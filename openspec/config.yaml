@@ -1,20 +1,28 @@
 schema: spec-driven
 
-# Project context (optional)
-# This is shown to AI when creating artifacts.
-# Add your tech stack, conventions, style guides, domain knowledge, etc.
-# Example:
-#   context: |
-#     Tech stack: TypeScript, React, Node.js
-#     We use conventional commits
-#     Domain: e-commerce platform
+context: |
+  Tech stack: Go 1.21+, Bubble Tea (TUI), Bubbles (UI components), Lip Gloss (styling)
+  Architecture: Elm architecture via Bubble Tea
+  Distribution: Single binary, no runtime dependencies
+  Platforms: macOS (primary), Linux (full support), Windows (best effort/WSL)
+  Testing: Go stdlib testing + teatest (charmbracelet) for TUI E2E
+  Test runner: gotestsum (watch mode for TDD, JUnit for CI)
+  CLI: Single command TUI app (no subcommands)
+  Git interaction: Shells out to git CLI (not libgit2)
 
-# Per-artifact rules (optional)
-# Add custom rules for specific artifacts.
-# Example:
-#   rules:
-#     proposal:
-#       - Keep proposals under 500 words
-#       - Always include a "Non-goals" section
-#     tasks:
-#       - Break tasks into chunks of max 2 hours
+rules:
+  proposal:
+    - Reference PRD.md for feature scope and requirements
+    - Include edge cases from PRD section 9.1
+  specs:
+    - Use Given/When/Then format for testable scenarios
+    - Reference existing git command patterns from CLAUDE.md
+  design:
+    - Document concurrency approach for parallel operations
+    - Keep packages internal — no public API surface
+  tasks:
+    - Each task must include associated test requirements (unit and/or E2E)
+    - Follow TDD: write tests before implementation
+    - Unit tests for git parsing and business logic (table-driven, stdlib)
+    - E2E tests for TUI flows using teatest
+    - Git command tests use re-exec pattern (no mock libraries)
