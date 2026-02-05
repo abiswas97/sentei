@@ -211,6 +211,32 @@ func TestDeleteWorktrees_ConcurrencyBound(t *testing.T) {
 	}
 }
 
+func TestPruneWorktrees_Success(t *testing.T) {
+	runner := &mockRunner{
+		responses: map[string]mockResponse{
+			"/repo worktree prune": {output: ""},
+		},
+	}
+
+	err := PruneWorktrees(runner, "/repo")
+	if err != nil {
+		t.Errorf("PruneWorktrees() error = %v, want nil", err)
+	}
+}
+
+func TestPruneWorktrees_Failure(t *testing.T) {
+	runner := &mockRunner{
+		responses: map[string]mockResponse{
+			"/repo worktree prune": {err: fmt.Errorf("prune failed")},
+		},
+	}
+
+	err := PruneWorktrees(runner, "/repo")
+	if err == nil {
+		t.Error("PruneWorktrees() error = nil, want error")
+	}
+}
+
 type concurrencyTrackingRunner struct {
 	inner         *mockRunner
 	current       *atomic.Int32

@@ -46,8 +46,14 @@ func (m Model) viewSummary() string {
 	}
 
 	b.WriteString("\n")
-	b.WriteString(styleDim.Render("  Tip: run `git worktree prune` to clean up any orphaned metadata"))
-	b.WriteString("\n\n")
+	if m.pruneErr != nil && *m.pruneErr != nil {
+		b.WriteString(styleWarning.Render(fmt.Sprintf("  Warning: failed to prune worktree metadata: %s", *m.pruneErr)))
+		b.WriteString("\n")
+	} else {
+		b.WriteString(styleDim.Render("  Pruned orphaned worktree metadata"))
+		b.WriteString("\n")
+	}
+	b.WriteString("\n")
 	b.WriteString(styleDim.Render("  Press q, enter, or esc to exit"))
 	b.WriteString("\n")
 

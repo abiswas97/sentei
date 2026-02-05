@@ -33,6 +33,11 @@ type DeletionResult struct {
 	Outcomes     []WorktreeOutcome
 }
 
+func PruneWorktrees(runner git.CommandRunner, repoPath string) error {
+	_, err := runner.Run(repoPath, "worktree", "prune")
+	return err
+}
+
 func DeleteWorktrees(runner git.CommandRunner, repoPath string, worktrees []git.Worktree, maxConcurrency int, progress chan<- DeletionEvent) DeletionResult {
 	defer close(progress)
 

@@ -33,6 +33,8 @@ type Model struct {
 	deletionTotal    int
 	deletionDone     int
 	progressCh       <-chan worktree.DeletionEvent
+
+	pruneErr *error
 }
 
 func NewModel(worktrees []git.Worktree, runner git.CommandRunner, repoPath string) Model {

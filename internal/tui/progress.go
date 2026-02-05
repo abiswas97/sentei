@@ -6,6 +6,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/abiswas/wt-sweep/internal/git"
 	"github.com/abiswas/wt-sweep/internal/worktree"
 )
 
@@ -25,6 +26,7 @@ type worktreeDeleteFailedMsg struct {
 	Err  error
 }
 type allDeletionsCompleteMsg struct{}
+type pruneCompleteMsg struct{ Err error }
 
 func waitForDeletionEvent(ch <-chan worktree.DeletionEvent) tea.Cmd {
 	return func() tea.Msg {
@@ -42,6 +44,13 @@ func waitForDeletionEvent(ch <-chan worktree.DeletionEvent) tea.Cmd {
 		default:
 			return waitForDeletionEvent(ch)()
 		}
+	}
+}
+
+func runPrune(runner git.CommandRunner, repoPath string) tea.Cmd {
+	return func() tea.Msg {
+		err := worktree.PruneWorktrees(runner, repoPath)
+		return pruneCompleteMsg{Err: err}
 	}
 }
 
@@ -73,6 +82,11 @@ func (m Model) updateProgress(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, waitForDeletionEvent(m.progressCh)
 
 	case allDeletionsCompleteMsg:
+		return m, runPrune(m.runner, m.repoPath)
+
+	case pruneCompleteMsg:
+		pruneErr := msg.Err
+		m.pruneErr = &pruneErr
 		m.view = summaryView
 	}
 	return m, nil
