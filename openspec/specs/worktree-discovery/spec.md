@@ -1,5 +1,5 @@
 ### Requirement: Worktree data model
-The system SHALL represent each worktree as a struct with fields: Path (string), HEAD (string), Branch (string), IsBare (bool), IsLocked (bool), LockReason (string), IsPrunable (bool), PruneReason (string), IsDetached (bool).
+The system SHALL represent each worktree as a struct with fields: Path (string), HEAD (string), Branch (string), IsBare (bool), IsLocked (bool), LockReason (string), IsPrunable (bool), PruneReason (string), IsDetached (bool), LastCommitDate (time.Time), LastCommitSubject (string), HasUncommittedChanges (bool), HasUntrackedFiles (bool), IsEnriched (bool), EnrichmentError (string).
 
 #### Scenario: Normal worktree
 - **WHEN** a porcelain block contains `worktree`, `HEAD`, and `branch` lines
@@ -12,6 +12,10 @@ The system SHALL represent each worktree as a struct with fields: Path (string),
 #### Scenario: Detached HEAD worktree
 - **WHEN** a porcelain block contains `worktree`, `HEAD`, and `detached` lines but no `branch` line
 - **THEN** the struct SHALL have IsDetached=true and Branch as empty string
+
+#### Scenario: Newly parsed worktree before enrichment
+- **WHEN** a worktree is freshly parsed from porcelain output
+- **THEN** enrichment fields SHALL be at zero values: LastCommitDate is zero time, LastCommitSubject is empty, HasUncommittedChanges is false, HasUntrackedFiles is false, IsEnriched is false, EnrichmentError is empty
 
 ### Requirement: Parse porcelain output
 The system SHALL parse the full output of `git worktree list --porcelain` into a slice of Worktree structs. Blocks are separated by blank lines. Each block starts with a `worktree <path>` line.
