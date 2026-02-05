@@ -156,6 +156,29 @@ func TestDeleteWorktrees_EmptyInput(t *testing.T) {
 	}
 }
 
+func TestDeleteWorktrees_LockedWorktreeUsesDoubleForce(t *testing.T) {
+	runner := &mockRunner{
+		responses: map[string]mockResponse{
+			"/repo worktree remove --force --force /work/locked": {output: ""},
+		},
+	}
+
+	worktrees := []git.Worktree{
+		{Path: "/work/locked", IsLocked: true},
+	}
+
+	progress := make(chan DeletionEvent, 20)
+	result := DeleteWorktrees(runner, "/repo", worktrees, 5, progress)
+	collectEvents(progress)
+
+	if result.SuccessCount != 1 {
+		t.Errorf("SuccessCount = %d, want 1", result.SuccessCount)
+	}
+	if result.FailureCount != 0 {
+		t.Errorf("FailureCount = %d, want 0", result.FailureCount)
+	}
+}
+
 func TestDeleteWorktrees_ConcurrencyBound(t *testing.T) {
 	var maxConcurrent atomic.Int32
 	var current atomic.Int32

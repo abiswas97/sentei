@@ -62,7 +62,12 @@ func DeleteWorktrees(runner git.CommandRunner, repoPath string, worktrees []git.
 
 			progress <- DeletionEvent{Type: DeletionStarted, Path: w.Path}
 
-			_, err := runner.Run(repoPath, "worktree", "remove", "--force", w.Path)
+			args := []string{"worktree", "remove", "--force"}
+			if w.IsLocked {
+				args = append(args, "--force")
+			}
+			args = append(args, w.Path)
+			_, err := runner.Run(repoPath, args...)
 
 			mu.Lock()
 			defer mu.Unlock()

@@ -1,20 +1,42 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"os"
 
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/abiswas/wt-sweep/internal/git"
+	"github.com/abiswas/wt-sweep/internal/playground"
 	"github.com/abiswas/wt-sweep/internal/tui"
 	"github.com/abiswas/wt-sweep/internal/worktree"
 )
 
 func main() {
+	playgroundFlag := flag.Bool("playground", false, "Launch with a temporary test repo")
+	playgroundKeep := flag.Bool("playground-keep", false, "Keep the playground directory after exit")
+	flag.Parse()
+
 	repoPath := "."
-	if len(os.Args) > 1 {
-		repoPath = os.Args[1]
+	if flag.NArg() > 0 {
+		repoPath = flag.Arg(0)
+	}
+
+	if *playgroundFlag {
+		var cleanup func()
+		var err error
+		repoPath, cleanup, err = playground.Setup()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error setting up playground: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Fprintf(os.Stderr, "Playground repo: %s\n", repoPath)
+		if !*playgroundKeep {
+			defer cleanup()
+		} else {
+			fmt.Fprintf(os.Stderr, "Playground will be kept at: %s\n", playground.PlaygroundDir)
+		}
 	}
 
 	runner := &git.GitRunner{}

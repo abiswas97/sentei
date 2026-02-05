@@ -64,18 +64,21 @@ func (m Model) viewConfirm() string {
 
 	if dirtyCount > 0 {
 		b.WriteString(styleWarning.Render(
-			fmt.Sprintf("  WARNING: %d worktree(s) have uncommitted changes that will be LOST\n", dirtyCount),
+			fmt.Sprintf("  WARNING: %d worktree(s) have uncommitted changes that will be LOST", dirtyCount),
 		))
+		b.WriteString("\n")
 	}
 	if untrackedCount > 0 {
 		b.WriteString(styleWarning.Render(
-			fmt.Sprintf("  WARNING: %d worktree(s) have untracked files that will be LOST\n", untrackedCount),
+			fmt.Sprintf("  WARNING: %d worktree(s) have untracked files that will be LOST", untrackedCount),
 		))
+		b.WriteString("\n")
 	}
 	if lockedCount > 0 {
 		b.WriteString(styleWarning.Render(
-			fmt.Sprintf("  WARNING: %d worktree(s) are locked and will be force-removed\n", lockedCount),
+			fmt.Sprintf("  WARNING: %d worktree(s) are locked and will be force-removed", lockedCount),
 		))
+		b.WriteString("\n")
 	}
 
 	b.WriteString("\n")
