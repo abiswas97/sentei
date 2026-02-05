@@ -32,6 +32,7 @@ type Model struct {
 	deletionResult   worktree.DeletionResult
 	deletionTotal    int
 	deletionDone     int
+	progressCh       <-chan worktree.DeletionEvent
 }
 
 func NewModel(worktrees []git.Worktree, runner git.CommandRunner, repoPath string) Model {

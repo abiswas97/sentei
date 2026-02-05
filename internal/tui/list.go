@@ -12,6 +12,12 @@ import (
 	"github.com/abiswas/wt-sweep/internal/git"
 )
 
+const (
+	colWidthBranch  = 30
+	colWidthAge     = 16
+	colWidthSubject = 40
+)
+
 func relativeTime(t time.Time) string {
 	if t.IsZero() {
 		return "unknown"
@@ -120,9 +126,10 @@ func (m Model) updateList(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 
 		case key.Matches(msg, keys.Toggle):
-			m.selected[m.cursor] = !m.selected[m.cursor]
-			if !m.selected[m.cursor] {
+			if m.selected[m.cursor] {
 				delete(m.selected, m.cursor)
+			} else {
+				m.selected[m.cursor] = true
 			}
 
 		case key.Matches(msg, keys.All):
@@ -189,11 +196,11 @@ func (m Model) viewList() string {
 			subject = wt.EnrichmentError
 		}
 
-		branchCol := fmt.Sprintf("%-30s", branch)
-		ageCol := fmt.Sprintf("%-16s", age)
+		branchCol := fmt.Sprintf("%-*s", colWidthBranch, branch)
+		ageCol := fmt.Sprintf("%-*s", colWidthAge, age)
 
-		if len(subject) > 40 {
-			subject = subject[:37] + "..."
+		if len(subject) > colWidthSubject {
+			subject = subject[:colWidthSubject-3] + "..."
 		}
 
 		row := lipgloss.JoinHorizontal(lipgloss.Top,

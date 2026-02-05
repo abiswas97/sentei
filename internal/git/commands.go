@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os/exec"
 	"strings"
+	"time"
 )
 
 type CommandRunner interface {
@@ -26,6 +27,16 @@ func (r *GitRunner) Run(dir string, args ...string) (string, error) {
 	}
 
 	return strings.TrimSpace(stdout.String()), nil
+}
+
+type DelayRunner struct {
+	Inner CommandRunner
+	Delay time.Duration
+}
+
+func (r *DelayRunner) Run(dir string, args ...string) (string, error) {
+	time.Sleep(r.Delay)
+	return r.Inner.Run(dir, args...)
 }
 
 func ValidateRepository(runner CommandRunner, repoPath string) error {

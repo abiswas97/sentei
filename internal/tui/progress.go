@@ -9,59 +9,70 @@ import (
 	"github.com/abiswas/wt-sweep/internal/worktree"
 )
 
+const (
+	statusPending  = "pending"
+	statusRemoving = "removing"
+	statusRemoved  = "removed"
+	statusFailed   = "failed"
+
+	progressBarWidth = 40
+)
+
 type worktreeDeleteStartedMsg struct{ Path string }
 type worktreeDeletedMsg struct{ Path string }
 type worktreeDeleteFailedMsg struct {
 	Path string
 	Err  error
 }
-type allDeletionsCompleteMsg struct {
-	Result worktree.DeletionResult
-}
+type allDeletionsCompleteMsg struct{}
 
-func (m Model) startDeletion() tea.Cmd {
-	selected := m.selectedWorktrees()
-
+func waitForDeletionEvent(ch <-chan worktree.DeletionEvent) tea.Cmd {
 	return func() tea.Msg {
-		progress := make(chan worktree.DeletionEvent, len(selected)*2)
-
-		var result worktree.DeletionResult
-		done := make(chan struct{})
-
-		go func() {
-			result = worktree.DeleteWorktrees(m.runner, m.repoPath, selected, 5, progress)
-			close(done)
-		}()
-
-		for ev := range progress {
-			switch ev.Type {
-			case worktree.DeletionStarted:
-				// handled via batch below
-			case worktree.DeletionCompleted:
-				// handled via batch below
-			case worktree.DeletionFailed:
-				// handled via batch below
-			}
-			_ = ev
+		ev, ok := <-ch
+		if !ok {
+			return allDeletionsCompleteMsg{}
 		}
-
-		<-done
-		return allDeletionsCompleteMsg{Result: result}
+		switch ev.Type {
+		case worktree.DeletionStarted:
+			return worktreeDeleteStartedMsg{Path: ev.Path}
+		case worktree.DeletionCompleted:
+			return worktreeDeletedMsg{Path: ev.Path}
+		case worktree.DeletionFailed:
+			return worktreeDeleteFailedMsg{Path: ev.Path, Err: ev.Error}
+		default:
+			return waitForDeletionEvent(ch)()
+		}
 	}
 }
 
 func (m Model) updateProgress(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case worktreeDeleteStartedMsg:
+		m.deletionStatuses[msg.Path] = statusRemoving
+		return m, waitForDeletionEvent(m.progressCh)
+
+	case worktreeDeletedMsg:
+		m.deletionStatuses[msg.Path] = statusRemoved
+		m.deletionDone++
+		m.deletionResult.SuccessCount++
+		m.deletionResult.Outcomes = append(m.deletionResult.Outcomes, worktree.WorktreeOutcome{
+			Path:    msg.Path,
+			Success: true,
+		})
+		return m, waitForDeletionEvent(m.progressCh)
+
+	case worktreeDeleteFailedMsg:
+		m.deletionStatuses[msg.Path] = statusFailed
+		m.deletionDone++
+		m.deletionResult.FailureCount++
+		m.deletionResult.Outcomes = append(m.deletionResult.Outcomes, worktree.WorktreeOutcome{
+			Path:    msg.Path,
+			Success: false,
+			Error:   fmt.Errorf("removing %s: %w", msg.Path, msg.Err),
+		})
+		return m, waitForDeletionEvent(m.progressCh)
+
 	case allDeletionsCompleteMsg:
-		m.deletionResult = msg.Result
-		m.deletionDone = m.deletionTotal
-		for _, o := range msg.Result.Outcomes {
-			if o.Success {
-				m.deletionStatuses[o.Path] = "removed"
-			} else {
-				m.deletionStatuses[o.Path] = "failed"
-			}
-		}
 		m.view = summaryView
 	}
 	return m, nil
@@ -78,9 +89,8 @@ func (m Model) viewProgress() string {
 		pct = m.deletionDone * 100 / m.deletionTotal
 	}
 
-	barWidth := 40
-	filled := barWidth * pct / 100
-	empty := barWidth - filled
+	filled := progressBarWidth * pct / 100
+	empty := progressBarWidth - filled
 
 	bar := strings.Repeat("#", filled) + strings.Repeat("-", empty)
 	b.WriteString(fmt.Sprintf("  [%s] %d/%d (%d%%)\n\n", bar, m.deletionDone, m.deletionTotal, pct))
@@ -92,12 +102,14 @@ func (m Model) viewProgress() string {
 
 		var indicator string
 		switch status {
-		case "removed":
+		case statusRemoved:
 			indicator = styleSuccess.Render("v") + " " + branch + "  " + styleDim.Render("removed")
-		case "failed":
+		case statusFailed:
 			indicator = styleError.Render("x") + " " + branch + "  " + styleError.Render("failed")
+		case statusRemoving:
+			indicator = styleWarning.Render("~") + " " + branch + "  " + styleDim.Render("removing...")
 		default:
-			indicator = styleDim.Render("~") + " " + branch + "  " + styleDim.Render("removing...")
+			indicator = styleDim.Render(".") + " " + branch + "  " + styleDim.Render("pending")
 		}
 
 		b.WriteString("  " + indicator + "\n")

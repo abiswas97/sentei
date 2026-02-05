@@ -3,6 +3,7 @@ package git
 import (
 	"fmt"
 	"testing"
+	"time"
 )
 
 type mockRunner struct {
@@ -20,6 +21,46 @@ func (m *mockRunner) Run(dir string, args ...string) (string, error) {
 		return resp.output, resp.err
 	}
 	return "", fmt.Errorf("unexpected call: %s", key)
+}
+
+func TestDelayRunner_DelegatesAndPreservesResult(t *testing.T) {
+	inner := &mockRunner{
+		responses: map[string]mockResponse{
+			"/dir:[status --porcelain]": {output: "M file.go", err: nil},
+		},
+	}
+	dr := &DelayRunner{Inner: inner, Delay: 50 * time.Millisecond}
+
+	start := time.Now()
+	out, err := dr.Run("/dir", "status", "--porcelain")
+	elapsed := time.Since(start)
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if out != "M file.go" {
+		t.Errorf("output = %q, want %q", out, "M file.go")
+	}
+	if elapsed < 50*time.Millisecond {
+		t.Errorf("elapsed %v, expected at least 50ms delay", elapsed)
+	}
+}
+
+func TestDelayRunner_PreservesError(t *testing.T) {
+	inner := &mockRunner{
+		responses: map[string]mockResponse{
+			"/dir:[worktree remove --force /path]": {output: "", err: fmt.Errorf("permission denied")},
+		},
+	}
+	dr := &DelayRunner{Inner: inner, Delay: 10 * time.Millisecond}
+
+	out, err := dr.Run("/dir", "worktree", "remove", "--force", "/path")
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if out != "" {
+		t.Errorf("output = %q, want empty", out)
+	}
 }
 
 func TestListWorktrees_Success(t *testing.T) {

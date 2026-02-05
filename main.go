@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -11,6 +12,11 @@ import (
 	"github.com/abiswas/wt-sweep/internal/playground"
 	"github.com/abiswas/wt-sweep/internal/tui"
 	"github.com/abiswas/wt-sweep/internal/worktree"
+)
+
+const (
+	enrichConcurrency = 10
+	playgroundDelay   = 800 * time.Millisecond
 )
 
 func main() {
@@ -47,7 +53,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	worktrees = worktree.EnrichWorktrees(runner, worktrees, 10)
+	worktrees = worktree.EnrichWorktrees(runner, worktrees, enrichConcurrency)
 
 	var filtered []git.Worktree
 	for _, wt := range worktrees {
@@ -61,7 +67,12 @@ func main() {
 		os.Exit(0)
 	}
 
-	model := tui.NewModel(filtered, runner, repoPath)
+	var tuiRunner git.CommandRunner = runner
+	if *playgroundFlag {
+		tuiRunner = &git.DelayRunner{Inner: runner, Delay: playgroundDelay}
+	}
+
+	model := tui.NewModel(filtered, tuiRunner, repoPath)
 	p := tea.NewProgram(model, tea.WithAltScreen())
 
 	if _, err := p.Run(); err != nil {

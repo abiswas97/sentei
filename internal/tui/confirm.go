@@ -6,6 +6,8 @@ import (
 
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
+
+	"github.com/abiswas/wt-sweep/internal/worktree"
 )
 
 func (m Model) updateConfirm(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -18,9 +20,12 @@ func (m Model) updateConfirm(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.deletionTotal = len(selected)
 			m.deletionDone = 0
 			for _, wt := range selected {
-				m.deletionStatuses[wt.Path] = "pending"
+				m.deletionStatuses[wt.Path] = statusPending
 			}
-			return m, m.startDeletion()
+			ch := make(chan worktree.DeletionEvent, len(selected)*2)
+			m.progressCh = ch
+			go worktree.DeleteWorktrees(m.runner, m.repoPath, selected, 5, ch)
+			return m, waitForDeletionEvent(m.progressCh)
 
 		case key.Matches(msg, keys.No), key.Matches(msg, keys.Back):
 			m.view = listView

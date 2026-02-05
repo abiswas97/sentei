@@ -10,25 +10,18 @@ import (
 	"time"
 )
 
-const PlaygroundDir = "/tmp/wt-sweep-playground"
+var PlaygroundDir = filepath.Join(os.TempDir(), "wt-sweep-playground")
 
 func gitRun(dir string, args ...string) error {
-	cmd := exec.Command("git", args...)
-	cmd.Dir = dir
-
-	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
-
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("git %s: %s", strings.Join(args, " "), strings.TrimSpace(stderr.String()))
-	}
-	return nil
+	return gitRunEnv(dir, nil, args...)
 }
 
 func gitRunEnv(dir string, env []string, args ...string) error {
 	cmd := exec.Command("git", args...)
 	cmd.Dir = dir
-	cmd.Env = append(os.Environ(), env...)
+	if len(env) > 0 {
+		cmd.Env = append(os.Environ(), env...)
+	}
 
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
