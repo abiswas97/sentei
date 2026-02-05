@@ -182,7 +182,11 @@ func (m Model) viewList() string {
 
 		branch := stripBranchPrefix(wt.Branch)
 		if branch == "" && wt.IsDetached {
-			branch = wt.HEAD[:7]
+			if len(wt.HEAD) >= 7 {
+				branch = wt.HEAD[:7]
+			} else {
+				branch = wt.HEAD
+			}
 		} else if branch == "" && wt.IsPrunable {
 			branch = "(prunable)"
 		}
