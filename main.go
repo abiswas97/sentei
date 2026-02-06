@@ -8,6 +8,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/abiswas97/sentei/internal/dryrun"
 	"github.com/abiswas97/sentei/internal/git"
 	"github.com/abiswas97/sentei/internal/playground"
 	"github.com/abiswas97/sentei/internal/tui"
@@ -22,6 +23,7 @@ const (
 func main() {
 	playgroundFlag := flag.Bool("playground", false, "Launch with a temporary test repo")
 	playgroundKeep := flag.Bool("playground-keep", false, "Keep the playground directory after exit")
+	dryRunFlag := flag.Bool("dry-run", false, "Print worktree summary and exit (no interactive TUI)")
 	flag.Parse()
 
 	repoPath := "."
@@ -64,6 +66,11 @@ func main() {
 
 	if len(filtered) == 0 {
 		fmt.Println("No worktrees found (only the main working tree exists).")
+		os.Exit(0)
+	}
+
+	if *dryRunFlag {
+		dryrun.Print(filtered, os.Stdout)
 		os.Exit(0)
 	}
 

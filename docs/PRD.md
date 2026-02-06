@@ -156,8 +156,8 @@ For each worktree, gather:
 ### 5.2 Extended Features (Post-MVP)
 
 #### F7: Sorting and Filtering
-- Sort by: last activity (default), branch name, path
-- Filter by: age threshold (e.g., "older than 30 days"), status
+- Sort by: last activity (default), branch name
+- Filter by: branch name substring (interactive `/` search)
 
 #### F8: Dry Run Mode
 - `--dry-run` flag to preview what would be deleted
