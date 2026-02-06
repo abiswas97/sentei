@@ -56,6 +56,9 @@ var (
 
 	styleStatusLocked = lipgloss.NewStyle().
 				Foreground(lipgloss.Color("245"))
+
+	styleStatusProtected = lipgloss.NewStyle().
+				Foreground(lipgloss.Color("63"))
 )
 
 // Semantic styles

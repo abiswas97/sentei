@@ -1,11 +1,15 @@
 ## MODIFIED Requirements
 
 ### Requirement: Display enriched worktrees in a scrollable list
-The TUI SHALL display worktrees using a `visibleIndices` mapping rather than iterating `m.worktrees` directly. The visible list SHALL reflect the current sort order and any active filter. All column layout, status indicators, and rendering behavior SHALL remain unchanged.
+The TUI SHALL display worktrees using a `visibleIndices` mapping rather than iterating `m.worktrees` directly. The visible list SHALL reflect the current sort order and any active filter. All column layout, status indicators, and rendering behavior SHALL remain unchanged. Protected worktrees SHALL display `[P]` in the checkbox column instead of `[ ]` or `[x]`.
 
 #### Scenario: Normal worktree row
 - **WHEN** a worktree has Branch="refs/heads/feature-x", LastCommitDate=3 days ago, LastCommitSubject="Add OAuth2 flow", HasUncommittedChanges=false, HasUntrackedFiles=false, IsLocked=false
 - **THEN** the row SHALL display columns: cursor indicator, `[ ]`, `[ok]`, `feature-x`, `3 days ago`, `Add OAuth2 flow` with columns aligned across all rows
+
+#### Scenario: Protected worktree row
+- **WHEN** a worktree has Branch="refs/heads/main" (a protected branch)
+- **THEN** the row SHALL display `[P]` in the checkbox column instead of `[ ]` and the worktree SHALL NOT be selectable
 
 #### Scenario: Dirty worktree row
 - **WHEN** a worktree has HasUncommittedChanges=true
@@ -32,23 +36,27 @@ The TUI SHALL display worktrees using a `visibleIndices` mapping rather than ite
 - **THEN** the row SHALL display the branch name and an error indicator instead of commit metadata
 
 ### Requirement: Multi-select worktrees
-The TUI SHALL allow selecting and deselecting individual worktrees with spacebar, and toggling all visible worktrees with the 'a' key. Selections SHALL be stored by worktree path (`map[string]bool`) rather than display index.
+The TUI SHALL allow selecting and deselecting individual worktrees with spacebar, and toggling all visible worktrees with the 'a' key. Selections SHALL be stored by worktree path (`map[string]bool`) rather than display index. Protected worktrees SHALL be excluded from selection — spacebar SHALL have no effect on them and select-all SHALL skip them.
 
 #### Scenario: Toggle single selection
-- **WHEN** the user presses spacebar on an unselected worktree
+- **WHEN** the user presses spacebar on an unselected, non-protected worktree
 - **THEN** the worktree SHALL become selected and its checkbox SHALL show [x]
 
 #### Scenario: Toggle single deselection
 - **WHEN** the user presses spacebar on a selected worktree
 - **THEN** the worktree SHALL become deselected and its checkbox SHALL show [ ]
 
+#### Scenario: Spacebar on protected worktree
+- **WHEN** the user presses spacebar on a protected worktree
+- **THEN** nothing SHALL happen; the worktree remains unselectable
+
 #### Scenario: Select all visible
-- **WHEN** the user presses 'a' and not all visible worktrees are selected
-- **THEN** all currently visible worktrees SHALL become selected
+- **WHEN** the user presses 'a' and not all non-protected visible worktrees are selected
+- **THEN** all currently visible non-protected worktrees SHALL become selected
 
 #### Scenario: Deselect all visible
-- **WHEN** the user presses 'a' and all visible worktrees are already selected
-- **THEN** all currently visible worktrees SHALL become deselected
+- **WHEN** the user presses 'a' and all non-protected visible worktrees are already selected
+- **THEN** all currently visible non-protected worktrees SHALL become deselected
 
 ### Requirement: Status bar
 The TUI SHALL display a status bar at the bottom showing the count of selected worktrees, filter state, available key bindings, and a status indicator legend. The sort indicator SHALL appear in the column headers (not the status bar). The legend SHALL appear on a separate line below the keybindings line. When filter mode is active, the legend line SHALL be replaced with contextual key hints (`enter: apply | esc: cancel`).

@@ -49,6 +49,10 @@ func Print(worktrees []git.Worktree, w io.Writer) {
 			subject = wt.EnrichmentError
 		}
 
+		if git.IsProtectedBranch(wt.Branch) {
+			branch += " [P]"
+		}
+
 		fmt.Fprintf(tw, "%s\t%s\t%s\t%s\n", statusIndicator(wt), branch, age, subject)
 	}
 	tw.Flush()

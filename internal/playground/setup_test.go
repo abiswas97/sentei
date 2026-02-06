@@ -22,12 +22,13 @@ func TestSetup_CreatesExpectedWorktrees(t *testing.T) {
 	porcelain := string(out)
 
 	blocks := splitWorktreeBlocks(porcelain)
-	// bare repo + 6 worktrees = 7 blocks
-	if len(blocks) != 7 {
-		t.Errorf("expected 7 worktree blocks, got %d\nporcelain:\n%s", len(blocks), porcelain)
+	// bare repo + 7 worktrees = 8 blocks
+	if len(blocks) != 8 {
+		t.Errorf("expected 8 worktree blocks, got %d\nporcelain:\n%s", len(blocks), porcelain)
 	}
 
 	expectedBranches := []string{
+		"refs/heads/main",
 		"refs/heads/feature/active",
 		"refs/heads/feature/wip",
 		"refs/heads/experiment/abandoned",

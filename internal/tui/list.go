@@ -163,6 +163,9 @@ func (m Model) updateList(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(msg, keys.Toggle):
 			if len(m.visibleIndices) > 0 {
 				wt := m.worktrees[m.visibleIndices[m.cursor]]
+				if git.IsProtectedBranch(wt.Branch) {
+					break
+				}
 				if m.selected[wt.Path] {
 					delete(m.selected, wt.Path)
 				} else {
@@ -173,18 +176,30 @@ func (m Model) updateList(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(msg, keys.All):
 			allSelected := true
 			for _, idx := range m.visibleIndices {
-				if !m.selected[m.worktrees[idx].Path] {
+				wt := m.worktrees[idx]
+				if git.IsProtectedBranch(wt.Branch) {
+					continue
+				}
+				if !m.selected[wt.Path] {
 					allSelected = false
 					break
 				}
 			}
 			if allSelected {
 				for _, idx := range m.visibleIndices {
-					delete(m.selected, m.worktrees[idx].Path)
+					wt := m.worktrees[idx]
+					if git.IsProtectedBranch(wt.Branch) {
+						continue
+					}
+					delete(m.selected, wt.Path)
 				}
 			} else {
 				for _, idx := range m.visibleIndices {
-					m.selected[m.worktrees[idx].Path] = true
+					wt := m.worktrees[idx]
+					if git.IsProtectedBranch(wt.Branch) {
+						continue
+					}
+					m.selected[wt.Path] = true
 				}
 			}
 
@@ -283,9 +298,13 @@ func (m Model) viewList() string {
 			cursor = "> "
 		}
 
-		checkbox := "[ ]"
-		if m.selected[wt.Path] {
+		var checkbox string
+		if git.IsProtectedBranch(wt.Branch) {
+			checkbox = styleStatusProtected.Render("[P]")
+		} else if m.selected[wt.Path] {
 			checkbox = "[x]"
+		} else {
+			checkbox = "[ ]"
 		}
 
 		status := statusIndicator(wt)
@@ -391,7 +410,8 @@ func (m Model) viewLegend() string {
 		styleStatusClean.Render("[ok]") + styleDim.Render(" clean  ") +
 		styleStatusDirty.Render("[~]") + styleDim.Render(" dirty  ") +
 		styleStatusUntracked.Render("[!]") + styleDim.Render(" untracked  ") +
-		styleStatusLocked.Render("[L]") + styleDim.Render(" locked")
+		styleStatusLocked.Render("[L]") + styleDim.Render(" locked  ") +
+		styleStatusProtected.Render("[P]") + styleDim.Render(" protected")
 }
 
 func columnStyle(base lipgloss.Style, col, branchWidth, subjectWidth int) lipgloss.Style {

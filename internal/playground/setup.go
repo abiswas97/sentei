@@ -59,6 +59,7 @@ func Setup() (repoPath string, cleanup func(), err error) {
 		name string
 		fn   func(string) error
 	}{
+		{"main", addMainWorktree},
 		{"feature/active", addCleanWorktree},
 		{"feature/wip", addDirtyWorktree},
 		{"experiment/abandoned", addUntrackedWorktree},
@@ -111,6 +112,14 @@ func seedInitialCommit(repoPath string) error {
 func worktreePath(repoPath, name string) string {
 	safe := strings.ReplaceAll(name, "/", "-")
 	return filepath.Join(PlaygroundDir, safe)
+}
+
+func addMainWorktree(repoPath string) error {
+	wtPath := worktreePath(repoPath, "main")
+	if err := gitRun(repoPath, "worktree", "add", wtPath, "main"); err != nil {
+		return err
+	}
+	return configWorktree(wtPath)
 }
 
 func addCleanWorktree(repoPath string) error {

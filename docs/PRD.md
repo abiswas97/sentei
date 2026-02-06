@@ -93,12 +93,6 @@ In a typical bare repo setup:
 - Needs to clean up periodically (weekly/monthly)
 - Values speed and safety
 
-### Secondary: DevOps / Platform Engineer
-
-- Maintains CI/CD pipelines that create temporary worktrees
-- Needs automated or scriptable cleanup
-- May run in non-interactive mode
-
 ---
 
 ## 5. Functional Requirements
@@ -163,18 +157,10 @@ For each worktree, gather:
 - `--dry-run` flag to preview what would be deleted
 - No confirmation required, just shows the plan
 
-#### F9: Non-Interactive Mode
-- `--yes` flag to skip confirmation
-- `--older-than=30d` to auto-select stale worktrees
-- For CI/automation use cases
-
-#### F10: Configuration File
-- `.sentei.yaml` in repo root or home directory
-- Configure: default sort, parallelism, protected branches
-
-#### F11: Branch Protection
-- Never show/select certain branches (e.g., main, develop)
-- Configurable protected branch patterns
+#### F9: Branch Protection
+- Protect well-known branches by convention: `main`, `master`, `develop`
+- Protected worktrees are visible in the list but cannot be selected for deletion
+- No configuration file needed — protection is built-in
 
 ---
 
@@ -305,9 +291,6 @@ sentei /path/to/bare/repo
 
 # Dry run
 sentei --dry-run
-
-# Non-interactive (for scripts)
-sentei --yes --older-than=30d
 
 # Show version
 sentei --version

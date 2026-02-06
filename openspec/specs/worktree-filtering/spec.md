@@ -65,15 +65,15 @@ The status bar SHALL indicate when a filter is applied and how many worktrees ma
 - **THEN** the filter input bar SHALL replace the normal status bar and the legend line SHALL be replaced with contextual key hints showing `enter: apply | esc: cancel`
 
 ### Requirement: Selection behavior with filter
-Selections SHALL persist across filter changes. The `a` (select all) key SHALL operate only on currently visible (filtered) worktrees.
+Selections SHALL persist across filter changes. The `a` (select all) key SHALL operate only on currently visible (filtered) worktrees. Protected worktrees SHALL be excluded from select-all regardless of filter state.
 
 #### Scenario: Hidden selections persist
 - **WHEN** the user selects worktree A, then applies a filter that hides worktree A
 - **THEN** worktree A SHALL remain selected (visible when filter is cleared or in the confirmation dialog)
 
 #### Scenario: Select all with active filter
-- **WHEN** a filter is active showing 3 of 10 worktrees and the user presses `a`
-- **THEN** only the 3 visible worktrees SHALL be toggled, not all 10
+- **WHEN** a filter is active showing 3 of 10 worktrees (1 protected) and the user presses `a`
+- **THEN** only the 2 visible non-protected worktrees SHALL be toggled, not all 10
 
 #### Scenario: Selected count includes hidden
 - **WHEN** 2 worktrees are selected but only 1 is visible due to filter
