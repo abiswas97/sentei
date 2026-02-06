@@ -63,10 +63,6 @@ The system SHALL accept a `--playground` flag that triggers playground setup, la
 - **WHEN** the user runs `sentei --playground`
 - **THEN** the system SHALL set up the playground, run the TUI against it, and remove the playground directory after the TUI exits
 
-#### Scenario: Playground keep flag
-- **WHEN** the user runs `sentei --playground --playground-keep`
-- **THEN** the system SHALL set up the playground and run the TUI, but NOT remove the playground directory after exit
-
 #### Scenario: Playground flag with repo path
 - **WHEN** the user runs `sentei --playground /some/path`
 - **THEN** the `--playground` flag SHALL take precedence and the path argument SHALL be ignored

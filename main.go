@@ -15,16 +15,23 @@ import (
 	"github.com/abiswas97/sentei/internal/worktree"
 )
 
+var version = "dev"
+
 const (
 	enrichConcurrency = 10
 	playgroundDelay   = 800 * time.Millisecond
 )
 
 func main() {
+	versionFlag := flag.Bool("version", false, "Print version and exit")
 	playgroundFlag := flag.Bool("playground", false, "Launch with a temporary test repo")
-	playgroundKeep := flag.Bool("playground-keep", false, "Keep the playground directory after exit")
 	dryRunFlag := flag.Bool("dry-run", false, "Print worktree summary and exit (no interactive TUI)")
 	flag.Parse()
+
+	if *versionFlag {
+		fmt.Printf("sentei %s\n", version)
+		os.Exit(0)
+	}
 
 	repoPath := "."
 	if flag.NArg() > 0 {
@@ -40,11 +47,7 @@ func main() {
 			os.Exit(1)
 		}
 		fmt.Fprintf(os.Stderr, "Playground repo: %s\n", repoPath)
-		if !*playgroundKeep {
-			defer cleanup()
-		} else {
-			fmt.Fprintf(os.Stderr, "Playground will be kept at: %s\n", playground.PlaygroundDir)
-		}
+		defer cleanup()
 	}
 
 	runner := &git.GitRunner{}
