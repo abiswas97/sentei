@@ -13,8 +13,6 @@ import (
 	"github.com/abiswas97/sentei/internal/git"
 )
 
-// Column indices for the worktree list table. These map to the
-// table.Row() argument order and the StyleFunc col parameter.
 const (
 	colCursor   = 0
 	colCheckbox = 1
@@ -24,8 +22,6 @@ const (
 	colSubject  = 5
 )
 
-// relativeTime formats a timestamp as a human-readable relative duration
-// (e.g. "3 days ago", "just now"). Returns "unknown" for zero-value times.
 func relativeTime(t time.Time) string {
 	if t.IsZero() {
 		return "unknown"
@@ -68,13 +64,10 @@ func relativeTime(t time.Time) string {
 	}
 }
 
-// stripBranchPrefix removes the "refs/heads/" prefix from a git branch reference.
 func stripBranchPrefix(ref string) string {
 	return strings.TrimPrefix(ref, "refs/heads/")
 }
 
-// statusIndicator returns a colored status badge for a worktree.
-// Priority: locked [L] > dirty [~] > untracked [!] > clean [ok].
 func statusIndicator(wt git.Worktree) string {
 	switch {
 	case wt.IsLocked:
@@ -92,16 +85,46 @@ func (m Model) updateList(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
-		m.height = max(msg.Height-5, 5)
+		m.height = max(msg.Height-6, 5)
 		return m, nil
 
 	case tea.KeyMsg:
+		if m.filterActive {
+			return m.updateFilterInput(msg)
+		}
+
 		switch {
 		case key.Matches(msg, keys.Quit):
 			return m, tea.Quit
 
+		case key.Matches(msg, keys.Back):
+			if m.filterText != "" {
+				m.filterText = ""
+				m.reindex()
+				return m, nil
+			}
+			return m, tea.Quit
+
+		case key.Matches(msg, keys.Filter):
+			m.filterActive = true
+			m.filterInput.SetValue(m.filterText)
+			m.filterInput.Focus()
+			return m, m.filterInput.Cursor.BlinkCmd()
+
+		case key.Matches(msg, keys.Sort):
+			m.sortField = (m.sortField + 1) % 2
+			m.cursor = 0
+			m.offset = 0
+			m.reindex()
+
+		case key.Matches(msg, keys.ReverseSort):
+			m.sortAscending = !m.sortAscending
+			m.cursor = 0
+			m.offset = 0
+			m.reindex()
+
 		case key.Matches(msg, keys.Down):
-			if m.cursor < len(m.worktrees)-1 {
+			if m.cursor < len(m.visibleIndices)-1 {
 				m.cursor++
 				if m.cursor >= m.offset+m.height {
 					m.offset = m.cursor - m.height + 1
@@ -118,8 +141,11 @@ func (m Model) updateList(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		case key.Matches(msg, keys.PageDown):
 			m.cursor += m.height
-			if m.cursor >= len(m.worktrees) {
-				m.cursor = len(m.worktrees) - 1
+			if m.cursor >= len(m.visibleIndices) {
+				m.cursor = len(m.visibleIndices) - 1
+			}
+			if m.cursor < 0 {
+				m.cursor = 0
 			}
 			if m.cursor >= m.offset+m.height {
 				m.offset = m.cursor - m.height + 1
@@ -135,18 +161,30 @@ func (m Model) updateList(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 
 		case key.Matches(msg, keys.Toggle):
-			if m.selected[m.cursor] {
-				delete(m.selected, m.cursor)
-			} else {
-				m.selected[m.cursor] = true
+			if len(m.visibleIndices) > 0 {
+				wt := m.worktrees[m.visibleIndices[m.cursor]]
+				if m.selected[wt.Path] {
+					delete(m.selected, wt.Path)
+				} else {
+					m.selected[wt.Path] = true
+				}
 			}
 
 		case key.Matches(msg, keys.All):
-			if len(m.selected) == len(m.worktrees) {
-				m.selected = make(map[int]bool)
+			allSelected := true
+			for _, idx := range m.visibleIndices {
+				if !m.selected[m.worktrees[idx].Path] {
+					allSelected = false
+					break
+				}
+			}
+			if allSelected {
+				for _, idx := range m.visibleIndices {
+					delete(m.selected, m.worktrees[idx].Path)
+				}
 			} else {
-				for i := range m.worktrees {
-					m.selected[i] = true
+				for _, idx := range m.visibleIndices {
+					m.selected[m.worktrees[idx].Path] = true
 				}
 			}
 
@@ -157,6 +195,30 @@ func (m Model) updateList(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	}
 	return m, nil
+}
+
+func (m Model) updateFilterInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch {
+	case key.Matches(msg, keys.Back):
+		m.filterActive = false
+		m.filterText = ""
+		m.filterInput.SetValue("")
+		m.filterInput.Blur()
+		m.reindex()
+		return m, nil
+
+	case key.Matches(msg, keys.Confirm):
+		m.filterActive = false
+		m.filterText = m.filterInput.Value()
+		m.filterInput.Blur()
+		return m, nil
+	}
+
+	var cmd tea.Cmd
+	m.filterInput, cmd = m.filterInput.Update(msg)
+	m.filterText = m.filterInput.Value()
+	m.reindex()
+	return m, cmd
 }
 
 func (m Model) viewList() string {
@@ -171,12 +233,36 @@ func (m Model) viewList() string {
 		return b.String()
 	}
 
-	end := min(m.offset+m.height, len(m.worktrees))
+	if len(m.visibleIndices) == 0 {
+		b.WriteString(styleDim.Render("  No matches."))
+		b.WriteString("\n\n")
+		b.WriteString(m.viewStatusOrFilter())
+		b.WriteString("\n")
+		b.WriteString(m.viewBottomLine())
+		return b.String()
+	}
+
+	end := min(m.offset+m.height, len(m.visibleIndices))
+
+	arrow := " ▲"
+	if !m.sortAscending {
+		arrow = " ▼"
+	}
+	hdrBranch := "Branch"
+	hdrAge := "Age"
+	hdrSubject := "Subject"
+	switch m.sortField {
+	case SortByBranch:
+		hdrBranch += arrow
+	case SortByAge:
+		hdrAge += arrow
+	}
 
 	t := table.New().
 		BorderTop(false).BorderBottom(false).
 		BorderLeft(false).BorderRight(false).
 		BorderColumn(false).BorderHeader(false).BorderRow(false).
+		Headers("", "", "", hdrBranch, hdrAge, hdrSubject).
 		Wrap(true)
 
 	if m.width > 0 {
@@ -184,16 +270,13 @@ func (m Model) viewList() string {
 	}
 
 	fixedWidth := colWidthCursor + colWidthCheckbox + colWidthStatus + colWidthAge
-	// 3 data columns (branch, age, subject) each have Padding(0,1) which eats
-	// 1 char of their Width budget. Subtract here so the proportional split
-	// accounts for it and the total doesn't overshoot the terminal width.
 	colPadding := 3
 	remaining := max(m.width-fixedWidth-colPadding, 20)
 	branchWidth := remaining / 2
 	subjectWidth := remaining - branchWidth
 
 	for i := m.offset; i < end; i++ {
-		wt := m.worktrees[i]
+		wt := m.worktrees[m.visibleIndices[i]]
 
 		cursor := "  "
 		if i == m.cursor {
@@ -201,7 +284,7 @@ func (m Model) viewList() string {
 		}
 
 		checkbox := "[ ]"
-		if m.selected[i] {
+		if m.selected[wt.Path] {
 			checkbox = "[x]"
 		}
 
@@ -227,8 +310,6 @@ func (m Model) viewList() string {
 			subject = wt.EnrichmentError
 		}
 
-		// Pre-truncate subject so it never wraps. Only branch names wrap.
-		// -2 accounts for Padding(0,1) inside the column plus a safety char.
 		maxSubject := subjectWidth - 2
 		if maxSubject > 3 && lipgloss.Width(subject) > maxSubject {
 			runes := []rune(subject)
@@ -240,50 +321,68 @@ func (m Model) viewList() string {
 		t.Row(cursor, checkbox, status, branch, age, subject)
 	}
 
+	sortedCol := colAge
+	if m.sortField == SortByBranch {
+		sortedCol = colBranch
+	}
+
 	t.StyleFunc(func(row, col int) lipgloss.Style {
+		if row == table.HeaderRow {
+			base := styleColumnHeader
+			if col == sortedCol {
+				base = styleColumnHeaderSorted
+			}
+			return columnStyle(base, col, branchWidth, subjectWidth)
+		}
+
 		idx := m.offset + row
 
 		var base lipgloss.Style
 		switch {
 		case idx == m.cursor:
 			base = styleCursorRow
-		case m.selected[idx]:
+		case m.selected[m.worktrees[m.visibleIndices[idx]].Path]:
 			base = styleSelectedRow
 		default:
 			base = styleNormalRow
 		}
 
-		switch col {
-		case colCursor:
-			return base.Width(colWidthCursor)
-		case colCheckbox:
-			return base.Width(colWidthCheckbox)
-		case colStatus:
-			return base.Width(colWidthStatus)
-		case colBranch:
-			return base.Width(branchWidth).Padding(0, 1)
-		case colAge:
-			return base.Width(colWidthAge).Padding(0, 1)
-		case colSubject:
-			return base.Width(subjectWidth).Padding(0, 1)
-		default:
-			return base
-		}
+		return columnStyle(base, col, branchWidth, subjectWidth)
 	})
 
 	b.WriteString(t.Render())
 	b.WriteString("\n")
 
-	b.WriteString(m.viewStatusBar())
+	b.WriteString(m.viewStatusOrFilter())
 	b.WriteString("\n")
-	b.WriteString(m.viewLegend())
+	b.WriteString(m.viewBottomLine())
 	return b.String()
+}
+
+func (m Model) viewStatusOrFilter() string {
+	if m.filterActive {
+		return m.filterInput.View()
+	}
+	return m.viewStatusBar()
+}
+
+func (m Model) viewBottomLine() string {
+	if m.filterActive {
+		return styleDim.Render("  enter: apply | esc: cancel")
+	}
+	return m.viewLegend()
 }
 
 func (m Model) viewStatusBar() string {
 	count := len(m.selected)
+
+	var filterInfo string
+	if m.filterText != "" {
+		filterInfo = fmt.Sprintf(" | filter: %q (%d/%d)", m.filterText, len(m.visibleIndices), len(m.worktrees))
+	}
+
 	return styleStatusBar.Render(
-		fmt.Sprintf("  %d selected | space: toggle | a: all | enter: delete | q: quit", count),
+		fmt.Sprintf("  %d selected%s | space: toggle | a: all | enter: delete | /: filter | s: sort | q: quit", count, filterInfo),
 	)
 }
 
@@ -293,4 +392,23 @@ func (m Model) viewLegend() string {
 		styleStatusDirty.Render("[~]") + styleDim.Render(" dirty  ") +
 		styleStatusUntracked.Render("[!]") + styleDim.Render(" untracked  ") +
 		styleStatusLocked.Render("[L]") + styleDim.Render(" locked")
+}
+
+func columnStyle(base lipgloss.Style, col, branchWidth, subjectWidth int) lipgloss.Style {
+	switch col {
+	case colCursor:
+		return base.Width(colWidthCursor)
+	case colCheckbox:
+		return base.Width(colWidthCheckbox)
+	case colStatus:
+		return base.Width(colWidthStatus)
+	case colBranch:
+		return base.Width(branchWidth).Padding(0, 1)
+	case colAge:
+		return base.Width(colWidthAge).Padding(0, 1)
+	case colSubject:
+		return base.Width(subjectWidth).Padding(0, 1)
+	default:
+		return base
+	}
 }

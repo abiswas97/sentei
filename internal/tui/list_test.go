@@ -137,9 +137,9 @@ func TestStatusIndicator(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := statusIndicator(tt.wt)
-			if !containsText(got, tt.want) {
-				t.Errorf("statusIndicator() rendered %q, want it to contain %q", got, tt.want)
+			got := stripAnsi(statusIndicator(tt.wt))
+			if got != tt.want {
+				t.Errorf("statusIndicator() rendered %q, want %q", got, tt.want)
 			}
 		})
 	}
@@ -156,25 +156,3 @@ func TestViewLegend(t *testing.T) {
 	}
 }
 
-func containsText(rendered, text string) bool {
-	// Strip ANSI escape sequences for comparison
-	clean := stripAnsi(rendered)
-	return clean == text
-}
-
-func stripAnsi(s string) string {
-	var result []byte
-	i := 0
-	for i < len(s) {
-		if s[i] == '\x1b' {
-			for i < len(s) && s[i] != 'm' {
-				i++
-			}
-			i++
-			continue
-		}
-		result = append(result, s[i])
-		i++
-	}
-	return string(result)
-}

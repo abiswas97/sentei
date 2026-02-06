@@ -18,7 +18,6 @@ func (m Model) updateConfirm(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.view = progressView
 			selected := m.selectedWorktrees()
 			m.deletionTotal = len(selected)
-			m.deletionDone = 0
 			for _, wt := range selected {
 				m.deletionStatuses[wt.Path] = statusPending
 			}

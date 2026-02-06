@@ -62,7 +62,6 @@ func (m Model) updateProgress(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case worktreeDeletedMsg:
 		m.deletionStatuses[msg.Path] = statusRemoved
-		m.deletionDone++
 		m.deletionResult.SuccessCount++
 		m.deletionResult.Outcomes = append(m.deletionResult.Outcomes, worktree.WorktreeOutcome{
 			Path:    msg.Path,
@@ -72,7 +71,6 @@ func (m Model) updateProgress(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case worktreeDeleteFailedMsg:
 		m.deletionStatuses[msg.Path] = statusFailed
-		m.deletionDone++
 		m.deletionResult.FailureCount++
 		m.deletionResult.Outcomes = append(m.deletionResult.Outcomes, worktree.WorktreeOutcome{
 			Path:    msg.Path,
@@ -98,16 +96,17 @@ func (m Model) viewProgress() string {
 	b.WriteString(styleHeader.Render("  Removing Worktrees  "))
 	b.WriteString("\n\n")
 
+	done := len(m.deletionResult.Outcomes)
 	pct := 0
 	if m.deletionTotal > 0 {
-		pct = m.deletionDone * 100 / m.deletionTotal
+		pct = done * 100 / m.deletionTotal
 	}
 
 	filled := progressBarWidth * pct / 100
 	empty := progressBarWidth - filled
 
 	bar := strings.Repeat("#", filled) + strings.Repeat("-", empty)
-	b.WriteString(fmt.Sprintf("  [%s] %d/%d (%d%%)\n\n", bar, m.deletionDone, m.deletionTotal, pct))
+	b.WriteString(fmt.Sprintf("  [%s] %d/%d (%d%%)\n\n", bar, done, m.deletionTotal, pct))
 
 	selected := m.selectedWorktrees()
 	for _, wt := range selected {
