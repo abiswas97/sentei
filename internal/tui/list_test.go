@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"strings"
 	"testing"
 	"time"
 
@@ -141,6 +142,17 @@ func TestStatusIndicator(t *testing.T) {
 				t.Errorf("statusIndicator() rendered %q, want it to contain %q", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestViewLegend(t *testing.T) {
+	m := Model{}
+	got := stripAnsi(m.viewLegend())
+
+	for _, want := range []string{"[ok] clean", "[~] dirty", "[!] untracked", "[L] locked"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("viewLegend() = %q, want it to contain %q", got, want)
+		}
 	}
 }
 

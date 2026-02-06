@@ -92,7 +92,7 @@ func (m Model) updateList(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
-		m.height = max(msg.Height-4, 5)
+		m.height = max(msg.Height-5, 5)
 		return m, nil
 
 	case tea.KeyMsg:
@@ -275,6 +275,8 @@ func (m Model) viewList() string {
 	b.WriteString("\n")
 
 	b.WriteString(m.viewStatusBar())
+	b.WriteString("\n")
+	b.WriteString(m.viewLegend())
 	return b.String()
 }
 
@@ -283,4 +285,12 @@ func (m Model) viewStatusBar() string {
 	return styleStatusBar.Render(
 		fmt.Sprintf("  %d selected | space: toggle | a: all | enter: delete | q: quit", count),
 	)
+}
+
+func (m Model) viewLegend() string {
+	return styleDim.Render("  ") +
+		styleStatusClean.Render("[ok]") + styleDim.Render(" clean  ") +
+		styleStatusDirty.Render("[~]") + styleDim.Render(" dirty  ") +
+		styleStatusUntracked.Render("[!]") + styleDim.Render(" untracked  ") +
+		styleStatusLocked.Render("[L]") + styleDim.Render(" locked")
 }
