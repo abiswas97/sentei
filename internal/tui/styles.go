@@ -52,4 +52,12 @@ var (
 
 	styleDim = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("241"))
+
+	// Fixed column widths for the worktree list table.
+	// Cursor/checkbox/status include +1 char for inter-column gap (no Padding).
+	// Age uses Padding(0,1) in StyleFunc instead, so no extra char here.
+	colWidthCursor   = 3  // "> " (2) + 1 gap
+	colWidthCheckbox = 5  // "[x]" (3) + 2 gap
+	colWidthStatus   = 6  // "[ok]" (4) + 2 gap
+	colWidthAge      = 16 // "12 hours ago" (12) + headroom
 )

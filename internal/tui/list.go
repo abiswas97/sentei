@@ -8,16 +8,24 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/lipgloss/table"
 
 	"github.com/abiswas97/sentei/internal/git"
 )
 
+// Column indices for the worktree list table. These map to the
+// table.Row() argument order and the StyleFunc col parameter.
 const (
-	colWidthBranch  = 30
-	colWidthAge     = 16
-	colWidthSubject = 40
+	colCursor   = 0
+	colCheckbox = 1
+	colStatus   = 2
+	colBranch   = 3
+	colAge      = 4
+	colSubject  = 5
 )
 
+// relativeTime formats a timestamp as a human-readable relative duration
+// (e.g. "3 days ago", "just now"). Returns "unknown" for zero-value times.
 func relativeTime(t time.Time) string {
 	if t.IsZero() {
 		return "unknown"
@@ -60,10 +68,13 @@ func relativeTime(t time.Time) string {
 	}
 }
 
+// stripBranchPrefix removes the "refs/heads/" prefix from a git branch reference.
 func stripBranchPrefix(ref string) string {
 	return strings.TrimPrefix(ref, "refs/heads/")
 }
 
+// statusIndicator returns a colored status badge for a worktree.
+// Priority: locked [L] > dirty [~] > untracked [!] > clean [ok].
 func statusIndicator(wt git.Worktree) string {
 	switch {
 	case wt.IsLocked:
@@ -80,10 +91,8 @@ func statusIndicator(wt git.Worktree) string {
 func (m Model) updateList(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		m.height = msg.Height - 4
-		if m.height < 5 {
-			m.height = 5
-		}
+		m.width = msg.Width
+		m.height = max(msg.Height-4, 5)
 		return m, nil
 
 	case tea.KeyMsg:
@@ -162,36 +171,54 @@ func (m Model) viewList() string {
 		return b.String()
 	}
 
-	end := m.offset + m.height
-	if end > len(m.worktrees) {
-		end = len(m.worktrees)
+	end := min(m.offset+m.height, len(m.worktrees))
+
+	t := table.New().
+		BorderTop(false).BorderBottom(false).
+		BorderLeft(false).BorderRight(false).
+		BorderColumn(false).BorderHeader(false).BorderRow(false).
+		Wrap(true)
+
+	if m.width > 0 {
+		t.Width(m.width)
 	}
+
+	fixedWidth := colWidthCursor + colWidthCheckbox + colWidthStatus + colWidthAge
+	// 3 data columns (branch, age, subject) each have Padding(0,1) which eats
+	// 1 char of their Width budget. Subtract here so the proportional split
+	// accounts for it and the total doesn't overshoot the terminal width.
+	colPadding := 3
+	remaining := max(m.width-fixedWidth-colPadding, 20)
+	branchWidth := remaining / 2
+	subjectWidth := remaining - branchWidth
 
 	for i := m.offset; i < end; i++ {
 		wt := m.worktrees[i]
-
-		checkbox := "[ ]"
-		if m.selected[i] {
-			checkbox = "[x]"
-		}
 
 		cursor := "  "
 		if i == m.cursor {
 			cursor = "> "
 		}
 
-		branch := stripBranchPrefix(wt.Branch)
-		if branch == "" && wt.IsDetached {
-			if len(wt.HEAD) >= 7 {
-				branch = wt.HEAD[:7]
-			} else {
-				branch = wt.HEAD
-			}
-		} else if branch == "" && wt.IsPrunable {
-			branch = "(prunable)"
+		checkbox := "[ ]"
+		if m.selected[i] {
+			checkbox = "[x]"
 		}
 
 		status := statusIndicator(wt)
+
+		branch := stripBranchPrefix(wt.Branch)
+		if branch == "" {
+			switch {
+			case wt.IsDetached:
+				branch = wt.HEAD
+				if len(branch) >= 7 {
+					branch = branch[:7]
+				}
+			case wt.IsPrunable:
+				branch = "(prunable)"
+			}
+		}
 
 		age := relativeTime(wt.LastCommitDate)
 		subject := wt.LastCommitSubject
@@ -200,29 +227,52 @@ func (m Model) viewList() string {
 			subject = wt.EnrichmentError
 		}
 
-		branchCol := fmt.Sprintf("%-*s", colWidthBranch, branch)
-		ageCol := fmt.Sprintf("%-*s", colWidthAge, age)
-
-		if len(subject) > colWidthSubject {
-			subject = subject[:colWidthSubject-3] + "..."
+		// Pre-truncate subject so it never wraps. Only branch names wrap.
+		// -2 accounts for Padding(0,1) inside the column plus a safety char.
+		maxSubject := subjectWidth - 2
+		if maxSubject > 3 && lipgloss.Width(subject) > maxSubject {
+			runes := []rune(subject)
+			if len(runes) > maxSubject-3 {
+				subject = string(runes[:maxSubject-3]) + "..."
+			}
 		}
 
-		row := lipgloss.JoinHorizontal(lipgloss.Top,
-			cursor, checkbox, " ", status, " ",
-			branchCol, " ", ageCol, " ", subject,
-		)
-
-		if i == m.cursor {
-			row = styleCursorRow.Render(row)
-		} else if m.selected[i] {
-			row = styleSelectedRow.Render(row)
-		} else {
-			row = styleNormalRow.Render(row)
-		}
-
-		b.WriteString(row)
-		b.WriteString("\n")
+		t.Row(cursor, checkbox, status, branch, age, subject)
 	}
+
+	t.StyleFunc(func(row, col int) lipgloss.Style {
+		idx := m.offset + row
+
+		var base lipgloss.Style
+		switch {
+		case idx == m.cursor:
+			base = styleCursorRow
+		case m.selected[idx]:
+			base = styleSelectedRow
+		default:
+			base = styleNormalRow
+		}
+
+		switch col {
+		case colCursor:
+			return base.Width(colWidthCursor)
+		case colCheckbox:
+			return base.Width(colWidthCheckbox)
+		case colStatus:
+			return base.Width(colWidthStatus)
+		case colBranch:
+			return base.Width(branchWidth).Padding(0, 1)
+		case colAge:
+			return base.Width(colWidthAge).Padding(0, 1)
+		case colSubject:
+			return base.Width(subjectWidth).Padding(0, 1)
+		default:
+			return base
+		}
+	})
+
+	b.WriteString(t.Render())
+	b.WriteString("\n")
 
 	b.WriteString(m.viewStatusBar())
 	return b.String()

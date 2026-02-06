@@ -19,9 +19,10 @@ const (
 type Model struct {
 	worktrees []git.Worktree
 	selected  map[int]bool
-	cursor    int
-	offset    int
-	height    int
+	cursor int
+	offset int
+	width  int
+	height int
 
 	view viewState
 
