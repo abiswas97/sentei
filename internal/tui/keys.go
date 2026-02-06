@@ -46,7 +46,7 @@ var keys = keyMap{
 		key.WithHelp("enter", "delete"),
 	),
 	Quit: key.NewBinding(
-		key.WithKeys("q", "ctrl+c"),
+		key.WithKeys("q", "esc", "ctrl+c"),
 		key.WithHelp("q", "quit"),
 	),
 	Yes: key.NewBinding(
