@@ -1,6 +1,6 @@
 ## Why
 
-The discovery and enrichment layers are complete — we can list worktrees and fetch their metadata. But the tool currently just prints to stdout. Users need an interactive TUI to visually browse worktrees, see status at a glance, multi-select stale ones, and trigger deletion — which is the core value proposition of wt-sweep (PRD F3-F6).
+The discovery and enrichment layers are complete — we can list worktrees and fetch their metadata. But the tool currently just prints to stdout. Users need an interactive TUI to visually browse worktrees, see status at a glance, multi-select stale ones, and trigger deletion — which is the core value proposition of sentei (PRD F3-F6).
 
 ## What Changes
 

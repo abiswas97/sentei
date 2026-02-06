@@ -1,6 +1,6 @@
 ## Context
 
-wt-sweep can discover and enrich worktrees but has no interactive interface. The current `main.go` prints a flat list to stdout. We need a Bubble Tea TUI that lets users browse, select, and delete worktrees. The data layer (`internal/git`, `internal/worktree`) is stable and provides `[]git.Worktree` with all needed metadata.
+sentei can discover and enrich worktrees but has no interactive interface. The current `main.go` prints a flat list to stdout. We need a Bubble Tea TUI that lets users browse, select, and delete worktrees. The data layer (`internal/git`, `internal/worktree`) is stable and provides `[]git.Worktree` with all needed metadata.
 
 Bubble Tea uses the Elm architecture: Model holds state, Update handles messages, View renders. All UI is built by composing these three methods.
 

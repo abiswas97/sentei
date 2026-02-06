@@ -5,7 +5,7 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"github.com/abiswas/wt-sweep/internal/git"
+	"github.com/abiswas97/sentei/internal/git"
 )
 
 func collectEvents(ch <-chan DeletionEvent) []DeletionEvent {

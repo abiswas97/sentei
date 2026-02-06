@@ -1,10 +1,10 @@
 ## Why
 
-There's no way to test the TUI without a real bare repo with worktrees in various states. Developers need a one-command way to spin up a realistic test environment and interact with wt-sweep against it. This also serves as a demo/onboarding tool for new users.
+There's no way to test the TUI without a real bare repo with worktrees in various states. Developers need a one-command way to spin up a realistic test environment and interact with sentei against it. This also serves as a demo/onboarding tool for new users.
 
 ## What Changes
 
-- Add a `--playground` flag to `wt-sweep` that creates a temporary bare repo in `/tmp/wt-sweep-playground/` with worktrees in distinct states (clean, dirty, untracked, locked, old commit, detached HEAD)
+- Add a `--playground` flag to `sentei` that creates a temporary bare repo in `/tmp/sentei-playground/` with worktrees in distinct states (clean, dirty, untracked, locked, old commit, detached HEAD)
 - Launch the TUI against the playground repo automatically after setup
 - Playground is idempotent: re-running tears down and recreates
 - Cleanup happens automatically on exit (deferred removal of `/tmp` dir), with a `--playground-keep` flag to preserve it for inspection
@@ -23,4 +23,4 @@ _None — existing specs are unchanged._
 - **New package**: `internal/playground/` (setup, teardown, fixture creation)
 - **Modified files**: `main.go` (add `--playground` and `--playground-keep` flag handling)
 - **No new dependencies**: uses only `os/exec` for git commands (same pattern as existing `git.CommandRunner`)
-- **Filesystem**: creates/removes `/tmp/wt-sweep-playground/` directory
+- **Filesystem**: creates/removes `/tmp/sentei-playground/` directory

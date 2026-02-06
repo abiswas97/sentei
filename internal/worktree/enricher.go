@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/abiswas/wt-sweep/internal/git"
+	"github.com/abiswas97/sentei/internal/git"
 )
 
 func ParseStatusPorcelain(output string) (hasUncommitted bool, hasUntracked bool) {

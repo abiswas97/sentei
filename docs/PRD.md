@@ -1,4 +1,4 @@
-# wt-sweep: Git Worktree Cleanup Tool
+# sentei: Git Worktree Cleanup Tool
 
 ## Product Requirements Document (PRD)
 
@@ -10,7 +10,7 @@
 
 ## 1. Executive Summary
 
-**wt-sweep** is a terminal user interface (TUI) tool for managing and cleaning up stale git worktrees in bare repositories. It provides an interactive, visual way to identify, select, and bulk-delete worktrees that are no longer needed, with parallel execution and clear progress feedback.
+**sentei** is a terminal user interface (TUI) tool for managing and cleaning up stale git worktrees in bare repositories. It provides an interactive, visual way to identify, select, and bulk-delete worktrees that are no longer needed, with parallel execution and clear progress feedback.
 
 ---
 
@@ -63,7 +63,7 @@ In a typical bare repo setup:
 
 ## 3. Solution Overview
 
-**wt-sweep** provides a TUI that:
+**sentei** provides a TUI that:
 
 1. **Scans** a bare repository for all worktrees
 2. **Enriches** each worktree with metadata (last commit date, uncommitted changes, branch status)
@@ -74,7 +74,7 @@ In a typical bare repo setup:
 
 ### Value Proposition
 
-| Before wt-sweep | After wt-sweep |
+| Before sentei | After sentei |
 |-----------------|----------------|
 | 5-15 min manual cleanup | 30 seconds interactive cleanup |
 | Risk of losing uncommitted work | Clear warnings for dirty worktrees |
@@ -169,7 +169,7 @@ For each worktree, gather:
 - For CI/automation use cases
 
 #### F10: Configuration File
-- `.wt-sweep.yaml` in repo root or home directory
+- `.sentei.yaml` in repo root or home directory
 - Configure: default sort, parallelism, protected branches
 
 #### F11: Branch Protection
@@ -221,7 +221,7 @@ For each worktree, gather:
 ### 7.2 Project Structure
 
 ```
-wt-sweep/
+sentei/
 ├── main.go                 # Entry point, CLI parsing
 ├── go.mod
 ├── go.sum
@@ -298,26 +298,26 @@ wt-sweep/
 
 ```bash
 # Basic usage - run in a bare repo or repo with worktrees
-wt-sweep
+sentei
 
 # Specify repo path
-wt-sweep /path/to/bare/repo
+sentei /path/to/bare/repo
 
 # Dry run
-wt-sweep --dry-run
+sentei --dry-run
 
 # Non-interactive (for scripts)
-wt-sweep --yes --older-than=30d
+sentei --yes --older-than=30d
 
 # Show version
-wt-sweep --version
+sentei --version
 ```
 
 ### 8.2 TUI Wireframe
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│ wt-sweep - Git Worktree Cleanup                          [?] Help   │
+│ sentei - Git Worktree Cleanup                          [?] Help   │
 ├─────────────────────────────────────────────────────────────────────┤
 │                                                                     │
 │   [ ] 🟢 feature/auth-refactor     3 days ago    "Add OAuth2 flow" │
@@ -402,7 +402,7 @@ Example:
    To unlock and retry:
      git worktree unlock /path/to/feature/old-branch
 
-   Or select "force delete locked" option in wt-sweep
+   Or select "force delete locked" option in sentei
 ```
 
 ---

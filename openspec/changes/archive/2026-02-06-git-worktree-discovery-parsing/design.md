@@ -1,6 +1,6 @@
 ## Context
 
-wt-sweep is a greenfield Go project. This is the first change — there's no existing code. We're building the foundation layer that parses `git worktree list --porcelain` output into structured Go data. All downstream features (metadata enrichment, TUI, deletion) will consume the types and functions defined here.
+sentei is a greenfield Go project. This is the first change — there's no existing code. We're building the foundation layer that parses `git worktree list --porcelain` output into structured Go data. All downstream features (metadata enrichment, TUI, deletion) will consume the types and functions defined here.
 
 Git's porcelain format is line-based and block-separated by blank lines. Each block represents one worktree with key-value pairs (some keys are bare flags like `bare`, `locked`, `prunable`).
 

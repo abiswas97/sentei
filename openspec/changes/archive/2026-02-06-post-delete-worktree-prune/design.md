@@ -1,6 +1,6 @@
 ## Context
 
-After worktree deletions, `$GIT_DIR/worktrees` can retain orphaned metadata entries. The current TUI summary displays a text tip suggesting users run `git worktree prune` manually. Since wt-sweep already has a `CommandRunner` and the repo path, it can automate this step.
+After worktree deletions, `$GIT_DIR/worktrees` can retain orphaned metadata entries. The current TUI summary displays a text tip suggesting users run `git worktree prune` manually. Since sentei already has a `CommandRunner` and the repo path, it can automate this step.
 
 The prune operation is a single `git worktree prune` call against the bare repo — fast, idempotent, and safe. It only removes metadata for worktrees whose directories no longer exist.
 

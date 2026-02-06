@@ -1,6 +1,6 @@
 
 ### Requirement: Setup creates a bare repository with worktrees
-The system SHALL create a bare git repository at `/tmp/wt-sweep-playground/repo.git` and add worktrees representing all states the TUI handles.
+The system SHALL create a bare git repository at `/tmp/sentei-playground/repo.git` and add worktrees representing all states the TUI handles.
 
 #### Scenario: Fresh setup
 - **WHEN** `Setup()` is called and no playground directory exists
@@ -12,7 +12,7 @@ The system SHALL create a bare git repository at `/tmp/wt-sweep-playground/repo.
 
 #### Scenario: Setup returns cleanup function
 - **WHEN** `Setup()` returns successfully
-- **THEN** the cleanup function SHALL remove the entire `/tmp/wt-sweep-playground/` directory when called
+- **THEN** the cleanup function SHALL remove the entire `/tmp/sentei-playground/` directory when called
 
 ### Requirement: Playground includes a clean worktree
 The system SHALL create a worktree on branch `feature/active` with a clean working tree and a recent commit.
@@ -60,15 +60,15 @@ The system SHALL create a worktree in detached HEAD state (checked out to a spec
 The system SHALL accept a `--playground` flag that triggers playground setup, launches the TUI against the playground repo, and cleans up on exit.
 
 #### Scenario: Playground flag launches TUI
-- **WHEN** the user runs `wt-sweep --playground`
+- **WHEN** the user runs `sentei --playground`
 - **THEN** the system SHALL set up the playground, run the TUI against it, and remove the playground directory after the TUI exits
 
 #### Scenario: Playground keep flag
-- **WHEN** the user runs `wt-sweep --playground --playground-keep`
+- **WHEN** the user runs `sentei --playground --playground-keep`
 - **THEN** the system SHALL set up the playground and run the TUI, but NOT remove the playground directory after exit
 
 #### Scenario: Playground flag with repo path
-- **WHEN** the user runs `wt-sweep --playground /some/path`
+- **WHEN** the user runs `sentei --playground /some/path`
 - **THEN** the `--playground` flag SHALL take precedence and the path argument SHALL be ignored
 
 ### Requirement: Playground uses delayed runner for TUI

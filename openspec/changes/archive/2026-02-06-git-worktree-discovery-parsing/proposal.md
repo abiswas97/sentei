@@ -1,6 +1,6 @@
 ## Why
 
-wt-sweep needs a foundation layer that can discover all worktrees in a git repository and parse their metadata from `git worktree list --porcelain` output. This is the first building block — every other feature (TUI display, enrichment, deletion) depends on having a reliable, structured representation of worktrees parsed from git's porcelain output.
+sentei needs a foundation layer that can discover all worktrees in a git repository and parse their metadata from `git worktree list --porcelain` output. This is the first building block — every other feature (TUI display, enrichment, deletion) depends on having a reliable, structured representation of worktrees parsed from git's porcelain output.
 
 ## What Changes
 

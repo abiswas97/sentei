@@ -7,7 +7,7 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/abiswas/wt-sweep/internal/worktree"
+	"github.com/abiswas97/sentei/internal/worktree"
 )
 
 func (m Model) updateConfirm(msg tea.Msg) (tea.Model, tea.Cmd) {

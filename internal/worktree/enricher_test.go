@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/abiswas/wt-sweep/internal/git"
+	"github.com/abiswas97/sentei/internal/git"
 )
 
 func TestParseStatusPorcelain(t *testing.T) {

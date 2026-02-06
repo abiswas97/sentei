@@ -1,8 +1,8 @@
-# wt-sweep: Git Worktree Cleanup Tool
+# sentei: Git Worktree Cleanup Tool
 
 ## Project Overview
 
-wt-sweep is a TUI (Terminal User Interface) tool for managing and cleaning up stale git worktrees in bare repositories. It provides an interactive way to identify, select, and bulk-delete worktrees with parallel execution and progress feedback.
+sentei is a TUI (Terminal User Interface) tool for managing and cleaning up stale git worktrees in bare repositories. It provides an interactive way to identify, select, and bulk-delete worktrees with parallel execution and progress feedback.
 
 ## Tech Stack
 
@@ -63,7 +63,7 @@ git worktree prune
 ### Project Structure
 
 ```
-wt-sweep/
+sentei/
 ├── main.go                 # Entry point, CLI parsing
 ├── internal/
 │   ├── git/               # Git command execution and parsing

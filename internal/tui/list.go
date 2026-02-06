@@ -9,7 +9,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
-	"github.com/abiswas/wt-sweep/internal/git"
+	"github.com/abiswas97/sentei/internal/git"
 )
 
 const (
@@ -153,7 +153,7 @@ func (m Model) updateList(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m Model) viewList() string {
 	var b strings.Builder
 
-	b.WriteString(styleHeader.Render("wt-sweep - Git Worktree Cleanup"))
+	b.WriteString(styleHeader.Render("sentei - Git Worktree Cleanup"))
 	b.WriteString("\n\n")
 
 	if len(m.worktrees) == 0 {

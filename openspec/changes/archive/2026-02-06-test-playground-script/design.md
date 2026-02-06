@@ -1,11 +1,11 @@
 ## Context
 
-wt-sweep needs a reproducible test environment — a bare repo with worktrees in various states. Currently the only way to test is against real repos. The playground should be a first-class dev tool that's fast, idempotent, and requires zero manual setup.
+sentei needs a reproducible test environment — a bare repo with worktrees in various states. Currently the only way to test is against real repos. The playground should be a first-class dev tool that's fast, idempotent, and requires zero manual setup.
 
 ## Goals / Non-Goals
 
 **Goals:**
-- One-command playground: `wt-sweep --playground`
+- One-command playground: `sentei --playground`
 - Covers all worktree states the TUI handles (clean, dirty, untracked, locked, old, detached, prunable)
 - Fast setup (<2 seconds)
 - Clean Go code in `internal/playground/` — no shell scripts
@@ -18,7 +18,7 @@ wt-sweep needs a reproducible test environment — a bare repo with worktrees in
 
 ## Decisions
 
-### D1: Fixed playground directory at `/tmp/wt-sweep-playground/`
+### D1: Fixed playground directory at `/tmp/sentei-playground/`
 
 Use a fixed, well-known path rather than `mktemp -d`.
 

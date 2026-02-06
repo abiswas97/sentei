@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/abiswas/wt-sweep/internal/git"
+	"github.com/abiswas97/sentei/internal/git"
 )
 
 func TestViewConfirm_CleanWorktrees(t *testing.T) {

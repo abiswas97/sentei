@@ -1,4 +1,4 @@
-module github.com/abiswas/wt-sweep
+module github.com/abiswas97/sentei
 
 go 1.24.2
 

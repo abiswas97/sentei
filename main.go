@@ -8,10 +8,10 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/abiswas/wt-sweep/internal/git"
-	"github.com/abiswas/wt-sweep/internal/playground"
-	"github.com/abiswas/wt-sweep/internal/tui"
-	"github.com/abiswas/wt-sweep/internal/worktree"
+	"github.com/abiswas97/sentei/internal/git"
+	"github.com/abiswas97/sentei/internal/playground"
+	"github.com/abiswas97/sentei/internal/tui"
+	"github.com/abiswas97/sentei/internal/worktree"
 )
 
 const (

@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-var PlaygroundDir = filepath.Join(os.TempDir(), "wt-sweep-playground")
+var PlaygroundDir = filepath.Join(os.TempDir(), "sentei-playground")
 
 func gitRun(dir string, args ...string) error {
 	return gitRunEnv(dir, nil, args...)
@@ -83,15 +83,15 @@ func seedInitialCommit(repoPath string) error {
 		return err
 	}
 
-	if err := gitRun(tmpWork, "config", "user.email", "test@wt-sweep.dev"); err != nil {
+	if err := gitRun(tmpWork, "config", "user.email", "test@sentei.dev"); err != nil {
 		return err
 	}
-	if err := gitRun(tmpWork, "config", "user.name", "wt-sweep test"); err != nil {
+	if err := gitRun(tmpWork, "config", "user.name", "sentei test"); err != nil {
 		return err
 	}
 
 	seedFile := filepath.Join(tmpWork, "README.md")
-	if err := os.WriteFile(seedFile, []byte("# Test Repository\n\nCreated by wt-sweep playground.\n"), 0o644); err != nil {
+	if err := os.WriteFile(seedFile, []byte("# Test Repository\n\nCreated by sentei playground.\n"), 0o644); err != nil {
 		return err
 	}
 
@@ -218,8 +218,8 @@ func addDetachedWorktree(repoPath string) error {
 }
 
 func configWorktree(wtPath string) error {
-	if err := gitRun(wtPath, "config", "user.email", "test@wt-sweep.dev"); err != nil {
+	if err := gitRun(wtPath, "config", "user.email", "test@sentei.dev"); err != nil {
 		return err
 	}
-	return gitRun(wtPath, "config", "user.name", "wt-sweep test")
+	return gitRun(wtPath, "config", "user.name", "sentei test")
 }

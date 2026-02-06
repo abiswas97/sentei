@@ -1,6 +1,6 @@
 ## 1. Playground Package
 
-- [x] 1.1 Create `internal/playground/setup.go` with `Setup() (repoPath string, cleanup func(), err error)` that removes any existing playground dir, creates `/tmp/wt-sweep-playground/`, and initializes a bare repo at `repo.git`
+- [x] 1.1 Create `internal/playground/setup.go` with `Setup() (repoPath string, cleanup func(), err error)` that removes any existing playground dir, creates `/tmp/sentei-playground/`, and initializes a bare repo at `repo.git`
 - [x] 1.2 Add helper `gitRun(dir string, args ...string) error` for running git commands during setup (thin wrapper around `os/exec`)
 - [x] 1.3 Create an initial commit on `main` branch with a seed file (needed before worktrees can be added)
 - [x] 1.4 Add `feature/active` worktree — clean, recent commit

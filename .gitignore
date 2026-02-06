@@ -1,6 +1,6 @@
 # Binaries
-wt-sweep
-wt-sweep-test
+sentei
+sentei-test
 *.exe
 *.exe~
 *.dll
