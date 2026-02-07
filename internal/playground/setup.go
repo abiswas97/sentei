@@ -45,7 +45,7 @@ func Setup() (repoPath string, cleanup func(), err error) {
 
 	repoPath = filepath.Join(PlaygroundDir, "repo.git")
 
-	if err := gitRun(PlaygroundDir, "init", "--bare", repoPath); err != nil {
+	if err := gitRun(PlaygroundDir, "init", "--bare", "--initial-branch=main", repoPath); err != nil {
 		cleanupFn()
 		return "", nil, fmt.Errorf("init bare repo: %w", err)
 	}
