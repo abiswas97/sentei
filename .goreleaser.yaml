@@ -40,13 +40,14 @@ signs:
       - ${artifact}
       - --yes
 
-homebrew_casks:
+brews:
   - repository:
       owner: abiswas97
       name: homebrew-tap
       token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
     homepage: https://github.com/abiswas97/sentei
     description: A TUI tool for cleaning up stale git worktrees
+    license: MIT
 
 changelog:
   use: github
