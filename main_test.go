@@ -8,7 +8,7 @@ import (
 
 func TestVersionFlag(t *testing.T) {
 	bin := t.TempDir() + "/sentei"
-	build := exec.Command("go", "build", "-ldflags", "-X main.version=v1.2.3", "-o", bin, ".")
+	build := exec.Command("go", "build", "-ldflags", "-X main.version=v1.2.3 -X main.commit=abc1234 -X main.date=2026-02-07", "-o", bin, ".")
 	if out, err := build.CombinedOutput(); err != nil {
 		t.Fatalf("build failed: %v\n%s", err, out)
 	}
@@ -19,7 +19,7 @@ func TestVersionFlag(t *testing.T) {
 			t.Fatalf("unexpected error: %v", err)
 		}
 		got := strings.TrimSpace(string(out))
-		want := "sentei v1.2.3"
+		want := "sentei v1.2.3 (abc1234, 2026-02-07)"
 		if got != want {
 			t.Errorf("got %q, want %q", got, want)
 		}
@@ -36,7 +36,7 @@ func TestVersionFlag(t *testing.T) {
 			t.Fatalf("unexpected error: %v", err)
 		}
 		got := strings.TrimSpace(string(out))
-		want := "sentei dev"
+		want := "sentei dev (none, unknown)"
 		if got != want {
 			t.Errorf("got %q, want %q", got, want)
 		}
@@ -48,7 +48,7 @@ func TestVersionFlag(t *testing.T) {
 			t.Fatalf("unexpected error: %v", err)
 		}
 		got := strings.TrimSpace(string(out))
-		want := "sentei v1.2.3"
+		want := "sentei v1.2.3 (abc1234, 2026-02-07)"
 		if got != want {
 			t.Errorf("got %q, want %q", got, want)
 		}

@@ -27,7 +27,7 @@ func Print(worktrees []git.Worktree, w io.Writer) {
 	})
 
 	tw := tabwriter.NewWriter(w, 0, 0, 2, ' ', 0)
-	fmt.Fprintln(tw, "STATUS\tBRANCH\tAGE\tSUBJECT")
+	_, _ = fmt.Fprintln(tw, "STATUS\tBRANCH\tAGE\tSUBJECT")
 	for _, wt := range sorted {
 		branch := stripBranchPrefix(wt.Branch)
 		if branch == "" {
@@ -53,9 +53,9 @@ func Print(worktrees []git.Worktree, w io.Writer) {
 			branch += " [P]"
 		}
 
-		fmt.Fprintf(tw, "%s\t%s\t%s\t%s\n", statusIndicator(wt), branch, age, subject)
+		_, _ = fmt.Fprintf(tw, "%s\t%s\t%s\t%s\n", statusIndicator(wt), branch, age, subject)
 	}
-	tw.Flush()
+	_ = tw.Flush()
 }
 
 func statusIndicator(wt git.Worktree) string {

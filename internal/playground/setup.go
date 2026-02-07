@@ -33,14 +33,14 @@ func gitRunEnv(dir string, env []string, args ...string) error {
 }
 
 func Setup() (repoPath string, cleanup func(), err error) {
-	os.RemoveAll(PlaygroundDir)
+	_ = os.RemoveAll(PlaygroundDir)
 
 	if err := os.MkdirAll(PlaygroundDir, 0o755); err != nil {
 		return "", nil, fmt.Errorf("creating playground dir: %w", err)
 	}
 
 	cleanupFn := func() {
-		os.RemoveAll(PlaygroundDir)
+		_ = os.RemoveAll(PlaygroundDir)
 	}
 
 	repoPath = filepath.Join(PlaygroundDir, "repo.git")

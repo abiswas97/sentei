@@ -15,7 +15,11 @@ import (
 	"github.com/abiswas97/sentei/internal/worktree"
 )
 
-var version = "dev"
+var (
+	version = "dev"
+	commit  = "none"
+	date    = "unknown"
+)
 
 const (
 	enrichConcurrency = 10
@@ -29,7 +33,7 @@ func main() {
 	flag.Parse()
 
 	if *versionFlag {
-		fmt.Printf("sentei %s\n", version)
+		fmt.Printf("sentei %s (%s, %s)\n", version, commit, date)
 		os.Exit(0)
 	}
 

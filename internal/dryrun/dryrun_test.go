@@ -173,7 +173,7 @@ func TestPrintSortOrder(t *testing.T) {
 	if oldestIdx == -1 || middleIdx == -1 || newerIdx == -1 {
 		t.Fatalf("missing branches in output:\n%s", output)
 	}
-	if !(oldestIdx < middleIdx && middleIdx < newerIdx) {
+	if oldestIdx >= middleIdx || middleIdx >= newerIdx {
 		t.Errorf("expected oldest < middle < newer, got positions %d, %d, %d\noutput:\n%s",
 			oldestIdx, middleIdx, newerIdx, output)
 	}
