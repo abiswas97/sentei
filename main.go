@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"runtime/debug"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -20,6 +21,31 @@ var (
 	commit  = "none"
 	date    = "unknown"
 )
+
+func init() {
+	if version != "dev" {
+		return
+	}
+	info, ok := debug.ReadBuildInfo()
+	if !ok {
+		return
+	}
+	if info.Main.Version != "" && info.Main.Version != "(devel)" {
+		version = info.Main.Version
+	}
+	for _, s := range info.Settings {
+		switch s.Key {
+		case "vcs.revision":
+			if len(s.Value) >= 7 {
+				commit = s.Value[:7]
+			}
+		case "vcs.time":
+			if t, err := time.Parse(time.RFC3339, s.Value); err == nil {
+				date = t.Format("2006-01-02")
+			}
+		}
+	}
+}
 
 const (
 	enrichConcurrency = 10
