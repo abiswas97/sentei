@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.1](https://github.com/abiswas97/sentei/compare/v0.3.0...v0.3.1) (2026-02-07)
+
+
+### Bug Fixes
+
+* merge release workflows so goreleaser triggers on release ([15834a0](https://github.com/abiswas97/sentei/commit/15834a07f22a56bd2451c7f8d1c3f83595db30de))
+* merge release workflows so goreleaser triggers on release ([ef9c46f](https://github.com/abiswas97/sentei/commit/ef9c46f4fe9e9797e5e72bcd439fd518212957f7))
+
 ## [0.3.0](https://github.com/abiswas97/sentei/compare/v0.2.0...v0.3.0) (2026-02-07)
 
 
