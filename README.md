@@ -1,5 +1,7 @@
 # sentei
 
+[![codecov](https://codecov.io/gh/abiswas97/sentei/branch/main/graph/badge.svg)](https://codecov.io/gh/abiswas97/sentei)
+
 A TUI tool for cleaning up stale git worktrees. Scan, select, and bulk-delete worktrees with parallel execution and clear progress feedback.
 
 ## Features

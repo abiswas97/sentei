@@ -22,5 +22,8 @@ go.work
 *.swp
 *.swo
 
+# GoReleaser
+dist/
+
 # OS
 .DS_Store

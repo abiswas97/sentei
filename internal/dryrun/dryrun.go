@@ -11,7 +11,7 @@ import (
 	"github.com/abiswas97/sentei/internal/git"
 )
 
-func Print(worktrees []git.Worktree, w io.Writer) {
+func Print(worktrees []git.Worktree, w io.Writer) error {
 	sorted := make([]git.Worktree, len(worktrees))
 	copy(sorted, worktrees)
 	sort.SliceStable(sorted, func(a, b int) bool {
@@ -27,7 +27,9 @@ func Print(worktrees []git.Worktree, w io.Writer) {
 	})
 
 	tw := tabwriter.NewWriter(w, 0, 0, 2, ' ', 0)
-	fmt.Fprintln(tw, "STATUS\tBRANCH\tAGE\tSUBJECT")
+	if _, err := fmt.Fprintln(tw, "STATUS\tBRANCH\tAGE\tSUBJECT"); err != nil {
+		return err
+	}
 	for _, wt := range sorted {
 		branch := stripBranchPrefix(wt.Branch)
 		if branch == "" {
@@ -53,9 +55,11 @@ func Print(worktrees []git.Worktree, w io.Writer) {
 			branch += " [P]"
 		}
 
-		fmt.Fprintf(tw, "%s\t%s\t%s\t%s\n", statusIndicator(wt), branch, age, subject)
+		if _, err := fmt.Fprintf(tw, "%s\t%s\t%s\t%s\n", statusIndicator(wt), branch, age, subject); err != nil {
+			return err
+		}
 	}
-	tw.Flush()
+	return tw.Flush()
 }
 
 func statusIndicator(wt git.Worktree) string {

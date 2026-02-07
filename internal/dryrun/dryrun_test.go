@@ -137,7 +137,9 @@ func TestPrint(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var buf bytes.Buffer
-			Print(tt.worktrees, &buf)
+			if err := Print(tt.worktrees, &buf); err != nil {
+				t.Fatalf("Print() error: %v", err)
+			}
 			output := buf.String()
 
 			for _, want := range tt.wantLines {
@@ -163,7 +165,9 @@ func TestPrintSortOrder(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	Print(worktrees, &buf)
+	if err := Print(worktrees, &buf); err != nil {
+		t.Fatalf("Print() error: %v", err)
+	}
 	output := buf.String()
 
 	oldestIdx := strings.Index(output, "oldest")
@@ -173,7 +177,7 @@ func TestPrintSortOrder(t *testing.T) {
 	if oldestIdx == -1 || middleIdx == -1 || newerIdx == -1 {
 		t.Fatalf("missing branches in output:\n%s", output)
 	}
-	if !(oldestIdx < middleIdx && middleIdx < newerIdx) {
+	if oldestIdx >= middleIdx || middleIdx >= newerIdx {
 		t.Errorf("expected oldest < middle < newer, got positions %d, %d, %d\noutput:\n%s",
 			oldestIdx, middleIdx, newerIdx, output)
 	}
@@ -191,7 +195,9 @@ func TestPrintNoAnsi(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	Print(worktrees, &buf)
+	if err := Print(worktrees, &buf); err != nil {
+		t.Fatalf("Print() error: %v", err)
+	}
 	output := buf.String()
 
 	if strings.Contains(output, "\x1b[") {
