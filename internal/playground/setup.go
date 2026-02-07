@@ -33,19 +33,19 @@ func gitRunEnv(dir string, env []string, args ...string) error {
 }
 
 func Setup() (repoPath string, cleanup func(), err error) {
-	os.RemoveAll(PlaygroundDir)
+	_ = os.RemoveAll(PlaygroundDir)
 
 	if err := os.MkdirAll(PlaygroundDir, 0o755); err != nil {
 		return "", nil, fmt.Errorf("creating playground dir: %w", err)
 	}
 
 	cleanupFn := func() {
-		os.RemoveAll(PlaygroundDir)
+		_ = os.RemoveAll(PlaygroundDir)
 	}
 
 	repoPath = filepath.Join(PlaygroundDir, "repo.git")
 
-	if err := gitRun(PlaygroundDir, "init", "--bare", repoPath); err != nil {
+	if err := gitRun(PlaygroundDir, "init", "--bare", "--initial-branch=main", repoPath); err != nil {
 		cleanupFn()
 		return "", nil, fmt.Errorf("init bare repo: %w", err)
 	}

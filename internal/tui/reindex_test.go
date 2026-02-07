@@ -59,7 +59,6 @@ func TestReindex_SortByBranch(t *testing.T) {
 	}
 }
 
-
 func TestReindex_FilterSubstring(t *testing.T) {
 	m := NewModel(makeWorktrees(), nil, "/repo")
 	m.filterText = "feature"

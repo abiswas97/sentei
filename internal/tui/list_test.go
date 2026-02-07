@@ -260,4 +260,3 @@ func TestDeselectAll_WithProtected(t *testing.T) {
 		t.Errorf("expected 0 selected after deselect-all, got %d", len(m.selected))
 	}
 }
-
