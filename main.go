@@ -77,7 +77,10 @@ func main() {
 	}
 
 	if *dryRunFlag {
-		dryrun.Print(filtered, os.Stdout)
+		if err := dryrun.Print(filtered, os.Stdout); err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
 		os.Exit(0)
 	}
 
