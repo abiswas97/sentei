@@ -41,7 +41,7 @@ The goal is a fully automated pipeline: push to feature branch → CI validates 
 
 ### D3: Cosign keyless signing from day one
 **Choice**: Include cosign signing via GitHub Actions OIDC.
-**Why**: Zero key management overhead. Uses GitHub's identity provider for attestation. Industry is moving toward sigstore/cosign for supply chain security. Only ~5 lines of GoReleaser config. Produces `.sig` and `.pem` files alongside checksums.
+**Why**: Zero key management overhead. Uses GitHub's identity provider for attestation. Industry is moving toward sigstore/cosign for supply chain security. Only ~5 lines of GoReleaser config. Produces a `.sigstore.json` bundle alongside checksums.
 **Trade-off**: Users need cosign installed to verify signatures (checksums.txt alone is still useful without it).
 
 ### D4: golangci-lint with moderate rule set

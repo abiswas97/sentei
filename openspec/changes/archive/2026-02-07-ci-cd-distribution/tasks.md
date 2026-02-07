@@ -1,7 +1,7 @@
 ## 1. External Setup
 
-- [ ] 1.1 Create `abiswas97/homebrew-tap` GitHub repo (public, empty, with a README)
-- [ ] 1.2 Create a fine-grained PAT with repo scope on `abiswas97/homebrew-tap` and add it as `HOMEBREW_TAP_GITHUB_TOKEN` secret in `abiswas97/sentei` repo settings
+- [x] 1.1 Create `abiswas97/homebrew-tap` GitHub repo (public, empty, with a README)
+- [x] 1.2 Create a fine-grained PAT with repo scope on `abiswas97/homebrew-tap` and add it as `HOMEBREW_TAP_GITHUB_TOKEN` secret in `abiswas97/sentei` repo settings
 
 ## 2. Project Files
 
@@ -48,4 +48,4 @@
 
 ## 10. Branch Protection
 
-- [ ] 10.1 Configure GitHub branch protection on main via `gh api`: require status checks (lint, test, build, commitlint), block force pushes, block direct pushes
+- [x] 10.1 Configure GitHub branch protection on main via `gh api`: require status checks (lint, test, build, commitlint), block force pushes, block direct pushes
