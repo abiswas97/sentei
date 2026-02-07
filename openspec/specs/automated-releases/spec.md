@@ -38,7 +38,7 @@ A GitHub Actions workflow SHALL trigger on tags matching `v*`. It SHALL run GoRe
 - **THEN** linux and darwin archives use `.tar.gz` format and windows archives use `.zip` format
 
 ### Requirement: GoReleaser generates and signs checksums
-GoReleaser SHALL generate a `checksums.txt` file containing SHA256 hashes of all archives. It SHALL sign the checksums file using cosign keyless signing (GitHub Actions OIDC), producing `.sig` and `.pem` files.
+GoReleaser SHALL generate a `checksums.txt` file containing SHA256 hashes of all archives. It SHALL sign the checksums file using cosign keyless signing (GitHub Actions OIDC), producing a `.sigstore.json` bundle file.
 
 #### Scenario: Checksums file is generated
 - **WHEN** GoReleaser completes a release
@@ -46,14 +46,14 @@ GoReleaser SHALL generate a `checksums.txt` file containing SHA256 hashes of all
 
 #### Scenario: Checksums are signed with cosign
 - **WHEN** GoReleaser completes a release
-- **THEN** `checksums.txt.sig` and `checksums.txt.pem` files are included in the GitHub Release assets
+- **THEN** a `checksums.txt.sigstore.json` bundle is included in the GitHub Release assets
 
-### Requirement: GoReleaser pushes Homebrew formula to tap
-GoReleaser SHALL generate a Homebrew formula and push it to the `abiswas97/homebrew-tap` repository. The formula SHALL include the project homepage and description.
+### Requirement: GoReleaser pushes Homebrew cask to tap
+GoReleaser SHALL generate a Homebrew cask and push it to the `abiswas97/homebrew-tap` repository. The cask SHALL include the project homepage and description.
 
-#### Scenario: Homebrew formula is updated on release
+#### Scenario: Homebrew cask is updated on release
 - **WHEN** GoReleaser completes a release
-- **THEN** the Homebrew formula in `abiswas97/homebrew-tap` is created or updated
+- **THEN** the Homebrew cask in `abiswas97/homebrew-tap` is created or updated
 
 #### Scenario: User installs via Homebrew
 - **WHEN** a user runs `brew tap abiswas97/tap && brew install sentei`
