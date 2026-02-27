@@ -2,8 +2,10 @@ package worktree
 
 import (
 	"fmt"
+	"os"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/abiswas97/sentei/internal/git"
 )
@@ -16,21 +18,17 @@ func collectEvents(ch <-chan DeletionEvent) []DeletionEvent {
 	return events
 }
 
-func TestDeleteWorktrees_AllSuccessful(t *testing.T) {
-	runner := &mockRunner{
-		responses: map[string]mockResponse{
-			"/repo worktree remove --force /work/a": {output: ""},
-			"/repo worktree remove --force /work/b": {output: ""},
-		},
-	}
+func TestDeleteWorktrees_DeletesRealDirectories(t *testing.T) {
+	dirA := t.TempDir()
+	dirB := t.TempDir()
 
 	worktrees := []git.Worktree{
-		{Path: "/work/a", Branch: "refs/heads/a"},
-		{Path: "/work/b", Branch: "refs/heads/b"},
+		{Path: dirA, Branch: "refs/heads/a"},
+		{Path: dirB, Branch: "refs/heads/b"},
 	}
 
 	progress := make(chan DeletionEvent, 20)
-	result := DeleteWorktrees(runner, "/repo", worktrees, 5, progress)
+	result := DeleteWorktrees(os.RemoveAll, worktrees, 5, progress)
 	events := collectEvents(progress)
 
 	if result.SuccessCount != 2 {
@@ -39,13 +37,11 @@ func TestDeleteWorktrees_AllSuccessful(t *testing.T) {
 	if result.FailureCount != 0 {
 		t.Errorf("FailureCount = %d, want 0", result.FailureCount)
 	}
-	if len(result.Outcomes) != 2 {
-		t.Fatalf("Outcomes length = %d, want 2", len(result.Outcomes))
+	if _, err := os.Stat(dirA); !os.IsNotExist(err) {
+		t.Errorf("directory %s should be deleted", dirA)
 	}
-	for i, o := range result.Outcomes {
-		if !o.Success {
-			t.Errorf("Outcome[%d] should be success", i)
-		}
+	if _, err := os.Stat(dirB); !os.IsNotExist(err) {
+		t.Errorf("directory %s should be deleted", dirB)
 	}
 
 	var started, completed int
@@ -67,12 +63,27 @@ func TestDeleteWorktrees_AllSuccessful(t *testing.T) {
 	}
 }
 
-func TestDeleteWorktrees_AllFailed(t *testing.T) {
-	runner := &mockRunner{
-		responses: map[string]mockResponse{
-			"/repo worktree remove --force /work/a": {err: fmt.Errorf("locked")},
-			"/repo worktree remove --force /work/b": {err: fmt.Errorf("permission denied")},
-		},
+func TestDeleteWorktrees_DirectoryAlreadyMissing_Succeeds(t *testing.T) {
+	worktrees := []git.Worktree{
+		{Path: "/nonexistent/path/worktree"},
+	}
+
+	progress := make(chan DeletionEvent, 10)
+	result := DeleteWorktrees(os.RemoveAll, worktrees, 5, progress)
+	collectEvents(progress)
+
+	if result.SuccessCount != 1 {
+		t.Errorf("SuccessCount = %d, want 1 (missing directory should be a no-op success)", result.SuccessCount)
+	}
+	if result.FailureCount != 0 {
+		t.Errorf("FailureCount = %d, want 0", result.FailureCount)
+	}
+}
+
+func TestDeleteWorktrees_RemovalFailure_ReportsFailure(t *testing.T) {
+	removalErr := fmt.Errorf("permission denied")
+	failingRemover := func(path string) error {
+		return removalErr
 	}
 
 	worktrees := []git.Worktree{
@@ -81,7 +92,7 @@ func TestDeleteWorktrees_AllFailed(t *testing.T) {
 	}
 
 	progress := make(chan DeletionEvent, 20)
-	result := DeleteWorktrees(runner, "/repo", worktrees, 5, progress)
+	result := DeleteWorktrees(failingRemover, worktrees, 5, progress)
 	collectEvents(progress)
 
 	if result.SuccessCount != 0 {
@@ -100,21 +111,25 @@ func TestDeleteWorktrees_AllFailed(t *testing.T) {
 	}
 }
 
-func TestDeleteWorktrees_MixedResults(t *testing.T) {
-	runner := &mockRunner{
-		responses: map[string]mockResponse{
-			"/repo worktree remove --force /work/ok":   {output: ""},
-			"/repo worktree remove --force /work/fail": {err: fmt.Errorf("locked")},
-		},
+func TestDeleteWorktrees_MixedOutcomes(t *testing.T) {
+	goodDir := t.TempDir()
+	badPath := "/work/fail"
+
+	removalErr := fmt.Errorf("locked")
+	remover := func(path string) error {
+		if path == badPath {
+			return removalErr
+		}
+		return os.RemoveAll(path)
 	}
 
 	worktrees := []git.Worktree{
-		{Path: "/work/ok"},
-		{Path: "/work/fail"},
+		{Path: goodDir},
+		{Path: badPath},
 	}
 
 	progress := make(chan DeletionEvent, 20)
-	result := DeleteWorktrees(runner, "/repo", worktrees, 5, progress)
+	result := DeleteWorktrees(remover, worktrees, 5, progress)
 	events := collectEvents(progress)
 
 	if result.SuccessCount != 1 {
@@ -142,10 +157,8 @@ func TestDeleteWorktrees_MixedResults(t *testing.T) {
 }
 
 func TestDeleteWorktrees_EmptyInput(t *testing.T) {
-	runner := &mockRunner{responses: map[string]mockResponse{}}
-
 	progress := make(chan DeletionEvent, 20)
-	result := DeleteWorktrees(runner, "/repo", nil, 5, progress)
+	result := DeleteWorktrees(os.RemoveAll, nil, 5, progress)
 	events := collectEvents(progress)
 
 	if result.SuccessCount != 0 || result.FailureCount != 0 {
@@ -156,45 +169,20 @@ func TestDeleteWorktrees_EmptyInput(t *testing.T) {
 	}
 }
 
-func TestDeleteWorktrees_LockedWorktreeUsesDoubleForce(t *testing.T) {
-	runner := &mockRunner{
-		responses: map[string]mockResponse{
-			"/repo worktree remove --force --force /work/locked": {output: ""},
-		},
-	}
-
-	worktrees := []git.Worktree{
-		{Path: "/work/locked", IsLocked: true},
-	}
-
-	progress := make(chan DeletionEvent, 20)
-	result := DeleteWorktrees(runner, "/repo", worktrees, 5, progress)
-	collectEvents(progress)
-
-	if result.SuccessCount != 1 {
-		t.Errorf("SuccessCount = %d, want 1", result.SuccessCount)
-	}
-	if result.FailureCount != 0 {
-		t.Errorf("FailureCount = %d, want 0", result.FailureCount)
-	}
-}
-
 func TestDeleteWorktrees_ConcurrencyBound(t *testing.T) {
-	var maxConcurrent atomic.Int32
-	var current atomic.Int32
+	var current, maxConcurrent atomic.Int32
 
-	runner := &concurrencyTrackingRunner{
-		inner: &mockRunner{
-			responses: map[string]mockResponse{
-				"/repo worktree remove --force /work/1": {output: ""},
-				"/repo worktree remove --force /work/2": {output: ""},
-				"/repo worktree remove --force /work/3": {output: ""},
-				"/repo worktree remove --force /work/4": {output: ""},
-				"/repo worktree remove --force /work/5": {output: ""},
-			},
-		},
-		current:       &current,
-		maxConcurrent: &maxConcurrent,
+	remover := func(path string) error {
+		cur := current.Add(1)
+		defer current.Add(-1)
+		for {
+			old := maxConcurrent.Load()
+			if cur <= old || maxConcurrent.CompareAndSwap(old, cur) {
+				break
+			}
+		}
+		time.Sleep(10 * time.Millisecond)
+		return nil
 	}
 
 	worktrees := make([]git.Worktree, 5)
@@ -203,7 +191,7 @@ func TestDeleteWorktrees_ConcurrencyBound(t *testing.T) {
 	}
 
 	progress := make(chan DeletionEvent, 50)
-	DeleteWorktrees(runner, "/repo", worktrees, 2, progress)
+	DeleteWorktrees(remover, worktrees, 2, progress)
 	collectEvents(progress)
 
 	if maxConcurrent.Load() > 2 {
@@ -235,22 +223,4 @@ func TestPruneWorktrees_Failure(t *testing.T) {
 	if err == nil {
 		t.Error("PruneWorktrees() error = nil, want error")
 	}
-}
-
-type concurrencyTrackingRunner struct {
-	inner         *mockRunner
-	current       *atomic.Int32
-	maxConcurrent *atomic.Int32
-}
-
-func (c *concurrencyTrackingRunner) Run(dir string, args ...string) (string, error) {
-	cur := c.current.Add(1)
-	for {
-		old := c.maxConcurrent.Load()
-		if cur <= old || c.maxConcurrent.CompareAndSwap(old, cur) {
-			break
-		}
-	}
-	defer c.current.Add(-1)
-	return c.inner.Run(dir, args...)
 }

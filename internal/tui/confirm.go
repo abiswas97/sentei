@@ -2,6 +2,7 @@ package tui
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/key"
@@ -23,7 +24,7 @@ func (m Model) updateConfirm(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			ch := make(chan worktree.DeletionEvent, len(selected)*2)
 			m.progressCh = ch
-			go worktree.DeleteWorktrees(m.runner, m.repoPath, selected, 5, ch)
+			go worktree.DeleteWorktrees(os.RemoveAll, selected, 5, ch)
 			return m, waitForDeletionEvent(m.progressCh)
 
 		case key.Matches(msg, keys.No), key.Matches(msg, keys.Back):
