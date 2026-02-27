@@ -38,7 +38,7 @@ func PruneWorktrees(runner git.CommandRunner, repoPath string) error {
 	return err
 }
 
-func DeleteWorktrees(runner git.CommandRunner, repoPath string, worktrees []git.Worktree, maxConcurrency int, progress chan<- DeletionEvent) DeletionResult {
+func DeleteWorktrees(remover func(string) error, worktrees []git.Worktree, maxConcurrency int, progress chan<- DeletionEvent) DeletionResult {
 	defer close(progress)
 
 	if len(worktrees) == 0 {
@@ -67,12 +67,7 @@ func DeleteWorktrees(runner git.CommandRunner, repoPath string, worktrees []git.
 
 			progress <- DeletionEvent{Type: DeletionStarted, Path: w.Path}
 
-			args := []string{"worktree", "remove", "--force"}
-			if w.IsLocked {
-				args = append(args, "--force")
-			}
-			args = append(args, w.Path)
-			_, err := runner.Run(repoPath, args...)
+			err := remover(w.Path)
 
 			mu.Lock()
 			defer mu.Unlock()
