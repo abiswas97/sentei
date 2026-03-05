@@ -106,7 +106,7 @@ func (m Model) viewProgress() string {
 	empty := progressBarWidth - filled
 
 	bar := strings.Repeat("#", filled) + strings.Repeat("-", empty)
-	b.WriteString(fmt.Sprintf("  [%s] %d/%d (%d%%)\n\n", bar, done, m.deletionTotal, pct))
+	fmt.Fprintf(&b, "  [%s] %d/%d (%d%%)\n\n", bar, done, m.deletionTotal, pct)
 
 	selected := m.selectedWorktrees()
 	for _, wt := range selected {
