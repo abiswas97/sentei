@@ -32,15 +32,15 @@ func (m Model) viewSummary() string {
 		))
 		b.WriteString("\n")
 	} else {
-		b.WriteString(fmt.Sprintf("  %s, %s\n",
+		fmt.Fprintf(&b, "  %s, %s\n",
 			styleSuccess.Render(fmt.Sprintf("%d removed", r.SuccessCount)),
 			styleError.Render(fmt.Sprintf("%d failed", r.FailureCount)),
-		))
+		)
 		b.WriteString("\n")
 		b.WriteString(styleError.Render("  Failures:\n"))
 		for _, o := range r.Outcomes {
 			if !o.Success {
-				b.WriteString(fmt.Sprintf("    x %s: %s\n", o.Path, o.Error))
+				fmt.Fprintf(&b, "    x %s: %s\n", o.Path, o.Error)
 			}
 		}
 	}
