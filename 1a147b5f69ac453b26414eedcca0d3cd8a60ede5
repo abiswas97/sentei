@@ -1,0 +1,25 @@
+internal/tui/progress.go
+  57fb71956275760f 109
+internal/tui/confirm.go
+  57fb71956275760f 44,65
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.8",
+  "base_commit_sha": "1a147b5f69ac453b26414eedcca0d3cd8a60ede5",
+  "prompts": {
+    "57fb71956275760f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "3af1244c-a353-4bfb-a33b-9f0a379aeb4e",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>",
+      "messages": [],
+      "total_additions": 3,
+      "total_deletions": 3,
+      "accepted_lines": 3,
+      "overriden_lines": 0
+    }
+  }
+}
