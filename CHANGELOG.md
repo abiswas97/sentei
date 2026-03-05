@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.0.1](https://github.com/abiswas97/sentei/compare/v1.0.0...v1.0.1) (2026-03-05)
+
+
+### Bug Fixes
+
+* replace git worktree remove with os.RemoveAll for reliable cleanup ([be03198](https://github.com/abiswas97/sentei/commit/be031988be2bccd79ca6ee30b0787b6c76c5d612))
+* use fmt.Fprintf instead of WriteString(fmt.Sprintf) to satisfy staticcheck QF1012 ([daa1e2d](https://github.com/abiswas97/sentei/commit/daa1e2dade5bb3a6d32e9779ba5bd3202f53f9ee))
+
 ## 1.0.0 (2026-02-07)
 
 
