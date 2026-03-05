@@ -41,7 +41,7 @@ func (m Model) viewConfirm() string {
 
 	b.WriteString(styleHeader.Render("  Confirm Deletion  "))
 	b.WriteString("\n\n")
-	b.WriteString(fmt.Sprintf("  You are about to delete %d worktree(s):\n\n", len(selected)))
+	fmt.Fprintf(&b, "  You are about to delete %d worktree(s):\n\n", len(selected))
 
 	var dirtyCount, untrackedCount, lockedCount int
 	for _, wt := range selected {
@@ -62,7 +62,7 @@ func (m Model) viewConfirm() string {
 			label = styleSuccess.Render("(clean)")
 		}
 
-		b.WriteString(fmt.Sprintf("    * %s %s\n", branch, label))
+		fmt.Fprintf(&b, "    * %s %s\n", branch, label)
 	}
 
 	b.WriteString("\n")
