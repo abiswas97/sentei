@@ -1,0 +1,23 @@
+.github/workflows/release-please.yml
+  57fb71956275760f 24
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.8",
+  "base_commit_sha": "50225fdc845e1a7d130edfde48b3102d5d73d72f",
+  "prompts": {
+    "57fb71956275760f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "3af1244c-a353-4bfb-a33b-9f0a379aeb4e",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>",
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 0,
+      "accepted_lines": 1,
+      "overriden_lines": 0
+    }
+  }
+}
