@@ -7,6 +7,7 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/abiswas97/sentei/internal/cleanup"
 	"github.com/abiswas97/sentei/internal/git"
 	"github.com/abiswas97/sentei/internal/worktree"
 )
@@ -53,7 +54,8 @@ type Model struct {
 	deletionTotal    int
 	progressCh       <-chan worktree.DeletionEvent
 
-	pruneErr *error
+	pruneErr      *error
+	cleanupResult *cleanup.Result
 }
 
 func NewModel(worktrees []git.Worktree, runner git.CommandRunner, repoPath string) Model {
