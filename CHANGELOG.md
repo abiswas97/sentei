@@ -1,5 +1,24 @@
 # Changelog
 
+## [1.1.0](https://github.com/abiswas97/sentei/compare/v1.0.1...v1.1.0) (2026-03-21)
+
+
+### Features
+
+* **cleanup:** add CLI subcommand and TUI integration ([4c1fca0](https://github.com/abiswas97/sentei/commit/4c1fca04b48b889196b9773bdaaf18d579fa767d))
+* **cleanup:** add types, fixtures, resolveConfigPath test, and stub orchestrator ([a9debb1](https://github.com/abiswas97/sentei/commit/a9debb161b7c4fce845092477481c60851f4c016))
+* **cleanup:** implement branch cleanup (gone-upstream and non-worktree) ([4fc4272](https://github.com/abiswas97/sentei/commit/4fc427209132d2efa4c028a7352d7d5a66b98bc6))
+* **cleanup:** implement config dedup with atomic writes ([8db2f74](https://github.com/abiswas97/sentei/commit/8db2f7408a818dee01e8401d3f5672147507655e))
+* **cleanup:** implement orphaned config section purge ([a1f8964](https://github.com/abiswas97/sentei/commit/a1f896495485465b5c7304e400217f5ff19febd1))
+* **cleanup:** implement remote ref pruning ([26ba91b](https://github.com/abiswas97/sentei/commit/26ba91bcb28f390016d522ead47a0f06162e40ce))
+* **cleanup:** wire orchestrator with all 5 pipeline steps ([3e027e9](https://github.com/abiswas97/sentei/commit/3e027e9dc230ce372a4d346ec3ed88db41fbf15d))
+
+
+### Bug Fixes
+
+* **cleanup:** address code review findings ([3e3c7bd](https://github.com/abiswas97/sentei/commit/3e3c7bd283e34467124610461fd1d7aa09dd104a))
+* resolve lint errors (errcheck, staticcheck QF1012) ([ae27fd7](https://github.com/abiswas97/sentei/commit/ae27fd7ae1470b8f46063bd0d8e4cf23c0a2ee60))
+
 ## [1.0.1](https://github.com/abiswas97/sentei/compare/v1.0.0...v1.0.1) (2026-03-05)
 
 
