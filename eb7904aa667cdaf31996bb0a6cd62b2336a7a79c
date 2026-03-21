@@ -1,0 +1,25 @@
+internal/cleanup/cleanup.go
+  f64c7206849682a4 85-125
+internal/cleanup/cleanup_test.go
+  f64c7206849682a4 5-6,77-151
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.17",
+  "base_commit_sha": "eb7904aa667cdaf31996bb0a6cd62b2336a7a79c",
+  "prompts": {
+    "f64c7206849682a4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c18abcdb-2bd1-40bf-8756-e09d97169a96",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>",
+      "messages": [],
+      "total_additions": 118,
+      "total_deletions": 1,
+      "accepted_lines": 118,
+      "overriden_lines": 0
+    }
+  }
+}
