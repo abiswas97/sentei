@@ -21,11 +21,11 @@ func copyFixture(t *testing.T, name string) string {
 
 func TestDedupConfig(t *testing.T) {
 	tests := []struct {
-		name             string
-		fixture          string
-		wantRemoved      int
-		wantLinesBefore  int
-		wantLinesAfter   int
+		name            string
+		fixture         string
+		wantRemoved     int
+		wantLinesBefore int
+		wantLinesAfter  int
 	}{
 		{
 			name:            "already clean",
