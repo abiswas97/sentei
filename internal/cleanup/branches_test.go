@@ -20,7 +20,7 @@ func TestDeleteGoneBranches(t *testing.T) {
 			wantDeleted: 0,
 		},
 		{
-			name: "deletes gone branches",
+			name:     "deletes gone branches",
 			branchVV: "  feature/old abc123 [origin/feature/old: gone] old commit\n  main def456 [origin/main] latest",
 			extraResponses: map[string]mockResponse{
 				"/repo:[branch -d feature/old]": {output: "Deleted branch feature/old"},
@@ -28,7 +28,7 @@ func TestDeleteGoneBranches(t *testing.T) {
 			wantDeleted: 1,
 		},
 		{
-			name: "skips worktree-checkout branches",
+			name:     "skips worktree-checkout branches",
 			branchVV: "+ fix/in-wt abc123 (/path/to/wt) [origin/fix/in-wt: gone] commit\n  feature/gone def456 [origin/feature/gone: gone] commit",
 			extraResponses: map[string]mockResponse{
 				"/repo:[branch -d feature/gone]": {output: "Deleted branch feature/gone"},
