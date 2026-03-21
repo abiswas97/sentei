@@ -82,5 +82,45 @@ func resolveConfigPath(runner git.CommandRunner, repoPath string) (string, error
 }
 
 func Run(runner git.CommandRunner, repoPath string, opts Options, emit func(Event)) Result {
-	return Result{}
+	configPath, err := resolveConfigPath(runner, repoPath)
+	if err != nil {
+		return Result{Errors: []OperationError{{Step: "resolve-config", Err: err}}}
+	}
+
+	var result Result
+
+	if r, err := PruneRemoteRefs(runner, repoPath, opts, emit); err != nil {
+		result.Errors = append(result.Errors, OperationError{Step: "prune-refs", Err: err})
+	} else {
+		result.StaleRefsRemoved = r
+	}
+
+	if r, err := DedupConfig(configPath, opts, emit); err != nil {
+		result.Errors = append(result.Errors, OperationError{Step: "dedup-config", Err: err})
+	} else {
+		result.ConfigDedupResult = r
+	}
+
+	if r, err := DeleteGoneBranches(runner, repoPath, opts, emit); err != nil {
+		result.Errors = append(result.Errors, OperationError{Step: "gone-branches", Err: err})
+	} else {
+		result.GoneBranchesDeleted = r.Deleted
+		result.BranchesSkipped = append(result.BranchesSkipped, r.Skipped...)
+	}
+
+	if r, err := CleanNonWorktreeBranches(runner, repoPath, opts, emit); err != nil {
+		result.Errors = append(result.Errors, OperationError{Step: "non-wt-branches", Err: err})
+	} else {
+		result.NonWtBranchesDeleted = r.Deleted
+		result.NonWtBranchesRemaining = r.Remaining
+		result.BranchesSkipped = append(result.BranchesSkipped, r.Skipped...)
+	}
+
+	if r, err := PurgeOrphanedBranchConfigs(runner, repoPath, configPath, opts, emit); err != nil {
+		result.Errors = append(result.Errors, OperationError{Step: "orphaned-configs", Err: err})
+	} else {
+		result.ConfigOrphanResult = r
+	}
+
+	return result
 }
