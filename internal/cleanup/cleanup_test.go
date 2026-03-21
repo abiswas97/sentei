@@ -2,6 +2,8 @@ package cleanup
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -70,5 +72,80 @@ func TestResolveConfigPath(t *testing.T) {
 				t.Errorf("path = %q, want suffix %q", path, tt.wantSuffix)
 			}
 		})
+	}
+}
+
+func setupOrchestratorTest(t *testing.T) (*mockRunner, string) {
+	t.Helper()
+	tmpDir := t.TempDir()
+	bareDir := filepath.Join(tmpDir, ".bare")
+	os.MkdirAll(bareDir, 0755)
+
+	configData, _ := os.ReadFile(filepath.Join("testdata", "bloated.gitconfig"))
+	configPath := filepath.Join(bareDir, "config")
+	os.WriteFile(configPath, configData, 0644)
+
+	runner := &mockRunner{responses: map[string]mockResponse{
+		tmpDir + ":[rev-parse --git-common-dir]":       {output: bareDir},
+		tmpDir + ":[remote prune origin --dry-run]":    {output: ""},
+		tmpDir + ":[fetch --prune origin]":             {output: ""},
+		tmpDir + ":[branch -vv]":                       {output: "  main abc123 [origin/main] latest"},
+		tmpDir + ":[worktree list --porcelain]":        {output: "worktree " + tmpDir + "\nbare\n\nworktree " + tmpDir + "/main\nHEAD abc\nbranch refs/heads/main"},
+		tmpDir + ":[branch --format=%(refname:short)]": {output: "main\nfeature/old"},
+	}}
+
+	return runner, tmpDir
+}
+
+func TestRun_SafeMode(t *testing.T) {
+	runner, repoPath := setupOrchestratorTest(t)
+	events := collectEvents(t)
+
+	result := Run(runner, repoPath, Options{Mode: ModeSafe}, events.emit)
+
+	if result.NonWtBranchesDeleted != 0 {
+		t.Error("safe mode should not delete non-worktree branches")
+	}
+	if result.NonWtBranchesRemaining == 0 {
+		t.Error("safe mode should still count remaining non-worktree branches")
+	}
+	if len(result.Errors) > 0 {
+		t.Errorf("unexpected errors: %v", result.Errors)
+	}
+}
+
+func TestRun_AggressiveMode(t *testing.T) {
+	runner, repoPath := setupOrchestratorTest(t)
+	runner.responses[repoPath+":[branch -d feature/old]"] = mockResponse{output: "Deleted"}
+	events := collectEvents(t)
+
+	result := Run(runner, repoPath, Options{Mode: ModeAggressive}, events.emit)
+
+	if result.NonWtBranchesDeleted == 0 {
+		t.Error("aggressive mode should delete non-worktree branches")
+	}
+}
+
+func TestRun_ErrorContinues(t *testing.T) {
+	runner, repoPath := setupOrchestratorTest(t)
+	runner.responses[repoPath+":[remote prune origin --dry-run]"] = mockResponse{err: fmt.Errorf("network error")}
+	events := collectEvents(t)
+
+	result := Run(runner, repoPath, Options{Mode: ModeSafe}, events.emit)
+
+	if len(result.Errors) == 0 {
+		t.Error("expected errors to be recorded")
+	}
+	foundPruneError := false
+	for _, e := range result.Errors {
+		if e.Step == "prune-refs" {
+			foundPruneError = true
+		}
+	}
+	if !foundPruneError {
+		t.Error("expected prune-refs error to be recorded")
+	}
+	if result.ConfigDedupResult.Before == 0 {
+		t.Error("config dedup should have run despite prune failure")
 	}
 }
