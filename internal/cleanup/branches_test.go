@@ -92,7 +92,7 @@ func TestParseGoneBranches(t *testing.T) {
 		{name: "no gone branches", input: "  main abc123 [origin/main] latest"},
 		{name: "standard gone branch", input: "  feature/old abc123 [origin/feature/old: gone] commit", wantGone: 1},
 		{name: "worktree-checkout gone branch", input: "+ fix/wt abc123 (/path) [origin/fix/wt: gone] commit", wantWorktreeGone: 1},
-		{name: "current branch with gone upstream", input: "* feature/current abc123 [origin/feature/current: gone] commit", wantGone: 1},
+		{name: "current branch with gone upstream", input: "* feature/current abc123 [origin/feature/current: gone] commit", wantWorktreeGone: 1},
 	}
 
 	for _, tt := range tests {

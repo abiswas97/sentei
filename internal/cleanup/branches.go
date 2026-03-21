@@ -42,8 +42,13 @@ func DeleteGoneBranches(runner git.CommandRunner, repoPath string, opts Options,
 		return result, nil
 	}
 
+	deleteFlag := "-d"
+	if opts.Force {
+		deleteFlag = "-D"
+	}
+
 	for _, b := range gone {
-		if _, err := runner.Run(repoPath, "branch", "-d", b); err != nil {
+		if _, err := runner.Run(repoPath, "branch", deleteFlag, b); err != nil {
 			result.Skipped = append(result.Skipped, SkippedBranch{Name: b, Reason: SkipUnmerged})
 		} else {
 			result.Deleted++
@@ -134,9 +139,10 @@ func parseGoneBranches(output string) (gone []string, worktreeGone []string) {
 
 		trimmed := strings.TrimLeft(line, " ")
 		inWorktree := strings.HasPrefix(trimmed, "+ ")
+		isCurrent := strings.HasPrefix(trimmed, "* ")
 		if inWorktree {
 			trimmed = strings.TrimPrefix(trimmed, "+ ")
-		} else {
+		} else if isCurrent {
 			trimmed = strings.TrimPrefix(trimmed, "* ")
 		}
 
@@ -146,7 +152,7 @@ func parseGoneBranches(output string) (gone []string, worktreeGone []string) {
 		}
 		branch := fields[0]
 
-		if inWorktree {
+		if inWorktree || isCurrent {
 			worktreeGone = append(worktreeGone, branch)
 		} else {
 			gone = append(gone, branch)
