@@ -1,0 +1,23 @@
+docs/superpowers/specs/2026-03-21-cleanup-command-design.md
+  f64c7206849682a4 1-395
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.17",
+  "base_commit_sha": "b1458759ae307d5dce5be0da989e6b0e3308e601",
+  "prompts": {
+    "f64c7206849682a4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c18abcdb-2bd1-40bf-8756-e09d97169a96",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>",
+      "messages": [],
+      "total_additions": 806,
+      "total_deletions": 92,
+      "accepted_lines": 714,
+      "overriden_lines": 0
+    }
+  }
+}

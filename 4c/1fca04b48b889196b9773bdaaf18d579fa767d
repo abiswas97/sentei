@@ -1,0 +1,33 @@
+internal/tui/summary.go
+  f64c7206849682a4 56-81
+cmd/cleanup.go
+  f64c7206849682a4 1-78
+internal/tui/model.go
+  f64c7206849682a4 10,57-58
+internal/tui/progress.go
+  f64c7206849682a4 9,23-26,62-68,100-103
+internal/tui/progress_test.go
+  f64c7206849682a4 66,70,73-77,87,91,97-98,102,107,110-114
+main.go
+  f64c7206849682a4 11,31-35
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.17",
+  "base_commit_sha": "4c1fca04b48b889196b9773bdaaf18d579fa767d",
+  "prompts": {
+    "f64c7206849682a4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c18abcdb-2bd1-40bf-8756-e09d97169a96",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>",
+      "messages": [],
+      "total_additions": 158,
+      "total_deletions": 9,
+      "accepted_lines": 158,
+      "overriden_lines": 0
+    }
+  }
+}
