@@ -5,6 +5,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/abiswas97/sentei/internal/git"
 )
 
 func DedupConfig(configPath string, opts Options, emit func(Event)) (ConfigResult, error) {
@@ -60,6 +62,80 @@ func DedupConfig(configPath string, opts Options, emit func(Event)) (ConfigResul
 	}
 
 	emit(Event{Step: "dedup-config", Message: fmt.Sprintf("Deduplicated config: removed %d lines (%d → %d)", removed, before, after), Level: LevelInfo})
+	return result, nil
+}
+
+func PurgeOrphanedBranchConfigs(runner git.CommandRunner, repoPath string, configPath string, opts Options, emit func(Event)) (ConfigResult, error) {
+	emit(Event{Step: "orphaned-configs", Message: "Removing config sections for deleted branches...", Level: LevelStep})
+
+	data, err := os.ReadFile(configPath)
+	if err != nil {
+		return ConfigResult{}, fmt.Errorf("reading config: %w", err)
+	}
+
+	branchOutput, err := runner.Run(repoPath, "branch", "--format=%(refname:short)")
+	if err != nil {
+		return ConfigResult{}, fmt.Errorf("listing branches: %w", err)
+	}
+
+	existing := make(map[string]bool)
+	for _, line := range strings.Split(branchOutput, "\n") {
+		b := strings.TrimSpace(line)
+		if b != "" {
+			existing[b] = true
+		}
+	}
+
+	lines := strings.Split(string(data), "\n")
+	before := len(lines)
+	var out []string
+	skip := false
+	orphanCount := 0
+
+	for _, line := range lines {
+		if strings.HasPrefix(line, "[branch \"") {
+			branchName := line
+			branchName = strings.TrimPrefix(branchName, "[branch \"")
+			branchName = strings.TrimSuffix(branchName, "\"]")
+			if !existing[branchName] {
+				skip = true
+				orphanCount++
+				continue
+			}
+			skip = false
+			out = append(out, line)
+			continue
+		}
+
+		if strings.HasPrefix(line, "[") {
+			skip = false
+			out = append(out, line)
+			continue
+		}
+
+		if !skip {
+			out = append(out, line)
+		}
+	}
+
+	after := len(out)
+	result := ConfigResult{Before: before, After: after, Removed: orphanCount}
+
+	if orphanCount == 0 {
+		emit(Event{Step: "orphaned-configs", Message: "No orphaned branch config sections", Level: LevelInfo})
+		return result, nil
+	}
+
+	if opts.DryRun {
+		emit(Event{Step: "orphaned-configs", Message: fmt.Sprintf("Would remove %d orphaned branch config section(s)", orphanCount), Level: LevelDetail})
+		return result, nil
+	}
+
+	if err := atomicWriteConfig(configPath, strings.Join(out, "\n")); err != nil {
+		return result, fmt.Errorf("writing purged config: %w", err)
+	}
+
+	emit(Event{Step: "orphaned-configs", Message: fmt.Sprintf("Removed %d orphaned config sections (%d → %d lines)", orphanCount, before, after), Level: LevelInfo})
 	return result, nil
 }
 

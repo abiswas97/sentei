@@ -113,3 +113,50 @@ func TestDedupConfig_CreatesBackup(t *testing.T) {
 		t.Errorf("backup file %s not created", bakPath)
 	}
 }
+
+func TestPurgeOrphanedBranchConfigs(t *testing.T) {
+	tests := []struct {
+		name          string
+		fixture       string
+		existBranches string
+		wantRemoved   int
+	}{
+		{
+			name:          "no orphans",
+			fixture:       "bloated.gitconfig",
+			existBranches: "main\nfeature/old-work\nfix/stale-branch",
+			wantRemoved:   0,
+		},
+		{
+			name:          "removes orphaned sections",
+			fixture:       "bloated.gitconfig",
+			existBranches: "main",
+			wantRemoved:   2,
+		},
+		{
+			name:          "all branches gone",
+			fixture:       "bloated.gitconfig",
+			existBranches: "",
+			wantRemoved:   3,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			path := copyFixture(t, tt.fixture)
+			runner := &mockRunner{responses: map[string]mockResponse{
+				"/repo:[branch --format=%(refname:short)]": {output: tt.existBranches},
+			}}
+			opts := Options{DryRun: false}
+			events := collectEvents(t)
+
+			result, err := PurgeOrphanedBranchConfigs(runner, "/repo", path, opts, events.emit)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if result.Removed != tt.wantRemoved {
+				t.Errorf("Removed = %d, want %d", result.Removed, tt.wantRemoved)
+			}
+		})
+	}
+}
