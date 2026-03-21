@@ -53,6 +53,32 @@ func (m Model) viewSummary() string {
 		b.WriteString(styleDim.Render("  Pruned orphaned worktree metadata"))
 		b.WriteString("\n")
 	}
+	if m.cleanupResult != nil {
+		r := m.cleanupResult
+		b.WriteString("\n")
+		b.WriteString(styleDim.Render("  Cleanup:"))
+		b.WriteString("\n")
+		if r.StaleRefsRemoved > 0 {
+			b.WriteString(fmt.Sprintf("    %s Pruned %d remote ref(s)\n", styleSuccess.Render("v"), r.StaleRefsRemoved))
+		}
+		if r.ConfigDedupResult.Removed > 0 {
+			b.WriteString(fmt.Sprintf("    %s Removed %d config duplicates\n", styleSuccess.Render("v"), r.ConfigDedupResult.Removed))
+		}
+		if r.GoneBranchesDeleted > 0 {
+			b.WriteString(fmt.Sprintf("    %s Deleted %d branch(es) with gone upstream\n", styleSuccess.Render("v"), r.GoneBranchesDeleted))
+		}
+		if r.ConfigOrphanResult.Removed > 0 {
+			b.WriteString(fmt.Sprintf("    %s Removed %d orphaned config section(s)\n", styleSuccess.Render("v"), r.ConfigOrphanResult.Removed))
+		}
+		if r.NonWtBranchesRemaining > 0 {
+			b.WriteString("\n")
+			b.WriteString(styleDim.Render(fmt.Sprintf("  Tip: %d local branch(es) not in any worktree.", r.NonWtBranchesRemaining)))
+			b.WriteString("\n")
+			b.WriteString(styleDim.Render("       Run `sentei cleanup --mode=aggressive` to remove them."))
+			b.WriteString("\n")
+		}
+	}
+
 	b.WriteString("\n")
 	b.WriteString(styleDim.Render("  Press q, enter, or esc to exit"))
 	b.WriteString("\n")

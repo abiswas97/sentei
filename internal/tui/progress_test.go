@@ -63,15 +63,18 @@ func TestUpdateProgress_AllDeletionsComplete_TriggersPrune(t *testing.T) {
 	}
 }
 
-func TestUpdateProgress_PruneComplete_TransitionsToSummary(t *testing.T) {
+func TestUpdateProgress_PruneComplete_ChainsCleanup(t *testing.T) {
 	m := NewModel([]git.Worktree{}, nil, "/repo")
 	m.view = progressView
 
-	updated, _ := m.updateProgress(pruneCompleteMsg{Err: nil})
+	updated, cmd := m.updateProgress(pruneCompleteMsg{Err: nil})
 	model := updated.(Model)
 
-	if model.view != summaryView {
-		t.Errorf("expected summaryView, got %d", model.view)
+	if model.view == summaryView {
+		t.Error("should not transition to summaryView yet — cleanup should run first")
+	}
+	if cmd == nil {
+		t.Fatal("expected a Cmd from pruneCompleteMsg, got nil")
 	}
 	if model.pruneErr == nil {
 		t.Fatal("expected pruneErr to be set (non-nil pointer)")
@@ -81,16 +84,34 @@ func TestUpdateProgress_PruneComplete_TransitionsToSummary(t *testing.T) {
 	}
 }
 
-func TestUpdateProgress_PruneFailed_TransitionsToSummary(t *testing.T) {
+func TestUpdateProgress_CleanupComplete_TransitionsToSummary(t *testing.T) {
 	m := NewModel([]git.Worktree{}, nil, "/repo")
 	m.view = progressView
 
-	pruneError := fmt.Errorf("permission denied")
-	updated, _ := m.updateProgress(pruneCompleteMsg{Err: pruneError})
+	updated, _ := m.updateProgress(cleanupCompleteMsg{})
 	model := updated.(Model)
 
 	if model.view != summaryView {
 		t.Errorf("expected summaryView, got %d", model.view)
+	}
+	if model.cleanupResult == nil {
+		t.Fatal("expected cleanupResult to be set")
+	}
+}
+
+func TestUpdateProgress_PruneFailed_ChainsCleanup(t *testing.T) {
+	m := NewModel([]git.Worktree{}, nil, "/repo")
+	m.view = progressView
+
+	pruneError := fmt.Errorf("permission denied")
+	updated, cmd := m.updateProgress(pruneCompleteMsg{Err: pruneError})
+	model := updated.(Model)
+
+	if model.view == summaryView {
+		t.Error("should not transition to summaryView yet — cleanup should run first")
+	}
+	if cmd == nil {
+		t.Fatal("expected a Cmd from pruneCompleteMsg, got nil")
 	}
 	if model.pruneErr == nil {
 		t.Fatal("expected pruneErr to be set")

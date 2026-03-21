@@ -8,6 +8,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/abiswas97/sentei/cmd"
 	"github.com/abiswas97/sentei/internal/dryrun"
 	"github.com/abiswas97/sentei/internal/git"
 	"github.com/abiswas97/sentei/internal/playground"
@@ -27,6 +28,11 @@ const (
 )
 
 func main() {
+	if len(os.Args) > 1 && os.Args[1] == "cleanup" {
+		cmd.RunCleanup(os.Args[2:])
+		return
+	}
+
 	versionFlag := flag.Bool("version", false, "Print version and exit")
 	playgroundFlag := flag.Bool("playground", false, "Launch with a temporary test repo")
 	dryRunFlag := flag.Bool("dry-run", false, "Print worktree summary and exit (no interactive TUI)")
