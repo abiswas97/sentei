@@ -26,7 +26,9 @@ func RunCleanup(args []string) {
 		fmt.Fprintf(os.Stderr, "Usage: sentei cleanup [options] [repo-path]\n\n")
 		fs.PrintDefaults()
 	}
-	fs.Parse(args)
+	if err := fs.Parse(args); err != nil {
+		os.Exit(1)
+	}
 
 	repoPath := "."
 	if fs.NArg() > 0 {
