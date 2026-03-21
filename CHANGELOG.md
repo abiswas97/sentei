@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.1](https://github.com/abiswas97/sentei/compare/v1.1.0...v1.1.1) (2026-03-21)
+
+
+### Bug Fixes
+
+* resolve lint errors (errcheck, staticcheck QF1012) ([ae27fd7](https://github.com/abiswas97/sentei/commit/ae27fd7ae1470b8f46063bd0d8e4cf23c0a2ee60))
+
 ## [1.1.0](https://github.com/abiswas97/sentei/compare/v1.0.1...v1.1.0) (2026-03-21)
 
 
