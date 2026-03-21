@@ -139,6 +139,12 @@ func TestPurgeOrphanedBranchConfigs(t *testing.T) {
 			existBranches: "",
 			wantRemoved:   3,
 		},
+		{
+			name:          "special characters in branch names",
+			fixture:       "special-chars.gitconfig",
+			existBranches: "feature/deep/nested.v2",
+			wantRemoved:   2,
+		},
 	}
 
 	for _, tt := range tests {

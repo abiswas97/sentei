@@ -148,10 +148,12 @@ func atomicWriteConfig(configPath string, content string) error {
 		perm = info.Mode().Perm()
 	}
 
-	original, err := os.ReadFile(configPath)
-	if err == nil {
-		if err := os.WriteFile(bakPath, original, perm); err != nil {
-			return fmt.Errorf("creating backup: %w", err)
+	if _, statErr := os.Stat(bakPath); os.IsNotExist(statErr) {
+		original, err := os.ReadFile(configPath)
+		if err == nil {
+			if err := os.WriteFile(bakPath, original, perm); err != nil {
+				return fmt.Errorf("creating backup: %w", err)
+			}
 		}
 	}
 
