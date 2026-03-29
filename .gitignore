@@ -27,3 +27,7 @@ dist/
 
 # OS
 .DS_Store
+
+# Code analysis indexes
+.code-review-graph/
+.cocoindex_code/
