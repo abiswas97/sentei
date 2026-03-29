@@ -1,0 +1,29 @@
+internal/tui/repo_options.go
+  764a16f68cca6469 113,145
+internal/tui/model.go
+  764a16f68cca6469 196-197
+internal/tui/repo_name.go
+  764a16f68cca6469 62-65,70-71,91-97
+internal/tui/menu.go
+  764a16f68cca6469 98
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.22",
+  "base_commit_sha": "0261fe8ee83b15e58936f941e7f5f2d9b315656d",
+  "prompts": {
+    "764a16f68cca6469": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ac54152b-b011-4656-a2ab-f030775dff6b",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>",
+      "messages": [],
+      "total_additions": 18,
+      "total_deletions": 21,
+      "accepted_lines": 18,
+      "overriden_lines": 0
+    }
+  }
+}
