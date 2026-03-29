@@ -76,8 +76,11 @@ func main() {
 	runner := &git.GitRunner{}
 	shell := &git.DefaultShellRunner{}
 
-	// Detect repo context
+	// Detect repo context and resolve to bare root if inside a worktree
 	context := repo.DetectContext(runner, repoPath)
+	if context == repo.ContextBareRepo {
+		repoPath = repo.ResolveBareRoot(runner, repoPath)
+	}
 
 	// Dry-run mode only works in bare repos
 	if *dryRunFlag {

@@ -2,8 +2,6 @@ package repo
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -63,10 +61,7 @@ func TestDetectContext(t *testing.T) {
 			responses: map[string]mockResponse{
 				"{dir}:[rev-parse --is-bare-repository]": {output: "false"},
 				"{dir}:[rev-parse --git-dir]":            {output: "/repo/.bare"},
-				"{dir}:[rev-parse --show-toplevel]":      {output: "{dir}"},
-			},
-			setupDir: func(t *testing.T, dir string) {
-				os.MkdirAll(filepath.Join(dir, ".bare"), 0755)
+				"{dir}:[rev-parse --git-common-dir]":     {output: "/repo/.bare"},
 			},
 			want: ContextBareRepo,
 		},
@@ -75,7 +70,7 @@ func TestDetectContext(t *testing.T) {
 			responses: map[string]mockResponse{
 				"{dir}:[rev-parse --is-bare-repository]": {output: "false"},
 				"{dir}:[rev-parse --git-dir]":            {output: ".git"},
-				"{dir}:[rev-parse --show-toplevel]":      {output: "{dir}"},
+				"{dir}:[rev-parse --git-common-dir]":     {output: ".git"},
 			},
 			want: ContextNonBareRepo,
 		},
@@ -112,6 +107,53 @@ func TestDetectContext(t *testing.T) {
 			got := DetectContext(runner, dir)
 			if got != tt.want {
 				t.Errorf("DetectContext() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestResolveBareRoot(t *testing.T) {
+	tests := []struct {
+		name      string
+		responses map[string]mockResponse
+		wantExact string // if set, expect this exact path
+		wantSelf  bool   // if true, expect the input dir back
+	}{
+		{
+			name: "from worktree resolves to bare root",
+			responses: map[string]mockResponse{
+				"{dir}:[rev-parse --git-common-dir]": {output: "/code/myproject/.bare"},
+			},
+			wantExact: "/code/myproject",
+		},
+		{
+			name: "git fails returns original path",
+			responses: map[string]mockResponse{
+				"{dir}:[rev-parse --git-common-dir]": {output: "", err: fmt.Errorf("not a git repo")},
+			},
+			wantSelf: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dir := t.TempDir()
+			resolved := make(map[string]mockResponse)
+			for k, v := range tt.responses {
+				resolved[strings.ReplaceAll(k, "{dir}", dir)] = mockResponse{
+					output: strings.ReplaceAll(v.output, "{dir}", dir),
+					err:    v.err,
+				}
+			}
+
+			runner := &mockRunner{responses: resolved}
+			got := ResolveBareRoot(runner, dir)
+
+			if tt.wantExact != "" && got != tt.wantExact {
+				t.Errorf("ResolveBareRoot() = %q, want %q", got, tt.wantExact)
+			}
+			if tt.wantSelf && got != dir {
+				t.Errorf("ResolveBareRoot() = %q, want %q", got, dir)
 			}
 		})
 	}
