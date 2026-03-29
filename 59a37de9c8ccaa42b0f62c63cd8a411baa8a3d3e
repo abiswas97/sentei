@@ -1,0 +1,49 @@
+internal/tui/menu.go
+  764a16f68cca6469 1-11
+internal/tui/progress.go
+  764a16f68cca6469 72-73,76-78,82,85-87,92,99,103,115,117-118,125,130
+internal/tui/list.go
+  764a16f68cca6469 92,101-102,106-109,113-116,119-121,125-127,131-134,139-142,147-149,151-152,154-155,159-161,163-164,168-169,173-174,176,182-183,187,193-194,198,201-202,206,211,222-225,230-232,237-238,249,255,264,267,273,297-298,301,308,348,361,365,367,386-387,393,400,403-404
+internal/tui/create_options.go
+  764a16f68cca6469 1-11
+internal/tui/confirm_test.go
+  764a16f68cca6469 15-16,39,56,73
+internal/tui/progress_test.go
+  764a16f68cca6469 79,82-83,97,116,119,127,136,151,159
+internal/tui/reindex_test.go
+  764a16f68cca6469 21-22,25-26,28-29,31-32,38-39,42-43,49-50,53-55,64,67-68,70-71,77,80-81,83-84,90,93-94,100,103-104,116-118,121-122,124-125,127-128,134-135,137,140,143,146-147,153,156-157,160-161,163,170,172,175-176,189-190,193-195,198,201-203
+internal/tui/create_progress.go
+  764a16f68cca6469 1-11
+internal/tui/summary.go
+  764a16f68cca6469 15-25,38,59-60,66-67,93-97
+internal/tui/create_summary.go
+  764a16f68cca6469 1-11
+internal/tui/confirm.go
+  764a16f68cca6469 21,23,26,28
+internal/tui/list_test.go
+  764a16f68cca6469 151,171,176,180,184,200,203,206,209-210,225,228-229,235,238,241-242,253-254,259-260
+internal/tui/model.go
+  764a16f68cca6469 11,19-20,24-27,37-38,61-90,98-109,115-154,164-165,174-181,188-189,198-205,212-213,221,224,234-236,269,271-272,274-275,277-278
+internal/tui/create_branch.go
+  764a16f68cca6469 1-11
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.22",
+  "base_commit_sha": "59a37de9c8ccaa42b0f62c63cd8a411baa8a3d3e",
+  "prompts": {
+    "764a16f68cca6469": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ac54152b-b011-4656-a2ab-f030775dff6b",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>",
+      "messages": [],
+      "total_additions": 432,
+      "total_deletions": 261,
+      "accepted_lines": 411,
+      "overriden_lines": 0
+    }
+  }
+}
