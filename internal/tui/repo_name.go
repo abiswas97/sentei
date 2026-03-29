@@ -76,6 +76,7 @@ func (m Model) updateRepoName(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.repo.focusedField = 0
 			m.repo.locationInput.Blur()
 			m.repo.nameInput.Blur()
+			m.repo.createWorktree = true
 			m.repo.publishGitHub = false
 			m.repo.ghStatus = ""
 			m.repo.optionsCursor = repoOptPublish

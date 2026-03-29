@@ -114,11 +114,12 @@ type repoState struct {
 	validationErr string
 
 	// Options
-	publishGitHub bool
-	visibility    string // "private" or "public"
-	descInput     textinput.Model
-	ghStatus      string // "authenticated", "not authenticated", "gh not found"
-	optionsCursor int
+	createWorktree bool
+	publishGitHub  bool
+	visibility     string // "private" or "public"
+	descInput      textinput.Model
+	ghStatus       string // "authenticated", "not authenticated", "gh not found"
+	optionsCursor  int
 
 	// Clone fields
 	urlInput           textinput.Model
