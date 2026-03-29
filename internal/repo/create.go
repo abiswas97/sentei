@@ -79,6 +79,12 @@ func runCreateSetup(runner git.CommandRunner, repoPath string, opts CreateOption
 	// Init bare repo
 	emit(Event{Phase: phaseName, Step: "Init bare repository", Status: StepRunning})
 	barePath := filepath.Join(repoPath, ".bare")
+	if err := os.MkdirAll(barePath, 0755); err != nil {
+		step := StepResult{Name: "Init bare repository", Status: StepFailed, Error: err}
+		phase.Steps = append(phase.Steps, step)
+		emit(Event{Phase: phaseName, Step: step.Name, Status: StepFailed, Error: err})
+		return phase
+	}
 	_, err := runner.Run(barePath, "init", "--bare")
 	if err != nil {
 		step := StepResult{Name: "Init bare repository", Status: StepFailed, Error: err}
