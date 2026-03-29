@@ -12,7 +12,17 @@ func (m Model) updateSummary(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch {
-		case key.Matches(msg, keys.Quit), key.Matches(msg, keys.Confirm), key.Matches(msg, keys.Back):
+		case key.Matches(msg, keys.Quit), key.Matches(msg, keys.Confirm):
+			if m.menuItems != nil {
+				m.view = menuView
+				return m, nil
+			}
+			return m, tea.Quit
+		case key.Matches(msg, keys.Back):
+			if m.menuItems != nil {
+				m.view = menuView
+				return m, nil
+			}
 			return m, tea.Quit
 		}
 	}
@@ -25,7 +35,7 @@ func (m Model) viewSummary() string {
 	b.WriteString(styleHeader.Render("  Summary  "))
 	b.WriteString("\n\n")
 
-	r := m.deletionResult
+	r := m.remove.deletionResult
 	if r.FailureCount == 0 {
 		b.WriteString(styleSuccess.Render(
 			fmt.Sprintf("  %d worktree(s) removed successfully", r.SuccessCount),
@@ -46,15 +56,15 @@ func (m Model) viewSummary() string {
 	}
 
 	b.WriteString("\n")
-	if m.pruneErr != nil && *m.pruneErr != nil {
-		b.WriteString(styleWarning.Render(fmt.Sprintf("  Warning: failed to prune worktree metadata: %s", *m.pruneErr)))
+	if m.remove.pruneErr != nil && *m.remove.pruneErr != nil {
+		b.WriteString(styleWarning.Render(fmt.Sprintf("  Warning: failed to prune worktree metadata: %s", *m.remove.pruneErr)))
 		b.WriteString("\n")
 	} else {
 		b.WriteString(styleDim.Render("  Pruned orphaned worktree metadata"))
 		b.WriteString("\n")
 	}
-	if m.cleanupResult != nil {
-		r := m.cleanupResult
+	if m.remove.cleanupResult != nil {
+		r := m.remove.cleanupResult
 		b.WriteString("\n")
 		b.WriteString(styleDim.Render("  Cleanup:"))
 		b.WriteString("\n")
@@ -80,7 +90,11 @@ func (m Model) viewSummary() string {
 	}
 
 	b.WriteString("\n")
-	b.WriteString(styleDim.Render("  Press q, enter, or esc to exit"))
+	if m.menuItems != nil {
+		b.WriteString(styleDim.Render("  Press enter to return to menu, or q to quit"))
+	} else {
+		b.WriteString(styleDim.Render("  Press q, enter, or esc to exit"))
+	}
 	b.WriteString("\n")
 
 	return b.String()

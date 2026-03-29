@@ -148,7 +148,7 @@ func TestStatusIndicator(t *testing.T) {
 }
 
 func TestViewLegend(t *testing.T) {
-	m := Model{}
+	m := NewModel(nil, nil, "")
 	got := stripAnsi(m.viewLegend())
 
 	for _, want := range []string{"[ok] clean", "[~] dirty", "[!] untracked", "[L] locked", "[P] protected"} {
@@ -168,20 +168,20 @@ func TestToggle_SkipsProtectedWorktree(t *testing.T) {
 		{Path: "/work/feature", Branch: "refs/heads/feature/x"},
 	}
 	m := NewModel(wts, nil, "/repo")
-	m.cursor = 0
+	m.remove.cursor = 0
 
 	updated, _ := m.Update(keyMsg(" "))
 	m = updated.(Model)
 
-	if m.selected["/work/main"] {
+	if m.remove.selected["/work/main"] {
 		t.Error("protected worktree should not be selectable via spacebar")
 	}
 
-	m.cursor = 1
+	m.remove.cursor = 1
 	updated, _ = m.Update(keyMsg(" "))
 	m = updated.(Model)
 
-	if !m.selected["/work/feature"] {
+	if !m.remove.selected["/work/feature"] {
 		t.Error("non-protected worktree should be selectable via spacebar")
 	}
 }
@@ -197,17 +197,17 @@ func TestSelectAll_SkipsProtectedWorktrees(t *testing.T) {
 	updated, _ := m.Update(keyMsg("a"))
 	m = updated.(Model)
 
-	if m.selected["/work/main"] {
+	if m.remove.selected["/work/main"] {
 		t.Error("protected worktree should not be selected by select-all")
 	}
-	if !m.selected["/work/feature"] {
+	if !m.remove.selected["/work/feature"] {
 		t.Error("non-protected worktree should be selected by select-all")
 	}
-	if !m.selected["/work/bugfix"] {
+	if !m.remove.selected["/work/bugfix"] {
 		t.Error("non-protected worktree should be selected by select-all")
 	}
-	if len(m.selected) != 2 {
-		t.Errorf("expected 2 selected, got %d", len(m.selected))
+	if len(m.remove.selected) != 2 {
+		t.Errorf("expected 2 selected, got %d", len(m.remove.selected))
 	}
 }
 
@@ -222,24 +222,24 @@ func TestSelectAll_WithFilter_SkipsProtected(t *testing.T) {
 	}
 	m := NewModel(wts, nil, "/repo")
 
-	m.filterText = "feat"
+	m.remove.filterText = "feat"
 	m.reindex()
 
-	if len(m.visibleIndices) != 2 {
-		t.Fatalf("expected 2 visible after filter, got %d", len(m.visibleIndices))
+	if len(m.remove.visibleIndices) != 2 {
+		t.Fatalf("expected 2 visible after filter, got %d", len(m.remove.visibleIndices))
 	}
 
 	updated, _ := m.Update(keyMsg("a"))
 	m = updated.(Model)
 
-	if !m.selected["/work/feat-a"] || !m.selected["/work/feat-b"] {
+	if !m.remove.selected["/work/feat-a"] || !m.remove.selected["/work/feat-b"] {
 		t.Error("visible non-protected worktrees should be selected")
 	}
-	if m.selected["/work/main"] || m.selected["/work/dev"] {
+	if m.remove.selected["/work/main"] || m.remove.selected["/work/dev"] {
 		t.Error("protected worktrees should not be selected even if hidden by filter")
 	}
-	if len(m.selected) != 2 {
-		t.Errorf("expected 2 selected, got %d", len(m.selected))
+	if len(m.remove.selected) != 2 {
+		t.Errorf("expected 2 selected, got %d", len(m.remove.selected))
 	}
 }
 
@@ -250,13 +250,13 @@ func TestDeselectAll_WithProtected(t *testing.T) {
 		{Path: "/work/bugfix", Branch: "refs/heads/bugfix/y"},
 	}
 	m := NewModel(wts, nil, "/repo")
-	m.selected["/work/feature"] = true
-	m.selected["/work/bugfix"] = true
+	m.remove.selected["/work/feature"] = true
+	m.remove.selected["/work/bugfix"] = true
 
 	updated, _ := m.Update(keyMsg("a"))
 	m = updated.(Model)
 
-	if len(m.selected) != 0 {
-		t.Errorf("expected 0 selected after deselect-all, got %d", len(m.selected))
+	if len(m.remove.selected) != 0 {
+		t.Errorf("expected 0 selected after deselect-all, got %d", len(m.remove.selected))
 	}
 }
