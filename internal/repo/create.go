@@ -1,12 +1,35 @@
 package repo
 
 import (
+	"bytes"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"strings"
 
 	"github.com/abiswas97/sentei/internal/git"
 )
+
+// GhRunner executes gh CLI commands directly without a shell, preventing shell injection.
+type GhRunner interface {
+	RunGh(dir string, args ...string) (string, error)
+}
+
+// DefaultGhRunner is the production GhRunner that invokes gh via exec.Command.
+type DefaultGhRunner struct{}
+
+func (r *DefaultGhRunner) RunGh(dir string, args ...string) (string, error) {
+	cmd := exec.Command("gh", args...)
+	cmd.Dir = dir
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		return "", fmt.Errorf("gh %s: %s", strings.Join(args, " "), strings.TrimSpace(stderr.String()))
+	}
+	return strings.TrimSpace(stdout.String()), nil
+}
 
 type CreateOptions struct {
 	Name          string
@@ -24,6 +47,10 @@ type CreateResult struct {
 }
 
 func Create(runner git.CommandRunner, shell git.ShellRunner, opts CreateOptions, emit func(Event)) CreateResult {
+	return CreateWithGh(runner, shell, &DefaultGhRunner{}, opts, emit)
+}
+
+func CreateWithGh(runner git.CommandRunner, _ git.ShellRunner, gh GhRunner, opts CreateOptions, emit func(Event)) CreateResult {
 	result := CreateResult{}
 	repoPath := filepath.Join(opts.Location, opts.Name)
 	result.RepoPath = repoPath
@@ -36,7 +63,7 @@ func Create(runner git.CommandRunner, shell git.ShellRunner, opts CreateOptions,
 	result.WorktreePath = filepath.Join(repoPath, "main")
 
 	if opts.PublishGitHub {
-		ghPhase := runCreateGitHub(runner, shell, repoPath, opts, emit)
+		ghPhase := runCreateGitHub(runner, gh, repoPath, opts, emit)
 		result.Phases = append(result.Phases, ghPhase)
 		if !ghPhase.HasFailures() {
 			// Extract GitHub URL from user lookup
@@ -165,13 +192,13 @@ func runCreateSetup(runner git.CommandRunner, repoPath string, opts CreateOption
 	return phase
 }
 
-func runCreateGitHub(runner git.CommandRunner, shell git.ShellRunner, repoPath string, opts CreateOptions, emit func(Event)) Phase {
+func runCreateGitHub(runner git.CommandRunner, gh GhRunner, repoPath string, opts CreateOptions, emit func(Event)) Phase {
 	phase := Phase{Name: "GitHub"}
 	phaseName := "GitHub"
 
 	// Look up GitHub user
 	emit(Event{Phase: phaseName, Step: "Look up GitHub user", Status: StepRunning})
-	ghUser, err := shell.RunShell(repoPath, "gh api user --jq .login")
+	ghUser, err := gh.RunGh(repoPath, "api", "user", "--jq", ".login")
 	if err != nil {
 		step := StepResult{Name: "Look up GitHub user", Status: StepFailed, Error: err}
 		phase.Steps = append(phase.Steps, step)
@@ -184,9 +211,8 @@ func runCreateGitHub(runner git.CommandRunner, shell git.ShellRunner, repoPath s
 	// Create GitHub repo
 	emit(Event{Phase: phaseName, Step: "Create GitHub repository", Status: StepRunning})
 	mainPath := filepath.Join(repoPath, "main")
-	desc := opts.Description
-	ghCmd := fmt.Sprintf("gh repo create %s --%s --description %q --source . --push", opts.Name, opts.Visibility, desc)
-	_, err = shell.RunShell(mainPath, ghCmd)
+	_, err = gh.RunGh(mainPath, "repo", "create", opts.Name,
+		"--"+opts.Visibility, "--description", opts.Description, "--source", ".", "--push")
 	if err != nil {
 		step := StepResult{Name: "Create GitHub repository", Status: StepFailed, Error: err}
 		phase.Steps = append(phase.Steps, step)

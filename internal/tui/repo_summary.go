@@ -2,8 +2,6 @@ package tui
 
 import (
 	"fmt"
-	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -32,7 +30,7 @@ func (m Model) updateRepoSummary(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch {
 		case key.Matches(msg, keys.Confirm):
 			if repoPath != "" {
-				return m, relaunchSenteiAt(repoPath)
+				return m, relaunchSentei(repoPath)
 			}
 			return m, tea.Quit
 		case key.Matches(msg, keys.Quit):
@@ -40,18 +38,6 @@ func (m Model) updateRepoSummary(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	}
 	return m, nil
-}
-
-func relaunchSenteiAt(repoPath string) tea.Cmd {
-	senteiPath, err := os.Executable()
-	if err != nil {
-		senteiPath = "sentei"
-	}
-	c := exec.Command(senteiPath, repoPath)
-	c.Env = os.Environ()
-	return tea.ExecProcess(c, func(err error) tea.Msg {
-		return tea.Quit()
-	})
 }
 
 func (m Model) viewRepoSummary() string {

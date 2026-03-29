@@ -2,8 +2,6 @@ package tui
 
 import (
 	"fmt"
-	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -56,18 +54,6 @@ func (m Model) updateMigrateSummary(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	}
 	return m, nil
-}
-
-func relaunchSentei(repoPath string) tea.Cmd {
-	senteiPath, err := os.Executable()
-	if err != nil {
-		senteiPath = "sentei"
-	}
-	c := exec.Command(senteiPath, repoPath)
-	c.Env = os.Environ()
-	return tea.ExecProcess(c, func(err error) tea.Msg {
-		return tea.Quit()
-	})
 }
 
 func (m Model) viewMigrateSummary() string {

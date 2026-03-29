@@ -2,11 +2,11 @@ package creator
 
 import (
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"strings"
 
+	"github.com/abiswas97/sentei/internal/fileutil"
 	"github.com/abiswas97/sentei/internal/git"
 )
 
@@ -110,7 +110,7 @@ func copyEnvFilesStep(srcDir, dstDir string, envFiles []string, emit func(Event)
 		}
 
 		dst := filepath.Join(dstDir, name)
-		if err := copyFile(src, dst); err != nil {
+		if err := fileutil.CopyFile(src, dst); err != nil {
 			emit(Event{Phase: "Setup", Step: stepName, Status: StepFailed, Error: err})
 			return StepResult{
 				Name:   stepName,
@@ -131,23 +131,4 @@ func copyEnvFilesStep(srcDir, dstDir string, envFiles []string, emit func(Event)
 		Status:  StepDone,
 		Message: msg,
 	}
-}
-
-func copyFile(src, dst string) error {
-	in, err := os.Open(src)
-	if err != nil {
-		return err
-	}
-	defer func() { _ = in.Close() }()
-
-	out, err := os.Create(dst)
-	if err != nil {
-		return err
-	}
-
-	if _, err := io.Copy(out, in); err != nil {
-		_ = out.Close()
-		return err
-	}
-	return out.Close()
 }
