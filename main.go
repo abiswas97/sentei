@@ -14,6 +14,7 @@ import (
 	"github.com/abiswas97/sentei/internal/git"
 	"github.com/abiswas97/sentei/internal/integration"
 	"github.com/abiswas97/sentei/internal/playground"
+	"github.com/abiswas97/sentei/internal/repo"
 	"github.com/abiswas97/sentei/internal/tui"
 	"github.com/abiswas97/sentei/internal/worktree"
 )
@@ -73,15 +74,18 @@ func main() {
 	}
 
 	runner := &git.GitRunner{}
+	shell := &git.DefaultShellRunner{}
 
-	// Validate this is a git repo before doing anything
-	if err := git.ValidateRepository(runner, repoPath); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		os.Exit(1)
-	}
+	// Detect repo context
+	context := repo.DetectContext(runner, repoPath)
 
-	// Dry-run mode: eager load worktrees and print
+	// Dry-run mode only works in bare repos
 	if *dryRunFlag {
+		if context != repo.ContextBareRepo {
+			fmt.Fprintf(os.Stderr, "Error: --dry-run requires a bare repository\n")
+			os.Exit(1)
+		}
+
 		worktrees, err := git.ListWorktrees(runner, repoPath)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
@@ -109,13 +113,17 @@ func main() {
 		os.Exit(0)
 	}
 
-	// Load config (best-effort — nil config is safe)
-	cfg, err := config.LoadConfig(repoPath,
-		config.WithRunner(runner),
-		config.WithKnownIntegrations(integration.Names()),
-	)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Warning: failed to load config: %v\n", err)
+	// Load config only for bare repos (config lives in repo)
+	var cfg *config.Config
+	if context == repo.ContextBareRepo {
+		var err error
+		cfg, err = config.LoadConfig(repoPath,
+			config.WithRunner(runner),
+			config.WithKnownIntegrations(integration.Names()),
+		)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: failed to load config: %v\n", err)
+		}
 	}
 
 	var tuiRunner git.CommandRunner = runner
@@ -124,7 +132,7 @@ func main() {
 	}
 
 	// Start at menu — worktrees loaded lazily
-	model := tui.NewMenuModel(tuiRunner, repoPath, cfg)
+	model := tui.NewMenuModel(tuiRunner, shell, repoPath, cfg, context)
 	p := tea.NewProgram(model, tea.WithAltScreen())
 
 	if _, err := p.Run(); err != nil {
