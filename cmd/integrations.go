@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"io"
 	"os/exec"
 	"strings"
 
@@ -26,6 +27,8 @@ func detectStatus(integ integration.Integration) string {
 		parts := strings.Fields(integ.Detect.Command)
 		if len(parts) > 0 {
 			cmd := exec.Command(parts[0], parts[1:]...)
+			cmd.Stdout = io.Discard
+			cmd.Stderr = io.Discard
 			if err := cmd.Run(); err == nil {
 				return "installed"
 			}
