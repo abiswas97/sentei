@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -59,6 +60,10 @@ func main() {
 	repoPath := "."
 	if flag.NArg() > 0 {
 		repoPath = flag.Arg(0)
+	}
+	// Resolve to absolute path for consistent display
+	if absPath, err := filepath.Abs(repoPath); err == nil {
+		repoPath = absPath
 	}
 
 	if *playgroundFlag {

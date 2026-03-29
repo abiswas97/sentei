@@ -2,6 +2,7 @@ package tui
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -95,7 +96,10 @@ func (m Model) updateMenu(msg tea.Msg) (tea.Model, tea.Cmd) {
 					return m, tea.Quit
 				case "Create new repository":
 					m.repo.nameInput.SetValue("")
-					m.repo.locationInput.SetValue("")
+					cwd, _ := os.Getwd()
+					if cwd != "" {
+						m.repo.locationInput.SetValue(cwd)
+					}
 					m.repo.focusedField = 0
 					m.repo.validationErr = ""
 					m.view = repoNameView
