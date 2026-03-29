@@ -1,0 +1,25 @@
+internal/integration/manager.go
+  836686c23c36f641 1-272
+internal/integration/manager_test.go
+  836686c23c36f641 1-175
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.22",
+  "base_commit_sha": "a6a27af856318524d2b3e4f655fa8490e6594bc8",
+  "prompts": {
+    "836686c23c36f641": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "3900c7b6-8b79-42a7-b749-c875614dd86f",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>",
+      "messages": [],
+      "total_additions": 469,
+      "total_deletions": 22,
+      "accepted_lines": 447,
+      "overriden_lines": 0
+    }
+  }
+}
