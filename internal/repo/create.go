@@ -208,11 +208,13 @@ func runCreateGitHub(runner git.CommandRunner, gh GhRunner, repoPath string, opt
 	phase.Steps = append(phase.Steps, StepResult{Name: "Look up GitHub user", Status: StepDone, Message: ghUser})
 	emit(Event{Phase: phaseName, Step: "Look up GitHub user", Status: StepDone, Message: ghUser})
 
-	// Create GitHub repo
+	// Create GitHub repo (without --source/--push — we push manually after configuring SSH remote)
 	emit(Event{Phase: phaseName, Step: "Create GitHub repository", Status: StepRunning})
-	mainPath := filepath.Join(repoPath, "main")
-	_, err = gh.RunGh(mainPath, "repo", "create", opts.Name,
-		"--"+opts.Visibility, "--description", opts.Description, "--source", ".", "--push")
+	ghArgs := []string{"repo", "create", opts.Name, "--" + opts.Visibility}
+	if opts.Description != "" {
+		ghArgs = append(ghArgs, "--description", opts.Description)
+	}
+	_, err = gh.RunGh(repoPath, ghArgs...)
 	if err != nil {
 		step := StepResult{Name: "Create GitHub repository", Status: StepFailed, Error: err}
 		phase.Steps = append(phase.Steps, step)
@@ -238,6 +240,7 @@ func runCreateGitHub(runner git.CommandRunner, gh GhRunner, repoPath string, opt
 
 	// Push
 	emit(Event{Phase: phaseName, Step: "Push to GitHub", Status: StepRunning})
+	mainPath := filepath.Join(repoPath, "main")
 	_, err = runner.Run(mainPath, "push", "-u", "origin", "main")
 	if err != nil {
 		step := StepResult{Name: "Push to GitHub", Status: StepFailed, Error: err}

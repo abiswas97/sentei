@@ -77,8 +77,8 @@ func TestCreate_WithGitHub(t *testing.T) {
 		fmt.Sprintf("%s/.bare:[remote set-head origin main]", repoPath):                                   {output: ""},
 	}}
 	ghRunner := &mockGhRunner{responses: map[string]mockResponse{
-		fmt.Sprintf("%s:gh[api user --jq .login]", repoPath):                                                   {output: "abiswas97"},
-		fmt.Sprintf("%s/main:gh[repo create my-project --private --description  --source . --push]", repoPath): {output: ""},
+		fmt.Sprintf("%s:gh[api user --jq .login]", repoPath):             {output: "abiswas97"},
+		fmt.Sprintf("%s:gh[repo create my-project --private]", repoPath): {output: ""},
 	}}
 
 	ec := &eventCollector{}

@@ -58,6 +58,16 @@ func (m Model) updateRepoOptions(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case tea.KeyMsg:
+		// When description is focused, forward all keys except navigation/action to the text input
+		if m.repo.optionsCursor == repoOptDescription && m.repo.publishGitHub {
+			if !key.Matches(msg, keys.Back) && !key.Matches(msg, keys.Confirm) &&
+				!key.Matches(msg, keys.Up) && !key.Matches(msg, keys.Down) {
+				var cmd tea.Cmd
+				m.repo.descInput, cmd = m.repo.descInput.Update(msg)
+				return m, cmd
+			}
+		}
+
 		visible := m.repoVisibleOptions()
 
 		switch {
@@ -66,7 +76,6 @@ func (m Model) updateRepoOptions(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, m.repo.nameInput.Focus()
 
 		case key.Matches(msg, keys.Down):
-			// Find current index in visible list
 			for i, opt := range visible {
 				if opt == m.repo.optionsCursor {
 					if i < len(visible)-1 {
@@ -92,7 +101,6 @@ func (m Model) updateRepoOptions(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if m.repo.ghStatus == "authenticated" {
 					m.repo.publishGitHub = !m.repo.publishGitHub
 					if !m.repo.publishGitHub {
-						// Reset cursor if it was on a now-hidden option
 						m.repo.optionsCursor = repoOptPublish
 					}
 				}
@@ -121,14 +129,6 @@ func (m Model) updateRepoOptions(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.repo.opType = "create"
 			m.view = repoProgressView
 			return m, m.startRepoPipeline(opts)
-
-		default:
-			// Forward to description input when focused on it
-			if m.repo.optionsCursor == repoOptDescription && m.repo.publishGitHub {
-				var cmd tea.Cmd
-				m.repo.descInput, cmd = m.repo.descInput.Update(msg)
-				return m, cmd
-			}
 		}
 	}
 	return m, nil
