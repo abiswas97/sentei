@@ -14,6 +14,7 @@ type keyMap struct {
 	Yes         key.Binding
 	No          key.Binding
 	Back        key.Binding
+	Tab         key.Binding
 	Sort        key.Binding
 	ReverseSort key.Binding
 	Filter      key.Binding
@@ -63,6 +64,10 @@ var keys = keyMap{
 	Back: key.NewBinding(
 		key.WithKeys("esc"),
 		key.WithHelp("esc", "back"),
+	),
+	Tab: key.NewBinding(
+		key.WithKeys("tab"),
+		key.WithHelp("tab", "switch field"),
 	),
 	Sort: key.NewBinding(
 		key.WithKeys("s"),
