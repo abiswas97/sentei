@@ -69,38 +69,38 @@ func runCleanup(runner git.CommandRunner, repoPath string) tea.Cmd {
 func (m Model) updateProgress(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case worktreeDeleteStartedMsg:
-		m.deletionStatuses[msg.Path] = statusRemoving
-		return m, waitForDeletionEvent(m.progressCh)
+		m.remove.deletionStatuses[msg.Path] = statusRemoving
+		return m, waitForDeletionEvent(m.remove.progressCh)
 
 	case worktreeDeletedMsg:
-		m.deletionStatuses[msg.Path] = statusRemoved
-		m.deletionResult.SuccessCount++
-		m.deletionResult.Outcomes = append(m.deletionResult.Outcomes, worktree.WorktreeOutcome{
+		m.remove.deletionStatuses[msg.Path] = statusRemoved
+		m.remove.deletionResult.SuccessCount++
+		m.remove.deletionResult.Outcomes = append(m.remove.deletionResult.Outcomes, worktree.WorktreeOutcome{
 			Path:    msg.Path,
 			Success: true,
 		})
-		return m, waitForDeletionEvent(m.progressCh)
+		return m, waitForDeletionEvent(m.remove.progressCh)
 
 	case worktreeDeleteFailedMsg:
-		m.deletionStatuses[msg.Path] = statusFailed
-		m.deletionResult.FailureCount++
-		m.deletionResult.Outcomes = append(m.deletionResult.Outcomes, worktree.WorktreeOutcome{
+		m.remove.deletionStatuses[msg.Path] = statusFailed
+		m.remove.deletionResult.FailureCount++
+		m.remove.deletionResult.Outcomes = append(m.remove.deletionResult.Outcomes, worktree.WorktreeOutcome{
 			Path:    msg.Path,
 			Success: false,
 			Error:   fmt.Errorf("removing %s: %w", msg.Path, msg.Err),
 		})
-		return m, waitForDeletionEvent(m.progressCh)
+		return m, waitForDeletionEvent(m.remove.progressCh)
 
 	case allDeletionsCompleteMsg:
 		return m, runPrune(m.runner, m.repoPath)
 
 	case pruneCompleteMsg:
 		pruneErr := msg.Err
-		m.pruneErr = &pruneErr
+		m.remove.pruneErr = &pruneErr
 		return m, runCleanup(m.runner, m.repoPath)
 
 	case cleanupCompleteMsg:
-		m.cleanupResult = &msg.Result
+		m.remove.cleanupResult = &msg.Result
 		m.view = summaryView
 	}
 	return m, nil
@@ -112,22 +112,22 @@ func (m Model) viewProgress() string {
 	b.WriteString(styleHeader.Render("  Removing Worktrees  "))
 	b.WriteString("\n\n")
 
-	done := len(m.deletionResult.Outcomes)
+	done := len(m.remove.deletionResult.Outcomes)
 	pct := 0
-	if m.deletionTotal > 0 {
-		pct = done * 100 / m.deletionTotal
+	if m.remove.deletionTotal > 0 {
+		pct = done * 100 / m.remove.deletionTotal
 	}
 
 	filled := progressBarWidth * pct / 100
 	empty := progressBarWidth - filled
 
 	bar := strings.Repeat("#", filled) + strings.Repeat("-", empty)
-	fmt.Fprintf(&b, "  [%s] %d/%d (%d%%)\n\n", bar, done, m.deletionTotal, pct)
+	fmt.Fprintf(&b, "  [%s] %d/%d (%d%%)\n\n", bar, done, m.remove.deletionTotal, pct)
 
 	selected := m.selectedWorktrees()
 	for _, wt := range selected {
 		branch := stripBranchPrefix(wt.Branch)
-		status := m.deletionStatuses[wt.Path]
+		status := m.remove.deletionStatuses[wt.Path]
 
 		var indicator string
 		switch status {

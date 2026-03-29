@@ -12,8 +12,8 @@ func TestViewConfirm_CleanWorktrees(t *testing.T) {
 		{Path: "/work/a", Branch: "refs/heads/feature-a"},
 		{Path: "/work/b", Branch: "refs/heads/feature-b"},
 	}, nil, "/repo")
-	m.selected["/work/a"] = true
-	m.selected["/work/b"] = true
+	m.remove.selected["/work/a"] = true
+	m.remove.selected["/work/b"] = true
 	m.view = confirmView
 
 	output := stripAnsi(m.viewConfirm())
@@ -36,7 +36,7 @@ func TestViewConfirm_DirtyWorktree(t *testing.T) {
 	m := NewModel([]git.Worktree{
 		{Path: "/work/dirty", Branch: "refs/heads/dirty-branch", HasUncommittedChanges: true},
 	}, nil, "/repo")
-	m.selected["/work/dirty"] = true
+	m.remove.selected["/work/dirty"] = true
 	m.view = confirmView
 
 	output := stripAnsi(m.viewConfirm())
@@ -53,7 +53,7 @@ func TestViewConfirm_LockedWorktree(t *testing.T) {
 	m := NewModel([]git.Worktree{
 		{Path: "/work/locked", Branch: "refs/heads/locked-branch", IsLocked: true},
 	}, nil, "/repo")
-	m.selected["/work/locked"] = true
+	m.remove.selected["/work/locked"] = true
 	m.view = confirmView
 
 	output := stripAnsi(m.viewConfirm())
@@ -70,7 +70,7 @@ func TestViewConfirm_UntrackedFiles(t *testing.T) {
 	m := NewModel([]git.Worktree{
 		{Path: "/work/untracked", Branch: "refs/heads/untracked-branch", HasUntrackedFiles: true},
 	}, nil, "/repo")
-	m.selected["/work/untracked"] = true
+	m.remove.selected["/work/untracked"] = true
 	m.view = confirmView
 
 	output := stripAnsi(m.viewConfirm())
