@@ -1,0 +1,23 @@
+docs/superpowers/plans/2026-03-29-config-ecosystem-integration.md
+  764a16f68cca6469 1-2543
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.22",
+  "base_commit_sha": "b5edfcbe882ac16200f6ff617a9021876d5810c6",
+  "prompts": {
+    "764a16f68cca6469": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ac54152b-b011-4656-a2ab-f030775dff6b",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>",
+      "messages": [],
+      "total_additions": 2566,
+      "total_deletions": 23,
+      "accepted_lines": 2543,
+      "overriden_lines": 0
+    }
+  }
+}
