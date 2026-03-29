@@ -1,0 +1,25 @@
+internal/config/config.go
+  764a16f68cca6469 1-44
+internal/config/config_test.go
+  764a16f68cca6469 1-232
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.22",
+  "base_commit_sha": "0396b91d39d95b1da18cfd5c0c7c3a4a96d9e211",
+  "prompts": {
+    "764a16f68cca6469": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ac54152b-b011-4656-a2ab-f030775dff6b",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>",
+      "messages": [],
+      "total_additions": 276,
+      "total_deletions": 0,
+      "accepted_lines": 276,
+      "overriden_lines": 0
+    }
+  }
+}
