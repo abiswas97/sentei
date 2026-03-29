@@ -180,6 +180,30 @@ func runMigrateBare(runner git.CommandRunner, repoPath, branch string, emit func
 	phase.Steps = append(phase.Steps, StepResult{Name: "Configure refspec", Status: StepDone})
 	emit(Event{Phase: phaseName, Step: "Configure refspec", Status: StepDone})
 
+	// Remove old working files from root (they'll be in the worktree instead)
+	// Keep only .bare, .git (pointer), and directories that are worktrees
+	emit(Event{Phase: phaseName, Step: "Clean root directory", Status: StepRunning})
+	entries, err := os.ReadDir(repoPath)
+	if err != nil {
+		step := StepResult{Name: "Clean root directory", Status: StepFailed, Error: err}
+		phase.Steps = append(phase.Steps, step)
+		emit(Event{Phase: phaseName, Step: step.Name, Status: StepFailed, Error: err})
+		return phase
+	}
+	for _, entry := range entries {
+		name := entry.Name()
+		// Keep .bare, .git pointer, and any hidden config (.sentei.yaml, etc.)
+		if name == ".bare" || name == ".git" {
+			continue
+		}
+		if err := os.RemoveAll(filepath.Join(repoPath, name)); err != nil {
+			emit(Event{Phase: phaseName, Step: "Clean root directory", Status: StepRunning,
+				Message: fmt.Sprintf("warning: could not remove %s: %v", name, err)})
+		}
+	}
+	phase.Steps = append(phase.Steps, StepResult{Name: "Clean root directory", Status: StepDone})
+	emit(Event{Phase: phaseName, Step: "Clean root directory", Status: StepDone})
+
 	// Create worktree for current branch
 	emit(Event{Phase: phaseName, Step: "Create worktree", Status: StepRunning})
 	_, err = runner.Run(repoPath, "worktree", "add", branch)
