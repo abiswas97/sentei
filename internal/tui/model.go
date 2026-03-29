@@ -82,6 +82,7 @@ type createState struct {
 	optionsCursor int
 
 	eventCh chan creator.Event
+	events  []creator.Event
 }
 
 type Model struct {
