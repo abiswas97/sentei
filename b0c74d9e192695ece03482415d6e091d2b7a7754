@@ -1,0 +1,29 @@
+internal/ecosystem/workspace.go
+  764a16f68cca6469 5,24
+internal/config/config.go
+  764a16f68cca6469 129-131
+cmd/integrations.go
+  764a16f68cca6469 5,30-31
+internal/config/config_test.go
+  764a16f68cca6469 490-499
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.22",
+  "base_commit_sha": "b0c74d9e192695ece03482415d6e091d2b7a7754",
+  "prompts": {
+    "764a16f68cca6469": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ac54152b-b011-4656-a2ab-f030775dff6b",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>",
+      "messages": [],
+      "total_additions": 18,
+      "total_deletions": 1,
+      "accepted_lines": 18,
+      "overriden_lines": 0
+    }
+  }
+}
