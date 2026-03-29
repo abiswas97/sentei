@@ -1,0 +1,25 @@
+internal/tui/model.go
+  764a16f68cca6469 15,31-38,102-139,143,146,155,180,192-210,214-236,252-258,266,292-305,330-343
+internal/tui/menu.go
+  764a16f68cca6469 12,84-86,89,94,96-112,121-123,144-158,160-162,164-168
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.22",
+  "base_commit_sha": "35bb61ebf7bd37946cb17535a5873c66bd693aad",
+  "prompts": {
+    "764a16f68cca6469": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ac54152b-b011-4656-a2ab-f030775dff6b",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>",
+      "messages": [],
+      "total_additions": 1611,
+      "total_deletions": 81,
+      "accepted_lines": 1573,
+      "overriden_lines": 0
+    }
+  }
+}
