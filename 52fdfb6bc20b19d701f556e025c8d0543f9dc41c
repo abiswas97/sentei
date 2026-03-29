@@ -1,0 +1,51 @@
+internal/creator/setup_test.go
+  764a16f68cca6469 29-37
+internal/creator/deps_test.go
+  764a16f68cca6469 19,59,93-95,141,159-160
+internal/creator/integrations.go
+  764a16f68cca6469 6,14,22,29,32,35,44,51,55-57,63,65,69-71,76,83,102,120,124,138,157,171,185,190,195-197,199
+internal/creator/teardown_test.go
+  764a16f68cca6469 82,113
+internal/creator/creator.go
+  764a16f68cca6469 66,77,80
+internal/tui/confirm.go
+  764a16f68cca6469 68,71
+internal/creator/deps.go
+  764a16f68cca6469 15,23,30-31,48,53,61,76,84,87,96
+internal/creator/creator_test.go
+  764a16f68cca6469 15-19,51,96,122,166
+internal/tui/model.go
+  764a16f68cca6469 74-77
+internal/git/commands.go
+  764a16f68cca6469 32-50
+internal/tui/create_options.go
+  764a16f68cca6469 12,174
+internal/creator/integrations_test.go
+  764a16f68cca6469 27-28,67,69-70,72,74,125-126
+internal/creator/teardown.go
+  764a16f68cca6469 46,64
+internal/tui/create_branch.go
+  764a16f68cca6469 70,74,81,157-162
+internal/creator/e2e_test.go
+  764a16f68cca6469 75,77,144,157
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.22",
+  "base_commit_sha": "52fdfb6bc20b19d701f556e025c8d0543f9dc41c",
+  "prompts": {
+    "764a16f68cca6469": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ac54152b-b011-4656-a2ab-f030775dff6b",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>",
+      "messages": [],
+      "total_additions": 127,
+      "total_deletions": 90,
+      "accepted_lines": 123,
+      "overriden_lines": 0
+    }
+  }
+}
