@@ -89,7 +89,7 @@ func (m Model) updateList(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case tea.KeyMsg:
-		if m.filterActive {
+		if m.remove.filterActive {
 			return m.updateFilterInput(msg)
 		}
 
@@ -98,113 +98,117 @@ func (m Model) updateList(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 
 		case key.Matches(msg, keys.Back):
-			if m.filterText != "" {
-				m.filterText = ""
+			if m.remove.filterText != "" {
+				m.remove.filterText = ""
 				m.reindex()
+				return m, nil
+			}
+			if m.menuItems != nil {
+				m.view = menuView
 				return m, nil
 			}
 			return m, tea.Quit
 
 		case key.Matches(msg, keys.Filter):
-			m.filterActive = true
-			m.filterInput.SetValue(m.filterText)
-			m.filterInput.Focus()
-			return m, m.filterInput.Cursor.BlinkCmd()
+			m.remove.filterActive = true
+			m.remove.filterInput.SetValue(m.remove.filterText)
+			m.remove.filterInput.Focus()
+			return m, m.remove.filterInput.Cursor.BlinkCmd()
 
 		case key.Matches(msg, keys.Sort):
-			m.sortField = (m.sortField + 1) % 2
-			m.cursor = 0
-			m.offset = 0
+			m.remove.sortField = (m.remove.sortField + 1) % 2
+			m.remove.cursor = 0
+			m.remove.offset = 0
 			m.reindex()
 
 		case key.Matches(msg, keys.ReverseSort):
-			m.sortAscending = !m.sortAscending
-			m.cursor = 0
-			m.offset = 0
+			m.remove.sortAscending = !m.remove.sortAscending
+			m.remove.cursor = 0
+			m.remove.offset = 0
 			m.reindex()
 
 		case key.Matches(msg, keys.Down):
-			if m.cursor < len(m.visibleIndices)-1 {
-				m.cursor++
-				if m.cursor >= m.offset+m.height {
-					m.offset = m.cursor - m.height + 1
+			if m.remove.cursor < len(m.remove.visibleIndices)-1 {
+				m.remove.cursor++
+				if m.remove.cursor >= m.remove.offset+m.height {
+					m.remove.offset = m.remove.cursor - m.height + 1
 				}
 			}
 
 		case key.Matches(msg, keys.Up):
-			if m.cursor > 0 {
-				m.cursor--
-				if m.cursor < m.offset {
-					m.offset = m.cursor
+			if m.remove.cursor > 0 {
+				m.remove.cursor--
+				if m.remove.cursor < m.remove.offset {
+					m.remove.offset = m.remove.cursor
 				}
 			}
 
 		case key.Matches(msg, keys.PageDown):
-			m.cursor += m.height
-			if m.cursor >= len(m.visibleIndices) {
-				m.cursor = len(m.visibleIndices) - 1
+			m.remove.cursor += m.height
+			if m.remove.cursor >= len(m.remove.visibleIndices) {
+				m.remove.cursor = len(m.remove.visibleIndices) - 1
 			}
-			if m.cursor < 0 {
-				m.cursor = 0
+			if m.remove.cursor < 0 {
+				m.remove.cursor = 0
 			}
-			if m.cursor >= m.offset+m.height {
-				m.offset = m.cursor - m.height + 1
+			if m.remove.cursor >= m.remove.offset+m.height {
+				m.remove.offset = m.remove.cursor - m.height + 1
 			}
 
 		case key.Matches(msg, keys.PageUp):
-			m.cursor -= m.height
-			if m.cursor < 0 {
-				m.cursor = 0
+			m.remove.cursor -= m.height
+			if m.remove.cursor < 0 {
+				m.remove.cursor = 0
 			}
-			if m.cursor < m.offset {
-				m.offset = m.cursor
+			if m.remove.cursor < m.remove.offset {
+				m.remove.offset = m.remove.cursor
 			}
 
 		case key.Matches(msg, keys.Toggle):
-			if len(m.visibleIndices) > 0 {
-				wt := m.worktrees[m.visibleIndices[m.cursor]]
+			if len(m.remove.visibleIndices) > 0 {
+				wt := m.remove.worktrees[m.remove.visibleIndices[m.remove.cursor]]
 				if git.IsProtectedBranch(wt.Branch) {
 					break
 				}
-				if m.selected[wt.Path] {
-					delete(m.selected, wt.Path)
+				if m.remove.selected[wt.Path] {
+					delete(m.remove.selected, wt.Path)
 				} else {
-					m.selected[wt.Path] = true
+					m.remove.selected[wt.Path] = true
 				}
 			}
 
 		case key.Matches(msg, keys.All):
 			allSelected := true
-			for _, idx := range m.visibleIndices {
-				wt := m.worktrees[idx]
+			for _, idx := range m.remove.visibleIndices {
+				wt := m.remove.worktrees[idx]
 				if git.IsProtectedBranch(wt.Branch) {
 					continue
 				}
-				if !m.selected[wt.Path] {
+				if !m.remove.selected[wt.Path] {
 					allSelected = false
 					break
 				}
 			}
 			if allSelected {
-				for _, idx := range m.visibleIndices {
-					wt := m.worktrees[idx]
+				for _, idx := range m.remove.visibleIndices {
+					wt := m.remove.worktrees[idx]
 					if git.IsProtectedBranch(wt.Branch) {
 						continue
 					}
-					delete(m.selected, wt.Path)
+					delete(m.remove.selected, wt.Path)
 				}
 			} else {
-				for _, idx := range m.visibleIndices {
-					wt := m.worktrees[idx]
+				for _, idx := range m.remove.visibleIndices {
+					wt := m.remove.worktrees[idx]
 					if git.IsProtectedBranch(wt.Branch) {
 						continue
 					}
-					m.selected[wt.Path] = true
+					m.remove.selected[wt.Path] = true
 				}
 			}
 
 		case key.Matches(msg, keys.Confirm):
-			if len(m.selected) > 0 {
+			if len(m.remove.selected) > 0 {
 				m.view = confirmView
 			}
 		}
@@ -215,23 +219,23 @@ func (m Model) updateList(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m Model) updateFilterInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch {
 	case key.Matches(msg, keys.Back):
-		m.filterActive = false
-		m.filterText = ""
-		m.filterInput.SetValue("")
-		m.filterInput.Blur()
+		m.remove.filterActive = false
+		m.remove.filterText = ""
+		m.remove.filterInput.SetValue("")
+		m.remove.filterInput.Blur()
 		m.reindex()
 		return m, nil
 
 	case key.Matches(msg, keys.Confirm):
-		m.filterActive = false
-		m.filterText = m.filterInput.Value()
-		m.filterInput.Blur()
+		m.remove.filterActive = false
+		m.remove.filterText = m.remove.filterInput.Value()
+		m.remove.filterInput.Blur()
 		return m, nil
 	}
 
 	var cmd tea.Cmd
-	m.filterInput, cmd = m.filterInput.Update(msg)
-	m.filterText = m.filterInput.Value()
+	m.remove.filterInput, cmd = m.remove.filterInput.Update(msg)
+	m.remove.filterText = m.remove.filterInput.Value()
 	m.reindex()
 	return m, cmd
 }
@@ -242,13 +246,13 @@ func (m Model) viewList() string {
 	b.WriteString(styleHeader.Render("sentei - Git Worktree Cleanup"))
 	b.WriteString("\n\n")
 
-	if len(m.worktrees) == 0 {
+	if len(m.remove.worktrees) == 0 {
 		b.WriteString(styleDim.Render("  No worktrees found."))
 		b.WriteString("\n")
 		return b.String()
 	}
 
-	if len(m.visibleIndices) == 0 {
+	if len(m.remove.visibleIndices) == 0 {
 		b.WriteString(styleDim.Render("  No matches."))
 		b.WriteString("\n\n")
 		b.WriteString(m.viewStatusOrFilter())
@@ -257,16 +261,16 @@ func (m Model) viewList() string {
 		return b.String()
 	}
 
-	end := min(m.offset+m.height, len(m.visibleIndices))
+	end := min(m.remove.offset+m.height, len(m.remove.visibleIndices))
 
 	arrow := " ▲"
-	if !m.sortAscending {
+	if !m.remove.sortAscending {
 		arrow = " ▼"
 	}
 	hdrBranch := "Branch"
 	hdrAge := "Age"
 	hdrSubject := "Subject"
-	switch m.sortField {
+	switch m.remove.sortField {
 	case SortByBranch:
 		hdrBranch += arrow
 	case SortByAge:
@@ -290,18 +294,18 @@ func (m Model) viewList() string {
 	branchWidth := remaining / 2
 	subjectWidth := remaining - branchWidth
 
-	for i := m.offset; i < end; i++ {
-		wt := m.worktrees[m.visibleIndices[i]]
+	for i := m.remove.offset; i < end; i++ {
+		wt := m.remove.worktrees[m.remove.visibleIndices[i]]
 
 		cursor := "  "
-		if i == m.cursor {
+		if i == m.remove.cursor {
 			cursor = "> "
 		}
 
 		var checkbox string
 		if git.IsProtectedBranch(wt.Branch) {
 			checkbox = styleStatusProtected.Render("[P]")
-		} else if m.selected[wt.Path] {
+		} else if m.remove.selected[wt.Path] {
 			checkbox = "[x]"
 		} else {
 			checkbox = "[ ]"
@@ -341,7 +345,7 @@ func (m Model) viewList() string {
 	}
 
 	sortedCol := colAge
-	if m.sortField == SortByBranch {
+	if m.remove.sortField == SortByBranch {
 		sortedCol = colBranch
 	}
 
@@ -354,13 +358,13 @@ func (m Model) viewList() string {
 			return columnStyle(base, col, branchWidth, subjectWidth)
 		}
 
-		idx := m.offset + row
+		idx := m.remove.offset + row
 
 		var base lipgloss.Style
 		switch {
-		case idx == m.cursor:
+		case idx == m.remove.cursor:
 			base = styleCursorRow
-		case m.selected[m.worktrees[m.visibleIndices[idx]].Path]:
+		case m.remove.selected[m.remove.worktrees[m.remove.visibleIndices[idx]].Path]:
 			base = styleSelectedRow
 		default:
 			base = styleNormalRow
@@ -379,25 +383,25 @@ func (m Model) viewList() string {
 }
 
 func (m Model) viewStatusOrFilter() string {
-	if m.filterActive {
-		return m.filterInput.View()
+	if m.remove.filterActive {
+		return m.remove.filterInput.View()
 	}
 	return m.viewStatusBar()
 }
 
 func (m Model) viewBottomLine() string {
-	if m.filterActive {
+	if m.remove.filterActive {
 		return styleDim.Render("  enter: apply | esc: cancel")
 	}
 	return m.viewLegend()
 }
 
 func (m Model) viewStatusBar() string {
-	count := len(m.selected)
+	count := len(m.remove.selected)
 
 	var filterInfo string
-	if m.filterText != "" {
-		filterInfo = fmt.Sprintf(" | filter: %q (%d/%d)", m.filterText, len(m.visibleIndices), len(m.worktrees))
+	if m.remove.filterText != "" {
+		filterInfo = fmt.Sprintf(" | filter: %q (%d/%d)", m.remove.filterText, len(m.remove.visibleIndices), len(m.remove.worktrees))
 	}
 
 	return styleStatusBar.Render(

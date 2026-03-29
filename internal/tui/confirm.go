@@ -18,14 +18,14 @@ func (m Model) updateConfirm(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(msg, keys.Yes):
 			m.view = progressView
 			selected := m.selectedWorktrees()
-			m.deletionTotal = len(selected)
+			m.remove.deletionTotal = len(selected)
 			for _, wt := range selected {
-				m.deletionStatuses[wt.Path] = statusPending
+				m.remove.deletionStatuses[wt.Path] = statusPending
 			}
 			ch := make(chan worktree.DeletionEvent, len(selected)*2)
-			m.progressCh = ch
+			m.remove.progressCh = ch
 			go worktree.DeleteWorktrees(os.RemoveAll, selected, 5, ch)
-			return m, waitForDeletionEvent(m.progressCh)
+			return m, waitForDeletionEvent(m.remove.progressCh)
 
 		case key.Matches(msg, keys.No), key.Matches(msg, keys.Back):
 			m.view = listView
