@@ -1,7 +1,6 @@
 package tui
 
 import (
-	"os"
 	"sort"
 	"strings"
 
@@ -194,12 +193,8 @@ func NewMenuModel(runner git.CommandRunner, shell git.ShellRunner, repoPath stri
 	nameInput.Placeholder = "my-project"
 
 	locationInput := textinput.New()
-	cwd, _ := os.Getwd()
-	if cwd == "" {
-		cwd = "."
-	}
-	locationInput.SetValue(cwd)
-	locationInput.Placeholder = cwd
+	locationInput.SetValue(repoPath)
+	locationInput.Placeholder = repoPath
 
 	descInput := textinput.New()
 	descInput.Placeholder = "optional description"

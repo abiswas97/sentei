@@ -110,7 +110,7 @@ func (m Model) updateRepoOptions(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 			opts := repo.CreateOptions{
 				Name:          name,
-				Location:      location,
+				Location:      filepath.Dir(location),
 				PublishGitHub: m.repo.publishGitHub,
 				Visibility:    m.repo.visibility,
 				Description:   strings.TrimSpace(m.repo.descInput.Value()),
@@ -139,11 +139,10 @@ func (m Model) viewRepoOptions() string {
 
 	name := m.repo.nameInput.Value()
 	location := m.repo.locationInput.Value()
-	dest := filepath.Join(location, name)
 
 	b.WriteString(styleTitle.Render(fmt.Sprintf("  sentei %s Create Repository", "\u2500")))
 	b.WriteString("\n\n")
-	b.WriteString(styleDim.Render(fmt.Sprintf("  %s \u00b7 %s", name, dest)))
+	b.WriteString(styleDim.Render(fmt.Sprintf("  %s \u00b7 %s", name, location)))
 	b.WriteString("\n\n")
 	b.WriteString(separator(m.width))
 	b.WriteString("\n\n")
