@@ -145,6 +145,10 @@ Current major dependencies:
 - github.com/charmbracelet/bubbles (UI components)
 - github.com/charmbracelet/lipgloss (styling)
 
+## Design
+
+When working on TUI design, styling, or visual changes, reference `.impeccable.md` for design context, brand personality, aesthetic direction, and design principles.
+
 ## Documentation
 
 - Keep PRD.md as source of truth for requirements
