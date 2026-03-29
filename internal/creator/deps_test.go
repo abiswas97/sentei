@@ -16,7 +16,7 @@ func boolPtr(b bool) *bool {
 
 func TestRunDeps_SingleEcosystem(t *testing.T) {
 	runner := &mockRunner{responses: map[string]mockResponse{
-		"/repo/feature-auth:[pnpm install]": {output: ""},
+		"/repo/feature-auth:shell[pnpm install]": {output: ""},
 	}}
 
 	opts := Options{
@@ -56,7 +56,7 @@ func TestRunDeps_NoEcosystems(t *testing.T) {
 
 func TestRunDeps_InstallFailure(t *testing.T) {
 	runner := &mockRunner{responses: map[string]mockResponse{
-		"/repo/feature-auth:[pnpm install]": {err: fmt.Errorf("ENOENT")},
+		"/repo/feature-auth:shell[pnpm install]": {err: fmt.Errorf("ENOENT")},
 	}}
 
 	opts := Options{
@@ -90,9 +90,9 @@ func TestRunDeps_ParallelWorkspaces(t *testing.T) {
 	os.WriteFile(filepath.Join(wtPath, "pnpm-workspace.yaml"), []byte(wsYaml), 0644)
 
 	runner := &mockRunner{responses: map[string]mockResponse{
-		wtPath + ":[pnpm install]":                                      {output: ""},
-		fmt.Sprintf("%s:[pnpm install --filter packages/ui]", wtPath):   {output: ""},
-		fmt.Sprintf("%s:[pnpm install --filter packages/core]", wtPath): {output: ""},
+		wtPath + ":shell[pnpm install]":                                      {output: ""},
+		fmt.Sprintf("%s:shell[pnpm install --filter packages/ui]", wtPath):   {output: ""},
+		fmt.Sprintf("%s:shell[pnpm install --filter packages/core]", wtPath): {output: ""},
 	}}
 
 	opts := Options{
@@ -138,7 +138,7 @@ func TestRunDeps_ParallelWorkspaces(t *testing.T) {
 
 func TestRunDeps_CommandParsing(t *testing.T) {
 	runner := &mockRunner{responses: map[string]mockResponse{
-		"/wt:[go mod download]": {output: ""},
+		"/wt:shell[go mod download]": {output: ""},
 	}}
 
 	opts := Options{
@@ -156,8 +156,7 @@ func TestRunDeps_CommandParsing(t *testing.T) {
 	if len(runner.calls) != 1 {
 		t.Fatalf("expected 1 call, got %d", len(runner.calls))
 	}
-	// The call key includes parsed args
-	if !strings.Contains(runner.calls[0], "go mod download") {
-		t.Errorf("call = %q, expected to contain 'go mod download'", runner.calls[0])
+	if !strings.Contains(runner.calls[0], "shell[go mod download]") {
+		t.Errorf("call = %q, expected to contain 'shell[go mod download]'", runner.calls[0])
 	}
 }

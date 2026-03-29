@@ -64,11 +64,11 @@ func (m Model) updateConfirm(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) runTeardownPhase(worktrees []git.Worktree, integrations []integration.Integration) tea.Cmd {
-	runner := m.runner
 	return func() tea.Msg {
+		shell := &git.DefaultShellRunner{}
 		var allResults []creator.StepResult
 		for _, wt := range worktrees {
-			results := creator.Teardown(runner, wt.Path, integrations, func(creator.Event) {})
+			results := creator.Teardown(shell, wt.Path, integrations, func(creator.Event) {})
 			allResults = append(allResults, results...)
 		}
 		return teardownCompleteMsg{results: allResults}

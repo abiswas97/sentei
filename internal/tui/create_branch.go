@@ -67,15 +67,18 @@ func (m Model) updateCreateBranch(msg tea.Msg) (tea.Model, tea.Cmd) {
 				existingPaths = append(existingPaths, wt.Path)
 			}
 			if err := validateBranchName(branch, existingPaths); err != nil {
+				m.create.validationErr = err.message
 				return m, nil
 			}
 
+			m.create.validationErr = ""
 			m.prepareCreateOptions()
 			m.view = createOptionsView
 			return m, nil
 		}
 
 		// Forward key to focused input
+		m.create.validationErr = ""
 		var cmd tea.Cmd
 		if m.create.focusedField == 0 {
 			m.create.branchInput, cmd = m.create.branchInput.Update(msg)
@@ -151,7 +154,12 @@ func (m Model) viewCreateBranch() string {
 		}
 		b.WriteString("    " + val)
 	}
-	b.WriteString("\n\n")
+	b.WriteString("\n")
+	if m.create.validationErr != "" {
+		b.WriteString("  " + styleError.Render(m.create.validationErr))
+		b.WriteString("\n")
+	}
+	b.WriteString("\n")
 
 	b.WriteString("  Base branch\n")
 	if m.create.focusedField == 1 {

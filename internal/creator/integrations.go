@@ -3,6 +3,7 @@ package creator
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -10,7 +11,7 @@ import (
 	"github.com/abiswas97/sentei/internal/integration"
 )
 
-func runIntegrations(runner git.CommandRunner, wtPath string, opts Options, emit func(Event)) Phase {
+func runIntegrations(shell git.ShellRunner, wtPath string, opts Options, emit func(Event)) Phase {
 	phase := Phase{Name: "Integrations"}
 
 	if len(opts.Integrations) == 0 {
@@ -18,20 +19,20 @@ func runIntegrations(runner git.CommandRunner, wtPath string, opts Options, emit
 	}
 
 	for _, integ := range opts.Integrations {
-		steps := setupIntegration(runner, wtPath, opts.RepoPath, integ, emit)
+		steps := setupIntegration(shell, wtPath, opts.RepoPath, integ, emit)
 		phase.Steps = append(phase.Steps, steps...)
 	}
 
 	return phase
 }
 
-func setupIntegration(runner git.CommandRunner, wtPath, repoPath string, integ integration.Integration, emit func(Event)) []StepResult {
+func setupIntegration(shell git.ShellRunner, wtPath, repoPath string, integ integration.Integration, emit func(Event)) []StepResult {
 	var steps []StepResult
 
-	installed := detectIntegration(runner, wtPath, integ)
+	installed := detectIntegration(shell, wtPath, integ)
 
 	if !installed {
-		depSteps := checkAndInstallDeps(runner, wtPath, integ, emit)
+		depSteps := checkAndInstallDeps(shell, wtPath, integ, emit)
 		steps = append(steps, depSteps...)
 
 		for _, s := range depSteps {
@@ -40,45 +41,46 @@ func setupIntegration(runner git.CommandRunner, wtPath, repoPath string, integ i
 			}
 		}
 
-		installStep := installIntegration(runner, wtPath, integ, emit)
+		installStep := installIntegration(shell, wtPath, integ, emit)
 		steps = append(steps, installStep)
 		if installStep.Status == StepFailed {
 			return steps
 		}
 	}
 
-	setupStep := runSetupCommand(runner, wtPath, repoPath, integ, emit)
+	setupStep := runSetupCommand(shell, wtPath, repoPath, integ, emit)
 	steps = append(steps, setupStep)
 
 	if setupStep.Status != StepFailed && len(integ.GitignoreEntries) > 0 {
-		appendGitignore(wtPath, integ.GitignoreEntries)
+		if err := appendGitignore(wtPath, integ.GitignoreEntries); err != nil {
+			emit(Event{Phase: "Integrations", Step: fmt.Sprintf("Gitignore %s", integ.Name), Status: StepFailed, Error: err})
+		}
 	}
 
 	return steps
 }
 
-func detectIntegration(runner git.CommandRunner, wtPath string, integ integration.Integration) bool {
+func detectIntegration(shell git.ShellRunner, wtPath string, integ integration.Integration) bool {
 	if integ.Detect.Command != "" {
-		args := strings.Fields(integ.Detect.Command)
-		_, err := runner.Run(wtPath, args...)
+		_, err := shell.RunShell(wtPath, integ.Detect.Command)
 		return err == nil
 	}
 	if integ.Detect.BinaryName != "" {
-		_, err := runner.Run(wtPath, integ.Detect.BinaryName, "--version")
-		return err == nil
+		if _, err := exec.LookPath(integ.Detect.BinaryName); err == nil {
+			return true
+		}
 	}
 	return false
 }
 
-func checkAndInstallDeps(runner git.CommandRunner, wtPath string, integ integration.Integration, emit func(Event)) []StepResult {
+func checkAndInstallDeps(shell git.ShellRunner, wtPath string, integ integration.Integration, emit func(Event)) []StepResult {
 	var steps []StepResult
 
 	for _, dep := range integ.Dependencies {
 		stepName := fmt.Sprintf("Check %s", dep.Name)
 		emit(Event{Phase: "Integrations", Step: stepName, Status: StepRunning})
 
-		args := strings.Fields(dep.Detect)
-		_, err := runner.Run(wtPath, args...)
+		_, err := shell.RunShell(wtPath, dep.Detect)
 		if err == nil {
 			emit(Event{Phase: "Integrations", Step: stepName, Status: StepDone})
 			steps = append(steps, StepResult{Name: stepName, Status: StepDone})
@@ -97,8 +99,7 @@ func checkAndInstallDeps(runner git.CommandRunner, wtPath string, integ integrat
 
 		installName := fmt.Sprintf("Install %s", dep.Name)
 		emit(Event{Phase: "Integrations", Step: installName, Status: StepRunning})
-		installArgs := strings.Fields(dep.Install)
-		_, installErr := runner.Run(wtPath, installArgs...)
+		_, installErr := shell.RunShell(wtPath, dep.Install)
 		if installErr != nil {
 			emit(Event{Phase: "Integrations", Step: installName, Status: StepFailed, Error: installErr})
 			steps = append(steps, StepResult{
@@ -116,12 +117,11 @@ func checkAndInstallDeps(runner git.CommandRunner, wtPath string, integ integrat
 	return steps
 }
 
-func installIntegration(runner git.CommandRunner, wtPath string, integ integration.Integration, emit func(Event)) StepResult {
+func installIntegration(shell git.ShellRunner, wtPath string, integ integration.Integration, emit func(Event)) StepResult {
 	stepName := fmt.Sprintf("Install %s", integ.Name)
 	emit(Event{Phase: "Integrations", Step: stepName, Status: StepRunning})
 
-	args := strings.Fields(integ.Install.Command)
-	_, err := runner.Run(wtPath, args...)
+	_, err := shell.RunShell(wtPath, integ.Install.Command)
 	if err != nil {
 		emit(Event{Phase: "Integrations", Step: stepName, Status: StepFailed, Error: err})
 		return StepResult{
@@ -135,7 +135,7 @@ func installIntegration(runner git.CommandRunner, wtPath string, integ integrati
 	return StepResult{Name: stepName, Status: StepDone}
 }
 
-func runSetupCommand(runner git.CommandRunner, wtPath, repoPath string, integ integration.Integration, emit func(Event)) StepResult {
+func runSetupCommand(shell git.ShellRunner, wtPath, repoPath string, integ integration.Integration, emit func(Event)) StepResult {
 	stepName := fmt.Sprintf("Setup %s", integ.Name)
 
 	if integ.Setup.Command == "" {
@@ -145,7 +145,6 @@ func runSetupCommand(runner git.CommandRunner, wtPath, repoPath string, integ in
 	emit(Event{Phase: "Integrations", Step: stepName, Status: StepRunning})
 
 	command := strings.ReplaceAll(integ.Setup.Command, "{path}", wtPath)
-	args := strings.Fields(command)
 
 	var runDir string
 	switch integ.Setup.WorkingDir {
@@ -155,7 +154,7 @@ func runSetupCommand(runner git.CommandRunner, wtPath, repoPath string, integ in
 		runDir = wtPath
 	}
 
-	_, err := runner.Run(runDir, args...)
+	_, err := shell.RunShell(runDir, command)
 	if err != nil {
 		emit(Event{Phase: "Integrations", Step: stepName, Status: StepFailed, Error: err})
 		return StepResult{
@@ -169,7 +168,7 @@ func runSetupCommand(runner git.CommandRunner, wtPath, repoPath string, integ in
 	return StepResult{Name: stepName, Status: StepDone}
 }
 
-func appendGitignore(dir string, entries []string) {
+func appendGitignore(dir string, entries []string) error {
 	gitignorePath := filepath.Join(dir, ".gitignore")
 
 	existing, _ := os.ReadFile(gitignorePath)
@@ -183,16 +182,19 @@ func appendGitignore(dir string, entries []string) {
 	}
 
 	if len(toAdd) == 0 {
-		return
+		return nil
 	}
 
 	f, err := os.OpenFile(gitignorePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
-		return
+		return fmt.Errorf("opening .gitignore: %w", err)
 	}
 	defer func() { _ = f.Close() }()
 
 	for _, entry := range toAdd {
-		_, _ = fmt.Fprintln(f, entry)
+		if _, err := fmt.Fprintln(f, entry); err != nil {
+			return fmt.Errorf("writing to .gitignore: %w", err)
+		}
 	}
+	return nil
 }

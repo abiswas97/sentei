@@ -12,11 +12,11 @@ import (
 
 func TestRun_FullPipeline(t *testing.T) {
 	runner := &mockRunner{responses: map[string]mockResponse{
-		"/repo:[worktree add /repo/feature-auth -b feature/auth main]": {output: ""},
-		"/repo/feature-auth:[merge main --no-edit]":                    {output: ""},
-		"/repo/feature-auth:[go mod download]":                         {output: ""},
-		"/repo/feature-auth:[code-review-graph --version]":             {output: "1.0"},
-		"/repo:[code-review-graph build --repo /repo/feature-auth]":    {output: ""},
+		"/repo:[worktree add /repo/feature-auth -b feature/auth main]":   {output: ""},
+		"/repo/feature-auth:[merge main --no-edit]":                      {output: ""},
+		"/repo/feature-auth:shell[go mod download]":                      {output: ""},
+		"/repo/feature-auth:shell[code-review-graph --version]":          {output: "1.0"},
+		"/repo:shell[code-review-graph build --repo /repo/feature-auth]": {output: ""},
 	}}
 
 	opts := Options{
@@ -48,7 +48,7 @@ func TestRun_FullPipeline(t *testing.T) {
 	}
 
 	ec := &eventCollector{}
-	result := Run(runner, opts, ec.emit)
+	result := Run(runner, runner, opts, ec.emit)
 
 	if result.WorktreePath != "/repo/feature-auth" {
 		t.Errorf("WorktreePath = %q, want %q", result.WorktreePath, "/repo/feature-auth")
@@ -93,7 +93,7 @@ func TestRun_CreateWorktreeFails_AbortsEarly(t *testing.T) {
 	}
 
 	ec := &eventCollector{}
-	result := Run(runner, opts, ec.emit)
+	result := Run(runner, runner, opts, ec.emit)
 
 	if len(result.Phases) != 1 {
 		t.Fatalf("phase count = %d, want 1 (abort after setup)", len(result.Phases))
@@ -119,7 +119,7 @@ func TestRun_MergeFailsContinues(t *testing.T) {
 	}
 
 	ec := &eventCollector{}
-	result := Run(runner, opts, ec.emit)
+	result := Run(runner, runner, opts, ec.emit)
 
 	if len(result.Phases) != 3 {
 		t.Fatalf("phase count = %d, want 3 (continues despite merge failure)", len(result.Phases))
@@ -163,7 +163,7 @@ func TestRun_CopyEnvFiles(t *testing.T) {
 	}
 
 	ec := &eventCollector{}
-	result := Run(runner, opts, ec.emit)
+	result := Run(runner, runner, opts, ec.emit)
 
 	// Verify env file was copied
 	envDst := filepath.Join(wtPath, ".env")

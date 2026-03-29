@@ -24,8 +24,8 @@ func TestRunIntegrations_NoIntegrations(t *testing.T) {
 
 func TestRunIntegrations_AlreadyInstalled(t *testing.T) {
 	runner := &mockRunner{responses: map[string]mockResponse{
-		"/wt:[code-review-graph --version]":          {output: "1.0.0"},
-		"/repo:[code-review-graph build --repo /wt]": {output: "built"},
+		"/wt:shell[code-review-graph --version]":          {output: "1.0.0"},
+		"/repo:shell[code-review-graph build --repo /wt]": {output: "built"},
 	}}
 
 	opts := Options{
@@ -64,14 +64,14 @@ func TestRunIntegrations_AlreadyInstalled(t *testing.T) {
 func TestRunIntegrations_InstallRequired(t *testing.T) {
 	runner := &mockRunner{responses: map[string]mockResponse{
 		// Detect fails first time
-		"/wt:[code-review-graph --version]": {err: fmt.Errorf("not found")},
+		"/wt:shell[code-review-graph --version]": {err: fmt.Errorf("not found")},
 		// Dependency checks
-		`/wt:[python3 -c "import sys; assert sys.version_info >= (3,10)"]`: {output: ""},
-		"/wt:[pipx --version]": {output: "1.0"},
+		`/wt:shell[python3 -c "import sys; assert sys.version_info >= (3,10)"]`: {output: ""},
+		"/wt:shell[pipx --version]": {output: "1.0"},
 		// Install
-		"/wt:[pipx install code-review-graph]": {output: "installed"},
+		"/wt:shell[pipx install code-review-graph]": {output: "installed"},
 		// Setup (working dir = repo, so runs from opts.RepoPath)
-		"/repo:[code-review-graph build --repo /wt]": {output: "built"},
+		"/repo:shell[code-review-graph build --repo /wt]": {output: "built"},
 	}}
 
 	opts := Options{
@@ -122,8 +122,8 @@ func TestRunIntegrations_InstallRequired(t *testing.T) {
 
 func TestRunIntegrations_SetupFailure(t *testing.T) {
 	runner := &mockRunner{responses: map[string]mockResponse{
-		"/wt:[ccc --version]": {output: "1.0"},
-		"/wt:[ccc init]":      {err: fmt.Errorf("init failed")},
+		"/wt:shell[ccc --version]": {output: "1.0"},
+		"/wt:shell[ccc init]":      {err: fmt.Errorf("init failed")},
 	}}
 
 	opts := Options{

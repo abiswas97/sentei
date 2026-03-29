@@ -72,8 +72,9 @@ func TestE2E_CreateWorktree(t *testing.T) {
 		},
 	}
 
+	shell := &git.DefaultShellRunner{}
 	var events []Event
-	result := Run(runner, opts, func(e Event) {
+	result := Run(runner, shell, opts, func(e Event) {
 		events = append(events, e)
 	})
 
@@ -140,7 +141,7 @@ func TestE2E_Teardown(t *testing.T) {
 	os.MkdirAll(cocDir, 0755)
 	os.WriteFile(filepath.Join(cocDir, "index.db"), []byte("data"), 0644)
 
-	runner := &git.GitRunner{}
+	shell := &git.DefaultShellRunner{}
 	integrations := []integration.Integration{
 		{
 			Name:     "code-review-graph",
@@ -153,7 +154,7 @@ func TestE2E_Teardown(t *testing.T) {
 	}
 
 	var events []Event
-	results := Teardown(runner, tmpDir, integrations, func(e Event) {
+	results := Teardown(shell, tmpDir, integrations, func(e Event) {
 		events = append(events, e)
 	})
 
