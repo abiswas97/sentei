@@ -1,0 +1,23 @@
+.gitignore
+  764a16f68cca6469 30-33
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.22",
+  "base_commit_sha": "b21aaf138439b72fdd5d5e2649d49ed3dcc327ba",
+  "prompts": {
+    "764a16f68cca6469": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ac54152b-b011-4656-a2ab-f030775dff6b",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>",
+      "messages": [],
+      "total_additions": 4,
+      "total_deletions": 0,
+      "accepted_lines": 4,
+      "overriden_lines": 0
+    }
+  }
+}
