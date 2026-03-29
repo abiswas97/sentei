@@ -1,0 +1,25 @@
+.golangci.yml
+  764a16f68cca6469 30-32
+internal/tui/styles.go
+  764a16f68cca6469 3-7,90-161
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.22",
+  "base_commit_sha": "90bb534dac305d4c779fd90ee90ae7928d0a5e88",
+  "prompts": {
+    "764a16f68cca6469": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ac54152b-b011-4656-a2ab-f030775dff6b",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>",
+      "messages": [],
+      "total_additions": 80,
+      "total_deletions": 1,
+      "accepted_lines": 80,
+      "overriden_lines": 0
+    }
+  }
+}
