@@ -43,7 +43,7 @@ func ScanArtifacts(wtPath string, integrations []integration.Integration) []Arti
 // Teardown removes integration artifacts from wtPath. For each integration that has
 // artifacts present, it runs the teardown command if configured; if the command fails
 // or is absent, it falls back to deleting the artifact directories directly.
-func Teardown(runner git.CommandRunner, wtPath string, integrations []integration.Integration, emit func(Event)) []StepResult {
+func Teardown(shell git.ShellRunner, wtPath string, integrations []integration.Integration, emit func(Event)) []StepResult {
 	artifacts := ScanArtifacts(wtPath, integrations)
 	if len(artifacts) == 0 {
 		return nil
@@ -61,14 +61,12 @@ func Teardown(runner git.CommandRunner, wtPath string, integrations []integratio
 		emit(Event{Phase: "Teardown", Step: stepName, Status: StepRunning})
 
 		if integ.Teardown.Command != "" {
-			args := strings.Fields(integ.Teardown.Command)
-			_, err := runner.Run(wtPath, args...)
+			_, err := shell.RunShell(wtPath, integ.Teardown.Command)
 			if err == nil {
 				emit(Event{Phase: "Teardown", Step: stepName, Status: StepDone})
 				results = append(results, StepResult{Name: stepName, Status: StepDone})
 				continue
 			}
-			// Command failed — fall back to directory deletion
 		}
 
 		allRemoved := true

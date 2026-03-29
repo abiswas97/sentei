@@ -12,7 +12,7 @@ import (
 
 const maxDepsConcurrency = 5
 
-func runDeps(runner git.CommandRunner, wtPath string, opts Options, emit func(Event)) Phase {
+func runDeps(shell git.ShellRunner, wtPath string, opts Options, emit func(Event)) Phase {
 	phase := Phase{Name: "Dependencies"}
 
 	if len(opts.Ecosystems) == 0 {
@@ -20,15 +20,15 @@ func runDeps(runner git.CommandRunner, wtPath string, opts Options, emit func(Ev
 	}
 
 	for _, eco := range opts.Ecosystems {
-		steps := installEcosystem(runner, wtPath, eco, emit)
+		steps := installEcosystem(shell, wtPath, eco, emit)
 		phase.Steps = append(phase.Steps, steps...)
 	}
 
 	return phase
 }
 
-func installEcosystem(runner git.CommandRunner, wtPath string, eco config.EcosystemConfig, emit func(Event)) []StepResult {
-	rootStep := runInstallCommand(runner, wtPath, eco.Name, eco.Install.Command, emit)
+func installEcosystem(shell git.ShellRunner, wtPath string, eco config.EcosystemConfig, emit func(Event)) []StepResult {
+	rootStep := runInstallCommand(shell, wtPath, eco.Name, eco.Install.Command, emit)
 	steps := []StepResult{rootStep}
 
 	if rootStep.Status == StepFailed {
@@ -45,12 +45,12 @@ func installEcosystem(runner git.CommandRunner, wtPath string, eco config.Ecosys
 	}
 
 	if eco.Install.IsParallel() {
-		wsSteps := installWorkspacesParallel(runner, wtPath, eco, workspaces, emit)
+		wsSteps := installWorkspacesParallel(shell, wtPath, eco, workspaces, emit)
 		steps = append(steps, wsSteps...)
 	} else {
 		for _, ws := range workspaces {
 			cmd := strings.ReplaceAll(eco.Install.WorkspaceInstall, "{dir}", ws)
-			step := runInstallCommand(runner, wtPath, fmt.Sprintf("%s (%s)", eco.Name, ws), cmd, emit)
+			step := runInstallCommand(shell, wtPath, fmt.Sprintf("%s (%s)", eco.Name, ws), cmd, emit)
 			steps = append(steps, step)
 		}
 	}
@@ -58,7 +58,7 @@ func installEcosystem(runner git.CommandRunner, wtPath string, eco config.Ecosys
 	return steps
 }
 
-func installWorkspacesParallel(runner git.CommandRunner, wtPath string, eco config.EcosystemConfig, workspaces []string, emit func(Event)) []StepResult {
+func installWorkspacesParallel(shell git.ShellRunner, wtPath string, eco config.EcosystemConfig, workspaces []string, emit func(Event)) []StepResult {
 	results := make([]StepResult, len(workspaces))
 	sem := make(chan struct{}, maxDepsConcurrency)
 	var wg sync.WaitGroup
@@ -73,7 +73,7 @@ func installWorkspacesParallel(runner git.CommandRunner, wtPath string, eco conf
 
 			cmd := strings.ReplaceAll(eco.Install.WorkspaceInstall, "{dir}", workspace)
 			stepName := fmt.Sprintf("%s (%s)", eco.Name, workspace)
-			results[idx] = runInstallCommand(runner, wtPath, stepName, cmd, emit)
+			results[idx] = runInstallCommand(shell, wtPath, stepName, cmd, emit)
 		}(i, ws)
 	}
 
@@ -81,11 +81,10 @@ func installWorkspacesParallel(runner git.CommandRunner, wtPath string, eco conf
 	return results
 }
 
-func runInstallCommand(runner git.CommandRunner, wtPath, stepName, command string, emit func(Event)) StepResult {
+func runInstallCommand(shell git.ShellRunner, wtPath, stepName, command string, emit func(Event)) StepResult {
 	emit(Event{Phase: "Dependencies", Step: stepName, Status: StepRunning})
 
-	args := strings.Fields(command)
-	if len(args) == 0 {
+	if command == "" {
 		emit(Event{Phase: "Dependencies", Step: stepName, Status: StepFailed, Error: fmt.Errorf("empty install command")})
 		return StepResult{
 			Name:   stepName,
@@ -94,7 +93,7 @@ func runInstallCommand(runner git.CommandRunner, wtPath, stepName, command strin
 		}
 	}
 
-	_, err := runner.Run(wtPath, args...)
+	_, err := shell.RunShell(wtPath, command)
 	if err != nil {
 		emit(Event{Phase: "Dependencies", Step: stepName, Status: StepFailed, Error: err})
 		return StepResult{

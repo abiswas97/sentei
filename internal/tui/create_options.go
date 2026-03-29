@@ -9,6 +9,7 @@ import (
 
 	"github.com/abiswas97/sentei/internal/config"
 	"github.com/abiswas97/sentei/internal/creator"
+	"github.com/abiswas97/sentei/internal/git"
 	"github.com/abiswas97/sentei/internal/integration"
 )
 
@@ -170,7 +171,7 @@ func (m *Model) startCreation() {
 	m.create.eventCh = ch
 
 	go func() {
-		result := creator.Run(m.runner, opts, func(e creator.Event) {
+		result := creator.Run(m.runner, &git.DefaultShellRunner{}, opts, func(e creator.Event) {
 			ch <- e
 		})
 		close(ch)

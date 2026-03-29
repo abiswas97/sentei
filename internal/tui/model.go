@@ -71,9 +71,10 @@ type menuItem struct {
 
 // createState holds all state for the worktree creation flow.
 type createState struct {
-	branchInput  textinput.Model
-	baseInput    textinput.Model
-	focusedField int // 0 = branch, 1 = base
+	branchInput   textinput.Model
+	baseInput     textinput.Model
+	focusedField  int // 0 = branch, 1 = base
+	validationErr string
 
 	ecosystems    []config.EcosystemConfig
 	integrations  []integration.Integration

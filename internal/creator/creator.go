@@ -63,7 +63,7 @@ func (r *Result) HasFailures() bool {
 	return false
 }
 
-func Run(runner git.CommandRunner, opts Options, emit func(Event)) Result {
+func Run(runner git.CommandRunner, shell git.ShellRunner, opts Options, emit func(Event)) Result {
 	result := Result{}
 
 	setupPhase := runSetup(runner, opts, emit)
@@ -74,10 +74,10 @@ func Run(runner git.CommandRunner, opts Options, emit func(Event)) Result {
 	}
 	result.WorktreePath = worktreePath(opts.RepoPath, opts.BranchName)
 
-	depsPhase := runDeps(runner, result.WorktreePath, opts, emit)
+	depsPhase := runDeps(shell, result.WorktreePath, opts, emit)
 	result.Phases = append(result.Phases, depsPhase)
 
-	intPhase := runIntegrations(runner, result.WorktreePath, opts, emit)
+	intPhase := runIntegrations(shell, result.WorktreePath, opts, emit)
 	result.Phases = append(result.Phases, intPhase)
 
 	return result

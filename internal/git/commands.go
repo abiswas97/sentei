@@ -29,6 +29,25 @@ func (r *GitRunner) Run(dir string, args ...string) (string, error) {
 	return strings.TrimSpace(stdout.String()), nil
 }
 
+// ShellRunner executes arbitrary shell commands (not git-specific).
+type ShellRunner interface {
+	RunShell(dir string, command string) (string, error)
+}
+
+type DefaultShellRunner struct{}
+
+func (r *DefaultShellRunner) RunShell(dir string, command string) (string, error) {
+	cmd := exec.Command("sh", "-c", command)
+	cmd.Dir = dir
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		return "", fmt.Errorf("%s: %s", command, strings.TrimSpace(stderr.String()))
+	}
+	return strings.TrimSpace(stdout.String()), nil
+}
+
 type DelayRunner struct {
 	Inner CommandRunner
 	Delay time.Duration

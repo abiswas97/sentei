@@ -26,6 +26,15 @@ func (m *mockRunner) Run(dir string, args ...string) (string, error) {
 	return "", fmt.Errorf("unexpected call: %s", key)
 }
 
+func (m *mockRunner) RunShell(dir string, command string) (string, error) {
+	key := fmt.Sprintf("%s:shell[%s]", dir, command)
+	m.calls = append(m.calls, key)
+	if resp, ok := m.responses[key]; ok {
+		return resp.output, resp.err
+	}
+	return "", fmt.Errorf("unexpected shell call: %s", key)
+}
+
 type eventCollector struct {
 	events []Event
 }

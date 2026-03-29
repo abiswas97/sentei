@@ -79,7 +79,7 @@ func TestTeardown_WithCommand(t *testing.T) {
 	os.MkdirAll(filepath.Join(wtDir, ".cocoindex_code"), 0755)
 
 	runner := &mockRunner{responses: map[string]mockResponse{
-		wtDir + ":[ccc reset --all --force]": {output: "reset"},
+		wtDir + ":shell[ccc reset --all --force]": {output: "reset"},
 	}}
 
 	integs := []integration.Integration{
@@ -110,7 +110,7 @@ func TestTeardown_CommandFailsFallsBackToDirDelete(t *testing.T) {
 	os.WriteFile(filepath.Join(artifactDir, "index.db"), []byte("data"), 0644)
 
 	runner := &mockRunner{responses: map[string]mockResponse{
-		wtDir + ":[ccc reset --all --force]": {err: fmt.Errorf("command not found")},
+		wtDir + ":shell[ccc reset --all --force]": {err: fmt.Errorf("command not found")},
 	}}
 
 	integs := []integration.Integration{
