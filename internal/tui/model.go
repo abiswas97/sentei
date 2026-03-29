@@ -84,7 +84,8 @@ type Model struct {
 	width    int
 	height   int
 
-	menuItems []menuItem
+	menuItems  []menuItem
+	menuCursor int
 
 	remove removeState
 	create createState
