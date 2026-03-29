@@ -1,0 +1,25 @@
+internal/repo/migrate.go
+  764a16f68cca6469 183-206
+internal/repo/e2e_test.go
+  764a16f68cca6469 144-161,170,173
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.22",
+  "base_commit_sha": "7049f73e10555625028dadd34afd3047641d8912",
+  "prompts": {
+    "764a16f68cca6469": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ac54152b-b011-4656-a2ab-f030775dff6b",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>",
+      "messages": [],
+      "total_additions": 44,
+      "total_deletions": 2,
+      "accepted_lines": 44,
+      "overriden_lines": 0
+    }
+  }
+}
