@@ -1,0 +1,23 @@
+internal/state/state.go
+  836686c23c36f641 9,21
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.22",
+  "base_commit_sha": "f1129d91fee6bcd5bbfa2ba24e7c70fc441b7432",
+  "prompts": {
+    "836686c23c36f641": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "3900c7b6-8b79-42a7-b749-c875614dd86f",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>",
+      "messages": [],
+      "total_additions": 2,
+      "total_deletions": 6,
+      "accepted_lines": 2,
+      "overriden_lines": 0
+    }
+  }
+}
