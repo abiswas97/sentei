@@ -79,7 +79,9 @@ func (m Model) updateRepoOptions(msg tea.Msg) (tea.Model, tea.Cmd) {
 			for i, opt := range visible {
 				if opt == m.repo.optionsCursor {
 					if i < len(visible)-1 {
+						oldCursor := m.repo.optionsCursor
 						m.repo.optionsCursor = visible[i+1]
+						return m, m.repoOptionsFocusChanged(oldCursor, m.repo.optionsCursor)
 					}
 					break
 				}
@@ -89,7 +91,9 @@ func (m Model) updateRepoOptions(msg tea.Msg) (tea.Model, tea.Cmd) {
 			for i, opt := range visible {
 				if opt == m.repo.optionsCursor {
 					if i > 0 {
+						oldCursor := m.repo.optionsCursor
 						m.repo.optionsCursor = visible[i-1]
+						return m, m.repoOptionsFocusChanged(oldCursor, m.repo.optionsCursor)
 					}
 					break
 				}
@@ -97,11 +101,14 @@ func (m Model) updateRepoOptions(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		case key.Matches(msg, keys.Toggle):
 			switch m.repo.optionsCursor {
+			case repoOptWorktree:
+				m.repo.createWorktree = !m.repo.createWorktree
 			case repoOptPublish:
 				if m.repo.ghStatus == "authenticated" {
 					m.repo.publishGitHub = !m.repo.publishGitHub
 					if !m.repo.publishGitHub {
 						m.repo.optionsCursor = repoOptPublish
+						m.repo.descInput.Blur()
 					}
 				}
 			case repoOptVisibility:
@@ -134,6 +141,17 @@ func (m Model) updateRepoOptions(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+// repoOptionsFocusChanged handles focus/blur on the description input when cursor moves.
+func (m *Model) repoOptionsFocusChanged(oldOpt, newOpt int) tea.Cmd {
+	if oldOpt == repoOptDescription {
+		m.repo.descInput.Blur()
+	}
+	if newOpt == repoOptDescription && m.repo.publishGitHub {
+		return m.repo.descInput.Focus()
+	}
+	return nil
+}
+
 func (m Model) viewRepoOptions() string {
 	var b strings.Builder
 
@@ -151,12 +169,17 @@ func (m Model) viewRepoOptions() string {
 	b.WriteString("  " + styleTitle.Render("Setup"))
 	b.WriteString("\n\n")
 
-	// Worktree (display-only)
+	// Worktree toggle
 	cursor := "  "
 	if m.repo.optionsCursor == repoOptWorktree {
 		cursor = "> "
 	}
-	checkbox := styleCheckboxOn.Render("[x]")
+	var checkbox string
+	if m.repo.createWorktree {
+		checkbox = styleCheckboxOn.Render("[x]")
+	} else {
+		checkbox = styleCheckboxOff.Render("[ ]")
+	}
 	hint := "  " + styleDim.Render("main")
 	if m.repo.optionsCursor == repoOptWorktree {
 		b.WriteString(styleAccent.Render(cursor) + checkbox + " Create initial worktree" + hint)
