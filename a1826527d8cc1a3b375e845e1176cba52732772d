@@ -1,0 +1,23 @@
+docs/superpowers/specs/2026-03-30-repo-operations-design.md
+  764a16f68cca6469 1-508
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.22",
+  "base_commit_sha": "a1826527d8cc1a3b375e845e1176cba52732772d",
+  "prompts": {
+    "764a16f68cca6469": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ac54152b-b011-4656-a2ab-f030775dff6b",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>",
+      "messages": [],
+      "total_additions": 511,
+      "total_deletions": 3,
+      "accepted_lines": 508,
+      "overriden_lines": 0
+    }
+  }
+}
