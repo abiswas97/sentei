@@ -1,0 +1,23 @@
+docs/superpowers/specs/2026-03-29-worktree-creation-design.md
+  764a16f68cca6469 1-536
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.22",
+  "base_commit_sha": "9f173fde3921c96eb638dd463f90c1ca9af1b69f",
+  "prompts": {
+    "764a16f68cca6469": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ac54152b-b011-4656-a2ab-f030775dff6b",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>",
+      "messages": [],
+      "total_additions": 538,
+      "total_deletions": 2,
+      "accepted_lines": 536,
+      "overriden_lines": 0
+    }
+  }
+}
