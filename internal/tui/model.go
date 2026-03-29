@@ -36,6 +36,7 @@ const (
 	migrateConfirmView
 	migrateProgressView
 	migrateSummaryView
+	migrateNextView
 )
 
 type SortField int
@@ -305,6 +306,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.updateMigrateConfirm(msg)
 	case migrateSummaryView:
 		return m.updateMigrateSummary(msg)
+	case migrateNextView:
+		return m.updateMigrateNext(msg)
 	}
 	return m, nil
 }
@@ -343,6 +346,8 @@ func (m Model) View() string {
 		return m.viewMigrateConfirm()
 	case migrateSummaryView:
 		return m.viewMigrateSummary()
+	case migrateNextView:
+		return m.viewMigrateNext()
 	}
 	return ""
 }
