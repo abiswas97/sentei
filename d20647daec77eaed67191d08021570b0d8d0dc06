@@ -1,0 +1,23 @@
+internal/tui/create_summary.go
+  764a16f68cca6469 3-5,7-11,14-26,31-110
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.22",
+  "base_commit_sha": "d20647daec77eaed67191d08021570b0d8d0dc06",
+  "prompts": {
+    "764a16f68cca6469": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ac54152b-b011-4656-a2ab-f030775dff6b",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>",
+      "messages": [],
+      "total_additions": 102,
+      "total_deletions": 2,
+      "accepted_lines": 102,
+      "overriden_lines": 0
+    }
+  }
+}
