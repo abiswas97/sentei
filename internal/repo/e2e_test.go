@@ -141,6 +141,24 @@ func TestE2E_MigrateRepo(t *testing.T) {
 		t.Error(".git should be a file (pointer), not a directory")
 	}
 
+	// Verify root directory is clean — only .bare, .git, and worktree dir should remain
+	entries, err := os.ReadDir(repoPath)
+	if err != nil {
+		t.Fatalf("reading repo root: %v", err)
+	}
+	allowedRootEntries := map[string]bool{".bare": true, ".git": true, "main": true}
+	for _, entry := range entries {
+		if !allowedRootEntries[entry.Name()] {
+			t.Errorf("unexpected file at repo root after migration: %s (old working files should be removed)", entry.Name())
+		}
+	}
+
+	// Verify worktree has the tracked files
+	wtFilePath := filepath.Join(result.WorktreePath, "file.txt")
+	if _, err := os.Stat(wtFilePath); os.IsNotExist(err) {
+		t.Error("file.txt should exist in worktree (checked out from git)")
+	}
+
 	// Verify backup exists
 	if result.BackupPath == "" {
 		t.Error("BackupPath should be set")
@@ -149,10 +167,10 @@ func TestE2E_MigrateRepo(t *testing.T) {
 		t.Error("backup directory should exist")
 	}
 
-	// Verify .env was copied to new worktree
+	// Verify .env was copied from backup to new worktree
 	wtEnvPath := filepath.Join(result.WorktreePath, ".env")
 	if _, err := os.Stat(wtEnvPath); os.IsNotExist(err) {
-		t.Error(".env should be copied to new worktree")
+		t.Error(".env should be copied to new worktree from backup")
 	}
 
 	// Test backup cleanup
