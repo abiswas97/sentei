@@ -9,6 +9,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/abiswas97/sentei/internal/git"
+	"github.com/abiswas97/sentei/internal/repo"
 	"github.com/abiswas97/sentei/internal/worktree"
 )
 
@@ -80,17 +81,35 @@ func (m Model) updateMenu(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		case key.Matches(msg, keys.Confirm):
 			if m.menuCursor >= 0 && m.menuCursor < len(m.menuItems) && m.menuItems[m.menuCursor].enabled {
-				switch m.menuCursor {
-				case 0: // Create
+				label := m.menuItems[m.menuCursor].label
+				switch label {
+				case "Create new worktree":
 					m.view = createBranchView
 					return m, m.create.branchInput.Cursor.BlinkCmd()
-				case 1: // Remove
+				case "Remove worktrees":
 					m.view = listView
 					if len(m.remove.worktrees) == 0 {
 						return m, loadWorktreeContext(m.runner, m.repoPath)
 					}
-				case 2: // Cleanup
+				case "Cleanup":
 					return m, tea.Quit
+				case "Create new repository":
+					m.repo.nameInput.SetValue("")
+					m.repo.locationInput.SetValue("")
+					m.repo.focusedField = 0
+					m.repo.validationErr = ""
+					m.view = repoNameView
+					return m, m.repo.nameInput.Focus()
+				case "Clone repository as bare":
+					m.repo.urlInput.SetValue("")
+					m.repo.cloneNameInput.SetValue("")
+					m.repo.cloneFocusedField = 0
+					m.repo.nameManuallyEdited = false
+					m.view = cloneInputView
+					return m, m.repo.urlInput.Focus()
+				case "Migrate to bare repository":
+					m.view = migrateConfirmView
+					return m, loadMigrateInfo(m.runner, m.repoPath)
 				}
 			}
 		}
@@ -99,6 +118,9 @@ func (m Model) updateMenu(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m *Model) updateMenuHints() {
+	if m.context != repo.ContextBareRepo {
+		return
+	}
 	if len(m.menuItems) < 2 {
 		return
 	}
@@ -119,23 +141,31 @@ func (m Model) viewMenu() string {
 	b.WriteString(styleTitle.Render(fmt.Sprintf("  sentei %s Git Worktree Manager", "\u2500")))
 	b.WriteString("\n\n")
 
-	b.WriteString(styleDim.Render(fmt.Sprintf("  %s (bare) %s %s", repoName, "\u00b7", m.repoPath)))
-	b.WriteString("\n")
-
-	if len(m.remove.worktrees) > 0 {
-		clean, dirty, locked := 0, 0, 0
-		for _, wt := range m.remove.worktrees {
-			switch {
-			case wt.IsLocked:
-				locked++
-			case wt.HasUncommittedChanges || wt.HasUntrackedFiles:
-				dirty++
-			default:
-				clean++
+	switch m.context {
+	case repo.ContextBareRepo:
+		b.WriteString(styleDim.Render(fmt.Sprintf("  %s (bare) %s %s", repoName, "\u00b7", m.repoPath)))
+		b.WriteString("\n")
+		if len(m.remove.worktrees) > 0 {
+			clean, dirty, locked := 0, 0, 0
+			for _, wt := range m.remove.worktrees {
+				switch {
+				case wt.IsLocked:
+					locked++
+				case wt.HasUncommittedChanges || wt.HasUntrackedFiles:
+					dirty++
+				default:
+					clean++
+				}
 			}
+			b.WriteString(styleDim.Render(fmt.Sprintf("  %d worktrees %s %d clean, %d dirty, %d locked",
+				len(m.remove.worktrees), "\u00b7", clean, dirty, locked)))
+			b.WriteString("\n")
 		}
-		b.WriteString(styleDim.Render(fmt.Sprintf("  %d worktrees %s %d clean, %d dirty, %d locked",
-			len(m.remove.worktrees), "\u00b7", clean, dirty, locked)))
+	case repo.ContextNonBareRepo:
+		b.WriteString(styleDim.Render(fmt.Sprintf("  %s %s %s", repoName, "\u00b7", m.repoPath)))
+		b.WriteString("\n")
+	case repo.ContextNoRepo:
+		b.WriteString(styleDim.Render(fmt.Sprintf("  %s", m.repoPath)))
 		b.WriteString("\n")
 	}
 
