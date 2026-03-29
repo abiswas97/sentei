@@ -9,6 +9,7 @@ import (
 
 	"github.com/abiswas97/sentei/internal/cleanup"
 	"github.com/abiswas97/sentei/internal/config"
+	"github.com/abiswas97/sentei/internal/creator"
 	"github.com/abiswas97/sentei/internal/git"
 	"github.com/abiswas97/sentei/internal/integration"
 	"github.com/abiswas97/sentei/internal/worktree"
@@ -72,12 +73,15 @@ type createState struct {
 	baseInput    textinput.Model
 	focusedField int // 0 = branch, 1 = base
 
-	ecosystems   []config.EcosystemConfig
-	integrations []integration.Integration
-	ecoEnabled   map[string]bool
-	intEnabled   map[string]bool
-	mergeBase    bool
-	copyEnvFiles bool
+	ecosystems    []config.EcosystemConfig
+	integrations  []integration.Integration
+	ecoEnabled    map[string]bool
+	intEnabled    map[string]bool
+	mergeBase     bool
+	copyEnvFiles  bool
+	optionsCursor int
+
+	eventCh chan creator.Event
 }
 
 type Model struct {
