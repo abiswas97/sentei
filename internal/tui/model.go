@@ -10,6 +10,7 @@ import (
 	"github.com/abiswas97/sentei/internal/cleanup"
 	"github.com/abiswas97/sentei/internal/config"
 	"github.com/abiswas97/sentei/internal/git"
+	"github.com/abiswas97/sentei/internal/integration"
 	"github.com/abiswas97/sentei/internal/worktree"
 )
 
@@ -67,9 +68,12 @@ type menuItem struct {
 
 // createState holds all state for the worktree creation flow.
 type createState struct {
-	branchInput textinput.Model
-	baseInput   textinput.Model
+	branchInput  textinput.Model
+	baseInput    textinput.Model
+	focusedField int // 0 = branch, 1 = base
 
+	ecosystems   []config.EcosystemConfig
+	integrations []integration.Integration
 	ecoEnabled   map[string]bool
 	intEnabled   map[string]bool
 	mergeBase    bool
