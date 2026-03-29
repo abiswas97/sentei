@@ -4,8 +4,21 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
+
+type mockGhRunner struct {
+	responses map[string]mockResponse
+}
+
+func (m *mockGhRunner) RunGh(dir string, args ...string) (string, error) {
+	key := fmt.Sprintf("%s:gh[%s]", dir, strings.Join(args, " "))
+	if resp, ok := m.responses[key]; ok {
+		return resp.output, resp.err
+	}
+	return "", fmt.Errorf("unexpected gh call: %s", key)
+}
 
 func TestCreate_LocalOnly(t *testing.T) {
 	dir := t.TempDir()
@@ -58,12 +71,14 @@ func TestCreate_WithGitHub(t *testing.T) {
 		fmt.Sprintf("%s:[worktree add main -b main]", repoPath):                                            {output: ""},
 		fmt.Sprintf("%s/main:[add -A]", repoPath):                                                          {output: ""},
 		fmt.Sprintf("%s/main:[commit -m Initial commit]", repoPath):                                        {output: ""},
-		// GitHub phase
-		fmt.Sprintf("%s:shell[gh api user --jq .login]", repoPath):                                                       {output: "abiswas97"},
-		fmt.Sprintf("%s/main:shell[gh repo create my-project --private --description \"\" --source . --push]", repoPath): {output: ""},
-		fmt.Sprintf("%s/.bare:[remote set-url origin git@github.com:abiswas97/my-project.git]", repoPath):                {output: ""},
-		fmt.Sprintf("%s/main:[push -u origin main]", repoPath):                                                           {output: ""},
-		fmt.Sprintf("%s/.bare:[remote set-head origin main]", repoPath):                                                  {output: ""},
+		// GitHub phase (git commands)
+		fmt.Sprintf("%s/.bare:[remote set-url origin git@github.com:abiswas97/my-project.git]", repoPath): {output: ""},
+		fmt.Sprintf("%s/main:[push -u origin main]", repoPath):                                            {output: ""},
+		fmt.Sprintf("%s/.bare:[remote set-head origin main]", repoPath):                                   {output: ""},
+	}}
+	ghRunner := &mockGhRunner{responses: map[string]mockResponse{
+		fmt.Sprintf("%s:gh[api user --jq .login]", repoPath):                                                   {output: "abiswas97"},
+		fmt.Sprintf("%s/main:gh[repo create my-project --private --description  --source . --push]", repoPath): {output: ""},
 	}}
 
 	ec := &eventCollector{}
@@ -74,7 +89,7 @@ func TestCreate_WithGitHub(t *testing.T) {
 		Visibility:    "private",
 		Description:   "",
 	}
-	result := Create(runner, runner, opts, ec.emit)
+	result := CreateWithGh(runner, runner, ghRunner, opts, ec.emit)
 
 	if len(result.Phases) != 2 {
 		t.Errorf("want 2 phases (setup + github), got %d", len(result.Phases))
@@ -121,8 +136,10 @@ func TestCreate_GitHubPhaseFailure_LocalStillUsable(t *testing.T) {
 		fmt.Sprintf("%s:[worktree add main -b main]", repoPath):                                            {output: ""},
 		fmt.Sprintf("%s/main:[add -A]", repoPath):                                                          {output: ""},
 		fmt.Sprintf("%s/main:[commit -m Initial commit]", repoPath):                                        {output: ""},
+	}}
+	ghRunner := &mockGhRunner{responses: map[string]mockResponse{
 		// GitHub phase fails at user lookup
-		fmt.Sprintf("%s:shell[gh api user --jq .login]", repoPath): {output: "", err: fmt.Errorf("gh: not authenticated")},
+		fmt.Sprintf("%s:gh[api user --jq .login]", repoPath): {output: "", err: fmt.Errorf("gh: not authenticated")},
 	}}
 
 	ec := &eventCollector{}
@@ -132,7 +149,7 @@ func TestCreate_GitHubPhaseFailure_LocalStillUsable(t *testing.T) {
 		PublishGitHub: true,
 		Visibility:    "private",
 	}
-	result := Create(runner, runner, opts, ec.emit)
+	result := CreateWithGh(runner, runner, ghRunner, opts, ec.emit)
 
 	// Local repo still usable despite GitHub failure
 	if result.RepoPath != repoPath {

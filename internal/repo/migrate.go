@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/abiswas97/sentei/internal/fileutil"
 	"github.com/abiswas97/sentei/internal/git"
 )
 
@@ -230,7 +231,7 @@ func runMigrateCopy(backupPath, worktreePath string, emit func(Event)) Phase {
 					continue
 				}
 			} else {
-				if err := copyFile(match, dst); err != nil {
+				if err := fileutil.CopyFile(match, dst); err != nil {
 					emit(Event{Phase: phaseName, Step: "Copy development files", Status: StepRunning,
 						Message: fmt.Sprintf("warning: could not copy %s: %v", name, err)})
 					continue
@@ -250,18 +251,6 @@ func runMigrateCopy(backupPath, worktreePath string, emit func(Event)) Phase {
 	return phase
 }
 
-func copyFile(src, dst string) error {
-	data, err := os.ReadFile(src)
-	if err != nil {
-		return err
-	}
-	info, err := os.Stat(src)
-	if err != nil {
-		return err
-	}
-	return os.WriteFile(dst, data, info.Mode())
-}
-
 func copyDir(src, dst string) error {
 	return filepath.WalkDir(src, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -275,7 +264,7 @@ func copyDir(src, dst string) error {
 		if d.IsDir() {
 			return os.MkdirAll(dstPath, 0755)
 		}
-		return copyFile(path, dstPath)
+		return fileutil.CopyFile(path, dstPath)
 	})
 }
 

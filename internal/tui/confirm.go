@@ -67,7 +67,7 @@ const maxTeardownConcurrency = 5
 
 func (m Model) runTeardownPhase(worktrees []git.Worktree, integrations []integration.Integration) tea.Cmd {
 	return func() tea.Msg {
-		shell := &git.DefaultShellRunner{}
+		shell := m.shell
 		type indexedResults struct {
 			index   int
 			results []creator.StepResult
