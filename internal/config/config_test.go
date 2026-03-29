@@ -1,6 +1,8 @@
 package config
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
 	"gopkg.in/yaml.v3"
@@ -274,5 +276,302 @@ func TestIsParallel(t *testing.T) {
 				t.Errorf("IsParallel() = %v, want %v", got, tc.want)
 			}
 		})
+	}
+}
+
+func TestLoadFile(t *testing.T) {
+	tests := []struct {
+		name    string
+		content string
+		wantErr bool
+	}{
+		{
+			name: "valid file",
+			content: `
+ecosystems:
+  - name: node
+    detect:
+      files:
+        - package.json
+    install:
+      command: npm install
+`,
+			wantErr: false,
+		},
+		{
+			name:    "malformed yaml",
+			content: "ecosystems: [\nunclosed",
+			wantErr: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			dir := t.TempDir()
+			path := filepath.Join(dir, "config.yaml")
+			if err := os.WriteFile(path, []byte(tc.content), 0o644); err != nil {
+				t.Fatalf("WriteFile: %v", err)
+			}
+
+			cfg, err := loadFile(path)
+			if tc.wantErr {
+				if err == nil {
+					t.Error("expected error, got nil")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("loadFile() error: %v", err)
+			}
+			if cfg == nil {
+				t.Fatal("expected non-nil config")
+			}
+		})
+	}
+}
+
+func TestLoadFile_NotFound(t *testing.T) {
+	cfg, err := loadFile("/nonexistent/path/config.yaml")
+	if err != nil {
+		t.Fatalf("expected nil error for missing file, got: %v", err)
+	}
+	if cfg != nil {
+		t.Fatalf("expected nil config for missing file, got: %+v", cfg)
+	}
+}
+
+func TestMergeEcosystems(t *testing.T) {
+	base := []EcosystemConfig{
+		{
+			Name:    "pnpm",
+			Detect:  DetectConfig{Files: []string{"pnpm-lock.yaml"}},
+			Install: InstallConfig{Command: "pnpm install"},
+		},
+		{
+			Name:    "go",
+			Detect:  DetectConfig{Files: []string{"go.mod"}},
+			Install: InstallConfig{Command: "go mod download"},
+		},
+	}
+
+	tests := []struct {
+		name    string
+		overlay []EcosystemConfig
+		check   func(t *testing.T, result []EcosystemConfig)
+	}{
+		{
+			name: "add new ecosystem",
+			overlay: []EcosystemConfig{
+				{
+					Name:    "cargo",
+					Detect:  DetectConfig{Files: []string{"Cargo.toml"}},
+					Install: InstallConfig{Command: "cargo fetch"},
+				},
+			},
+			check: func(t *testing.T, result []EcosystemConfig) {
+				if len(result) != 3 {
+					t.Fatalf("expected 3 ecosystems, got %d", len(result))
+				}
+				last := result[2]
+				if last.Name != "cargo" {
+					t.Errorf("new ecosystem name: got %q, want %q", last.Name, "cargo")
+				}
+				if last.Source != "test" {
+					t.Errorf("new ecosystem source: got %q, want %q", last.Source, "test")
+				}
+			},
+		},
+		{
+			name: "override command field",
+			overlay: []EcosystemConfig{
+				{
+					Name:    "pnpm",
+					Install: InstallConfig{Command: "pnpm install --frozen-lockfile"},
+				},
+			},
+			check: func(t *testing.T, result []EcosystemConfig) {
+				if len(result) != 2 {
+					t.Fatalf("expected 2 ecosystems, got %d", len(result))
+				}
+				pnpm := result[0]
+				if pnpm.Install.Command != "pnpm install --frozen-lockfile" {
+					t.Errorf("pnpm command: got %q, want %q", pnpm.Install.Command, "pnpm install --frozen-lockfile")
+				}
+				if pnpm.Source != "test" {
+					t.Errorf("pnpm source: got %q, want %q", pnpm.Source, "test")
+				}
+				// Detect.Files should be preserved from base.
+				if len(pnpm.Detect.Files) == 0 {
+					t.Error("expected detect.files to be preserved from base")
+				}
+			},
+		},
+		{
+			name: "disable ecosystem",
+			overlay: []EcosystemConfig{
+				{
+					Name:    "go",
+					Enabled: boolPtr(false),
+				},
+			},
+			check: func(t *testing.T, result []EcosystemConfig) {
+				for _, e := range result {
+					if e.Name == "go" {
+						if e.IsEnabled() {
+							t.Error("expected go to be disabled")
+						}
+						return
+					}
+				}
+				t.Error("go ecosystem not found in result")
+			},
+		},
+		{
+			name:    "nil overlay returns base unchanged",
+			overlay: nil,
+			check: func(t *testing.T, result []EcosystemConfig) {
+				if len(result) != len(base) {
+					t.Fatalf("expected %d ecosystems, got %d", len(base), len(result))
+				}
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			result := mergeEcosystems(base, tc.overlay, "test")
+			tc.check(t, result)
+		})
+	}
+}
+
+func TestValidate(t *testing.T) {
+	tests := []struct {
+		name    string
+		cfg     Config
+		wantErr bool
+	}{
+		{
+			name: "valid config",
+			cfg: Config{
+				Ecosystems: []EcosystemConfig{
+					{
+						Name:   "go",
+						Detect: DetectConfig{Files: []string{"go.mod"}},
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "missing name",
+			cfg: Config{
+				Ecosystems: []EcosystemConfig{
+					{
+						Name:   "",
+						Detect: DetectConfig{Files: []string{"go.mod"}},
+					},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "no detect files",
+			cfg: Config{
+				Ecosystems: []EcosystemConfig{
+					{
+						Name:   "go",
+						Detect: DetectConfig{Files: nil},
+					},
+				},
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			err := validate(&tc.cfg)
+			if tc.wantErr && err == nil {
+				t.Error("expected error, got nil")
+			}
+			if !tc.wantErr && err != nil {
+				t.Errorf("unexpected error: %v", err)
+			}
+		})
+	}
+}
+
+func TestLoadConfig(t *testing.T) {
+	// Set up a fake XDG_CONFIG_HOME with a global config that overrides pnpm command.
+	xdgDir := t.TempDir()
+	senteiConfigDir := filepath.Join(xdgDir, "sentei")
+	if err := os.MkdirAll(senteiConfigDir, 0o755); err != nil {
+		t.Fatalf("MkdirAll: %v", err)
+	}
+	globalConfig := `
+ecosystems:
+  - name: pnpm
+    install:
+      command: pnpm install --frozen-lockfile
+`
+	if err := os.WriteFile(filepath.Join(senteiConfigDir, "config.yaml"), []byte(globalConfig), 0o644); err != nil {
+		t.Fatalf("WriteFile global config: %v", err)
+	}
+
+	// Set up a repo directory with a .sentei.yaml that enables integrations.
+	repoDir := t.TempDir()
+	// Create a minimal git repo so resolveRepoRoot falls back gracefully.
+	repoConfig := `
+integrations_enabled:
+  - code-review-graph
+  - cocoindex-code
+`
+	if err := os.WriteFile(filepath.Join(repoDir, ".sentei.yaml"), []byte(repoConfig), 0o644); err != nil {
+		t.Fatalf("WriteFile repo config: %v", err)
+	}
+
+	t.Setenv("XDG_CONFIG_HOME", xdgDir)
+
+	cfg, err := LoadConfig(repoDir)
+	if err != nil {
+		t.Fatalf("LoadConfig() error: %v", err)
+	}
+
+	// Check that pnpm command was overridden.
+	var pnpm *EcosystemConfig
+	for i := range cfg.Ecosystems {
+		if cfg.Ecosystems[i].Name == "pnpm" {
+			pnpm = &cfg.Ecosystems[i]
+			break
+		}
+	}
+	if pnpm == nil {
+		t.Fatal("pnpm ecosystem not found in config")
+	}
+	if pnpm.Install.Command != "pnpm install --frozen-lockfile" {
+		t.Errorf("pnpm command: got %q, want %q", pnpm.Install.Command, "pnpm install --frozen-lockfile")
+	}
+
+	// Check integrations.
+	if len(cfg.IntegrationsEnabled) != 2 {
+		t.Fatalf("IntegrationsEnabled: got %d, want 2", len(cfg.IntegrationsEnabled))
+	}
+}
+
+func TestLoadConfig_EmbeddedOnly(t *testing.T) {
+	// Point XDG_CONFIG_HOME to an empty dir and use a repo dir with no .sentei.yaml.
+	xdgDir := t.TempDir()
+	repoDir := t.TempDir()
+
+	t.Setenv("XDG_CONFIG_HOME", xdgDir)
+
+	cfg, err := LoadConfig(repoDir)
+	if err != nil {
+		t.Fatalf("LoadConfig() error: %v", err)
+	}
+
+	if len(cfg.Ecosystems) != 16 {
+		t.Fatalf("expected 16 ecosystems from defaults, got %d", len(cfg.Ecosystems))
 	}
 }
