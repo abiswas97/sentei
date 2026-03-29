@@ -1,0 +1,27 @@
+main.go
+  764a16f68cca6469 79,81-83
+internal/repo/repo.go
+  764a16f68cca6469 66-68,70-74,82-99
+internal/repo/repo_test.go
+  764a16f68cca6469 64,73,114-160
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.22",
+  "base_commit_sha": "769842bbc1bd5bfd46c0e9db65386f6637980dc7",
+  "prompts": {
+    "764a16f68cca6469": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ac54152b-b011-4656-a2ab-f030775dff6b",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>",
+      "messages": [],
+      "total_additions": 79,
+      "total_deletions": 13,
+      "accepted_lines": 79,
+      "overriden_lines": 0
+    }
+  }
+}
