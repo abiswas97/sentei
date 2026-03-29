@@ -1,7 +1,7 @@
 package integration
 
-func init() {
-	register(Integration{
+func codeReviewGraph() Integration {
+	return Integration{
 		Name:        "code-review-graph",
 		Description: "Build code graph for AI-assisted code review",
 		URL:         "https://github.com/tirth8205/code-review-graph",
@@ -30,5 +30,5 @@ func init() {
 			Dirs: []string{".code-review-graph/"},
 		},
 		GitignoreEntries: []string{".code-review-graph/"},
-	})
+	}
 }

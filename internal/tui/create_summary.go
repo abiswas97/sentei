@@ -32,15 +32,14 @@ func (m Model) viewCreateSummary() string {
 
 	branch := m.create.branchInput.Value()
 	base := m.create.baseInput.Value()
-	wtPath := m.repoPath + "/" + creator.SanitizeBranchPath(branch)
 
-	hasFailures := false
-	for _, ev := range m.create.events {
-		if ev.Status == creator.StepFailed {
-			hasFailures = true
-			break
-		}
+	result := m.create.result
+	wtPath := m.repoPath + "/" + creator.SanitizeBranchPath(branch)
+	if result != nil && result.WorktreePath != "" {
+		wtPath = result.WorktreePath
 	}
+
+	hasFailures := result != nil && result.HasFailures()
 
 	b.WriteString(styleTitle.Render(fmt.Sprintf("  sentei %s Worktree Created", "\u2500")))
 	b.WriteString("\n\n")
@@ -58,40 +57,28 @@ func (m Model) viewCreateSummary() string {
 	b.WriteString(fmt.Sprintf("    %-10s %s\n", styleDim.Render("Path"), wtPath))
 	b.WriteString(fmt.Sprintf("    %-10s %s (from %s)\n", styleDim.Render("Branch"), branch, base))
 
-	// Summarize ecosystems
-	for _, eco := range m.create.ecosystems {
-		if !m.create.ecoEnabled[eco.Name] {
-			continue
-		}
-		status := styleIndicatorDone.Render(indicatorDone)
-		for _, ev := range m.create.events {
-			if ev.Phase == "Dependencies" && strings.Contains(ev.Step, eco.Name) && ev.Status == creator.StepFailed {
-				status = styleIndicatorFailed.Render(indicatorFailed)
-				if ev.Error != nil {
-					status += "  " + styleError.Render(ev.Error.Error())
+	if result != nil {
+		for _, phase := range result.Phases {
+			label := ""
+			switch phase.Name {
+			case "Dependencies":
+				label = "Deps"
+			case "Integrations":
+				label = "Index"
+			default:
+				continue
+			}
+			for _, step := range phase.Steps {
+				status := styleIndicatorDone.Render(indicatorDone)
+				if step.Status == creator.StepFailed {
+					status = styleIndicatorFailed.Render(indicatorFailed)
+					if step.Error != nil {
+						status += "  " + styleError.Render(step.Error.Error())
+					}
 				}
-				break
+				b.WriteString(fmt.Sprintf("    %-10s %s %s\n", styleDim.Render(label), step.Name, status))
 			}
 		}
-		b.WriteString(fmt.Sprintf("    %-10s %s %s\n", styleDim.Render("Deps"), eco.Name, status))
-	}
-
-	// Summarize integrations
-	for _, integ := range m.create.integrations {
-		if !m.create.intEnabled[integ.Name] {
-			continue
-		}
-		status := styleIndicatorDone.Render(indicatorDone)
-		for _, ev := range m.create.events {
-			if ev.Phase == "Integrations" && strings.Contains(ev.Step, integ.Name) && ev.Status == creator.StepFailed {
-				status = styleIndicatorFailed.Render(indicatorFailed)
-				if ev.Error != nil {
-					status += "  " + styleError.Render(ev.Error.Error())
-				}
-				break
-			}
-		}
-		b.WriteString(fmt.Sprintf("    %-10s %s %s\n", styleDim.Render("Index"), integ.Name, status))
 	}
 
 	b.WriteString("\n")

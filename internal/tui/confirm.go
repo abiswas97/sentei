@@ -63,13 +63,37 @@ func (m Model) updateConfirm(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+const maxTeardownConcurrency = 5
+
 func (m Model) runTeardownPhase(worktrees []git.Worktree, integrations []integration.Integration) tea.Cmd {
 	return func() tea.Msg {
 		shell := &git.DefaultShellRunner{}
+		type indexedResults struct {
+			index   int
+			results []creator.StepResult
+		}
+
+		resultsCh := make(chan indexedResults, len(worktrees))
+		sem := make(chan struct{}, maxTeardownConcurrency)
+
+		for i, wt := range worktrees {
+			sem <- struct{}{}
+			go func(idx int, wtPath string) {
+				defer func() { <-sem }()
+				results := creator.Teardown(shell, wtPath, integrations, func(creator.Event) {})
+				resultsCh <- indexedResults{index: idx, results: results}
+			}(i, wt.Path)
+		}
+
+		collected := make([][]creator.StepResult, len(worktrees))
+		for range worktrees {
+			ir := <-resultsCh
+			collected[ir.index] = ir.results
+		}
+
 		var allResults []creator.StepResult
-		for _, wt := range worktrees {
-			results := creator.Teardown(shell, wt.Path, integrations, func(creator.Event) {})
-			allResults = append(allResults, results...)
+		for _, r := range collected {
+			allResults = append(allResults, r...)
 		}
 		return teardownCompleteMsg{results: allResults}
 	}

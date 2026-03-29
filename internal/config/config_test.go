@@ -501,7 +501,7 @@ func TestValidate(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			err := validate(&tc.cfg)
+			err := validate(&tc.cfg, []string{"code-review-graph", "cocoindex-code"})
 			if tc.wantErr && err == nil {
 				t.Error("expected error, got nil")
 			}

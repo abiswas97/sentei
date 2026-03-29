@@ -90,7 +90,6 @@ func TestRunDeps_ParallelWorkspaces(t *testing.T) {
 	os.WriteFile(filepath.Join(wtPath, "pnpm-workspace.yaml"), []byte(wsYaml), 0644)
 
 	runner := &mockRunner{responses: map[string]mockResponse{
-		wtPath + ":shell[pnpm install]":                                      {output: ""},
 		fmt.Sprintf("%s:shell[pnpm install --filter packages/ui]", wtPath):   {output: ""},
 		fmt.Sprintf("%s:shell[pnpm install --filter packages/core]", wtPath): {output: ""},
 	}}
@@ -112,9 +111,9 @@ func TestRunDeps_ParallelWorkspaces(t *testing.T) {
 	ec := &eventCollector{}
 	phase := runDeps(runner, wtPath, opts, ec.emit)
 
-	// Root install + 2 workspace installs = 3 steps
-	if len(phase.Steps) != 3 {
-		t.Fatalf("step count = %d, want 3", len(phase.Steps))
+	// 2 workspace installs (root install skipped when workspaces detected)
+	if len(phase.Steps) != 2 {
+		t.Fatalf("step count = %d, want 2", len(phase.Steps))
 	}
 
 	// Verify all steps completed
@@ -131,8 +130,8 @@ func TestRunDeps_ParallelWorkspaces(t *testing.T) {
 			runningCount++
 		}
 	}
-	if runningCount < 3 {
-		t.Errorf("expected at least 3 running events, got %d", runningCount)
+	if runningCount < 2 {
+		t.Errorf("expected at least 2 running events, got %d", runningCount)
 	}
 }
 

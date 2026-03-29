@@ -12,6 +12,7 @@ import (
 	"github.com/abiswas97/sentei/internal/config"
 	"github.com/abiswas97/sentei/internal/dryrun"
 	"github.com/abiswas97/sentei/internal/git"
+	"github.com/abiswas97/sentei/internal/integration"
 	"github.com/abiswas97/sentei/internal/playground"
 	"github.com/abiswas97/sentei/internal/tui"
 	"github.com/abiswas97/sentei/internal/worktree"
@@ -109,7 +110,10 @@ func main() {
 	}
 
 	// Load config (best-effort — nil config is safe)
-	cfg, err := config.LoadConfig(repoPath)
+	cfg, err := config.LoadConfig(repoPath,
+		config.WithRunner(runner),
+		config.WithKnownIntegrations(integration.Names()),
+	)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Warning: failed to load config: %v\n", err)
 	}

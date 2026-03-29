@@ -34,6 +34,7 @@ func (m Model) updateCreateProgress(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, m.waitForCreateEvent()
 
 	case createCompleteMsg:
+		m.create.result = &msg.Result
 		m.view = createSummaryView
 		return m, nil
 	}

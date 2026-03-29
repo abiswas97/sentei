@@ -28,21 +28,18 @@ func runDeps(shell git.ShellRunner, wtPath string, opts Options, emit func(Event
 }
 
 func installEcosystem(shell git.ShellRunner, wtPath string, eco config.EcosystemConfig, emit func(Event)) []StepResult {
-	rootStep := runInstallCommand(shell, wtPath, eco.Name, eco.Install.Command, emit)
-	steps := []StepResult{rootStep}
-
-	if rootStep.Status == StepFailed {
-		return steps
-	}
-
 	if eco.Install.WorkspaceDetect == "" || eco.Install.WorkspaceInstall == "" {
-		return steps
+		rootStep := runInstallCommand(shell, wtPath, eco.Name, eco.Install.Command, emit)
+		return []StepResult{rootStep}
 	}
 
 	workspaces, err := ecosystem.DetectWorkspaces(wtPath, eco.Install.WorkspaceDetect)
 	if err != nil || len(workspaces) == 0 {
-		return steps
+		rootStep := runInstallCommand(shell, wtPath, eco.Name, eco.Install.Command, emit)
+		return []StepResult{rootStep}
 	}
+
+	var steps []StepResult
 
 	if eco.Install.IsParallel() {
 		wsSteps := installWorkspacesParallel(shell, wtPath, eco, workspaces, emit)

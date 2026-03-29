@@ -2,6 +2,7 @@ package tui
 
 import (
 	"fmt"
+	"path/filepath"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/key"
@@ -59,6 +60,23 @@ func (m Model) updateCreateBranch(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.create.baseInput.Blur()
 			m.create.branchInput.Focus()
 			return m, m.create.branchInput.Cursor.BlinkCmd()
+
+		case key.Matches(msg, keys.QuickCreate):
+			branch := m.create.branchInput.Value()
+			var existingPaths []string
+			for _, wt := range m.remove.worktrees {
+				existingPaths = append(existingPaths, wt.Path)
+			}
+			if err := validateBranchName(branch, existingPaths); err != nil {
+				m.create.validationErr = err.message
+				return m, nil
+			}
+
+			m.create.validationErr = ""
+			m.prepareCreateOptions()
+			m.startCreation()
+			m.view = createProgressView
+			return m, m.waitForCreateEvent()
 
 		case key.Matches(msg, keys.Confirm):
 			branch := m.create.branchInput.Value()
@@ -138,7 +156,7 @@ func (m Model) viewCreateBranch() string {
 	b.WriteString(styleTitle.Render(fmt.Sprintf("  sentei %s Create Worktree", "\u2500")))
 	b.WriteString("\n\n")
 
-	b.WriteString(styleDim.Render(fmt.Sprintf("  %s %s %s", strings.TrimPrefix(m.repoPath, ""), "\u00b7", m.repoPath)))
+	b.WriteString(styleDim.Render(fmt.Sprintf("  %s %s %s", filepath.Base(m.repoPath), "\u00b7", m.repoPath)))
 	b.WriteString("\n\n")
 
 	b.WriteString(separator(m.width))
@@ -175,7 +193,7 @@ func (m Model) viewCreateBranch() string {
 
 	b.WriteString(separator(m.width))
 	b.WriteString("\n\n")
-	b.WriteString(styleDim.Render("  enter continue \u00b7 tab switch field \u00b7 esc back"))
+	b.WriteString(styleDim.Render("  enter continue \u00b7 ctrl+enter quick create \u00b7 tab switch field \u00b7 esc back"))
 	b.WriteString("\n")
 
 	return b.String()

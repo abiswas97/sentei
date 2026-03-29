@@ -168,14 +168,16 @@ func (m *Model) startCreation() {
 	}
 
 	ch := make(chan creator.Event, 50)
+	resultCh := make(chan creator.Result, 1)
 	m.create.eventCh = ch
+	m.create.resultCh = resultCh
 
 	go func() {
 		result := creator.Run(m.runner, &git.DefaultShellRunner{}, opts, func(e creator.Event) {
 			ch <- e
 		})
 		close(ch)
-		_ = result
+		resultCh <- result
 	}()
 }
 
@@ -183,7 +185,8 @@ func (m Model) waitForCreateEvent() tea.Cmd {
 	return func() tea.Msg {
 		ev, ok := <-m.create.eventCh
 		if !ok {
-			return createCompleteMsg{}
+			result := <-m.create.resultCh
+			return createCompleteMsg{Result: result}
 		}
 		return createEventMsg{Event: ev}
 	}
@@ -192,7 +195,9 @@ func (m Model) waitForCreateEvent() tea.Cmd {
 type createEventMsg struct {
 	Event creator.Event
 }
-type createCompleteMsg struct{}
+type createCompleteMsg struct {
+	Result creator.Result
+}
 
 func (m Model) viewCreateOptions() string {
 	var b strings.Builder
