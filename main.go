@@ -9,6 +9,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/abiswas97/sentei/cmd"
+	"github.com/abiswas97/sentei/internal/config"
 	"github.com/abiswas97/sentei/internal/dryrun"
 	"github.com/abiswas97/sentei/internal/git"
 	"github.com/abiswas97/sentei/internal/playground"
@@ -72,27 +73,34 @@ func main() {
 
 	runner := &git.GitRunner{}
 
-	worktrees, err := git.ListWorktrees(runner, repoPath)
-	if err != nil {
+	// Validate this is a git repo before doing anything
+	if err := git.ValidateRepository(runner, repoPath); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
 
-	worktrees = worktree.EnrichWorktrees(runner, worktrees, enrichConcurrency)
-
-	var filtered []git.Worktree
-	for _, wt := range worktrees {
-		if !wt.IsBare {
-			filtered = append(filtered, wt)
-		}
-	}
-
-	if len(filtered) == 0 {
-		fmt.Println("No worktrees found (only the main working tree exists).")
-		os.Exit(0)
-	}
-
+	// Dry-run mode: eager load worktrees and print
 	if *dryRunFlag {
+		worktrees, err := git.ListWorktrees(runner, repoPath)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
+
+		worktrees = worktree.EnrichWorktrees(runner, worktrees, enrichConcurrency)
+
+		var filtered []git.Worktree
+		for _, wt := range worktrees {
+			if !wt.IsBare {
+				filtered = append(filtered, wt)
+			}
+		}
+
+		if len(filtered) == 0 {
+			fmt.Println("No worktrees found (only the main working tree exists).")
+			os.Exit(0)
+		}
+
 		if err := dryrun.Print(filtered, os.Stdout); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
@@ -100,12 +108,19 @@ func main() {
 		os.Exit(0)
 	}
 
+	// Load config (best-effort — nil config is safe)
+	cfg, err := config.LoadConfig(repoPath)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: failed to load config: %v\n", err)
+	}
+
 	var tuiRunner git.CommandRunner = runner
 	if *playgroundFlag {
 		tuiRunner = &git.DelayRunner{Inner: runner, Delay: playgroundDelay}
 	}
 
-	model := tui.NewModel(filtered, tuiRunner, repoPath)
+	// Start at menu — worktrees loaded lazily
+	model := tui.NewMenuModel(tuiRunner, repoPath, cfg)
 	p := tea.NewProgram(model, tea.WithAltScreen())
 
 	if _, err := p.Run(); err != nil {
