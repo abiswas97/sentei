@@ -99,8 +99,9 @@ func (m Model) viewCreateRepoSummary(result repo.CreateResult) string {
 		if ghErrMsg != "" {
 			msg = ghErrMsg
 		}
-		b.WriteString(fmt.Sprintf("    %-10s %s\n", styleDim.Render("GitHub"),
-			styleError.Render(indicatorFailed+" "+msg)))
+		errWidth := max(m.width-14, 30) // 14 chars for indentation + label
+		wrappedErr := styleError.Width(errWidth).Render(indicatorFailed + " " + msg)
+		b.WriteString(fmt.Sprintf("    %-10s %s\n", styleDim.Render("GitHub"), wrappedErr))
 	}
 
 	worktreePath := result.WorktreePath

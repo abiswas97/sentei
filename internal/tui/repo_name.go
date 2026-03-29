@@ -78,7 +78,7 @@ func (m Model) updateRepoName(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.repo.nameInput.Blur()
 			m.repo.publishGitHub = false
 			m.repo.ghStatus = ""
-			m.repo.optionsCursor = 0
+			m.repo.optionsCursor = repoOptPublish
 			m.view = repoOptionsView
 			return m, checkGitHubAuth(m.shell)
 		}
