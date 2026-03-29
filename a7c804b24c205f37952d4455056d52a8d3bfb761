@@ -1,0 +1,25 @@
+internal/tui/model.go
+  764a16f68cca6469 85
+internal/tui/create_progress.go
+  764a16f68cca6469 3-5,7-23,26-39,43-84,88-167
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.22",
+  "base_commit_sha": "a7c804b24c205f37952d4455056d52a8d3bfb761",
+  "prompts": {
+    "764a16f68cca6469": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ac54152b-b011-4656-a2ab-f030775dff6b",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>",
+      "messages": [],
+      "total_additions": 161,
+      "total_deletions": 3,
+      "accepted_lines": 160,
+      "overriden_lines": 0
+    }
+  }
+}
