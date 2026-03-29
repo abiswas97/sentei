@@ -18,6 +18,8 @@
 | Create | `internal/state/state_test.go` | Unit tests for state persistence |
 | Create | `internal/integration/detect.go` | Scan worktree dirs for integration artifacts |
 | Create | `internal/integration/detect_test.go` | Unit tests for detection |
+| Create | `internal/fileutil/copy.go` | Shared `CopyDir` helper for cross-package use |
+| Create | `internal/fileutil/copy_test.go` | Unit tests for CopyDir |
 | Create | `internal/integration/manager.go` | Enable/disable integrations across worktrees |
 | Create | `internal/integration/manager_test.go` | Unit tests for manager |
 | Create | `internal/tui/integration_list.go` | Management list view (update + view + info dialog) |
@@ -31,7 +33,9 @@
 | Modify | `internal/tui/create_options.go` | Remove integration toggles, add info line |
 | Modify | `internal/tui/create_branch.go` | Use state for integration list instead of config toggles |
 | Modify | `internal/creator/integrations.go` | Add ccc copy optimization |
-| Modify | `internal/creator/integrations_test.go` | Tests for ccc copy |
+| Modify | `internal/creator/integrations_test.go` | Tests for index copy |
+| Modify | `internal/integration/integration.go` | Add IndexCopyDir field |
+| Modify | `internal/integration/ccc.go` | Set IndexCopyDir for ccc |
 
 ---
 
@@ -188,13 +192,35 @@ func Load(bareDir string) (*State, error) {
 	return &s, nil
 }
 
-// Save writes the state to bareDir/sentei.json.
+// Save writes the state to bareDir/sentei.json atomically (write to temp, then rename).
 func Save(bareDir string, s *State) error {
 	data, err := json.MarshalIndent(s, "", "  ")
 	if err != nil {
 		return fmt.Errorf("encoding state: %w", err)
 	}
-	return os.WriteFile(filepath.Join(bareDir, stateFile), data, 0644)
+	data = append(data, '\n')
+
+	target := filepath.Join(bareDir, stateFile)
+	tmp, err := os.CreateTemp(bareDir, ".sentei-*.json")
+	if err != nil {
+		return fmt.Errorf("creating temp file: %w", err)
+	}
+	tmpName := tmp.Name()
+
+	if _, err := tmp.Write(data); err != nil {
+		tmp.Close()
+		os.Remove(tmpName)
+		return fmt.Errorf("writing state: %w", err)
+	}
+	if err := tmp.Close(); err != nil {
+		os.Remove(tmpName)
+		return fmt.Errorf("closing temp file: %w", err)
+	}
+	if err := os.Rename(tmpName, target); err != nil {
+		os.Remove(tmpName)
+		return fmt.Errorf("renaming state file: %w", err)
+	}
+	return nil
 }
 ```
 
@@ -208,6 +234,49 @@ Expected: All 6 tests pass.
 ```bash
 git add internal/state/state.go internal/state/state_test.go
 git commit -m "feat: add state persistence for bare repo integration config"
+```
+
+---
+
+### Task 1b: Add IndexCopyDir to Integration Struct
+
+**Files:**
+- Modify: `internal/integration/integration.go`
+- Modify: `internal/integration/ccc.go`
+
+The ccc copy optimization needs to know which directory to copy between worktrees. Rather than hardcoding `"cocoindex-code"` name checks, add a config-driven field to the `Integration` struct.
+
+- [ ] **Step 1: Add IndexCopyDir field to Integration struct**
+
+In `internal/integration/integration.go`, add to the `Integration` struct:
+
+```go
+// IndexCopyDir is the directory name (relative to worktree root) that can be
+// copied from one worktree to another to seed an incremental index. Empty means
+// the integration's index cannot be shared across worktrees (e.g., absolute paths).
+IndexCopyDir string
+```
+
+- [ ] **Step 2: Set IndexCopyDir for ccc**
+
+In `internal/integration/ccc.go`, add to the `cocoindexCode()` return:
+
+```go
+IndexCopyDir: ".cocoindex_code",
+```
+
+crg's `codeReviewGraph()` gets no `IndexCopyDir` (empty string = not copyable).
+
+- [ ] **Step 3: Verify build**
+
+Run: `cd /Users/abiswas/code/personal/sentei/feature-integration-selection && go build ./...`
+Expected: Build succeeds.
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add internal/integration/integration.go internal/integration/ccc.go
+git commit -m "feat: add IndexCopyDir field for config-driven index copy optimization"
 ```
 
 ---
@@ -459,7 +528,6 @@ func TestEnableIntegration_RunsSetupOnEachWorktree(t *testing.T) {
 	shell := &managerMockShell{responses: map[string]mockShellResponse{
 		"/repo/main:shell[code-review-graph --version]":          {output: "1.0"},
 		"/repo:shell[code-review-graph build --repo /repo/main]": {output: "built"},
-		"/repo/main:shell[code-review-graph build --repo /repo/feat]": {err: fmt.Errorf("wrong")},
 		"/repo/feat:shell[code-review-graph --version]":          {output: "1.0"},
 		"/repo:shell[code-review-graph build --repo /repo/feat]": {output: "built"},
 	}}
@@ -468,7 +536,7 @@ func TestEnableIntegration_RunsSetupOnEachWorktree(t *testing.T) {
 	wtPaths := []string{"/repo/main", "/repo/feat"}
 	var events []ManagerEvent
 
-	EnableIntegration(shell, "/repo", wtPaths, integ, func(e ManagerEvent) {
+	EnableIntegration(shell, "/repo", "/repo/main", wtPaths, integ, func(e ManagerEvent) {
 		events = append(events, e)
 	})
 
@@ -476,15 +544,27 @@ func TestEnableIntegration_RunsSetupOnEachWorktree(t *testing.T) {
 		t.Fatal("expected events to be emitted")
 	}
 
-	// Should have setup events for both worktrees
-	var setupEvents int
-	for _, e := range events {
-		if strings.Contains(e.Step, "Setup") {
-			setupEvents++
-		}
+	// Assert exact event sequence: Setup for main, then Setup for feat
+	type wantEvent struct {
+		worktree string
+		step     string
+		status   ManagerStatus
 	}
-	if setupEvents != 2 {
-		t.Errorf("setup events = %d, want 2", setupEvents)
+	want := []wantEvent{
+		{"/repo/main", "Setup code-review-graph", StatusRunning},
+		{"/repo/main", "Setup code-review-graph", StatusDone},
+		{"/repo/feat", "Setup code-review-graph", StatusRunning},
+		{"/repo/feat", "Setup code-review-graph", StatusDone},
+	}
+	if len(events) != len(want) {
+		t.Fatalf("event count = %d, want %d\nevents: %+v", len(events), len(want), events)
+	}
+	for i, w := range want {
+		got := events[i]
+		if got.Worktree != w.worktree || got.Step != w.step || got.Status != w.status {
+			t.Errorf("event[%d] = {%s, %s, %d}, want {%s, %s, %d}",
+				i, got.Worktree, got.Step, got.Status, w.worktree, w.step, w.status)
+		}
 	}
 }
 
@@ -628,7 +708,9 @@ func enableOnWorktree(shell git.ShellRunner, repoPath, wtPath string, integ Inte
 
 	// Update gitignore
 	if len(integ.GitignoreEntries) > 0 {
-		appendGitignoreEntries(wtPath, integ.GitignoreEntries)
+		if err := appendGitignoreEntries(wtPath, integ.GitignoreEntries); err != nil {
+			emit(ManagerEvent{Worktree: wtPath, Step: fmt.Sprintf("Gitignore %s", integ.Name), Status: StatusFailed, Error: err})
+		}
 	}
 }
 
@@ -677,7 +759,7 @@ func detectTool(shell git.ShellRunner, wtPath string, integ Integration) bool {
 	return false
 }
 
-func appendGitignoreEntries(dir string, entries []string) {
+func appendGitignoreEntries(dir string, entries []string) error {
 	gitignorePath := filepath.Join(dir, ".gitignore")
 	existing, _ := os.ReadFile(gitignorePath)
 	content := string(existing)
@@ -689,17 +771,20 @@ func appendGitignoreEntries(dir string, entries []string) {
 		}
 	}
 	if len(toAdd) == 0 {
-		return
+		return nil
 	}
 
 	f, err := os.OpenFile(gitignorePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
-		return
+		return fmt.Errorf("opening .gitignore: %w", err)
 	}
 	defer f.Close()
 	for _, entry := range toAdd {
-		fmt.Fprintln(f, entry)
+		if _, err := fmt.Fprintln(f, entry); err != nil {
+			return fmt.Errorf("writing to .gitignore: %w", err)
+		}
 	}
+	return nil
 }
 ```
 
@@ -938,7 +1023,14 @@ func (m Model) loadIntegrationState() tea.Cmd {
 		}
 
 		bareDir := filepath.Join(m.repoPath, ".bare")
-		st, _ := state.Load(bareDir)
+		st, err := state.Load(bareDir)
+		if err != nil {
+			return integrationStateLoadedMsg{
+				integrations: all,
+				current:      current,
+				err:          err,
+			}
+		}
 
 		return integrationStateLoadedMsg{
 			integrations: all,
@@ -1039,11 +1131,14 @@ func (m Model) updateIntegrationList(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case integrationStateLoadedMsg:
 		m.integ.integrations = msg.integrations
 		m.integ.current = msg.current
+		// Initialize staged from disk state
 		m.integ.staged = make(map[string]bool)
 		for _, integ := range msg.integrations {
 			m.integ.staged[integ.Name] = msg.current[integ.Name]
 		}
-		if len(msg.enabled) > 0 {
+		// If state file loaded successfully and had entries, overlay those as source of truth.
+		// If state file was corrupt (msg.err != nil), fall back to disk detection only.
+		if msg.err == nil && len(msg.enabled) > 0 {
 			for _, integ := range msg.integrations {
 				m.integ.staged[integ.Name] = false
 			}
@@ -1086,12 +1181,9 @@ func (m Model) updateIntegrationList(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 
 		case key.Matches(msg, keys.Back):
-			if m.integrationHasPendingChanges() {
-				// Discard changes — reset staged to current
-				for _, integ := range m.integ.integrations {
-					m.integ.staged[integ.Name] = m.integ.current[integ.Name]
-				}
-				return m, nil
+			// Discard any pending changes and return to menu in one press
+			for _, integ := range m.integ.integrations {
+				m.integ.staged[integ.Name] = m.integ.current[integ.Name]
 			}
 			m.view = menuView
 			return m, nil
@@ -1205,10 +1297,9 @@ func (m Model) viewIntegrationList() string {
 	// Key hints
 	hints := "  w/s navigate \u00b7 space toggle \u00b7 ? info"
 	if pending > 0 {
-		hints += " \u00b7 enter apply \u00b7 esc discard"
-	} else {
-		hints += " \u00b7 esc back"
+		hints += " \u00b7 enter apply"
 	}
+	hints += " \u00b7 esc back"
 	b.WriteString(styleDim.Render(hints))
 	b.WriteString("\n")
 
@@ -1408,10 +1499,12 @@ case key.Matches(msg, keys.Confirm):
     }
 ```
 
-And rename/refactor:
+And rename/refactor. **Important**: This must be a value receiver that captures channels locally
+and passes them to `waitForIntegrationEvent` as parameters — NOT stored on the model — to
+avoid a data race between the goroutine and Bubble Tea's value-copy update loop.
 
 ```go
-func (m *Model) startIntegrationApply() tea.Cmd {
+func (m Model) startIntegrationApply() (Model, tea.Cmd) {
     var toEnable, toDisable []integration.Integration
     for _, integ := range m.integ.integrations {
         staged := m.integ.staged[integ.Name]
@@ -1435,11 +1528,12 @@ func (m *Model) startIntegrationApply() tea.Cmd {
 
     repoPath := m.repoPath
     shell := m.shell
+    mainWT := m.findSourceWorktree()
 
     go func() {
         emit := func(e integration.ManagerEvent) { ch <- e }
         for _, integ := range toEnable {
-            integration.EnableIntegration(shell, repoPath, wtPaths, integ, emit)
+            integration.EnableIntegration(shell, repoPath, mainWT, wtPaths, integ, emit)
         }
         for _, integ := range toDisable {
             integration.DisableIntegration(shell, wtPaths, integ, emit)
@@ -1448,7 +1542,35 @@ func (m *Model) startIntegrationApply() tea.Cmd {
         doneCh <- struct{}{}
     }()
 
-    return m.waitForIntegrationEvent()
+    return m, waitForIntegrationEvent(ch, doneCh)
+}
+```
+
+Update the Confirm handler in `updateIntegrationList` to use the returned model:
+
+```go
+case key.Matches(msg, keys.Confirm):
+    if m.integrationHasPendingChanges() {
+        m.integ.events = nil
+        m.integ.returnView = integrationListView
+        m.view = integrationProgressView
+        m, cmd := m.startIntegrationApply()
+        return m, cmd
+    }
+```
+
+Update `waitForIntegrationEvent` to be a standalone function that takes channel params:
+
+```go
+func waitForIntegrationEvent(ch <-chan integration.ManagerEvent, doneCh <-chan struct{}) tea.Cmd {
+    return func() tea.Msg {
+        ev, ok := <-ch
+        if !ok {
+            <-doneCh
+            return integrationApplyDoneMsg{}
+        }
+        return integrationEventMsg{Event: ev}
+    }
 }
 ```
 
@@ -1481,33 +1603,63 @@ func (m Model) updateIntegrationProgress(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case integrationEventMsg:
 		m.integ.events = append(m.integ.events, msg.Event)
-		return m, m.waitForIntegrationEvent()
+		return m, waitForIntegrationEvent(m.integ.eventCh, m.integ.doneCh)
 
 	case integrationApplyDoneMsg:
-		// Update state file
-		bareDir := filepath.Join(m.repoPath, ".bare")
-		var enabled []string
-		for _, integ := range m.integ.integrations {
-			if m.integ.staged[integ.Name] {
-				enabled = append(enabled, integ.Name)
+		// Save state and refresh disk detection in a Cmd (avoid I/O on UI goroutine)
+		return m, m.finalizeIntegrationApply()
+
+	case integrationFinalizedMsg:
+		if m.integ.returnView != migrateNextView {
+			m.integ.current = msg.current
+			for _, integ := range m.integ.integrations {
+				m.integ.staged[integ.Name] = m.integ.current[integ.Name]
 			}
 		}
-		_ = state.Save(bareDir, &state.State{Integrations: enabled})
-
-		// Refresh current state from disk
-		mainWT := m.findSourceWorktree()
-		if mainWT != "" {
-			m.integ.current = integration.DetectAllPresent(mainWT, m.integ.integrations)
-		}
-		// Sync staged to current
-		for _, integ := range m.integ.integrations {
-			m.integ.staged[integ.Name] = m.integ.current[integ.Name]
-		}
-
 		m.view = m.integ.returnView
 		return m, nil
 	}
 	return m, nil
+}
+
+type integrationFinalizedMsg struct {
+	current map[string]bool
+	err     error
+}
+
+func (m Model) finalizeIntegrationApply() tea.Cmd {
+	repoPath := m.repoPath
+	returnView := m.integ.returnView
+	integrations := m.integ.integrations
+	staged := make(map[string]bool)
+	for k, v := range m.integ.staged {
+		staged[k] = v
+	}
+	repoResult := m.repo.result
+
+	return func() tea.Msg {
+		bareDir := filepath.Join(repoPath, ".bare")
+		if returnView == migrateNextView {
+			if result, ok := repoResult.(repo.MigrateResult); ok {
+				bareDir = filepath.Join(result.BareRoot, ".bare")
+			}
+		}
+
+		var enabled []string
+		for _, integ := range integrations {
+			if staged[integ.Name] {
+				enabled = append(enabled, integ.Name)
+			}
+		}
+		err := state.Save(bareDir, &state.State{Integrations: enabled})
+
+		current := make(map[string]bool)
+		for _, integ := range integrations {
+			current[integ.Name] = staged[integ.Name]
+		}
+
+		return integrationFinalizedMsg{current: current, err: err}
+	}
 }
 
 func (m Model) viewIntegrationProgress() string {
@@ -1695,7 +1847,8 @@ func (m Model) updateMigrateIntegrations(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.integ.events = nil
 				m.integ.returnView = migrateNextView
 				m.view = integrationProgressView
-				return m, m.startMigrateIntegrationApply()
+				m, cmd := m.startMigrateIntegrationApply()
+				return m, cmd
 			}
 			m.view = migrateNextView
 			return m, nil
@@ -1709,10 +1862,10 @@ func (m Model) updateMigrateIntegrations(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m *Model) startMigrateIntegrationApply() tea.Cmd {
+func (m Model) startMigrateIntegrationApply() (Model, tea.Cmd) {
 	result, ok := m.repo.result.(repo.MigrateResult)
 	if !ok {
-		return nil
+		return m, nil
 	}
 
 	var toEnable []integration.Integration
@@ -1738,13 +1891,15 @@ func (m *Model) startMigrateIntegrationApply() tea.Cmd {
 	go func() {
 		emit := func(e integration.ManagerEvent) { ch <- e }
 		for _, integ := range toEnable {
-			integration.EnableIntegration(shell, repoPath, []string{wtPath}, integ, emit)
+			// mainWTPath == wtPath for migration (main is the only worktree),
+			// so ccc copy optimization is correctly skipped — full index runs.
+			integration.EnableIntegration(shell, repoPath, wtPath, []string{wtPath}, integ, emit)
 		}
 		close(ch)
 		doneCh <- struct{}{}
 	}()
 
-	return m.waitForIntegrationEvent()
+	return m, waitForIntegrationEvent(ch, doneCh)
 }
 
 func (m Model) viewMigrateIntegrations() string {
@@ -1844,44 +1999,11 @@ func (m Model) migrateWorktreePath(result repo.MigrateResult) string {
 }
 ```
 
-- [ ] **Step 3: Save state on integration progress completion for migration**
+- [ ] **Step 3: Verify migration path in finalizeIntegrationApply**
 
-In `integration_progress.go`, the `integrationApplyDoneMsg` handler already saves state. But during migration, `m.repoPath` may still point to the old non-bare path. We need to use the migration result's BareRoot.
+The `finalizeIntegrationApply` function in `integration_progress.go` (Task 8) already handles the migration case by checking `returnView == migrateNextView` and using `result.BareRoot` for the bare dir. No additional changes needed here — just verify the migration path works during E2E testing.
 
-Update the save logic in `updateIntegrationProgress` to handle the migration case:
-
-```go
-case integrationApplyDoneMsg:
-    // Determine bare dir
-    bareDir := filepath.Join(m.repoPath, ".bare")
-    if m.integ.returnView == migrateNextView {
-        if result, ok := m.repo.result.(repo.MigrateResult); ok {
-            bareDir = filepath.Join(result.BareRoot, ".bare")
-        }
-    }
-
-    var enabled []string
-    for _, integ := range m.integ.integrations {
-        if m.integ.staged[integ.Name] {
-            enabled = append(enabled, integ.Name)
-        }
-    }
-    _ = state.Save(bareDir, &state.State{Integrations: enabled})
-
-    // Refresh current state
-    if m.integ.returnView != migrateNextView {
-        mainWT := m.findSourceWorktree()
-        if mainWT != "" {
-            m.integ.current = integration.DetectAllPresent(mainWT, m.integ.integrations)
-        }
-        for _, integ := range m.integ.integrations {
-            m.integ.staged[integ.Name] = m.integ.current[integ.Name]
-        }
-    }
-
-    m.view = m.integ.returnView
-    return m, nil
-```
+Note: during migration onboarding, `ccc index` runs as a full (slow) index because `mainWTPath == wtPath` (main is the only worktree), so the copy optimization is correctly skipped.
 
 - [ ] **Step 4: Verify build**
 
@@ -1981,35 +2103,46 @@ case strings.HasPrefix(item.key, "int:"):
     m.create.intEnabled[name] = !m.create.intEnabled[name]
 ```
 
-- [ ] **Step 2: Add informational integration line to viewCreateOptions**
+- [ ] **Step 2: Load active integrations in prepareCreateOptions, render in view**
+
+Add an `activeIntegrationNames []string` field to `createState` in `model.go`:
+
+```go
+activeIntegrationNames []string // loaded from state, displayed as info line
+```
+
+In `prepareCreateOptions()` in `create_branch.go`, load the integration names (replacing the removed integration loading section):
+
+```go
+// Load active integration names from state for display
+bareDir := filepath.Join(m.repoPath, ".bare")
+st, _ := state.Load(bareDir)
+m.create.activeIntegrationNames = nil
+for _, name := range st.Integrations {
+    switch name {
+    case "code-review-graph":
+        m.create.activeIntegrationNames = append(m.create.activeIntegrationNames, "crg")
+    case "cocoindex-code":
+        m.create.activeIntegrationNames = append(m.create.activeIntegrationNames, "ccc")
+    default:
+        m.create.activeIntegrationNames = append(m.create.activeIntegrationNames, name)
+    }
+}
+```
 
 In `viewCreateOptions()`, after rendering the option items and before the separator, add:
 
 ```go
-// After the items loop, before the separator
 b.WriteString("\n")
 
-// Show active integrations from state
-bareDir := filepath.Join(m.repoPath, ".bare")
-st, _ := state.Load(bareDir)
-if len(st.Integrations) > 0 {
-    var shortNames []string
-    for _, name := range st.Integrations {
-        switch name {
-        case "code-review-graph":
-            shortNames = append(shortNames, "crg")
-        case "cocoindex-code":
-            shortNames = append(shortNames, "ccc")
-        default:
-            shortNames = append(shortNames, name)
-        }
-    }
-    b.WriteString(styleDim.Render(fmt.Sprintf("  Integrations from main: %s", strings.Join(shortNames, ", "))))
+if len(m.create.activeIntegrationNames) > 0 {
+    b.WriteString(styleDim.Render(fmt.Sprintf("  Integrations from main: %s",
+        strings.Join(m.create.activeIntegrationNames, ", "))))
     b.WriteString("\n")
 }
 ```
 
-Add imports for `state` and `filepath` to the file.
+Add import for `state` and `filepath` to `create_branch.go` (not `create_options.go` — the load happens in the Update path).
 
 - [ ] **Step 3: Update startCreation to read integrations from state**
 
@@ -2024,9 +2157,12 @@ for _, integ := range m.create.integrations {
     }
 }
 
-// With:
+// With (reads state — this runs in the Update path, triggered by enter keypress, so I/O is acceptable):
 bareDir := filepath.Join(m.repoPath, ".bare")
-st, _ := state.Load(bareDir)
+st, err := state.Load(bareDir)
+if err != nil {
+    st = &state.State{}
+}
 var enabledInts []integration.Integration
 enabledSet := make(map[string]bool)
 for _, name := range st.Integrations {
@@ -2106,7 +2242,7 @@ git commit -m "feat: replace integration toggles with repo-level state in create
 Add to `internal/creator/integrations_test.go`:
 
 ```go
-func TestCopyCCCIndex_CopiesFromSource(t *testing.T) {
+func TestCopyIntegrationIndex_CopiesFromSource(t *testing.T) {
 	sourceDir := t.TempDir()
 	targetDir := t.TempDir()
 
@@ -2115,7 +2251,7 @@ func TestCopyCCCIndex_CopiesFromSource(t *testing.T) {
 	os.MkdirAll(srcIndex, 0755)
 	os.WriteFile(filepath.Join(srcIndex, "settings.yml"), []byte("test"), 0644)
 
-	err := copyCCCIndex(sourceDir, targetDir)
+	err := copyIntegrationIndex(sourceDir, targetDir, ".cocoindex_code")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -2127,11 +2263,11 @@ func TestCopyCCCIndex_CopiesFromSource(t *testing.T) {
 	}
 }
 
-func TestCopyCCCIndex_NoSourceIndex_ReturnsError(t *testing.T) {
+func TestCopyIntegrationIndex_NoSourceIndex_ReturnsError(t *testing.T) {
 	sourceDir := t.TempDir()
 	targetDir := t.TempDir()
 
-	err := copyCCCIndex(sourceDir, targetDir)
+	err := copyIntegrationIndex(sourceDir, targetDir, ".cocoindex_code")
 	if err == nil {
 		t.Error("expected error when source index doesn't exist")
 	}
@@ -2140,30 +2276,23 @@ func TestCopyCCCIndex_NoSourceIndex_ReturnsError(t *testing.T) {
 
 - [ ] **Step 2: Run tests to verify they fail**
 
-Run: `cd /Users/abiswas/code/personal/sentei/feature-integration-selection && go test ./internal/creator/ -run TestCopyCCC -v`
+Run: `cd /Users/abiswas/code/personal/sentei/feature-integration-selection && go test ./internal/creator/ -run TestCopyIntegration -v`
 Expected: Compilation error — `copyCCCIndex` not defined.
 
-- [ ] **Step 3: Implement copyCCCIndex**
+- [ ] **Step 3a: Create shared fileutil.CopyDir**
 
-Add to `internal/creator/integrations.go`:
+Create `internal/fileutil/copy.go`:
 
 ```go
-// copyCCCIndex copies the .cocoindex_code directory from source to target worktree.
-// Returns an error if the source index doesn't exist.
-func copyCCCIndex(sourceWT, targetWT string) error {
-	srcDir := filepath.Join(sourceWT, ".cocoindex_code")
-	if _, err := os.Stat(srcDir); os.IsNotExist(err) {
-		return fmt.Errorf("no cocoindex-code index at %s", srcDir)
-	}
+package fileutil
 
-	dstDir := filepath.Join(targetWT, ".cocoindex_code")
-	// Remove existing if any
-	os.RemoveAll(dstDir)
+import (
+	"os"
+	"path/filepath"
+)
 
-	return copyDir(srcDir, dstDir)
-}
-
-func copyDir(src, dst string) error {
+// CopyDir recursively copies a directory tree from src to dst.
+func CopyDir(src, dst string) error {
 	return filepath.Walk(src, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
@@ -2182,6 +2311,63 @@ func copyDir(src, dst string) error {
 		return os.WriteFile(target, data, info.Mode())
 	})
 }
+```
+
+Create `internal/fileutil/copy_test.go`:
+
+```go
+package fileutil
+
+import (
+	"os"
+	"path/filepath"
+	"testing"
+)
+
+func TestCopyDir(t *testing.T) {
+	src := t.TempDir()
+	os.MkdirAll(filepath.Join(src, "sub"), 0755)
+	os.WriteFile(filepath.Join(src, "a.txt"), []byte("hello"), 0644)
+	os.WriteFile(filepath.Join(src, "sub", "b.txt"), []byte("world"), 0644)
+
+	dst := filepath.Join(t.TempDir(), "copy")
+	if err := CopyDir(src, dst); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	got, _ := os.ReadFile(filepath.Join(dst, "a.txt"))
+	if string(got) != "hello" {
+		t.Errorf("a.txt = %q, want hello", got)
+	}
+	got, _ = os.ReadFile(filepath.Join(dst, "sub", "b.txt"))
+	if string(got) != "world" {
+		t.Errorf("sub/b.txt = %q, want world", got)
+	}
+}
+```
+
+- [ ] **Step 3b: Implement copyIntegrationIndex**
+
+Add to `internal/creator/integrations.go`:
+
+```go
+// copyIntegrationIndex copies the IndexCopyDir from source to target worktree.
+// Returns an error if the source index doesn't exist. Uses the Integration's
+// IndexCopyDir field — config-driven, no hardcoded integration names.
+func copyIntegrationIndex(sourceWT, targetWT, indexDir string) error {
+	srcDir := filepath.Join(sourceWT, indexDir)
+	if _, err := os.Stat(srcDir); os.IsNotExist(err) {
+		return fmt.Errorf("no index at %s", srcDir)
+	}
+
+	dstDir := filepath.Join(targetWT, indexDir)
+	os.RemoveAll(dstDir)
+
+	return fileutil.CopyDir(srcDir, dstDir)
+}
+```
+
+Add `"github.com/abiswas97/sentei/internal/fileutil"` to the import block.
 ```
 
 - [ ] **Step 4: Integrate copy into setupIntegration**
@@ -2210,11 +2396,11 @@ Update `setupIntegration` signature to accept `sourceWorktree` and add the copy 
 func setupIntegration(shell git.ShellRunner, wtPath, repoPath, sourceWorktree string, integ integration.Integration, emit func(Event)) []StepResult {
 	var steps []StepResult
 
-	// ccc optimization: copy index from source worktree before setup
-	if integ.Name == "cocoindex-code" && sourceWorktree != "" {
+	// Copy optimization: if the integration has a copyable index dir, seed from source worktree
+	if integ.IndexCopyDir != "" && sourceWorktree != "" {
 		stepName := "Copy index from main"
 		emit(Event{Phase: "Integrations", Step: stepName, Status: StepRunning})
-		if err := copyCCCIndex(sourceWorktree, wtPath); err != nil {
+		if err := copyIntegrationIndex(sourceWorktree, wtPath, integ.IndexCopyDir); err != nil {
 			// Not fatal — just means we'll do a full index
 			emit(Event{Phase: "Integrations", Step: stepName, Status: StepSkipped, Message: err.Error()})
 		} else {
@@ -2245,13 +2431,13 @@ In `enableOnWorktree`, add before the detect/install/setup steps:
 
 ```go
 func enableOnWorktree(shell git.ShellRunner, repoPath, mainWTPath, wtPath string, integ Integration, emit func(ManagerEvent)) {
-	// ccc optimization: if this isn't main and main has an index, copy it first
-	if integ.Name == "cocoindex-code" && mainWTPath != "" && wtPath != mainWTPath {
-		srcDir := filepath.Join(mainWTPath, ".cocoindex_code")
+	// Copy optimization: if the integration has a copyable index dir and this isn't main, seed from main
+	if integ.IndexCopyDir != "" && mainWTPath != "" && wtPath != mainWTPath {
+		srcDir := filepath.Join(mainWTPath, integ.IndexCopyDir)
 		if _, err := os.Stat(srcDir); err == nil {
 			stepName := "Copy index from main"
 			emit(ManagerEvent{Worktree: wtPath, Step: stepName, Status: StatusRunning})
-			dstDir := filepath.Join(wtPath, ".cocoindex_code")
+			dstDir := filepath.Join(wtPath, integ.IndexCopyDir)
 			os.RemoveAll(dstDir)
 			if err := copyDirManager(srcDir, dstDir); err != nil {
 				emit(ManagerEvent{Worktree: wtPath, Step: stepName, Status: StatusFailed, Error: err})
@@ -2264,27 +2450,9 @@ func enableOnWorktree(shell git.ShellRunner, repoPath, mainWTPath, wtPath string
 	// ... rest unchanged
 ```
 
-Add `copyDirManager` (or import from a shared location — since creator and integration are separate packages, duplicate the small helper):
-
-```go
-func copyDirManager(src, dst string) error {
-	return filepath.Walk(src, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-		rel, _ := filepath.Rel(src, path)
-		target := filepath.Join(dst, rel)
-		if info.IsDir() {
-			return os.MkdirAll(target, info.Mode())
-		}
-		data, err := os.ReadFile(path)
-		if err != nil {
-			return err
-		}
-		return os.WriteFile(target, data, info.Mode())
-	})
-}
-```
+Use `fileutil.CopyDir` from `internal/fileutil/copy.go` (shared helper, created in Task 12 Step 3a).
+Replace `copyDirManager(srcDir, dstDir)` with `fileutil.CopyDir(srcDir, dstDir)`.
+Add import: `"github.com/abiswas97/sentei/internal/fileutil"`
 
 - [ ] **Step 6: Update all callers of EnableIntegration to pass mainWTPath**
 

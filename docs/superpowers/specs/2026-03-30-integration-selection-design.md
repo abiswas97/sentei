@@ -78,7 +78,7 @@ Toggling stages changes visually without applying:
 
 - `[+]` staged to add (green)
 - `[-]` staged to remove (yellow/red)
-- Footer shows "{N} changes pending" and adds `esc discard`
+- Footer shows "{N} changes pending" and adds `enter apply`; `esc` always goes back (discarding pending changes)
 
 ### Info Dialog (Carousel)
 
