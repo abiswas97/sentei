@@ -12,6 +12,13 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// RepoRootResolver resolves the git common dir for a repository path.
+// This mirrors git.CommandRunner but is defined here to avoid a circular
+// dependency between config and git packages.
+type RepoRootResolver interface {
+	Run(dir string, args ...string) (string, error)
+}
+
 //go:embed defaults/ecosystems.yaml
 var defaultEcosystemsYAML []byte
 
@@ -100,7 +107,10 @@ func mergeEcosystems(base, overlay []EcosystemConfig, overlaySource string) []Ec
 
 // mergeConfigs merges overlay on top of base, returning a new Config. Scalar
 // lists (ProtectedBranches, IntegrationsEnabled) are replaced entirely when
-// the overlay provides them.
+// the overlay provides them. Note: an empty list (e.g. `protected_branches: []`)
+// in the overlay will NOT clear the base list — only a non-empty overlay replaces.
+// This is intentional: YAML unmarshalling produces a nil slice for `[]`, which is
+// indistinguishable from an absent field.
 func mergeConfigs(base, overlay *Config, overlaySource string) *Config {
 	result := &Config{
 		Ecosystems:          mergeEcosystems(base.Ecosystems, overlay.Ecosystems, overlaySource),
@@ -116,15 +126,9 @@ func mergeConfigs(base, overlay *Config, overlaySource string) *Config {
 	return result
 }
 
-// knownIntegrations is the set of recognised integration names.
-var knownIntegrations = map[string]struct{}{
-	"code-review-graph": {},
-	"cocoindex-code":    {},
-}
-
 // validate checks the config for structural errors and warns about unknown
-// integration names.
-func validate(cfg *Config) error {
+// integration names. knownIntegrationNames is the set of recognised names.
+func validate(cfg *Config, knownIntegrationNames []string) error {
 	for i, e := range cfg.Ecosystems {
 		if !e.IsEnabled() {
 			continue
@@ -136,8 +140,12 @@ func validate(cfg *Config) error {
 			return fmt.Errorf("ecosystem %q: detect.files must not be empty", e.Name)
 		}
 	}
+	known := make(map[string]struct{}, len(knownIntegrationNames))
+	for _, n := range knownIntegrationNames {
+		known[n] = struct{}{}
+	}
 	for _, name := range cfg.IntegrationsEnabled {
-		if _, ok := knownIntegrations[name]; !ok {
+		if _, ok := known[name]; !ok {
 			fmt.Fprintf(os.Stderr, "warning: unknown integration %q in integrations_enabled\n", name)
 		}
 	}
@@ -157,17 +165,46 @@ func globalConfigPath() string {
 
 // resolveRepoRoot resolves a git working directory to the root of the bare
 // repository (the directory containing the worktrees). It falls back to
-// repoPath on any error.
-func resolveRepoRoot(repoPath string) string {
-	out, err := exec.Command("git", "-C", repoPath, "rev-parse", "--git-common-dir").Output()
-	if err != nil {
-		return repoPath
+// repoPath on any error. When runner is nil, it falls back to exec.Command
+// directly (for use in contexts where a runner is not yet available).
+func resolveRepoRoot(repoPath string, runner RepoRootResolver) string {
+	var commonDir string
+	if runner != nil {
+		out, err := runner.Run(repoPath, "rev-parse", "--git-common-dir")
+		if err != nil {
+			return repoPath
+		}
+		commonDir = strings.TrimSpace(out)
+	} else {
+		out, err := exec.Command("git", "-C", repoPath, "rev-parse", "--git-common-dir").Output()
+		if err != nil {
+			return repoPath
+		}
+		commonDir = strings.TrimSpace(string(out))
 	}
-	commonDir := strings.TrimSpace(string(out))
 	if filepath.IsAbs(commonDir) {
 		return filepath.Dir(commonDir)
 	}
 	return filepath.Dir(filepath.Join(repoPath, commonDir))
+}
+
+// LoadOption configures optional behaviour of LoadConfig.
+type LoadOption func(*loadOptions)
+
+type loadOptions struct {
+	runner                RepoRootResolver
+	knownIntegrationNames []string
+}
+
+// WithRunner supplies a git command runner for resolving the repo root.
+func WithRunner(r RepoRootResolver) LoadOption {
+	return func(o *loadOptions) { o.runner = r }
+}
+
+// WithKnownIntegrations supplies the set of valid integration names for
+// config validation. When empty, integration name validation is skipped.
+func WithKnownIntegrations(names []string) LoadOption {
+	return func(o *loadOptions) { o.knownIntegrationNames = names }
 }
 
 // LoadConfig is the public API for loading sentei configuration. It:
@@ -175,7 +212,12 @@ func resolveRepoRoot(repoPath string) string {
 //  2. Merges the global config (~/.config/sentei/config.yaml).
 //  3. Resolves the repo root and merges .sentei.yaml from it.
 //  4. Validates the result.
-func LoadConfig(repoPath string) (*Config, error) {
+func LoadConfig(repoPath string, opts ...LoadOption) (*Config, error) {
+	var lo loadOptions
+	for _, opt := range opts {
+		opt(&lo)
+	}
+
 	cfg, err := loadEmbeddedDefaults()
 	if err != nil {
 		return nil, err
@@ -193,7 +235,7 @@ func LoadConfig(repoPath string) (*Config, error) {
 		cfg = mergeConfigs(cfg, globalCfg, "global")
 	}
 
-	repoRoot := resolveRepoRoot(repoPath)
+	repoRoot := resolveRepoRoot(repoPath, lo.runner)
 	repoCfg, err := loadFile(filepath.Join(repoRoot, ".sentei.yaml"))
 	if err != nil {
 		return nil, fmt.Errorf("loading repo config: %w", err)
@@ -202,7 +244,7 @@ func LoadConfig(repoPath string) (*Config, error) {
 		cfg = mergeConfigs(cfg, repoCfg, "per-repo")
 	}
 
-	if err := validate(cfg); err != nil {
+	if err := validate(cfg, lo.knownIntegrationNames); err != nil {
 		return nil, err
 	}
 	return cfg, nil

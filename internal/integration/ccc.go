@@ -1,7 +1,7 @@
 package integration
 
-func init() {
-	register(Integration{
+func cocoindexCode() Integration {
+	return Integration{
 		Name:        "cocoindex-code",
 		Description: "Semantic code search index",
 		URL:         "https://github.com/cocoindex-io/cocoindex-code",
@@ -32,5 +32,5 @@ func init() {
 			Dirs:    []string{".cocoindex_code/"},
 		},
 		GitignoreEntries: []string{".cocoindex_code/"},
-	})
+	}
 }

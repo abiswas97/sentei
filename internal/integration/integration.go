@@ -44,23 +44,31 @@ type TeardownSpec struct {
 	Dirs    []string
 }
 
-var registry []Integration
-
-func register(i Integration) {
-	registry = append(registry, i)
-}
-
-// All returns every registered integration.
+// All returns every known integration.
 func All() []Integration {
-	return registry
+	return []Integration{
+		codeReviewGraph(),
+		cocoindexCode(),
+	}
 }
 
 // Get returns the integration with the given name, or nil if not found.
 func Get(name string) *Integration {
-	for i := range registry {
-		if registry[i].Name == name {
-			return &registry[i]
+	all := All()
+	for i := range all {
+		if all[i].Name == name {
+			return &all[i]
 		}
 	}
 	return nil
+}
+
+// Names returns the names of all known integrations.
+func Names() []string {
+	all := All()
+	names := make([]string, len(all))
+	for i, integ := range all {
+		names[i] = integ.Name
+	}
+	return names
 }

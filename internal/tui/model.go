@@ -84,8 +84,10 @@ type createState struct {
 	copyEnvFiles  bool
 	optionsCursor int
 
-	eventCh chan creator.Event
-	events  []creator.Event
+	eventCh  chan creator.Event
+	resultCh chan creator.Result
+	events   []creator.Event
+	result   *creator.Result
 }
 
 type Model struct {
@@ -145,7 +147,7 @@ func NewMenuModel(runner git.CommandRunner, repoPath string, cfg *config.Config)
 		height:   20,
 		menuItems: []menuItem{
 			{label: "Create new worktree", enabled: true},
-			{label: "Remove worktrees", enabled: true},
+			{label: "Remove worktrees", hint: "loading\u2026", enabled: false},
 			{label: "Cleanup", hint: "safe mode", enabled: true},
 		},
 		remove: removeState{
@@ -169,6 +171,9 @@ func NewMenuModel(runner git.CommandRunner, repoPath string, cfg *config.Config)
 }
 
 func (m Model) Init() tea.Cmd {
+	if m.view == menuView {
+		return loadWorktreeContext(m.runner, m.repoPath)
+	}
 	return nil
 }
 

@@ -10,6 +10,7 @@ type keyMap struct {
 	Toggle      key.Binding
 	All         key.Binding
 	Confirm     key.Binding
+	QuickCreate key.Binding
 	Quit        key.Binding
 	Yes         key.Binding
 	No          key.Binding
@@ -48,6 +49,10 @@ var keys = keyMap{
 	Confirm: key.NewBinding(
 		key.WithKeys("enter"),
 		key.WithHelp("enter", "delete"),
+	),
+	QuickCreate: key.NewBinding(
+		key.WithKeys("ctrl+enter"),
+		key.WithHelp("ctrl+enter", "quick create"),
 	),
 	Quit: key.NewBinding(
 		key.WithKeys("q", "ctrl+c"),
