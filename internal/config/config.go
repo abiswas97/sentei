@@ -126,6 +126,9 @@ var knownIntegrations = map[string]struct{}{
 // integration names.
 func validate(cfg *Config) error {
 	for i, e := range cfg.Ecosystems {
+		if !e.IsEnabled() {
+			continue
+		}
 		if e.Name == "" {
 			return fmt.Errorf("ecosystems[%d]: name is required", i)
 		}

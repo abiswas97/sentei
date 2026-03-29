@@ -2,6 +2,7 @@ package ecosystem
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -20,7 +21,7 @@ var cargoMembersRe = regexp.MustCompile(`"([^"]+)"`)
 func DetectWorkspaces(rootDir, configFile string) ([]string, error) {
 	path := filepath.Join(rootDir, configFile)
 	data, err := os.ReadFile(path)
-	if os.IsNotExist(err) {
+	if errors.Is(err, os.ErrNotExist) {
 		return nil, nil
 	}
 	if err != nil {

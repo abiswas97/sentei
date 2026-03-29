@@ -487,6 +487,16 @@ func TestValidate(t *testing.T) {
 			},
 			wantErr: true,
 		},
+		{
+			name: "unknown integration name is warning not error",
+			cfg: Config{
+				Ecosystems: []EcosystemConfig{
+					{Name: "go", Detect: DetectConfig{Files: []string{"go.mod"}}, Install: InstallConfig{Command: "go mod download"}},
+				},
+				IntegrationsEnabled: []string{"future-tool"},
+			},
+			wantErr: false,
+		},
 	}
 
 	for _, tc := range tests {
