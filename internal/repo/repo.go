@@ -1,7 +1,6 @@
 package repo
 
 import (
-	"os"
 	"path/filepath"
 
 	"github.com/abiswas97/sentei/internal/git"
@@ -64,16 +63,38 @@ func DetectContext(runner git.CommandRunner, path string) RepoContext {
 		return ContextNoRepo
 	}
 
-	// Inside a git repo — check for sentei's .bare directory at repo root
-	toplevel, err := runner.Run(path, "rev-parse", "--show-toplevel")
+	// Inside a git repo — check for sentei's .bare directory via --git-common-dir
+	// (--show-toplevel returns the worktree root, not the bare repo root)
+	commonDir, err := runner.Run(path, "rev-parse", "--git-common-dir")
 	if err == nil {
-		bareDir := filepath.Join(toplevel, ".bare")
-		if info, statErr := os.Stat(bareDir); statErr == nil && info.IsDir() {
+		if !filepath.IsAbs(commonDir) {
+			commonDir = filepath.Join(path, commonDir)
+		}
+		// commonDir is .bare itself (sentei's structure)
+		if filepath.Base(commonDir) == ".bare" {
 			return ContextBareRepo
 		}
 	}
 
 	return ContextNonBareRepo
+}
+
+// ResolveBareRoot resolves the bare repo root from any path (worktree, bare root, or inside .bare).
+// Falls back to path if git commands fail or the structure isn't recognized.
+func ResolveBareRoot(runner git.CommandRunner, path string) string {
+	commonDir, err := runner.Run(path, "rev-parse", "--git-common-dir")
+	if err != nil {
+		return path
+	}
+	if !filepath.IsAbs(commonDir) {
+		commonDir = filepath.Join(path, commonDir)
+	}
+	// If commonDir is .bare, parent is the bare repo root
+	if filepath.Base(commonDir) == ".bare" {
+		return filepath.Dir(commonDir)
+	}
+	// Otherwise return parent of commonDir (e.g., parent of .git)
+	return filepath.Dir(commonDir)
 }
 
 func (r *Phase) HasFailures() bool {
