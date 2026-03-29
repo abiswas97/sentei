@@ -1,0 +1,27 @@
+cmd/ecosystems.go
+  764a16f68cca6469 1-55
+main.go
+  764a16f68cca6469 36-45
+cmd/integrations.go
+  764a16f68cca6469 1-40
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.22",
+  "base_commit_sha": "a34fc285f36cb306a4c7afeecc083b571e6bfd9d",
+  "prompts": {
+    "764a16f68cca6469": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ac54152b-b011-4656-a2ab-f030775dff6b",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>",
+      "messages": [],
+      "total_additions": 105,
+      "total_deletions": 0,
+      "accepted_lines": 105,
+      "overriden_lines": 0
+    }
+  }
+}
