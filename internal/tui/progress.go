@@ -7,6 +7,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/abiswas97/sentei/internal/cleanup"
+	"github.com/abiswas97/sentei/internal/creator"
 	"github.com/abiswas97/sentei/internal/git"
 	"github.com/abiswas97/sentei/internal/worktree"
 )
@@ -16,8 +17,6 @@ const (
 	statusRemoving = "removing"
 	statusRemoved  = "removed"
 	statusFailed   = "failed"
-
-	progressBarWidth = 40
 )
 
 type cleanupCompleteMsg struct {
@@ -112,36 +111,65 @@ func (m Model) viewProgress() string {
 	b.WriteString(styleHeader.Render("  Removing Worktrees  "))
 	b.WriteString("\n\n")
 
-	done := len(m.remove.deletionResult.Outcomes)
-	pct := 0
-	if m.remove.deletionTotal > 0 {
-		pct = done * 100 / m.remove.deletionTotal
-	}
-
-	filled := progressBarWidth * pct / 100
-	empty := progressBarWidth - filled
-
-	bar := strings.Repeat("#", filled) + strings.Repeat("-", empty)
-	fmt.Fprintf(&b, "  [%s] %d/%d (%d%%)\n\n", bar, done, m.remove.deletionTotal, pct)
-
-	selected := m.selectedWorktrees()
-	for _, wt := range selected {
-		branch := stripBranchPrefix(wt.Branch)
-		status := m.remove.deletionStatuses[wt.Path]
-
-		var indicator string
-		switch status {
-		case statusRemoved:
-			indicator = styleSuccess.Render("v") + " " + branch + "  " + styleDim.Render("removed")
-		case statusFailed:
-			indicator = styleError.Render("x") + " " + branch + "  " + styleError.Render("failed")
-		case statusRemoving:
-			indicator = styleWarning.Render("~") + " " + branch + "  " + styleDim.Render("removing...")
-		default:
-			indicator = styleDim.Render(".") + " " + branch + "  " + styleDim.Render("pending")
+	// Teardown phase (if any)
+	if len(m.remove.teardownResults) > 0 {
+		hasFailed := false
+		for _, r := range m.remove.teardownResults {
+			if r.Status == creator.StepFailed {
+				hasFailed = true
+			}
 		}
 
-		b.WriteString("  " + indicator + "\n")
+		statusText := fmt.Sprintf("%d/%d", len(m.remove.teardownResults), len(m.remove.teardownResults))
+		if hasFailed {
+			statusText += " " + styleIndicatorWarning.Render(indicatorWarning)
+		} else {
+			statusText += " " + styleIndicatorDone.Render(indicatorDone)
+		}
+		b.WriteString(fmt.Sprintf("  %-30s %s\n", stylePhaseDone.Render("Teardown"), styleDim.Render(statusText)))
+		b.WriteString("\n")
+	}
+
+	// Remove phase
+	done := len(m.remove.deletionResult.Outcomes)
+
+	phaseStatus := fmt.Sprintf("%d/%d", done, m.remove.deletionTotal)
+	if done == m.remove.deletionTotal && m.remove.deletionTotal > 0 {
+		phaseStatus += " " + styleIndicatorDone.Render(indicatorDone)
+		b.WriteString(fmt.Sprintf("  %-30s %s\n", stylePhaseDone.Render("Removing worktrees"), styleDim.Render(phaseStatus)))
+	} else {
+		b.WriteString(fmt.Sprintf("  %-30s %s\n", stylePhaseActive.Render("Removing worktrees"), styleDim.Render(phaseStatus)))
+
+		selected := m.selectedWorktrees()
+		for _, wt := range selected {
+			branch := stripBranchPrefix(wt.Branch)
+			status := m.remove.deletionStatuses[wt.Path]
+
+			var ind string
+			switch status {
+			case statusRemoved:
+				ind = styleIndicatorDone.Render(indicatorDone)
+			case statusFailed:
+				ind = styleIndicatorFailed.Render(indicatorFailed)
+			case statusRemoving:
+				ind = styleIndicatorActive.Render(indicatorActive)
+			default:
+				ind = styleIndicatorPending.Render(indicatorPending)
+			}
+
+			b.WriteString(fmt.Sprintf("  %s %s\n", ind, branch))
+		}
+	}
+
+	b.WriteString("\n")
+
+	// Prune & cleanup phase
+	if m.remove.pruneErr != nil {
+		b.WriteString(fmt.Sprintf("  %-30s %s\n", stylePhaseDone.Render("Prune & cleanup"), styleDim.Render(styleIndicatorDone.Render(indicatorDone))))
+	} else if done == m.remove.deletionTotal && m.remove.deletionTotal > 0 {
+		b.WriteString(fmt.Sprintf("  %-30s %s\n", stylePhaseActive.Render("Prune & cleanup"), styleDim.Render(styleIndicatorActive.Render(indicatorActive))))
+	} else {
+		b.WriteString(fmt.Sprintf("  %-30s %s\n", stylePhasePending.Render("Prune & cleanup"), styleDim.Render("pending")))
 	}
 
 	return b.String()
