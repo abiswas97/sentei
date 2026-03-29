@@ -1,0 +1,25 @@
+internal/tui/migrate_summary.go
+  764a16f68cca6469 14,21,24-28,41,45-46,49-51,68,94-98,121-126,130-134,136-144,146-177,179-197,201
+internal/tui/model.go
+  764a16f68cca6469 39,309-310,349-350
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.22",
+  "base_commit_sha": "cb5e80765046c4893b2d84e23cc0c57c862175bc",
+  "prompts": {
+    "764a16f68cca6469": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ac54152b-b011-4656-a2ab-f030775dff6b",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>",
+      "messages": [],
+      "total_additions": 98,
+      "total_deletions": 21,
+      "accepted_lines": 98,
+      "overriden_lines": 0
+    }
+  }
+}
