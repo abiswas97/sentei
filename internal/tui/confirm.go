@@ -8,8 +8,15 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/abiswas97/sentei/internal/creator"
+	"github.com/abiswas97/sentei/internal/git"
+	"github.com/abiswas97/sentei/internal/integration"
 	"github.com/abiswas97/sentei/internal/worktree"
 )
+
+type teardownCompleteMsg struct {
+	results []creator.StepResult
+}
 
 func (m Model) updateConfirm(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
@@ -18,20 +25,78 @@ func (m Model) updateConfirm(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(msg, keys.Yes):
 			m.view = progressView
 			selected := m.selectedWorktrees()
-			m.deletionTotal = len(selected)
+			m.remove.deletionTotal = len(selected)
 			for _, wt := range selected {
-				m.deletionStatuses[wt.Path] = statusPending
+				m.remove.deletionStatuses[wt.Path] = statusPending
 			}
+
+			integrations := integration.All()
+			hasTeardown := false
+			for _, wt := range selected {
+				if len(creator.ScanArtifacts(wt.Path, integrations)) > 0 {
+					hasTeardown = true
+					break
+				}
+			}
+
+			if hasTeardown {
+				return m, m.runTeardownPhase(selected, integrations)
+			}
+
 			ch := make(chan worktree.DeletionEvent, len(selected)*2)
-			m.progressCh = ch
+			m.remove.progressCh = ch
 			go worktree.DeleteWorktrees(os.RemoveAll, selected, 5, ch)
-			return m, waitForDeletionEvent(m.progressCh)
+			return m, waitForDeletionEvent(m.remove.progressCh)
 
 		case key.Matches(msg, keys.No), key.Matches(msg, keys.Back):
 			m.view = listView
 		}
+
+	case teardownCompleteMsg:
+		m.remove.teardownResults = msg.results
+		selected := m.selectedWorktrees()
+		ch := make(chan worktree.DeletionEvent, len(selected)*2)
+		m.remove.progressCh = ch
+		go worktree.DeleteWorktrees(os.RemoveAll, selected, 5, ch)
+		return m, waitForDeletionEvent(m.remove.progressCh)
 	}
 	return m, nil
+}
+
+const maxTeardownConcurrency = 5
+
+func (m Model) runTeardownPhase(worktrees []git.Worktree, integrations []integration.Integration) tea.Cmd {
+	return func() tea.Msg {
+		shell := m.shell
+		type indexedResults struct {
+			index   int
+			results []creator.StepResult
+		}
+
+		resultsCh := make(chan indexedResults, len(worktrees))
+		sem := make(chan struct{}, maxTeardownConcurrency)
+
+		for i, wt := range worktrees {
+			sem <- struct{}{}
+			go func(idx int, wtPath string) {
+				defer func() { <-sem }()
+				results := creator.Teardown(shell, wtPath, integrations, func(creator.Event) {})
+				resultsCh <- indexedResults{index: idx, results: results}
+			}(i, wt.Path)
+		}
+
+		collected := make([][]creator.StepResult, len(worktrees))
+		for range worktrees {
+			ir := <-resultsCh
+			collected[ir.index] = ir.results
+		}
+
+		var allResults []creator.StepResult
+		for _, r := range collected {
+			allResults = append(allResults, r...)
+		}
+		return teardownCompleteMsg{results: allResults}
+	}
 }
 
 func (m Model) viewConfirm() string {
@@ -66,6 +131,29 @@ func (m Model) viewConfirm() string {
 	}
 
 	b.WriteString("\n")
+
+	// Integration teardown info
+	integrations := integration.All()
+	dirCounts := make(map[string]int)
+	for _, wt := range selected {
+		artifacts := creator.ScanArtifacts(wt.Path, integrations)
+		for _, a := range artifacts {
+			for _, d := range a.Dirs {
+				dirCounts[d]++
+			}
+		}
+	}
+	if len(dirCounts) > 0 {
+		b.WriteString("  Cleaning up:\n\n")
+		for dir, count := range dirCounts {
+			noun := "worktree"
+			if count > 1 {
+				noun = "worktrees"
+			}
+			fmt.Fprintf(&b, "    %-28s in %d %s\n", dir, count, noun)
+		}
+		b.WriteString("\n")
+	}
 
 	if dirtyCount > 0 {
 		b.WriteString(styleWarning.Render(

@@ -27,3 +27,6 @@ linters:
       - path: _test\.go
         linters:
           - errcheck
+      - path: internal/tui/styles\.go
+        linters:
+          - unused
