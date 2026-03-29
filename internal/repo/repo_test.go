@@ -36,6 +36,14 @@ func (m *mockRunner) RunShell(dir string, command string) (string, error) {
 	return "", fmt.Errorf("unexpected shell call: %s", key)
 }
 
+type eventCollector struct {
+	events []Event
+}
+
+func (c *eventCollector) emit(e Event) {
+	c.events = append(c.events, e)
+}
+
 func TestDetectContext(t *testing.T) {
 	tests := []struct {
 		name      string
