@@ -1,0 +1,105 @@
+ecosystems:
+  - name: pnpm
+    detect:
+      files: ["pnpm-lock.yaml"]
+    install:
+      command: "pnpm install"
+      workspace_detect: "pnpm-workspace.yaml"
+      workspace_install: "pnpm install --filter {dir}"
+      parallel: true
+    env_files: [".env", ".env.local"]
+  - name: yarn
+    detect:
+      files: ["yarn.lock"]
+    install:
+      command: "yarn install"
+      workspace_detect: "package.json"
+      workspace_install: "yarn workspace {dir} install"
+      parallel: true
+    env_files: [".env", ".env.local"]
+  - name: npm
+    detect:
+      files: ["package-lock.json"]
+    install:
+      command: "npm install"
+      workspace_detect: "package.json"
+      workspace_install: "npm install --workspace {dir}"
+      parallel: true
+    env_files: [".env", ".env.local"]
+  - name: bun
+    detect:
+      files: ["bun.lockb"]
+    install:
+      command: "bun install"
+      workspace_detect: "package.json"
+      workspace_install: "bun install --filter {dir}"
+      parallel: true
+    env_files: [".env", ".env.local"]
+  - name: cargo
+    detect:
+      files: ["Cargo.toml"]
+    install:
+      command: "cargo build"
+      workspace_detect: "Cargo.toml"
+  - name: go
+    detect:
+      files: ["go.mod"]
+    install:
+      command: "go mod download"
+      workspace_detect: "go.work"
+  - name: uv
+    detect:
+      files: ["uv.lock"]
+    install:
+      command: "uv sync"
+    env_files: [".env"]
+  - name: poetry
+    detect:
+      files: ["poetry.lock"]
+    install:
+      command: "poetry install"
+    env_files: [".env"]
+  - name: pip
+    detect:
+      files: ["requirements.txt"]
+    install:
+      command: "pip install -r requirements.txt"
+    env_files: [".env"]
+  - name: ruby
+    detect:
+      files: ["Gemfile.lock"]
+    install:
+      command: "bundle install"
+    env_files: [".env"]
+  - name: php
+    detect:
+      files: ["composer.lock"]
+    install:
+      command: "composer install"
+    env_files: [".env"]
+  - name: dotnet
+    detect:
+      files: ["*.sln", "*.csproj"]
+    install:
+      command: "dotnet restore"
+  - name: elixir
+    detect:
+      files: ["mix.lock"]
+    install:
+      command: "mix deps.get"
+    env_files: [".env"]
+  - name: swift
+    detect:
+      files: ["Package.swift"]
+    install:
+      command: "swift package resolve"
+  - name: dart
+    detect:
+      files: ["pubspec.lock"]
+    install:
+      command: "dart pub get"
+  - name: deno
+    detect:
+      files: ["deno.lock"]
+    install:
+      command: "deno install"
