@@ -1,0 +1,25 @@
+internal/repo/clone.go
+  764a16f68cca6469 1-191
+internal/repo/clone_test.go
+  764a16f68cca6469 1-113
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.22",
+  "base_commit_sha": "94a882bdad0f3cdd35977ef96dcd4f8ead3cf94e",
+  "prompts": {
+    "764a16f68cca6469": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ac54152b-b011-4656-a2ab-f030775dff6b",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>",
+      "messages": [],
+      "total_additions": 689,
+      "total_deletions": 1,
+      "accepted_lines": 688,
+      "overriden_lines": 0
+    }
+  }
+}
