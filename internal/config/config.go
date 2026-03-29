@@ -1,5 +1,23 @@
 package config
 
+import (
+	_ "embed"
+	"fmt"
+
+	"gopkg.in/yaml.v3"
+)
+
+//go:embed defaults/ecosystems.yaml
+var defaultEcosystemsYAML []byte
+
+func loadEmbeddedDefaults() (*Config, error) {
+	var cfg Config
+	if err := yaml.Unmarshal(defaultEcosystemsYAML, &cfg); err != nil {
+		return nil, fmt.Errorf("parsing embedded defaults: %w", err)
+	}
+	return &cfg, nil
+}
+
 // Config is the top-level configuration for sentei.
 type Config struct {
 	Ecosystems          []EcosystemConfig `yaml:"ecosystems"`

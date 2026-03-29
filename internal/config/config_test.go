@@ -6,6 +6,52 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+func TestLoadEmbeddedDefaults(t *testing.T) {
+	cfg, err := loadEmbeddedDefaults()
+	if err != nil {
+		t.Fatalf("loadEmbeddedDefaults() error: %v", err)
+	}
+
+	if len(cfg.Ecosystems) != 16 {
+		t.Fatalf("expected 16 ecosystems, got %d", len(cfg.Ecosystems))
+	}
+
+	if cfg.Ecosystems[0].Name != "pnpm" {
+		t.Errorf("first ecosystem: got %q, want %q", cfg.Ecosystems[0].Name, "pnpm")
+	}
+
+	for i, e := range cfg.Ecosystems {
+		if e.Name == "" {
+			t.Errorf("Ecosystems[%d].Name is empty", i)
+		}
+		if len(e.Detect.Files) == 0 {
+			t.Errorf("Ecosystems[%d] (%s): Detect.Files is empty", i, e.Name)
+		}
+		if e.Install.Command == "" {
+			t.Errorf("Ecosystems[%d] (%s): Install.Command is empty", i, e.Name)
+		}
+	}
+
+	// Spot-check pnpm workspace_detect and parallel.
+	pnpm := cfg.Ecosystems[0]
+	if pnpm.Install.WorkspaceDetect != "pnpm-workspace.yaml" {
+		t.Errorf("pnpm WorkspaceDetect: got %q, want %q", pnpm.Install.WorkspaceDetect, "pnpm-workspace.yaml")
+	}
+	if !pnpm.Install.IsParallel() {
+		t.Error("pnpm Install.Parallel: expected true")
+	}
+
+	wantNames := []string{
+		"pnpm", "yarn", "npm", "bun", "cargo", "go", "uv", "poetry",
+		"pip", "ruby", "php", "dotnet", "elixir", "swift", "dart", "deno",
+	}
+	for i, want := range wantNames {
+		if cfg.Ecosystems[i].Name != want {
+			t.Errorf("Ecosystems[%d].Name: got %q, want %q", i, cfg.Ecosystems[i].Name, want)
+		}
+	}
+}
+
 func boolPtr(b bool) *bool {
 	return &b
 }
