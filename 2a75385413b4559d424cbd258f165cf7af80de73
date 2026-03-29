@@ -1,0 +1,39 @@
+internal/repo/create.go
+  764a16f68cca6469 4,7,9,14-33,50-53,66,195,201,214-215
+internal/fileutil/copy.go
+  764a16f68cca6469 1-18
+internal/tui/helpers.go
+  764a16f68cca6469 1-20
+internal/tui/repo_summary.go
+  764a16f68cca6469 33
+internal/creator/setup.go
+  764a16f68cca6469 9,113
+internal/tui/create_options.go
+  764a16f68cca6469 175
+internal/repo/migrate.go
+  764a16f68cca6469 11,234,267
+internal/repo/create_test.go
+  764a16f68cca6469 7,11-21,74-77,79-81,92,139-140,142,152
+internal/tui/confirm.go
+  764a16f68cca6469 70
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.22",
+  "base_commit_sha": "2a75385413b4559d424cbd258f165cf7af80de73",
+  "prompts": {
+    "764a16f68cca6469": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ac54152b-b011-4656-a2ab-f030775dff6b",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>",
+      "messages": [],
+      "total_additions": 121,
+      "total_deletions": 99,
+      "accepted_lines": 106,
+      "overriden_lines": 0
+    }
+  }
+}
