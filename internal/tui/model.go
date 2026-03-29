@@ -12,6 +12,7 @@ import (
 	"github.com/abiswas97/sentei/internal/creator"
 	"github.com/abiswas97/sentei/internal/git"
 	"github.com/abiswas97/sentei/internal/integration"
+	"github.com/abiswas97/sentei/internal/repo"
 	"github.com/abiswas97/sentei/internal/worktree"
 )
 
@@ -27,6 +28,14 @@ const (
 	createOptionsView
 	createProgressView
 	createSummaryView
+	repoNameView
+	repoOptionsView
+	repoProgressView
+	repoSummaryView
+	cloneInputView
+	migrateConfirmView
+	migrateProgressView
+	migrateSummaryView
 )
 
 type SortField int
@@ -90,11 +99,51 @@ type createState struct {
 	result   *creator.Result
 }
 
+// MigrateInfo holds pre-loaded info about the repo being migrated.
+type MigrateInfo struct {
+	Branch  string
+	IsDirty bool
+}
+
+// repoState holds all state for repo create/clone/migrate flows.
+type repoState struct {
+	// Create repo fields
+	nameInput     textinput.Model
+	locationInput textinput.Model
+	focusedField  int // 0 = name, 1 = location
+	validationErr string
+
+	// Options
+	publishGitHub bool
+	visibility    string // "private" or "public"
+	descInput     textinput.Model
+	ghStatus      string // "authenticated", "not authenticated", "gh not found"
+	optionsCursor int
+
+	// Clone fields
+	urlInput           textinput.Model
+	cloneNameInput     textinput.Model
+	cloneFocusedField  int // 0 = url, 1 = name
+	nameManuallyEdited bool
+
+	// Migrate fields
+	migrateInfo MigrateInfo
+
+	// Shared progress/summary
+	eventCh  chan repo.Event
+	resultCh chan interface{} // receives CreateResult, CloneResult, or MigrateResult
+	events   []repo.Event
+	result   interface{}
+	opType   string // "create", "clone", "migrate"
+}
+
 type Model struct {
 	view     viewState
 	runner   git.CommandRunner
+	shell    git.ShellRunner
 	repoPath string
 	cfg      *config.Config
+	context  repo.RepoContext
 	width    int
 	height   int
 
@@ -103,6 +152,7 @@ type Model struct {
 
 	remove removeState
 	create createState
+	repo   repoState
 }
 
 func NewModel(worktrees []git.Worktree, runner git.CommandRunner, repoPath string) Model {
@@ -127,7 +177,7 @@ func NewModel(worktrees []git.Worktree, runner git.CommandRunner, repoPath strin
 	return m
 }
 
-func NewMenuModel(runner git.CommandRunner, repoPath string, cfg *config.Config) Model {
+func NewMenuModel(runner git.CommandRunner, shell git.ShellRunner, repoPath string, cfg *config.Config, context repo.RepoContext) Model {
 	branchInput := textinput.New()
 	branchInput.Placeholder = "feature/my-branch"
 	branchInput.Focus()
@@ -139,17 +189,51 @@ func NewMenuModel(runner git.CommandRunner, repoPath string, cfg *config.Config)
 	filterInput := textinput.New()
 	filterInput.Prompt = "filter: "
 
-	m := Model{
-		view:     menuView,
-		runner:   runner,
-		repoPath: repoPath,
-		cfg:      cfg,
-		height:   20,
-		menuItems: []menuItem{
+	nameInput := textinput.New()
+	nameInput.Placeholder = "my-project"
+
+	locationInput := textinput.New()
+	locationInput.Placeholder = "/path/to/projects"
+
+	descInput := textinput.New()
+	descInput.Placeholder = "optional description"
+
+	urlInput := textinput.New()
+	urlInput.Placeholder = "git@github.com:user/repo.git"
+
+	cloneNameInput := textinput.New()
+	cloneNameInput.Placeholder = "repo"
+
+	var items []menuItem
+	switch context {
+	case repo.ContextBareRepo:
+		items = []menuItem{
 			{label: "Create new worktree", enabled: true},
 			{label: "Remove worktrees", hint: "loading\u2026", enabled: false},
 			{label: "Cleanup", hint: "safe mode", enabled: true},
-		},
+		}
+	case repo.ContextNoRepo:
+		items = []menuItem{
+			{label: "Create new repository", enabled: true},
+			{label: "Clone repository as bare", enabled: true},
+		}
+	case repo.ContextNonBareRepo:
+		items = []menuItem{
+			{label: "Migrate to bare repository", enabled: true},
+			{label: "Clone repository as bare", enabled: true},
+			{label: "Create new repository", enabled: true},
+		}
+	}
+
+	m := Model{
+		view:      menuView,
+		runner:    runner,
+		shell:     shell,
+		repoPath:  repoPath,
+		cfg:       cfg,
+		context:   context,
+		height:    20,
+		menuItems: items,
 		remove: removeState{
 			selected:         make(map[string]bool),
 			sortField:        SortByAge,
@@ -165,13 +249,21 @@ func NewMenuModel(runner git.CommandRunner, repoPath string, cfg *config.Config)
 			mergeBase:    true,
 			copyEnvFiles: true,
 		},
+		repo: repoState{
+			nameInput:      nameInput,
+			locationInput:  locationInput,
+			descInput:      descInput,
+			urlInput:       urlInput,
+			cloneNameInput: cloneNameInput,
+			visibility:     "private",
+		},
 	}
 
 	return m
 }
 
 func (m Model) Init() tea.Cmd {
-	if m.view == menuView {
+	if m.view == menuView && m.context == repo.ContextBareRepo {
 		return loadWorktreeContext(m.runner, m.repoPath)
 	}
 	return nil
@@ -197,6 +289,20 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.updateCreateProgress(msg)
 	case createSummaryView:
 		return m.updateCreateSummary(msg)
+	case repoNameView:
+		return m.updateRepoName(msg)
+	case repoOptionsView:
+		return m.updateRepoOptions(msg)
+	case repoProgressView, migrateProgressView:
+		return m.updateRepoProgress(msg)
+	case repoSummaryView:
+		return m.updateRepoSummary(msg)
+	case cloneInputView:
+		return m.updateCloneInput(msg)
+	case migrateConfirmView:
+		return m.updateMigrateConfirm(msg)
+	case migrateSummaryView:
+		return m.updateMigrateSummary(msg)
 	}
 	return m, nil
 }
@@ -221,6 +327,20 @@ func (m Model) View() string {
 		return m.viewCreateProgress()
 	case createSummaryView:
 		return m.viewCreateSummary()
+	case repoNameView:
+		return m.viewRepoName()
+	case repoOptionsView:
+		return m.viewRepoOptions()
+	case repoProgressView, migrateProgressView:
+		return m.viewRepoProgress()
+	case repoSummaryView:
+		return m.viewRepoSummary()
+	case cloneInputView:
+		return m.viewCloneInput()
+	case migrateConfirmView:
+		return m.viewMigrateConfirm()
+	case migrateSummaryView:
+		return m.viewMigrateSummary()
 	}
 	return ""
 }
