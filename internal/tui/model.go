@@ -56,6 +56,8 @@ type removeState struct {
 	deletionTotal    int
 	progressCh       <-chan worktree.DeletionEvent
 
+	teardownResults []creator.StepResult
+
 	pruneErr      *error
 	cleanupResult *cleanup.Result
 }
