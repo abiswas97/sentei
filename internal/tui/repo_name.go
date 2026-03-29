@@ -59,16 +59,16 @@ func (m Model) updateRepoName(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			}
 
-			// Check location exists
-			if _, err := os.Stat(location); os.IsNotExist(err) {
-				m.repo.validationErr = fmt.Sprintf("location does not exist: %s", location)
+			// Check parent directory exists
+			parentDir := filepath.Dir(location)
+			if _, err := os.Stat(parentDir); os.IsNotExist(err) {
+				m.repo.validationErr = fmt.Sprintf("parent directory does not exist: %s", parentDir)
 				return m, nil
 			}
 
 			// Check destination doesn't already exist
-			dest := filepath.Join(location, name)
-			if _, err := os.Stat(dest); err == nil {
-				m.repo.validationErr = fmt.Sprintf("directory already exists: %s", dest)
+			if _, err := os.Stat(location); err == nil {
+				m.repo.validationErr = fmt.Sprintf("directory already exists: %s", location)
 				return m, nil
 			}
 
@@ -88,6 +88,13 @@ func (m Model) updateRepoName(msg tea.Msg) (tea.Model, tea.Cmd) {
 		var cmd tea.Cmd
 		if m.repo.focusedField == 0 {
 			m.repo.nameInput, cmd = m.repo.nameInput.Update(msg)
+			// Auto-update location to show <repoPath>/<name> as user types
+			name := strings.TrimSpace(m.repo.nameInput.Value())
+			if name != "" {
+				m.repo.locationInput.SetValue(filepath.Join(m.repoPath, name))
+			} else {
+				m.repo.locationInput.SetValue(m.repoPath)
+			}
 		} else {
 			m.repo.locationInput, cmd = m.repo.locationInput.Update(msg)
 		}
