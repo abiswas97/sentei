@@ -33,6 +33,16 @@ func main() {
 		return
 	}
 
+	if len(os.Args) > 1 && os.Args[1] == "ecosystems" {
+		cmd.RunEcosystems(os.Args[2:])
+		return
+	}
+
+	if len(os.Args) > 1 && os.Args[1] == "integrations" {
+		cmd.RunIntegrations()
+		return
+	}
+
 	versionFlag := flag.Bool("version", false, "Print version and exit")
 	playgroundFlag := flag.Bool("playground", false, "Launch with a temporary test repo")
 	dryRunFlag := flag.Bool("dry-run", false, "Print worktree summary and exit (no interactive TUI)")
