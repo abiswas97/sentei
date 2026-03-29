@@ -11,6 +11,10 @@ type Integration struct {
 	Setup            SetupSpec
 	Teardown         TeardownSpec
 	GitignoreEntries []string
+	// IndexCopyDir is the directory name (relative to worktree root) that can be
+	// copied from one worktree to another to seed an incremental index. Empty means
+	// the integration's index cannot be shared across worktrees (e.g., absolute paths).
+	IndexCopyDir string
 }
 
 // Dependency is a prerequisite tool needed before an integration can be installed.

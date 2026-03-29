@@ -32,5 +32,6 @@ func cocoindexCode() Integration {
 			Dirs:    []string{".cocoindex_code/"},
 		},
 		GitignoreEntries: []string{".cocoindex_code/"},
+		IndexCopyDir:     ".cocoindex_code",
 	}
 }
