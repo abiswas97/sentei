@@ -1,6 +1,10 @@
 package tui
 
-import "github.com/charmbracelet/lipgloss"
+import (
+	"strings"
+
+	"github.com/charmbracelet/lipgloss"
+)
 
 // UI chrome
 var (
@@ -83,3 +87,75 @@ var (
 	colWidthStatus   = 6  // "[ok]" (4) + 2 gap
 	colWidthAge      = 16 // "12 hours ago" (12) + headroom
 )
+
+// Phase header styles
+var (
+	stylePhaseDone = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("42")).
+			Bold(true)
+
+	stylePhaseActive = lipgloss.NewStyle().
+				Foreground(lipgloss.Color("62")).
+				Bold(true)
+
+	stylePhasePending = lipgloss.NewStyle().
+				Foreground(lipgloss.Color("241"))
+)
+
+// Progress indicators
+var (
+	styleIndicatorDone = lipgloss.NewStyle().
+				Foreground(lipgloss.Color("42"))
+
+	styleIndicatorActive = lipgloss.NewStyle().
+				Foreground(lipgloss.Color("62"))
+
+	styleIndicatorPending = lipgloss.NewStyle().
+				Foreground(lipgloss.Color("241"))
+
+	styleIndicatorFailed = lipgloss.NewStyle().
+				Foreground(lipgloss.Color("196"))
+
+	styleIndicatorWarning = lipgloss.NewStyle().
+				Foreground(lipgloss.Color("214"))
+)
+
+// Layout elements
+var (
+	styleSeparator = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("241"))
+
+	styleTitle = lipgloss.NewStyle().
+			Bold(true).
+			Foreground(lipgloss.Color("15"))
+
+	styleAccent = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("62"))
+
+	styleCheckboxOn = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("42"))
+
+	styleCheckboxOff = lipgloss.NewStyle().
+				Foreground(lipgloss.Color("241"))
+
+	styleHint = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("241"))
+)
+
+// Indicator characters
+const (
+	indicatorDone    = "●"
+	indicatorActive  = "◐"
+	indicatorPending = "·"
+	indicatorFailed  = "✗"
+	indicatorWarning = "⚠"
+)
+
+// separator renders a dotted separator line at the given width.
+func separator(width int) string {
+	if width <= 4 {
+		width = 40
+	}
+	line := strings.Repeat("┄", width-4)
+	return styleSeparator.Render("  " + line)
+}
