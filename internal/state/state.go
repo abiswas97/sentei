@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 )
 
 const stateFile = "sentei.json"
@@ -17,12 +18,7 @@ type State struct {
 
 // HasIntegration reports whether name is in the Integrations slice.
 func (s *State) HasIntegration(name string) bool {
-	for _, v := range s.Integrations {
-		if v == name {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(s.Integrations, name)
 }
 
 // Load reads the state from bareDir/sentei.json. If the file does not exist,
