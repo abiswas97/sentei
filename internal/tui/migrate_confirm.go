@@ -148,7 +148,7 @@ func (m Model) viewMigrateConfirm() string {
 	b.WriteString("\n")
 	b.WriteString(separator(m.width))
 	b.WriteString("\n\n")
-	b.WriteString(styleDim.Render("  enter migrate \u00b7 esc back"))
+	b.WriteString(styleDim.Render("  enter confirm  •  esc back  •  q quit"))
 	b.WriteString("\n")
 
 	return b.String()

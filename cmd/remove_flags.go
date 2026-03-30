@@ -104,7 +104,11 @@ func RemoveCLICommand(opts *RemoveOptions) string {
 	if opts.DryRun {
 		flags["dry-run"] = "true"
 	}
-	return buildFlagString("sentei remove", flags)
+	cmd := buildFlagString("sentei remove", flags)
+	if opts.RepoPath != "" {
+		cmd += " " + opts.RepoPath
+	}
+	return cmd
 }
 
 // FormatStaleDuration converts a duration back to a human-friendly string (in days).
