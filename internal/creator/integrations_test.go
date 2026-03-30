@@ -156,6 +156,35 @@ func TestRunIntegrations_SetupFailure(t *testing.T) {
 	}
 }
 
+func TestCopyIntegrationIndex_CopiesFromSource(t *testing.T) {
+	sourceDir := t.TempDir()
+	targetDir := t.TempDir()
+
+	srcIndex := filepath.Join(sourceDir, ".cocoindex_code")
+	os.MkdirAll(srcIndex, 0755)
+	os.WriteFile(filepath.Join(srcIndex, "settings.yml"), []byte("test"), 0644)
+
+	err := copyIntegrationIndex(sourceDir, targetDir, ".cocoindex_code")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	targetIndex := filepath.Join(targetDir, ".cocoindex_code", "settings.yml")
+	if _, err := os.Stat(targetIndex); os.IsNotExist(err) {
+		t.Error("expected settings.yml to be copied")
+	}
+}
+
+func TestCopyIntegrationIndex_NoSourceIndex_ReturnsError(t *testing.T) {
+	sourceDir := t.TempDir()
+	targetDir := t.TempDir()
+
+	err := copyIntegrationIndex(sourceDir, targetDir, ".cocoindex_code")
+	if err == nil {
+		t.Error("expected error when source index doesn't exist")
+	}
+}
+
 func TestAppendGitignore(t *testing.T) {
 	tests := []struct {
 		name     string

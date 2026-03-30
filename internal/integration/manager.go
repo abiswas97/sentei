@@ -3,12 +3,11 @@ package integration
 import (
 	"bufio"
 	"fmt"
-	"io"
-	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
 
+	"github.com/abiswas97/sentei/internal/fileutil"
 	"github.com/abiswas97/sentei/internal/git"
 )
 
@@ -54,7 +53,7 @@ func EnableIntegration(
 			// Only copy when source exists; ignore copy errors (non-fatal optimisation).
 			if _, err := os.Stat(src); err == nil {
 				_ = os.RemoveAll(dst)
-				_ = copyDir(src, dst)
+				_ = fileutil.CopyDir(src, dst)
 			}
 		}
 
@@ -220,53 +219,4 @@ func readGitignoreLines(path string) (map[string]bool, error) {
 		lines[scanner.Text()] = true
 	}
 	return lines, scanner.Err()
-}
-
-// copyDir recursively copies src to dst, preserving file permissions.
-func copyDir(src, dst string) error {
-	return filepath.WalkDir(src, func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		rel, err := filepath.Rel(src, path)
-		if err != nil {
-			return err
-		}
-		target := filepath.Join(dst, rel)
-
-		if d.IsDir() {
-			info, err := d.Info()
-			if err != nil {
-				return err
-			}
-			return os.MkdirAll(target, info.Mode())
-		}
-
-		return copyFile(path, target)
-	})
-}
-
-// copyFile copies a single file from src to dst, preserving permissions.
-func copyFile(src, dst string) error {
-	in, err := os.Open(src)
-	if err != nil {
-		return err
-	}
-	defer func() { _ = in.Close() }()
-
-	info, err := in.Stat()
-	if err != nil {
-		return err
-	}
-
-	out, err := os.OpenFile(dst, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, info.Mode())
-	if err != nil {
-		return err
-	}
-
-	if _, err = io.Copy(out, in); err != nil {
-		_ = out.Close()
-		return err
-	}
-	return out.Close()
 }
