@@ -38,17 +38,17 @@ func (m Model) updateMigrateSummary(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		switch {
 		case key.Matches(msg, keys.Yes):
-			// Delete backup, then show what-next screen
+			// Delete backup, then show integration selection screen
 			if result.BackupPath != "" {
 				_ = repo.DeleteBackup(result.BackupPath)
 			}
-			m.view = migrateNextView
-			return m, nil
+			m.view = migrateIntegrationsView
+			return m, loadMigrateIntegrations(m.migrateWorktreePath(result))
 
 		case key.Matches(msg, keys.No):
-			// Keep backup, show what-next screen
-			m.view = migrateNextView
-			return m, nil
+			// Keep backup, show integration selection screen
+			m.view = migrateIntegrationsView
+			return m, loadMigrateIntegrations(m.migrateWorktreePath(result))
 
 		case key.Matches(msg, keys.Quit):
 			return m, tea.Quit
