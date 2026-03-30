@@ -1,4 +1,7 @@
-## ADDED Requirements
+## Purpose
+Covers TUI worktree sorting by age or branch name, with key bindings to cycle sort field and reverse direction, sort indicators in column headers, and selection stability across sort changes.
+
+## Requirements
 
 ### Requirement: Sort worktrees by field
 The TUI SHALL sort the displayed worktree list by a configurable sort field. The available sort fields SHALL be: last activity date (age) and branch name. The default sort field SHALL be age with ascending direction (oldest first).

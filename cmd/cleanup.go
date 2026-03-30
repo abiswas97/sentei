@@ -1,9 +1,7 @@
 package cmd
 
 import (
-	"flag"
 	"fmt"
-	"os"
 
 	"github.com/abiswas97/sentei/internal/cleanup"
 	"github.com/abiswas97/sentei/internal/git"
@@ -17,43 +15,28 @@ const (
 	nc     = "\033[0m"
 )
 
-func RunCleanup(args []string) {
-	fs := flag.NewFlagSet("cleanup", flag.ExitOnError)
-	mode := fs.String("mode", "safe", "Cleanup mode: safe or aggressive")
-	force := fs.Bool("force", false, "Force-delete unmerged branches (aggressive mode)")
-	dryRun := fs.Bool("dry-run", false, "Show what would be done without making changes")
-	fs.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Usage: sentei cleanup [options] [repo-path]\n\n")
-		fs.PrintDefaults()
+// RunCleanup executes the cleanup command in non-interactive mode.
+func RunCleanup(args []string) error {
+	opts, err := ParseCleanupFlags(args)
+	if err != nil {
+		return err
 	}
-	if err := fs.Parse(args); err != nil {
-		os.Exit(1)
+	if err := ValidateCleanupForNonInteractive(opts); err != nil {
+		return err
 	}
+	repoPath := ParseCleanupRepoPath(args)
+	return RunCleanupWithOpts(opts, repoPath)
+}
 
-	repoPath := "."
-	if fs.NArg() > 0 {
-		repoPath = fs.Arg(0)
-	}
-
-	m := cleanup.Mode(*mode)
-	if m != cleanup.ModeSafe && m != cleanup.ModeAggressive {
-		fmt.Fprintf(os.Stderr, "Unknown mode: %s (use safe or aggressive)\n", *mode)
-		os.Exit(1)
-	}
-
-	opts := cleanup.Options{
-		Mode:   m,
-		Force:  *force,
-		DryRun: *dryRun,
-	}
-
+// RunCleanupWithOpts executes cleanup with pre-parsed options.
+func RunCleanupWithOpts(opts *cleanup.Options, repoPath string) error {
 	if opts.DryRun {
 		fmt.Printf("%s(dry run)%s\n", dim, nc)
 	}
 	fmt.Println()
 
 	runner := &git.GitRunner{}
-	result := cleanup.Run(runner, repoPath, opts, printEvent)
+	result := cleanup.Run(runner, repoPath, *opts, printEvent)
 
 	fmt.Println()
 	for _, e := range result.Errors {
@@ -64,6 +47,8 @@ func RunCleanup(args []string) {
 		fmt.Printf("\n%sTip:%s %d local branch(es) are not checked out in any worktree.\n", blue, nc, result.NonWtBranchesRemaining)
 		fmt.Printf("     Run %ssentei cleanup --mode=aggressive%s to remove them.\n", dim, nc)
 	}
+
+	return nil
 }
 
 func printEvent(e cleanup.Event) {

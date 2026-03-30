@@ -115,16 +115,58 @@ func TestViewIntegrationProgress_GroupsByWorktree(t *testing.T) {
 func TestViewIntegrationProgress_ShowsProgressBar(t *testing.T) {
 	m := makeIntegrationModel()
 	m.view = integrationProgressView
+	m.integ.totalSteps = 3 // Known upfront.
 	m.integ.events = []integration.ManagerEvent{
+		{Worktree: "/repo/main", Step: "step1", Status: integration.StatusRunning},
 		{Worktree: "/repo/main", Step: "step1", Status: integration.StatusDone},
+		{Worktree: "/repo/main", Step: "step2", Status: integration.StatusRunning},
 		{Worktree: "/repo/main", Step: "step2", Status: integration.StatusDone},
 		{Worktree: "/repo/main", Step: "step3", Status: integration.StatusRunning},
 	}
 
 	output := stripAnsi(m.viewIntegrationProgress())
 
-	if !strings.Contains(output, "2/3") {
-		t.Errorf("expected output to contain progress '2/3', got:\n%s", output)
+	// 2 done out of 3 total → 66%.
+	if !strings.Contains(output, "66%") {
+		t.Errorf("expected output to contain progress '66%%', got:\n%s", output)
+	}
+}
+
+func TestViewIntegrationProgress_ProgressCountsUniqueSteps(t *testing.T) {
+	m := makeIntegrationModel()
+	m.view = integrationProgressView
+	m.integ.totalSteps = 3
+	m.integ.events = []integration.ManagerEvent{
+		{Worktree: "/repo/main", Step: "Setup code-review-graph", Status: integration.StatusRunning},
+		{Worktree: "/repo/main", Step: "Setup code-review-graph", Status: integration.StatusDone},
+		{Worktree: "/repo/main", Step: "Install cocoindex-code", Status: integration.StatusRunning},
+		{Worktree: "/repo/main", Step: "Install cocoindex-code", Status: integration.StatusDone},
+		{Worktree: "/repo/main", Step: "Setup cocoindex-code", Status: integration.StatusRunning},
+		{Worktree: "/repo/main", Step: "Setup cocoindex-code", Status: integration.StatusDone},
+	}
+
+	output := stripAnsi(m.viewIntegrationProgress())
+
+	// 3/3 done → 100%.
+	if !strings.Contains(output, "100%") {
+		t.Errorf("expected progress '100%%', got:\n%s", output)
+	}
+}
+
+func TestViewIntegrationProgress_TotalKnownUpfront(t *testing.T) {
+	m := makeIntegrationModel()
+	m.view = integrationProgressView
+	m.integ.totalSteps = 9
+	m.integ.events = []integration.ManagerEvent{
+		{Worktree: "/repo/main", Step: "Setup crg", Status: integration.StatusDone},
+		{Worktree: "/repo/main", Step: "Install ccc", Status: integration.StatusRunning},
+	}
+
+	output := stripAnsi(m.viewIntegrationProgress())
+
+	// 1 done out of 9 → 11%.
+	if !strings.Contains(output, "11%") {
+		t.Errorf("expected progress '11%%' (upfront total), got:\n%s", output)
 	}
 }
 

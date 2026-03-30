@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/abiswas97/sentei/internal/cleanup"
@@ -67,6 +68,12 @@ func runCleanup(runner git.CommandRunner, repoPath string) tea.Cmd {
 
 func (m Model) updateProgress(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		if key.Matches(msg, keys.Quit) {
+			return m, tea.Quit
+		}
+		return m, nil
+
 	case worktreeDeleteStartedMsg:
 		m.remove.deletionStatuses[msg.Path] = statusRemoving
 		return m, waitForDeletionEvent(m.remove.progressCh)
@@ -100,6 +107,7 @@ func (m Model) updateProgress(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case cleanupCompleteMsg:
 		m.remove.cleanupResult = &msg.Result
+		m.stateStale = true
 		m.view = summaryView
 	}
 	return m, nil
@@ -120,7 +128,7 @@ func (m Model) viewProgress() string {
 			}
 		}
 
-		statusText := fmt.Sprintf("%d/%d", len(m.remove.teardownResults), len(m.remove.teardownResults))
+		statusText := "100%"
 		if hasFailed {
 			statusText += " " + styleIndicatorWarning.Render(indicatorWarning)
 		} else {
@@ -133,7 +141,11 @@ func (m Model) viewProgress() string {
 	// Remove phase
 	done := len(m.remove.deletionResult.Outcomes)
 
-	phaseStatus := fmt.Sprintf("%d/%d", done, m.remove.deletionTotal)
+	pct := 0
+	if m.remove.deletionTotal > 0 {
+		pct = (done * 100) / m.remove.deletionTotal
+	}
+	phaseStatus := fmt.Sprintf("%d%%", pct)
 	if done == m.remove.deletionTotal && m.remove.deletionTotal > 0 {
 		phaseStatus += " " + styleIndicatorDone.Render(indicatorDone)
 		fmt.Fprintf(&b, "  %-30s %s\n", stylePhaseDone.Render("Removing worktrees"), styleDim.Render(phaseStatus))

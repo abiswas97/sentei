@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/abiswas97/sentei/internal/creator"
@@ -63,6 +64,12 @@ func (m Model) waitForRepoEvent() tea.Cmd {
 
 func (m Model) updateRepoProgress(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		if key.Matches(msg, keys.Quit) {
+			return m, tea.Quit
+		}
+		return m, nil
+
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = max(msg.Height-6, 5)
@@ -74,6 +81,7 @@ func (m Model) updateRepoProgress(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case repoDoneMsg:
 		m.repo.result = msg.result
+		m.stateStale = true
 		if m.repo.opType == "migrate" {
 			m.view = migrateSummaryView
 		} else {
@@ -168,16 +176,21 @@ func (m Model) viewRepoProgress() string {
 		var headerStyle func(strs ...string) string
 		var statusText string
 
+		pct := 0
+		if pd.total > 0 {
+			pct = (pd.done * 100) / pd.total
+		}
+
 		switch {
 		case isComplete && !hasFailure:
 			headerStyle = stylePhaseDone.Render
-			statusText = fmt.Sprintf("%d/%d %s", pd.done, pd.total, styleIndicatorDone.Render(indicatorDone))
+			statusText = fmt.Sprintf("%d%% %s", pct, styleIndicatorDone.Render(indicatorDone))
 		case isComplete && hasFailure:
 			headerStyle = stylePhaseActive.Render
-			statusText = fmt.Sprintf("%d/%d %s", pd.done, pd.total, styleIndicatorWarning.Render(indicatorWarning))
+			statusText = fmt.Sprintf("%d%% %s", pct, styleIndicatorWarning.Render(indicatorWarning))
 		case isActive:
 			headerStyle = stylePhaseActive.Render
-			statusText = fmt.Sprintf("%d/%d", pd.done, pd.total)
+			statusText = fmt.Sprintf("%d%%", pct)
 		default:
 			headerStyle = stylePhasePending.Render
 			statusText = "pending"

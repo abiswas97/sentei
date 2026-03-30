@@ -8,18 +8,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/abiswas97/sentei/internal/cleanup"
-	"github.com/abiswas97/sentei/internal/git"
 )
-
-// runStandaloneCleanup runs cleanup from the menu (not after deletion).
-func runStandaloneCleanup(runner git.CommandRunner, repoPath string) tea.Cmd {
-	return func() tea.Msg {
-		result := cleanup.Run(runner, repoPath, cleanup.Options{
-			Mode: cleanup.ModeSafe,
-		}, func(_ cleanup.Event) {})
-		return standaloneCleanupDoneMsg{result: result}
-	}
-}
 
 type standaloneCleanupDoneMsg struct {
 	result cleanup.Result
@@ -34,6 +23,7 @@ func (m Model) updateCleanupResult(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case standaloneCleanupDoneMsg:
 		m.remove.cleanupResult = &msg.result
+		m.stateStale = true
 		return m, nil
 
 	case tea.KeyMsg:
@@ -66,7 +56,7 @@ func (m Model) viewCleanupResult() string {
 	// Check if anything was actually done
 	totalActions := r.StaleRefsRemoved + r.ConfigDedupResult.Removed +
 		r.GoneBranchesDeleted + r.ConfigOrphanResult.Removed +
-		r.NonWtBranchesDeleted
+		r.NonWtBranchesDeleted + r.WorktreesPruned
 
 	if len(r.Errors) == 0 && totalActions == 0 {
 		fmt.Fprintf(&b, "  %s Repository is clean\n\n",
@@ -114,6 +104,17 @@ func (m Model) viewCleanupResult() string {
 			pluralize(r.ConfigOrphanResult.Removed, "section", "sections"))
 	} else if len(r.Errors) == 0 {
 		fmt.Fprintf(&b, "  %s No orphaned config sections\n",
+			styleIndicatorPending.Render(indicatorPending))
+	}
+
+	// Pruned worktrees
+	if r.WorktreesPruned > 0 {
+		fmt.Fprintf(&b, "  %s Pruned %d stale %s\n",
+			styleIndicatorDone.Render(indicatorDone),
+			r.WorktreesPruned,
+			pluralize(r.WorktreesPruned, "worktree", "worktrees"))
+	} else if len(r.Errors) == 0 {
+		fmt.Fprintf(&b, "  %s No stale worktrees\n",
 			styleIndicatorPending.Render(indicatorPending))
 	}
 

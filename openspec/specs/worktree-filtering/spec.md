@@ -1,4 +1,7 @@
-## ADDED Requirements
+## Purpose
+Covers the TUI filter mode for narrowing the worktree list by branch name using case-insensitive substring matching, including selection behavior and cursor clamping during filtering.
+
+## Requirements
 
 ### Requirement: Activate filter mode with slash key
 The TUI SHALL enter filter mode when the user presses `/` from the list view. In filter mode, a text input bar SHALL appear replacing the status bar, and keyboard input SHALL be directed to the text input.

@@ -1,3 +1,8 @@
+## Purpose
+Covers worktree discovery including the data model, parsing of `git worktree list --porcelain` output, the CommandRunner abstraction, repository validation, and the public ListWorktrees API.
+
+## Requirements
+
 ### Requirement: Worktree data model
 The system SHALL represent each worktree as a struct with fields: Path (string), HEAD (string), Branch (string), IsBare (bool), IsLocked (bool), LockReason (string), IsPrunable (bool), PruneReason (string), IsDetached (bool), LastCommitDate (time.Time), LastCommitSubject (string), HasUncommittedChanges (bool), HasUntrackedFiles (bool), IsEnriched (bool), EnrichmentError (string).
 

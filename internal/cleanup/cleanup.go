@@ -3,6 +3,7 @@ package cleanup
 import (
 	"fmt"
 	"path/filepath"
+	"strings"
 
 	"github.com/abiswas97/sentei/internal/git"
 )
@@ -27,8 +28,20 @@ type Result struct {
 	GoneBranchesDeleted    int
 	NonWtBranchesDeleted   int
 	NonWtBranchesRemaining int
+	WorktreesPruned        int
 	BranchesSkipped        []SkippedBranch
 	Errors                 []OperationError
+}
+
+// countPrunable counts worktree entries marked as "prunable" in porcelain output.
+func countPrunable(porcelain string) int {
+	count := 0
+	for _, line := range strings.Split(porcelain, "\n") {
+		if strings.HasPrefix(strings.TrimSpace(line), "prunable") {
+			count++
+		}
+	}
+	return count
 }
 
 type ConfigResult struct {
@@ -122,5 +135,49 @@ func Run(runner git.CommandRunner, repoPath string, opts Options, emit func(Even
 		result.ConfigOrphanResult = r
 	}
 
+	// Prune worktrees with broken gitdir links.
+	if pruned, err := pruneWorktrees(runner, repoPath, opts, emit); err != nil {
+		result.Errors = append(result.Errors, OperationError{Step: "worktree-prune", Err: err})
+	} else {
+		result.WorktreesPruned = pruned
+	}
+
 	return result
+}
+
+func pruneWorktrees(runner git.CommandRunner, repoPath string, opts Options, emit func(Event)) (int, error) {
+	emit(Event{Level: LevelStep, Message: "Pruning stale worktree metadata"})
+
+	if opts.DryRun {
+		// Check how many are prunable without actually pruning.
+		output, err := runner.Run(repoPath, "worktree", "list", "--porcelain")
+		if err != nil {
+			return 0, err
+		}
+		count := countPrunable(output)
+		if count > 0 {
+			emit(Event{Level: LevelInfo, Message: fmt.Sprintf("Would prune %d stale worktree(s)", count)})
+		} else {
+			emit(Event{Level: LevelInfo, Message: "No stale worktrees"})
+		}
+		return count, nil
+	}
+
+	// Count prunable before pruning.
+	output, err := runner.Run(repoPath, "worktree", "list", "--porcelain")
+	if err != nil {
+		return 0, err
+	}
+	count := countPrunable(output)
+
+	if count > 0 {
+		if _, err := runner.Run(repoPath, "worktree", "prune"); err != nil {
+			return 0, err
+		}
+		emit(Event{Level: LevelInfo, Message: fmt.Sprintf("Pruned %d stale worktree(s)", count)})
+	} else {
+		emit(Event{Level: LevelInfo, Message: "No stale worktrees"})
+	}
+
+	return count, nil
 }

@@ -1,3 +1,7 @@
+## Purpose
+Covers the TUI progress view during deletion, including progress bar updates, per-worktree status tracking, post-deletion summary, and the Cmd-chained event consumption pattern.
+
+## Requirements
 
 ### Requirement: Display deletion progress
 The TUI SHALL display a progress view during deletion showing a progress bar, percentage, and per-worktree status, updating in real-time as each deletion event is received from the deletion channel.

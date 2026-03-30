@@ -1,6 +1,7 @@
-schema: spec-driven
+schema: sentei
 
 context: |
+  Domain: Manages git worktrees in bare repositories for branch-based development
   Tech stack: Go 1.21+, Bubble Tea (TUI), Bubbles (UI components), Lip Gloss (styling)
   Architecture: Elm architecture via Bubble Tea
   Distribution: Single binary, no runtime dependencies
@@ -9,6 +10,8 @@ context: |
   Test runner: gotestsum (watch mode for TDD, JUnit for CI)
   CLI: Single command TUI app (no subcommands)
   Git interaction: Shells out to git CLI (not libgit2)
+  Structure: internal/git (commands/parsing), internal/tui (Bubble Tea views/model), internal/worktree (enrichment/deletion), internal/creator (worktree creation pipeline), internal/cleanup (branch cleanup), internal/repo (repo create/clone/migrate), cmd/ (CLI subcommands)
+  Patterns: Channel-based event emission for async operations (creator, cleanup, repo), Bubble Tea Cmd/Msg for TUI state transitions, re-exec pattern for git command testing
 
 rules:
   proposal:
@@ -20,9 +23,17 @@ rules:
   design:
     - Document concurrency approach for parallel operations
     - Keep packages internal — no public API surface
+    - Reference Bubble Tea Cmd/Msg pattern for async operations
+    - Prefer interfaces at consumption site (Go convention)
+    - Use context.Context for cancellation in long-running operations
   tasks:
     - Each task must include associated test requirements (unit and/or E2E)
-    - Follow TDD: write tests before implementation
-    - Unit tests for git parsing and business logic (table-driven, stdlib)
+    - "Follow TDD: write tests before implementation"
+    - "Unit tests for git parsing and business logic (table-driven, stdlib)"
     - E2E tests for TUI flows using teatest
-    - Git command tests use re-exec pattern (no mock libraries)
+    - "Git command tests use re-exec pattern (no mock libraries)"
+    - "NEVER use time.Sleep in tests — use teatest.WaitFor or condition-based polling"
+  verification:
+    - Every spec requirement must map to at least one automated test
+    - "Prefer teatest E2E tests for TUI verification, unit tests for business logic"
+    - Include edge cases from PRD section 9.1 in test scenarios

@@ -18,6 +18,7 @@ const (
 	StatusRunning ManagerStatus = iota
 	StatusDone
 	StatusFailed
+	StatusSkipped
 )
 
 // ManagerEvent is emitted by EnableIntegration and DisableIntegration to report
@@ -63,6 +64,12 @@ func EnableIntegration(
 				// installTool already emitted the failure event.
 				continue
 			}
+		} else {
+			// Tool already installed — skip install and dep steps.
+			for _, dep := range integ.Dependencies {
+				emit(ManagerEvent{Worktree: wtPath, Step: "Install dependency " + dep.Name, Status: StatusSkipped})
+			}
+			emit(ManagerEvent{Worktree: wtPath, Step: "Install " + integ.Name, Status: StatusSkipped})
 		}
 
 		// Step 3: run setup.
@@ -141,15 +148,17 @@ func detectTool(shell git.ShellRunner, wtPath string, integ Integration) bool {
 func installTool(shell git.ShellRunner, wtPath string, integ Integration, emit func(ManagerEvent)) error {
 	// Check and install dependencies.
 	for _, dep := range integ.Dependencies {
+		stepName := "Install dependency " + dep.Name
 		_, err := shell.RunShell(wtPath, dep.Detect)
 		if err != nil && dep.Install != "" {
-			stepName := "Install dependency " + dep.Name
 			emit(ManagerEvent{Worktree: wtPath, Step: stepName, Status: StatusRunning})
 			if _, err2 := shell.RunShell(wtPath, dep.Install); err2 != nil {
 				emit(ManagerEvent{Worktree: wtPath, Step: stepName, Status: StatusFailed, Error: err2})
 				return err2
 			}
 			emit(ManagerEvent{Worktree: wtPath, Step: stepName, Status: StatusDone})
+		} else {
+			emit(ManagerEvent{Worktree: wtPath, Step: stepName, Status: StatusSkipped})
 		}
 	}
 

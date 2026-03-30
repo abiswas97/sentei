@@ -105,6 +105,26 @@ func (m Model) startIntegrationApply() (Model, tea.Cmd) {
 		wtPaths = append(wtPaths, wt.Path)
 	}
 
+	// Calculate total steps upfront for accurate progress bar.
+	// Enable: setup is always 1 per worktree. Deps/install are conditional
+	// but we count them as maximum so the bar doesn't exceed total.
+	totalSteps := 0
+	for _, integ := range toEnable {
+		stepsPerWT := 1 // setup (always runs)
+		stepsPerWT += len(integ.Dependencies)
+		stepsPerWT++ // install
+		totalSteps += stepsPerWT * len(wtPaths)
+	}
+	for _, integ := range toDisable {
+		stepsPerWT := 0
+		if integ.Teardown.Command != "" {
+			stepsPerWT++ // teardown
+		}
+		stepsPerWT += len(integ.Teardown.Dirs) // dir removals
+		totalSteps += stepsPerWT * len(wtPaths)
+	}
+	m.integ.totalSteps = totalSteps
+
 	ch := make(chan integration.ManagerEvent, 50)
 	doneCh := make(chan struct{}, 1)
 	m.integ.eventCh = ch

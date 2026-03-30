@@ -1,3 +1,7 @@
+## Purpose
+Covers the playground mode that creates a temporary bare repository with worktrees in various states for demo and testing purposes.
+
+## Requirements
 
 ### Requirement: Setup creates a bare repository with worktrees
 The system SHALL create a bare git repository at `/tmp/sentei-playground/repo.git` and add worktrees representing all states the TUI handles.
