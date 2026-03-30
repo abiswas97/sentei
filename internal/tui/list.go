@@ -243,7 +243,7 @@ func (m Model) updateFilterInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 func (m Model) viewList() string {
 	var b strings.Builder
 
-	b.WriteString(styleHeader.Render("sentei - Git Worktree Cleanup"))
+	b.WriteString(styleHeader.Render("sentei \u2500 Remove Worktrees"))
 	b.WriteString("\n\n")
 
 	if len(m.remove.worktrees) == 0 {

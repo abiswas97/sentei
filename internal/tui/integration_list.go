@@ -160,12 +160,12 @@ func (m Model) updateIntegrationList(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 		switch {
-		case key.Matches(msg, keys.IntDown):
+		case key.Matches(msg, keys.Down):
 			if len(m.integ.integrations) > 0 && m.integ.cursor < len(m.integ.integrations)-1 {
 				m.integ.cursor++
 			}
 
-		case key.Matches(msg, keys.IntUp):
+		case key.Matches(msg, keys.Up):
 			if m.integ.cursor > 0 {
 				m.integ.cursor--
 			}
@@ -295,9 +295,9 @@ func (m Model) viewIntegrationList() string {
 	b.WriteString("\n\n")
 
 	if pending > 0 {
-		b.WriteString(styleDim.Render("  w/s navigate \u00b7 space toggle \u00b7 ? info \u00b7 enter apply \u00b7 esc back"))
+		b.WriteString(styleDim.Render("  j/k navigate \u00b7 space toggle \u00b7 ? info \u00b7 enter apply \u00b7 esc back"))
 	} else {
-		b.WriteString(styleDim.Render("  w/s navigate \u00b7 space toggle \u00b7 ? info \u00b7 esc back"))
+		b.WriteString(styleDim.Render("  j/k navigate \u00b7 space toggle \u00b7 ? info \u00b7 esc back"))
 	}
 	b.WriteString("\n")
 
@@ -359,7 +359,7 @@ func (m Model) renderIntegrationInfo() string {
 
 	// Navigation: single compact line
 	content.WriteString("\n")
-	content.WriteString(styleDim.Render("\u25c0 prev \u00b7 next \u25b6 \u00b7 esc close"))
+	content.WriteString(styleDim.Render("h/\u25c0 prev \u00b7 l/\u25b6 next \u00b7 esc close"))
 
 	dialog := styleDialogBox.Width(innerWidth + 6).Render(content.String())
 	return dialog
