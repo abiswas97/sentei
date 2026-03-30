@@ -47,15 +47,15 @@ func (m Model) viewCreateSummary() string {
 	b.WriteString("\n\n")
 
 	if hasFailures {
-		b.WriteString(fmt.Sprintf("  %s %s created with issues\n\n",
-			styleIndicatorWarning.Render(indicatorWarning), branch))
+		fmt.Fprintf(&b, "  %s %s created with issues\n\n",
+			styleIndicatorWarning.Render(indicatorWarning), branch)
 	} else {
-		b.WriteString(fmt.Sprintf("  %s %s ready\n\n",
-			styleIndicatorDone.Render(indicatorDone), branch))
+		fmt.Fprintf(&b, "  %s %s ready\n\n",
+			styleIndicatorDone.Render(indicatorDone), branch)
 	}
 
-	b.WriteString(fmt.Sprintf("    %-10s %s\n", styleDim.Render("Path"), wtPath))
-	b.WriteString(fmt.Sprintf("    %-10s %s (from %s)\n", styleDim.Render("Branch"), branch, base))
+	fmt.Fprintf(&b, "    %-10s %s\n", styleDim.Render("Path"), wtPath)
+	fmt.Fprintf(&b, "    %-10s %s (from %s)\n", styleDim.Render("Branch"), branch, base)
 
 	if result != nil {
 		for _, phase := range result.Phases {
@@ -76,7 +76,7 @@ func (m Model) viewCreateSummary() string {
 						status += "  " + styleError.Render(step.Error.Error())
 					}
 				}
-				b.WriteString(fmt.Sprintf("    %-10s %s %s\n", styleDim.Render(label), step.Name, status))
+				fmt.Fprintf(&b, "    %-10s %s %s\n", styleDim.Render(label), step.Name, status)
 			}
 		}
 	}
@@ -84,7 +84,7 @@ func (m Model) viewCreateSummary() string {
 	b.WriteString("\n")
 	b.WriteString(separator(m.width))
 	b.WriteString("\n\n")
-	b.WriteString(fmt.Sprintf("    cd %s\n", wtPath))
+	fmt.Fprintf(&b, "    cd %s\n", wtPath)
 	b.WriteString("\n")
 
 	if m.menuItems != nil {

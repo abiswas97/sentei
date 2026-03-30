@@ -59,6 +59,12 @@ func installWorkspacesParallel(shell git.ShellRunner, wtPath string, eco config.
 	results := make([]StepResult, len(workspaces))
 	sem := make(chan struct{}, maxDepsConcurrency)
 	var wg sync.WaitGroup
+	var mu sync.Mutex
+	safeEmit := func(e Event) {
+		mu.Lock()
+		defer mu.Unlock()
+		emit(e)
+	}
 
 	for i, ws := range workspaces {
 		wg.Add(1)
@@ -70,7 +76,7 @@ func installWorkspacesParallel(shell git.ShellRunner, wtPath string, eco config.
 
 			cmd := strings.ReplaceAll(eco.Install.WorkspaceInstall, "{dir}", workspace)
 			stepName := fmt.Sprintf("%s (%s)", eco.Name, workspace)
-			results[idx] = runInstallCommand(shell, wtPath, stepName, cmd, emit)
+			results[idx] = runInstallCommand(shell, wtPath, stepName, cmd, safeEmit)
 		}(i, ws)
 	}
 
