@@ -12,6 +12,7 @@ type RemoveOptions struct {
 	Stale    time.Duration
 	Merged   bool
 	All      bool
+	DryRun   bool
 	RepoPath string
 }
 
@@ -50,6 +51,7 @@ func ParseRemoveFlags(args []string) (*RemoveOptions, error) {
 	stale := fs.String("stale", "", "Remove worktrees older than duration (e.g., 30d, 2w, 3m)")
 	merged := fs.Bool("merged", false, "Remove worktrees whose branches are fully merged")
 	all := fs.Bool("all", false, "Remove all non-protected worktrees")
+	dryRun := fs.Bool("dry-run", false, "Show what would be removed without deleting")
 
 	if err := fs.Parse(args); err != nil {
 		return nil, err
@@ -58,6 +60,7 @@ func ParseRemoveFlags(args []string) (*RemoveOptions, error) {
 	opts := &RemoveOptions{
 		Merged: *merged,
 		All:    *all,
+		DryRun: *dryRun,
 	}
 
 	if *stale != "" {
@@ -96,6 +99,9 @@ func RemoveCLICommand(opts *RemoveOptions) string {
 	}
 	if opts.All {
 		flags["all"] = "true"
+	}
+	if opts.DryRun {
+		flags["dry-run"] = "true"
 	}
 	return buildFlagString("sentei remove", flags)
 }
