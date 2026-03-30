@@ -115,14 +115,18 @@ func TestViewIntegrationProgress_GroupsByWorktree(t *testing.T) {
 func TestViewIntegrationProgress_ShowsProgressBar(t *testing.T) {
 	m := makeIntegrationModel()
 	m.view = integrationProgressView
+	m.integ.totalSteps = 3 // Known upfront.
 	m.integ.events = []integration.ManagerEvent{
+		{Worktree: "/repo/main", Step: "step1", Status: integration.StatusRunning},
 		{Worktree: "/repo/main", Step: "step1", Status: integration.StatusDone},
+		{Worktree: "/repo/main", Step: "step2", Status: integration.StatusRunning},
 		{Worktree: "/repo/main", Step: "step2", Status: integration.StatusDone},
 		{Worktree: "/repo/main", Step: "step3", Status: integration.StatusRunning},
 	}
 
 	output := stripAnsi(m.viewIntegrationProgress())
 
+	// 2 done out of 3 total (known upfront).
 	if !strings.Contains(output, "2/3") {
 		t.Errorf("expected output to contain progress '2/3', got:\n%s", output)
 	}
@@ -131,6 +135,7 @@ func TestViewIntegrationProgress_ShowsProgressBar(t *testing.T) {
 func TestViewIntegrationProgress_ProgressCountsUniqueSteps(t *testing.T) {
 	m := makeIntegrationModel()
 	m.view = integrationProgressView
+	m.integ.totalSteps = 3 // Known upfront: 3 steps total.
 	// Each step emits Running then Done — 6 raw events but only 3 unique steps.
 	m.integ.events = []integration.ManagerEvent{
 		{Worktree: "/repo/main", Step: "Setup code-review-graph", Status: integration.StatusRunning},
@@ -146,6 +151,24 @@ func TestViewIntegrationProgress_ProgressCountsUniqueSteps(t *testing.T) {
 	// Should show 3/3 (3 unique steps, all done), not 6/6.
 	if !strings.Contains(output, "3/3") {
 		t.Errorf("expected progress '3/3' (unique steps), got:\n%s", output)
+	}
+}
+
+func TestViewIntegrationProgress_TotalKnownUpfront(t *testing.T) {
+	m := makeIntegrationModel()
+	m.view = integrationProgressView
+	m.integ.totalSteps = 9 // 3 worktrees × 3 steps = 9 total.
+	// Only 2 steps done so far.
+	m.integ.events = []integration.ManagerEvent{
+		{Worktree: "/repo/main", Step: "Setup crg", Status: integration.StatusDone},
+		{Worktree: "/repo/main", Step: "Install ccc", Status: integration.StatusRunning},
+	}
+
+	output := stripAnsi(m.viewIntegrationProgress())
+
+	// Should show 1/9 (total is fixed upfront, not growing).
+	if !strings.Contains(output, "1/9") {
+		t.Errorf("expected progress '1/9' (upfront total), got:\n%s", output)
 	}
 }
 

@@ -146,18 +146,23 @@ func (m Model) viewIntegrationProgress() string {
 	b.WriteString(separator(m.width))
 	b.WriteString("\n\n")
 
-	// Progress bar — count unique steps, not raw events.
-	stepStatus := make(map[string]integration.ManagerStatus)
+	// Progress bar — use upfront total, count unique completed steps.
+	total := m.integ.totalSteps
+	stepStatus := make(map[string]bool)
+	done := 0
 	for _, ev := range m.integ.events {
 		key := ev.Worktree + ":" + ev.Step
-		stepStatus[key] = ev.Status
-	}
-	total := len(stepStatus)
-	done := 0
-	for _, status := range stepStatus {
-		if status == integration.StatusDone || status == integration.StatusFailed {
+		if stepStatus[key] {
+			continue // Already counted this step.
+		}
+		if ev.Status == integration.StatusDone || ev.Status == integration.StatusFailed {
+			stepStatus[key] = true
 			done++
 		}
+	}
+	// If no upfront total was set, fall back to discovered steps.
+	if total == 0 {
+		total = done
 	}
 
 	const barWidth = 20
