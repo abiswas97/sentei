@@ -94,7 +94,7 @@ func (m Model) updateMenu(msg tea.Msg) (tea.Model, tea.Cmd) {
 					if len(m.remove.worktrees) == 0 {
 						return m, loadWorktreeContext(m.runner, m.repoPath)
 					}
-				case "Cleanup":
+				case "Cleanup & exit":
 					return m, tea.Quit
 				case "Create new repository":
 					m.repo.nameInput.SetValue("")
