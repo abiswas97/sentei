@@ -193,9 +193,10 @@ type integrationState struct {
 	infoCursor int  // which integration is shown in the carousel //nolint:unused
 
 	// Progress
-	events  []integration.ManagerEvent    //nolint:unused
-	eventCh chan integration.ManagerEvent //nolint:unused
-	doneCh  chan struct{}                 //nolint:unused
+	events     []integration.ManagerEvent    //nolint:unused
+	totalSteps int                           // known upfront for progress bar
+	eventCh    chan integration.ManagerEvent //nolint:unused
+	doneCh     chan struct{}                 //nolint:unused
 
 	// Context: where to return after progress completes
 	returnView viewState //nolint:unused
