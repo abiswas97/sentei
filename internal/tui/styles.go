@@ -138,6 +138,12 @@ var (
 	styleCheckboxOff = lipgloss.NewStyle().
 				Foreground(lipgloss.Color("241"))
 
+	styleStagedAdd = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("42")) // green — same as clean/success
+
+	styleStagedRemove = lipgloss.NewStyle().
+				Foreground(lipgloss.Color("214")) // orange — same as dirty/warning
+
 	styleHint = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("241"))
 )

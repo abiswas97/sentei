@@ -37,6 +37,10 @@ const (
 	migrateProgressView
 	migrateSummaryView
 	migrateNextView
+	integrationListView
+	integrationProgressView
+	migrateIntegrationsView
+	cleanupResultView
 )
 
 type SortField int
@@ -86,13 +90,12 @@ type createState struct {
 	focusedField  int // 0 = branch, 1 = base
 	validationErr string
 
-	ecosystems    []config.EcosystemConfig
-	integrations  []integration.Integration
-	ecoEnabled    map[string]bool
-	intEnabled    map[string]bool
-	mergeBase     bool
-	copyEnvFiles  bool
-	optionsCursor int
+	ecosystems             []config.EcosystemConfig
+	ecoEnabled             map[string]bool
+	activeIntegrationNames []string // loaded from state, displayed as info line
+	mergeBase              bool
+	copyEnvFiles           bool
+	optionsCursor          int
 
 	eventCh  chan creator.Event
 	resultCh chan creator.Result
@@ -139,6 +142,29 @@ type repoState struct {
 	opType   string // "create", "clone", "migrate"
 }
 
+// integrationState holds all state for the integration management flow.
+type integrationState struct {
+	integrations []integration.Integration //nolint:unused
+	current      map[string]bool           // what's on disk right now
+	staged       map[string]bool           // desired state after apply
+	detected     map[string]bool           // what was detected on disk at load time (for "detected" hints)
+	depStatus    map[string]bool           // dep name → installed (for info dialog) //nolint:unused
+	cursor       int                       //nolint:unused
+	colCursor    int                       // 0-based column index for future expansion //nolint:unused
+
+	// Info dialog
+	showInfo   bool //nolint:unused
+	infoCursor int  // which integration is shown in the carousel //nolint:unused
+
+	// Progress
+	events  []integration.ManagerEvent    //nolint:unused
+	eventCh chan integration.ManagerEvent //nolint:unused
+	doneCh  chan struct{}                 //nolint:unused
+
+	// Context: where to return after progress completes
+	returnView viewState //nolint:unused
+}
+
 type Model struct {
 	view     viewState
 	runner   git.CommandRunner
@@ -155,6 +181,7 @@ type Model struct {
 	remove removeState
 	create createState
 	repo   repoState
+	integ  integrationState
 }
 
 func NewModel(worktrees []git.Worktree, runner git.CommandRunner, repoPath string) Model {
@@ -212,8 +239,9 @@ func NewMenuModel(runner git.CommandRunner, shell git.ShellRunner, repoPath stri
 	case repo.ContextBareRepo:
 		items = []menuItem{
 			{label: "Create new worktree", enabled: true},
+			{label: "Manage integrations", enabled: true},
 			{label: "Remove worktrees", hint: "loading\u2026", enabled: false},
-			{label: "Cleanup", hint: "safe mode", enabled: true},
+			{label: "Cleanup & exit", hint: "prune refs, remove gone branches", enabled: true},
 		}
 	case repo.ContextNoRepo:
 		items = []menuItem{
@@ -248,7 +276,6 @@ func NewMenuModel(runner git.CommandRunner, shell git.ShellRunner, repoPath stri
 			branchInput:  branchInput,
 			baseInput:    baseInput,
 			ecoEnabled:   make(map[string]bool),
-			intEnabled:   make(map[string]bool),
 			mergeBase:    true,
 			copyEnvFiles: true,
 		},
@@ -259,6 +286,11 @@ func NewMenuModel(runner git.CommandRunner, shell git.ShellRunner, repoPath stri
 			urlInput:       urlInput,
 			cloneNameInput: cloneNameInput,
 			visibility:     "private",
+		},
+		integ: integrationState{
+			current:  make(map[string]bool),
+			staged:   make(map[string]bool),
+			detected: make(map[string]bool),
 		},
 	}
 
@@ -308,6 +340,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.updateMigrateSummary(msg)
 	case migrateNextView:
 		return m.updateMigrateNext(msg)
+	case integrationListView:
+		return m.updateIntegrationList(msg)
+	case integrationProgressView:
+		return m.updateIntegrationProgress(msg)
+	case migrateIntegrationsView:
+		return m.updateMigrateIntegrations(msg)
+	case cleanupResultView:
+		return m.updateCleanupResult(msg)
 	}
 	return m, nil
 }
@@ -348,6 +388,14 @@ func (m Model) View() string {
 		return m.viewMigrateSummary()
 	case migrateNextView:
 		return m.viewMigrateNext()
+	case integrationListView:
+		return m.viewIntegrationList()
+	case integrationProgressView:
+		return m.viewIntegrationProgress()
+	case migrateIntegrationsView:
+		return m.viewMigrateIntegrations()
+	case cleanupResultView:
+		return m.viewCleanupResult()
 	}
 	return ""
 }

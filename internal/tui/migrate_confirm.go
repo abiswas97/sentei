@@ -91,21 +91,21 @@ func (m Model) viewMigrateConfirm() string {
 		branch = styleDim.Render("detecting\u2026")
 	}
 
-	b.WriteString(fmt.Sprintf("  %-18s %s\n", styleDim.Render("Current branch"), branch))
+	fmt.Fprintf(&b, "  %-18s %s\n", styleDim.Render("Current branch"), branch)
 
 	if m.repo.migrateInfo.IsDirty {
-		b.WriteString(fmt.Sprintf("  %-18s %s\n", styleDim.Render("Status"),
-			styleIndicatorWarning.Render(indicatorWarning+" uncommitted changes")))
+		fmt.Fprintf(&b, "  %-18s %s\n", styleDim.Render("Status"),
+			styleIndicatorWarning.Render(indicatorWarning+" uncommitted changes"))
 	} else {
-		b.WriteString(fmt.Sprintf("  %-18s %s\n", styleDim.Render("Status"), styleSuccess.Render("clean")))
+		fmt.Fprintf(&b, "  %-18s %s\n", styleDim.Render("Status"), styleSuccess.Render("clean"))
 	}
 
 	b.WriteString("\n")
 	b.WriteString("  This will:\n")
-	b.WriteString(fmt.Sprintf("    %s Back up current repo\n", styleDim.Render("\u25cf")))
-	b.WriteString(fmt.Sprintf("    %s Convert to bare repository structure\n", styleDim.Render("\u25cf")))
-	b.WriteString(fmt.Sprintf("    %s Create worktree for %s\n", styleDim.Render("\u25cf"),
-		filepath.Base(m.repoPath)+"/"+branch))
+	fmt.Fprintf(&b, "    %s Back up current repo\n", styleDim.Render("\u25cf"))
+	fmt.Fprintf(&b, "    %s Convert to bare repository structure\n", styleDim.Render("\u25cf"))
+	fmt.Fprintf(&b, "    %s Create worktree for %s\n", styleDim.Render("\u25cf"),
+		filepath.Base(m.repoPath)+"/"+branch)
 
 	if m.repo.migrateInfo.IsDirty {
 		b.WriteString("\n")

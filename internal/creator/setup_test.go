@@ -4,10 +4,12 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sync"
 	"testing"
 )
 
 type mockRunner struct {
+	mu        sync.Mutex
 	responses map[string]mockResponse
 	calls     []string
 }
@@ -19,7 +21,9 @@ type mockResponse struct {
 
 func (m *mockRunner) Run(dir string, args ...string) (string, error) {
 	key := fmt.Sprintf("%s:%v", dir, args)
+	m.mu.Lock()
 	m.calls = append(m.calls, key)
+	m.mu.Unlock()
 	if resp, ok := m.responses[key]; ok {
 		return resp.output, resp.err
 	}
@@ -28,7 +32,9 @@ func (m *mockRunner) Run(dir string, args ...string) (string, error) {
 
 func (m *mockRunner) RunShell(dir string, command string) (string, error) {
 	key := fmt.Sprintf("%s:shell[%s]", dir, command)
+	m.mu.Lock()
 	m.calls = append(m.calls, key)
+	m.mu.Unlock()
 	if resp, ok := m.responses[key]; ok {
 		return resp.output, resp.err
 	}

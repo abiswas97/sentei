@@ -3,7 +3,8 @@ package integration
 // Integration describes a dev tool that can be installed and managed per-worktree.
 type Integration struct {
 	Name             string
-	Description      string
+	ShortDescription string // one-line tagline for list views
+	Description      string // full description for info dialog
 	URL              string
 	Dependencies     []Dependency
 	Detect           DetectSpec
@@ -11,6 +12,10 @@ type Integration struct {
 	Setup            SetupSpec
 	Teardown         TeardownSpec
 	GitignoreEntries []string
+	// IndexCopyDir is the directory name (relative to worktree root) that can be
+	// copied from one worktree to another to seed an incremental index. Empty means
+	// the integration's index cannot be shared across worktrees (e.g., absolute paths).
+	IndexCopyDir string
 }
 
 // Dependency is a prerequisite tool needed before an integration can be installed.

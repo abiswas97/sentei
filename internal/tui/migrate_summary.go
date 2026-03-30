@@ -38,17 +38,17 @@ func (m Model) updateMigrateSummary(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		switch {
 		case key.Matches(msg, keys.Yes):
-			// Delete backup, then show what-next screen
+			// Delete backup, then show integration selection screen
 			if result.BackupPath != "" {
 				_ = repo.DeleteBackup(result.BackupPath)
 			}
-			m.view = migrateNextView
-			return m, nil
+			m.view = migrateIntegrationsView
+			return m, loadMigrateIntegrations(m.migrateWorktreePath(result))
 
 		case key.Matches(msg, keys.No):
-			// Keep backup, show what-next screen
-			m.view = migrateNextView
-			return m, nil
+			// Keep backup, show integration selection screen
+			m.view = migrateIntegrationsView
+			return m, loadMigrateIntegrations(m.migrateWorktreePath(result))
 
 		case key.Matches(msg, keys.Quit):
 			return m, tea.Quit
@@ -92,16 +92,16 @@ func (m Model) viewMigrateSummary() string {
 			errMsg = failErr.Error()
 		}
 		errWidth := max(m.width-8, 30)
-		b.WriteString(fmt.Sprintf("  %s Migration failed\n\n",
-			styleIndicatorFailed.Render(indicatorFailed)))
+		fmt.Fprintf(&b, "  %s Migration failed\n\n",
+			styleIndicatorFailed.Render(indicatorFailed))
 		b.WriteString("    " + styleError.Width(errWidth).Render(errMsg))
 		b.WriteString("\n\n")
 		if result.BackupPath != "" {
 			b.WriteString("  Your original repo is backed up at:\n")
-			b.WriteString(fmt.Sprintf("    %s\n\n", styleDim.Render(result.BackupPath)))
+			fmt.Fprintf(&b, "    %s\n\n", styleDim.Render(result.BackupPath))
 			b.WriteString("  To restore:\n")
-			b.WriteString(fmt.Sprintf("    rm -rf %s && mv %s %s\n",
-				result.BareRoot, result.BackupPath, result.BareRoot))
+			fmt.Fprintf(&b, "    rm -rf %s && mv %s %s\n",
+				result.BareRoot, result.BackupPath, result.BareRoot)
 		}
 		b.WriteString("\n")
 		b.WriteString(separator(m.width))
@@ -112,18 +112,18 @@ func (m Model) viewMigrateSummary() string {
 	}
 
 	repoName := filepath.Base(result.BareRoot)
-	b.WriteString(fmt.Sprintf("  %s %s migrated\n\n",
-		styleIndicatorDone.Render(indicatorDone), repoName))
+	fmt.Fprintf(&b, "  %s %s migrated\n\n",
+		styleIndicatorDone.Render(indicatorDone), repoName)
 
-	b.WriteString(fmt.Sprintf("    %-10s %s\n", styleDim.Render("Path"), result.BareRoot))
-	b.WriteString(fmt.Sprintf("    %-10s %s\n", styleDim.Render("Branch"), result.Branch))
+	fmt.Fprintf(&b, "    %-10s %s\n", styleDim.Render("Path"), result.BareRoot)
+	fmt.Fprintf(&b, "    %-10s %s\n", styleDim.Render("Branch"), result.Branch)
 	if result.BackupPath != "" {
 		backupName := filepath.Base(result.BackupPath)
 		sizeHint := ""
 		if result.BackupSize != "" {
 			sizeHint = "  " + styleDim.Render(result.BackupSize)
 		}
-		b.WriteString(fmt.Sprintf("    %-10s %s%s\n", styleDim.Render("Backup"), backupName, sizeHint))
+		fmt.Fprintf(&b, "    %-10s %s%s\n", styleDim.Render("Backup"), backupName, sizeHint)
 	}
 
 	b.WriteString("\n")
@@ -182,17 +182,19 @@ func (m Model) viewMigrateNext() string {
 	b.WriteString(separator(m.width))
 	b.WriteString("\n\n")
 
-	b.WriteString(fmt.Sprintf("  %s %s ready\n\n",
-		styleIndicatorDone.Render(indicatorDone), repoName))
+	fmt.Fprintf(&b, "  %s %s ready\n\n",
+		styleIndicatorDone.Render(indicatorDone), repoName)
 
-	b.WriteString(fmt.Sprintf("    cd %s\n", styleDim.Render(worktreePath)))
+	fmt.Fprintf(&b, "    cd %s\n", styleDim.Render(worktreePath))
 	b.WriteString("\n")
 
+	b.WriteString(styleDim.Render("  Your repo is ready for worktrees."))
+	b.WriteString("\n")
 	b.WriteString(styleDim.Render("  Continue in sentei to create worktrees"))
 	b.WriteString("\n")
-	b.WriteString(styleDim.Render("  and set up integrations (code-review-graph,"))
+	b.WriteString(styleDim.Render("  and set up your workspace, or exit"))
 	b.WriteString("\n")
-	b.WriteString(styleDim.Render("  cocoindex-code), or exit to your shell."))
+	b.WriteString(styleDim.Render("  to your shell."))
 	b.WriteString("\n")
 
 	b.WriteString("\n")

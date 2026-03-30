@@ -243,7 +243,7 @@ func (m Model) updateFilterInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 func (m Model) viewList() string {
 	var b strings.Builder
 
-	b.WriteString(styleHeader.Render("sentei - Git Worktree Cleanup"))
+	b.WriteString(styleTitle.Render("  sentei \u2500 Remove Worktrees"))
 	b.WriteString("\n\n")
 
 	if len(m.remove.worktrees) == 0 {
@@ -391,7 +391,7 @@ func (m Model) viewStatusOrFilter() string {
 
 func (m Model) viewBottomLine() string {
 	if m.remove.filterActive {
-		return styleDim.Render("  enter: apply | esc: cancel")
+		return styleDim.Render("  enter apply \u00b7 esc cancel")
 	}
 	return m.viewLegend()
 }
@@ -401,11 +401,11 @@ func (m Model) viewStatusBar() string {
 
 	var filterInfo string
 	if m.remove.filterText != "" {
-		filterInfo = fmt.Sprintf(" | filter: %q (%d/%d)", m.remove.filterText, len(m.remove.visibleIndices), len(m.remove.worktrees))
+		filterInfo = fmt.Sprintf(" \u00b7 filter: %q (%d/%d)", m.remove.filterText, len(m.remove.visibleIndices), len(m.remove.worktrees))
 	}
 
 	return styleStatusBar.Render(
-		fmt.Sprintf("  %d selected%s | space: toggle | a: all | enter: delete | /: filter | s: sort | q: quit", count, filterInfo),
+		fmt.Sprintf("  %d selected%s \u00b7 space toggle \u00b7 a all \u00b7 enter delete \u00b7 / filter \u00b7 s sort \u00b7 q quit", count, filterInfo),
 	)
 }
 
