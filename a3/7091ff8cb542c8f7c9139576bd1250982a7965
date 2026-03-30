@@ -1,0 +1,35 @@
+internal/tui/create_confirm_test.go
+  4a3693f6355ed8c0 1-216
+internal/tui/model.go
+  4a3693f6355ed8c0 10,46-47,57-70,85,201-203,330-355,409-412,463-466
+internal/tui/migrate_confirm.go
+  4a3693f6355ed8c0 53-61,63-65,67-68,70-72,74,78-99,101-104
+internal/tui/create_confirm.go
+  4a3693f6355ed8c0 1-138
+internal/tui/clone_confirm.go
+  4a3693f6355ed8c0 1-97
+main.go
+  4a3693f6355ed8c0 214-229
+internal/tui/clone_confirm_test.go
+  4a3693f6355ed8c0 1-199
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.22",
+  "base_commit_sha": "a37091ff8cb542c8f7c9139576bd1250982a7965",
+  "prompts": {
+    "4a3693f6355ed8c0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a9b374a7-9e9c-4fd6-8010-99b0fee4726d",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>",
+      "messages": [],
+      "total_additions": 1156,
+      "total_deletions": 55,
+      "accepted_lines": 1115,
+      "overriden_lines": 0
+    }
+  }
+}
