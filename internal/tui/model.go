@@ -37,6 +37,9 @@ const (
 	migrateProgressView
 	migrateSummaryView
 	migrateNextView
+	integrationListView
+	integrationProgressView
+	migrateIntegrationsView
 )
 
 type SortField int
@@ -139,6 +142,28 @@ type repoState struct {
 	opType   string // "create", "clone", "migrate"
 }
 
+// integrationState holds all state for the integration management flow.
+type integrationState struct {
+	integrations []integration.Integration //nolint:unused
+	current      map[string]bool           // what's on disk right now
+	staged       map[string]bool           // desired state after apply
+	detected     map[string]bool           // what was detected on disk at load time (for "detected" hints)
+	cursor       int                       //nolint:unused
+	colCursor    int                       // 0-based column index for future expansion //nolint:unused
+
+	// Info dialog
+	showInfo   bool //nolint:unused
+	infoCursor int  // which integration is shown in the carousel //nolint:unused
+
+	// Progress
+	events  []integration.ManagerEvent    //nolint:unused
+	eventCh chan integration.ManagerEvent //nolint:unused
+	doneCh  chan struct{}                 //nolint:unused
+
+	// Context: where to return after progress completes
+	returnView viewState //nolint:unused
+}
+
 type Model struct {
 	view     viewState
 	runner   git.CommandRunner
@@ -155,6 +180,7 @@ type Model struct {
 	remove removeState
 	create createState
 	repo   repoState
+	integ  integrationState
 }
 
 func NewModel(worktrees []git.Worktree, runner git.CommandRunner, repoPath string) Model {
@@ -260,6 +286,11 @@ func NewMenuModel(runner git.CommandRunner, shell git.ShellRunner, repoPath stri
 			cloneNameInput: cloneNameInput,
 			visibility:     "private",
 		},
+		integ: integrationState{
+			current:  make(map[string]bool),
+			staged:   make(map[string]bool),
+			detected: make(map[string]bool),
+		},
 	}
 
 	return m
@@ -308,6 +339,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.updateMigrateSummary(msg)
 	case migrateNextView:
 		return m.updateMigrateNext(msg)
+	case integrationListView:
+		return m.updateIntegrationList(msg)
+	case integrationProgressView:
+		return m.updateIntegrationProgress(msg)
+	case migrateIntegrationsView:
+		return m.updateMigrateIntegrations(msg)
 	}
 	return m, nil
 }
@@ -348,6 +385,12 @@ func (m Model) View() string {
 		return m.viewMigrateSummary()
 	case migrateNextView:
 		return m.viewMigrateNext()
+	case integrationListView:
+		return m.viewIntegrationList()
+	case integrationProgressView:
+		return m.viewIntegrationProgress()
+	case migrateIntegrationsView:
+		return m.viewMigrateIntegrations()
 	}
 	return ""
 }
