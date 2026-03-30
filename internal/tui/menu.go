@@ -86,6 +86,9 @@ func (m Model) updateMenu(msg tea.Msg) (tea.Model, tea.Cmd) {
 				case "Create new worktree":
 					m.view = createBranchView
 					return m, m.create.branchInput.Cursor.BlinkCmd()
+				case "Manage integrations":
+					m.view = integrationListView
+					return m, m.loadIntegrationState()
 				case "Remove worktrees":
 					m.view = listView
 					if len(m.remove.worktrees) == 0 {
@@ -121,16 +124,16 @@ func (m *Model) updateMenuHints() {
 	if m.context != repo.ContextBareRepo {
 		return
 	}
-	if len(m.menuItems) < 2 {
+	if len(m.menuItems) < 3 {
 		return
 	}
 	count := len(m.remove.worktrees)
 	if count > 0 {
-		m.menuItems[1].hint = fmt.Sprintf("%d available", count)
-		m.menuItems[1].enabled = true
+		m.menuItems[2].hint = fmt.Sprintf("%d available", count)
+		m.menuItems[2].enabled = true
 	} else {
-		m.menuItems[1].hint = "none"
-		m.menuItems[1].enabled = false
+		m.menuItems[2].hint = "none"
+		m.menuItems[2].enabled = false
 	}
 }
 
