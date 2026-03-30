@@ -4,7 +4,7 @@ Covers the non-interactive dry-run mode that prints a pipe-friendly worktree tab
 ## Requirements
 
 ### Requirement: CLI accepts --dry-run flag
-The CLI SHALL accept a `--dry-run` boolean flag that enables non-interactive preview mode.
+The CLI SHALL accept a `--dry-run` boolean flag that enables non-interactive preview mode. The `--dry-run` flag SHALL be composable with `--non-interactive` and command-specific flags. When used with a decision command, `--dry-run` SHALL show what would happen without executing.
 
 #### Scenario: Flag is recognized
 - **WHEN** user runs `sentei --dry-run`
@@ -17,6 +17,14 @@ The CLI SHALL accept a `--dry-run` boolean flag that enables non-interactive pre
 #### Scenario: Combines with repo path
 - **WHEN** user runs `sentei --dry-run /path/to/repo`
 - **THEN** dry-run output is printed for the specified repo
+
+#### Scenario: Dry-run with decision command
+- **WHEN** user runs `sentei cleanup --mode aggressive --dry-run --non-interactive`
+- **THEN** the system SHALL print what branches would be cleaned up without actually deleting them
+
+#### Scenario: Dry-run with remove and filter
+- **WHEN** user runs `sentei remove --merged --dry-run --non-interactive`
+- **THEN** the system SHALL print which worktrees would be removed without deleting them and exit with code 0
 
 ### Requirement: Dry-run prints worktree table to stdout
 The system SHALL print a formatted table of all non-bare worktrees to stdout showing: status indicator, branch name, age, and last commit subject.
