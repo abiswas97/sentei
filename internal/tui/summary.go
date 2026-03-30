@@ -32,7 +32,7 @@ func (m Model) updateSummary(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m Model) viewSummary() string {
 	var b strings.Builder
 
-	b.WriteString(styleHeader.Render("sentei \u2500 Removal Complete"))
+	b.WriteString(styleTitle.Render("  sentei \u2500 Removal Complete"))
 	b.WriteString("\n\n")
 
 	r := m.remove.deletionResult
@@ -91,9 +91,9 @@ func (m Model) viewSummary() string {
 
 	b.WriteString("\n")
 	if m.menuItems != nil {
-		b.WriteString(styleDim.Render("  Press enter to return to menu, or q to quit"))
+		b.WriteString(styleDim.Render("  enter menu \u00b7 q quit"))
 	} else {
-		b.WriteString(styleDim.Render("  Press q, enter, or esc to exit"))
+		b.WriteString(styleDim.Render("  enter quit \u00b7 esc quit"))
 	}
 	b.WriteString("\n")
 
