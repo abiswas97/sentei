@@ -1,3 +1,8 @@
+## Purpose
+Covers the --version CLI flag that prints the version string with commit SHA and build date, then exits immediately.
+
+## Requirements
+
 ### Requirement: Version flag prints version and exits
 The CLI SHALL accept a `--version` flag. When provided, it SHALL print the version string to stdout in the format `sentei <version> (<commit>, <date>)` and exit with code 0. The commit SHALL be the short (7-char) git commit SHA. The date SHALL be the build date in `YYYY-MM-DD` format. No other output SHALL be produced.
 

@@ -1,3 +1,7 @@
+## Purpose
+Covers parallel worktree deletion via `git worktree remove --force`, progress reporting through channels, and the public DeleteWorktrees API.
+
+## Requirements
 
 ### Requirement: Delete worktrees via git worktree remove
 The system SHALL delete worktrees by executing `git worktree remove --force <path>` for each selected worktree.

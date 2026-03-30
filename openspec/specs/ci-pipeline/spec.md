@@ -1,4 +1,7 @@
-## ADDED Requirements
+## Purpose
+Covers the continuous integration pipeline including linting, testing, building, code coverage, dependency updates, and branch protection rules.
+
+## Requirements
 
 ### Requirement: CI runs lint, test, and build on every push and PR
 The CI workflow SHALL trigger on pushes to `main` and on pull requests targeting `main`. It SHALL run three jobs: lint (golangci-lint), test (go test with race detector and coverage), and build (go build). All three jobs MUST pass for the workflow to succeed.

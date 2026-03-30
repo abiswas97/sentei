@@ -1,4 +1,7 @@
-## ADDED Requirements
+## Purpose
+Covers the non-interactive dry-run mode that prints a pipe-friendly worktree table to stdout and exits without launching the TUI.
+
+## Requirements
 
 ### Requirement: CLI accepts --dry-run flag
 The CLI SHALL accept a `--dry-run` boolean flag that enables non-interactive preview mode.
