@@ -1,0 +1,27 @@
+internal/tui/model.go
+  836686c23c36f641 43,349-350,397-398
+internal/tui/cleanup_result.go
+  836686c23c36f641 1-146
+internal/tui/menu.go
+  836686c23c36f641 98-100
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.22",
+  "base_commit_sha": "9525ee3cc735a20fa89ff5145f5c9c164caf8dc5",
+  "prompts": {
+    "836686c23c36f641": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "3900c7b6-8b79-42a7-b749-c875614dd86f",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>",
+      "messages": [],
+      "total_additions": 166,
+      "total_deletions": 13,
+      "accepted_lines": 154,
+      "overriden_lines": 0
+    }
+  }
+}
