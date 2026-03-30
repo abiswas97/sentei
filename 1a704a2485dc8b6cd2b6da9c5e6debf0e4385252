@@ -1,0 +1,29 @@
+internal/tui/migrate_integrations_test.go
+  836686c23c36f641 1-109
+internal/tui/integration_list_test.go
+  836686c23c36f641 1-340
+internal/tui/integration_progress_test.go
+  836686c23c36f641 1-141
+internal/tui/cleanup_result_test.go
+  836686c23c36f641 1-142
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.22",
+  "base_commit_sha": "1a704a2485dc8b6cd2b6da9c5e6debf0e4385252",
+  "prompts": {
+    "836686c23c36f641": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "3900c7b6-8b79-42a7-b749-c875614dd86f",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>",
+      "messages": [],
+      "total_additions": 754,
+      "total_deletions": 22,
+      "accepted_lines": 732,
+      "overriden_lines": 0
+    }
+  }
+}
