@@ -3,7 +3,7 @@ package integration
 func cocoindexCode() Integration {
 	return Integration{
 		Name:        "cocoindex-code",
-		Description: "Semantic code search index",
+		Description: "Indexes your codebase for semantic search, letting AI agents find code by meaning rather than keywords. Supports incremental updates.",
 		URL:         "https://github.com/cocoindex-io/cocoindex-code",
 		Dependencies: []Dependency{
 			{
