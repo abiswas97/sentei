@@ -338,6 +338,31 @@ func TestRemoveNonInteractive_NoFilters(t *testing.T) {
 	}
 }
 
+func TestRemoveNonInteractive_DryRun(t *testing.T) {
+	bin := buildBinary(t)
+	bareRepo := setupBareRepoWithMergedBranch(t)
+
+	cmd := exec.Command(bin, "remove", "--merged", "--dry-run", "--force", "--non-interactive", bareRepo)
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("sentei remove --merged --dry-run failed: %v\n%s", err, out)
+	}
+
+	output := string(out)
+	if !strings.Contains(output, "dry run") {
+		t.Errorf("expected 'dry run' in output, got:\n%s", output)
+	}
+	if !strings.Contains(output, "Would remove") {
+		t.Errorf("expected 'Would remove' in output, got:\n%s", output)
+	}
+
+	// Verify the worktree was NOT actually deleted.
+	wtPath := filepath.Join(bareRepo, "feature-merged-branch")
+	if _, err := os.Stat(wtPath); os.IsNotExist(err) {
+		t.Error("worktree should still exist after dry-run")
+	}
+}
+
 func TestIntegrationsCLI(t *testing.T) {
 	bin := buildBinary(t)
 

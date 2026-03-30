@@ -57,6 +57,18 @@ func RunRemove(args []string) error {
 		return nil
 	}
 
+	if opts.DryRun {
+		fmt.Printf("%s(dry run)%s Would remove %d worktree(s):\n", dim, nc, len(filtered))
+		for _, wt := range filtered {
+			branch := wt.Branch
+			if idx := len("refs/heads/"); len(branch) > idx {
+				branch = branch[idx:]
+			}
+			fmt.Printf("  %s\n", branch)
+		}
+		return nil
+	}
+
 	fmt.Printf("Removing %d worktree(s)...\n", len(filtered))
 
 	remover := func(path string) error {
@@ -64,8 +76,6 @@ func RunRemove(args []string) error {
 		return err
 	}
 
-	// Each worktree produces 2 events (started + completed/failed), so buffer
-	// must hold all events to avoid deadlock since DeleteWorktrees is synchronous.
 	progress := make(chan worktree.DeletionEvent, 2*len(filtered))
 	result := worktree.DeleteWorktrees(remover, filtered, 5, progress)
 
