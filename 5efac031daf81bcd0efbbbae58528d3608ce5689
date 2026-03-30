@@ -1,0 +1,27 @@
+internal/tui/model.go
+  836686c23c36f641 92-97
+internal/tui/create_branch.go
+  836686c23c36f641 13,128-140
+internal/tui/create_options.go
+  836686c23c36f641 5,14,29-31,36-38,51-53,133-137,139-144,206-207,209,241-245
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.22",
+  "base_commit_sha": "5efac031daf81bcd0efbbbae58528d3608ce5689",
+  "prompts": {
+    "836686c23c36f641": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "3900c7b6-8b79-42a7-b749-c875614dd86f",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>",
+      "messages": [],
+      "total_additions": 50,
+      "total_deletions": 63,
+      "accepted_lines": 50,
+      "overriden_lines": 0
+    }
+  }
+}
