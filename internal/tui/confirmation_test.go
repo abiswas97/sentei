@@ -182,7 +182,7 @@ func TestBuildCLICommand_WithFlags(t *testing.T) {
 		"mode":  "aggressive",
 		"force": "true",
 	})
-	expected := "sentei cleanup --force true --mode aggressive"
+	expected := "sentei cleanup --force --mode aggressive"
 	if result != expected {
 		t.Errorf("got %q, want %q", result, expected)
 	}

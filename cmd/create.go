@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/abiswas97/sentei/internal/config"
 	"github.com/abiswas97/sentei/internal/creator"
@@ -120,11 +121,7 @@ func matchEcosystems(available []config.EcosystemConfig, requested []string) []c
 // findSource picks a source worktree for env file copying (prefers main/master).
 func findSource(worktrees []git.Worktree) string {
 	for _, wt := range worktrees {
-		branch := wt.Branch
-		// Strip refs/heads/ prefix if present.
-		if idx := len("refs/heads/"); len(branch) > idx {
-			branch = branch[idx:]
-		}
+		branch := strings.TrimPrefix(wt.Branch, "refs/heads/")
 		if branch == "main" || branch == "master" {
 			return wt.Path
 		}
