@@ -13,6 +13,7 @@ import (
 func ParseCleanupFlags(args []string) (*cleanup.Options, error) {
 	fs := flag.NewFlagSet("cleanup", flag.ContinueOnError)
 	mode := fs.String("mode", "", "Cleanup mode: safe or aggressive")
+	force := fs.Bool("force", false, "Force-delete unmerged branches (aggressive mode)")
 	dryRun := fs.Bool("dry-run", false, "Show what would be done without making changes")
 
 	if err := fs.Parse(args); err != nil {
@@ -20,6 +21,7 @@ func ParseCleanupFlags(args []string) (*cleanup.Options, error) {
 	}
 
 	opts := &cleanup.Options{
+		Force:  *force,
 		DryRun: *dryRun,
 	}
 
@@ -32,6 +34,19 @@ func ParseCleanupFlags(args []string) (*cleanup.Options, error) {
 	}
 
 	return opts, nil
+}
+
+// ParseCleanupRepoPath extracts the positional repo path from cleanup args.
+func ParseCleanupRepoPath(args []string) string {
+	fs := flag.NewFlagSet("cleanup", flag.ContinueOnError)
+	fs.String("mode", "", "")
+	fs.Bool("force", false, "")
+	fs.Bool("dry-run", false, "")
+	_ = fs.Parse(args)
+	if fs.NArg() > 0 {
+		return fs.Arg(0)
+	}
+	return "."
 }
 
 // ValidateCleanupForNonInteractive checks that all required flags are present
