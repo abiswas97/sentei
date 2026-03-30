@@ -2,6 +2,7 @@ package tui
 
 import (
 	"fmt"
+	"path/filepath"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/key"
@@ -10,6 +11,7 @@ import (
 	"github.com/abiswas97/sentei/internal/config"
 	"github.com/abiswas97/sentei/internal/creator"
 	"github.com/abiswas97/sentei/internal/integration"
+	"github.com/abiswas97/sentei/internal/state"
 )
 
 type optionItem struct {
@@ -17,7 +19,6 @@ type optionItem struct {
 	description string
 	hint        string
 	key         string
-	section     string // "setup" or "integration"
 }
 
 func (m Model) buildOptionItems() []optionItem {
@@ -25,18 +26,16 @@ func (m Model) buildOptionItems() []optionItem {
 
 	for _, eco := range m.create.ecosystems {
 		items = append(items, optionItem{
-			label:   fmt.Sprintf("Install dependencies (%s)", eco.Name),
-			hint:    eco.Name + " detected",
-			key:     "eco:" + eco.Name,
-			section: "setup",
+			label: fmt.Sprintf("Install dependencies (%s)", eco.Name),
+			hint:  eco.Name + " detected",
+			key:   "eco:" + eco.Name,
 		})
 	}
 
 	items = append(items, optionItem{
-		label:   "Merge default branch",
-		hint:    fmt.Sprintf("%s \u2192 %s", m.create.baseInput.Value(), m.create.branchInput.Value()),
-		key:     "merge",
-		section: "setup",
+		label: "Merge default branch",
+		hint:  fmt.Sprintf("%s \u2192 %s", m.create.baseInput.Value(), m.create.branchInput.Value()),
+		key:   "merge",
 	})
 
 	hasEnvFiles := false
@@ -49,20 +48,9 @@ func (m Model) buildOptionItems() []optionItem {
 	}
 	if hasEnvFiles {
 		items = append(items, optionItem{
-			label:   "Copy environment files",
-			hint:    strings.Join(envFileNames, ", "),
-			key:     "envfiles",
-			section: "setup",
-		})
-	}
-
-	for _, integ := range m.create.integrations {
-		items = append(items, optionItem{
-			label:       integ.Name,
-			description: integ.Description,
-			hint:        integ.URL,
-			key:         "int:" + integ.Name,
-			section:     "integration",
+			label: "Copy environment files",
+			hint:  strings.Join(envFileNames, ", "),
+			key:   "envfiles",
 		})
 	}
 
@@ -78,9 +66,6 @@ func (m Model) isOptionEnabled(item optionItem) bool {
 		return m.create.mergeBase
 	case item.key == "envfiles":
 		return m.create.copyEnvFiles
-	case strings.HasPrefix(item.key, "int:"):
-		name := strings.TrimPrefix(item.key, "int:")
-		return m.create.intEnabled[name]
 	}
 	return false
 }
@@ -94,9 +79,6 @@ func (m *Model) toggleOption(item optionItem) {
 		m.create.mergeBase = !m.create.mergeBase
 	case item.key == "envfiles":
 		m.create.copyEnvFiles = !m.create.copyEnvFiles
-	case strings.HasPrefix(item.key, "int:"):
-		name := strings.TrimPrefix(item.key, "int:")
-		m.create.intEnabled[name] = !m.create.intEnabled[name]
 	}
 }
 
@@ -148,9 +130,18 @@ func (m *Model) startCreation() {
 		}
 	}
 
+	bareDir := filepath.Join(m.repoPath, ".bare")
+	st, err := state.Load(bareDir)
+	if err != nil {
+		st = &state.State{}
+	}
 	var enabledInts []integration.Integration
-	for _, integ := range m.create.integrations {
-		if m.create.intEnabled[integ.Name] {
+	enabledSet := make(map[string]bool)
+	for _, name := range st.Integrations {
+		enabledSet[name] = true
+	}
+	for _, integ := range integration.All() {
+		if enabledSet[integ.Name] {
 			enabledInts = append(enabledInts, integ)
 		}
 	}
@@ -212,21 +203,10 @@ func (m Model) viewCreateOptions() string {
 	b.WriteString(separator(m.width))
 	b.WriteString("\n\n")
 
-	currentSection := ""
-	for i, item := range items {
-		if item.section != currentSection {
-			currentSection = item.section
-			sectionLabel := "Setup"
-			if currentSection == "integration" {
-				sectionLabel = "Integrations"
-			}
-			if i > 0 {
-				b.WriteString("\n")
-			}
-			b.WriteString("  " + styleTitle.Render(sectionLabel))
-			b.WriteString("\n\n")
-		}
+	b.WriteString("  " + styleTitle.Render("Setup"))
+	b.WriteString("\n\n")
 
+	for i, item := range items {
 		cursor := "  "
 		if i == m.create.optionsCursor {
 			cursor = "> "
@@ -258,6 +238,11 @@ func (m Model) viewCreateOptions() string {
 	}
 
 	b.WriteString("\n")
+	if len(m.create.activeIntegrationNames) > 0 {
+		b.WriteString(styleDim.Render(fmt.Sprintf("  Integrations from main: %s",
+			strings.Join(m.create.activeIntegrationNames, ", "))))
+		b.WriteString("\n")
+	}
 	b.WriteString(separator(m.width))
 	b.WriteString("\n\n")
 	b.WriteString(styleDim.Render("  space toggle \u00b7 enter create \u00b7 esc back"))
