@@ -42,6 +42,7 @@ func (m Model) updateCreateProgress(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case createCompleteMsg:
 		m.create.result = &msg.Result
+		m.stateStale = true
 		m.view = createSummaryView
 		return m, nil
 	}
