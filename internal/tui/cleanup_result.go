@@ -55,7 +55,7 @@ func (m Model) viewCleanupResult() string {
 	// Check if anything was actually done
 	totalActions := r.StaleRefsRemoved + r.ConfigDedupResult.Removed +
 		r.GoneBranchesDeleted + r.ConfigOrphanResult.Removed +
-		r.NonWtBranchesDeleted
+		r.NonWtBranchesDeleted + r.WorktreesPruned
 
 	if len(r.Errors) == 0 && totalActions == 0 {
 		fmt.Fprintf(&b, "  %s Repository is clean\n\n",
@@ -103,6 +103,17 @@ func (m Model) viewCleanupResult() string {
 			pluralize(r.ConfigOrphanResult.Removed, "section", "sections"))
 	} else if len(r.Errors) == 0 {
 		fmt.Fprintf(&b, "  %s No orphaned config sections\n",
+			styleIndicatorPending.Render(indicatorPending))
+	}
+
+	// Pruned worktrees
+	if r.WorktreesPruned > 0 {
+		fmt.Fprintf(&b, "  %s Pruned %d stale %s\n",
+			styleIndicatorDone.Render(indicatorDone),
+			r.WorktreesPruned,
+			pluralize(r.WorktreesPruned, "worktree", "worktrees"))
+	} else if len(r.Errors) == 0 {
+		fmt.Fprintf(&b, "  %s No stale worktrees\n",
 			styleIndicatorPending.Render(indicatorPending))
 	}
 

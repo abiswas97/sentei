@@ -24,10 +24,10 @@ func loadWorktreeContext(runner git.CommandRunner, repoPath string) tea.Cmd {
 		if err != nil {
 			return worktreeContextMsg{err: err}
 		}
-		wts = worktree.EnrichWorktrees(runner, wts, 10)
+		wts = worktree.EnrichWorktrees(runner, wts, worktree.DefaultEnrichConcurrency)
 		var filtered []git.Worktree
 		for _, wt := range wts {
-			if !wt.IsBare {
+			if !wt.IsBare && !wt.IsPrunable {
 				filtered = append(filtered, wt)
 			}
 		}
