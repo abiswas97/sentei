@@ -35,6 +35,8 @@ sentei is a TUI (Terminal User Interface) tool for managing and cleaning up stal
 - Write tests for all git parsing logic
 - Test edge cases documented in PRD section 9.1
 - Use table-driven tests for multiple scenarios
+- **Never use `time.Sleep` in tests** — always use condition-based waiting (teatest.WaitFor, channels, sync primitives). A test that passes by timing luck is not a passing test.
+- For TUI E2E tests with teatest, use `teatest.WaitFor(t, tm.Output(), condition)` to poll for expected output before sending the next action
 
 ### Git Commands
 

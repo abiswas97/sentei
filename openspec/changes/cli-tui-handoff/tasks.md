@@ -10,24 +10,24 @@
 
 ## 2. Confirmation View Component
 
-- [ ] 2.1 Create `internal/tui/confirmation.go` with reusable `ConfirmationViewModel` — accepts title, key-value pairs, CLI command string
-- [ ] 2.2 Implement View rendering: title, key-value rows, separator, CLI command echo, keybindings footer
-- [ ] 2.3 Implement Update: Enter → proceed (returns a `ConfirmMsg`), Esc → back, q/Ctrl+C → quit
-- [ ] 2.4 Add `CLICommand() string` method to each options struct that generates the equivalent CLI command from its fields
-- [ ] 2.5 Unit tests for confirmation view: rendering, key handling, CLI command generation
+- [x] 2.1 Create `internal/tui/confirmation.go` with reusable `ConfirmationViewModel` — accepts title, key-value pairs, CLI command string
+- [x] 2.2 Implement View rendering: title, key-value rows, separator, CLI command echo, keybindings footer
+- [x] 2.3 Implement Update: Enter → proceed (returns a `ConfirmMsg`), Esc → back, q/Ctrl+C → quit
+- [x] 2.4 Add `CLICommand() string` method to each options struct that generates the equivalent CLI command from its fields
+- [x] 2.5 Unit tests for confirmation view: rendering, key handling, CLI command generation
 
 ## 3. Phase 1 — Cleanup Command
 
-- [ ] 3.1 Define `CleanupOptions` struct (Mode, Force, DryRun) if not already present; add `ParseFlags` function
-- [ ] 3.2 Register cleanup as a decision command in the registry
-- [ ] 3.3 Add cleanup confirmation view: display mode, force, dry-run settings with CLI command echo
-- [ ] 3.4 Implement TUI entry: no flags → full flow, partial flags → enter at first missing, all flags → confirmation view
-- [ ] 3.5 Implement `--non-interactive` path: parse flags → validate required (mode) → execute → print results to stdout
-- [ ] 3.6 Unit tests for cleanup flag parsing, option validation, missing flag errors
-- [ ] 3.7 teatest E2E: launch cleanup TUI with no flags, navigate full flow, verify screens
-- [ ] 3.8 teatest E2E: launch cleanup TUI with `--mode safe`, verify enters at confirmation view
-- [ ] 3.9 Binary E2E: `sentei cleanup --mode safe --non-interactive` against real bare repo, verify stdout output
-- [ ] 3.10 Binary E2E: `sentei cleanup --non-interactive` (missing --mode), verify error message and exit code 1
+- [x] 3.1 Define `CleanupOptions` struct (Mode, Force, DryRun) if not already present; add `ParseFlags` function
+- [x] 3.2 Register cleanup as a decision command in the registry
+- [ ] 3.3 Add cleanup confirmation view: display mode, force, dry-run settings with CLI command echo (deferred: cleanup has no TUI flow yet)
+- [ ] 3.4 Implement TUI entry: no flags → full flow, partial flags → enter at first missing, all flags → confirmation view (deferred: cleanup has no TUI flow yet)
+- [x] 3.5 Implement `--non-interactive` path: parse flags → validate required (mode) → execute → print results to stdout
+- [x] 3.6 Unit tests for cleanup flag parsing, option validation, missing flag errors
+- [ ] 3.7 teatest E2E: launch cleanup TUI with no flags, navigate full flow, verify screens (deferred: cleanup has no TUI flow yet)
+- [ ] 3.8 teatest E2E: launch cleanup TUI with `--mode safe`, verify enters at confirmation view (deferred: cleanup has no TUI flow yet)
+- [x] 3.9 Binary E2E: `sentei cleanup --mode safe --non-interactive` against real bare repo, verify stdout output
+- [x] 3.10 Binary E2E: `sentei cleanup --non-interactive` (missing --mode), verify error message and exit code 1
 
 ## 4. Phase 2 — Create Worktree Command
 
@@ -88,8 +88,8 @@
 
 ## 9. teatest Infrastructure
 
-- [ ] 9.1 Add `github.com/charmbracelet/x/exp/teatest` dependency
-- [ ] 9.2 Create test helper: `setupBareRepo(t *testing.T) string` — creates a bare repo with N worktrees in `t.TempDir()`
-- [ ] 9.3 Create test helper: `setupBareRepoWithState(t *testing.T, opts RepoOpts) string` — configurable worktree count, dirty state, stale dates, merged branches
-- [ ] 9.4 Create test helper: `launchTUI(t *testing.T, args ...string) *teatest.TestModel` — builds and launches sentei with given args
-- [ ] 9.5 Verify teatest setup works with a smoke test: launch TUI, send 'q', assert clean exit
+- [x] 9.1 Add `github.com/charmbracelet/x/exp/teatest` dependency
+- [x] 9.2 Create test helper: `setupBareRepo(t *testing.T) string` — creates a bare repo with N worktrees in `t.TempDir()`
+- [x] 9.3 Create test helper: `setupBareRepoWithState(t *testing.T, opts RepoOpts) string` — configurable worktree count, dirty state, stale dates, merged branches
+- [x] 9.4 Create test helper: `launchTUI(t *testing.T, args ...string) *teatest.TestModel` — builds and launches sentei with given args
+- [x] 9.5 Verify teatest setup works with a smoke test: launch TUI, send 'q', assert clean exit

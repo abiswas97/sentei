@@ -1,6 +1,7 @@
 package testutil
 
 import (
+	"bytes"
 	"testing"
 	"time"
 
@@ -13,8 +14,10 @@ func TestSmoke_LaunchAndQuit(t *testing.T) {
 
 	tm := LaunchTUI(t, repoPath)
 
-	// Give the TUI a moment to render the initial view.
-	time.Sleep(100 * time.Millisecond)
+	// Wait for TUI to render something before sending quit.
+	teatest.WaitFor(t, tm.Output(), func(bts []byte) bool {
+		return bytes.Contains(bts, []byte("sentei"))
+	}, teatest.WithDuration(10*time.Second), teatest.WithCheckInterval(50*time.Millisecond))
 
 	// Send 'q' to quit.
 	tm.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("q")})
