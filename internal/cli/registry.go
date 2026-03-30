@@ -147,6 +147,28 @@ func (r *Registry) UsageString() string {
 	return b.String()
 }
 
+// BuildFlagString constructs a CLI command string from a base command and flags.
+// Boolean flags (value == "true") are rendered as --flag (no value).
+// Flags are sorted by key for deterministic output.
+func BuildFlagString(base string, flags map[string]string) string {
+	flagKeys := make([]string, 0, len(flags))
+	for k := range flags {
+		flagKeys = append(flagKeys, k)
+	}
+	sort.Strings(flagKeys)
+
+	result := base
+	for _, k := range flagKeys {
+		v := flags[k]
+		if v == "true" {
+			result += " --" + k
+		} else {
+			result += " --" + k + " " + v
+		}
+	}
+	return result
+}
+
 // extractGlobalFlags pulls --non-interactive and --force from the args slice,
 // returning the flag values and the remaining args. This uses a simple scan
 // rather than flag.FlagSet to avoid conflicting with command-specific flags.

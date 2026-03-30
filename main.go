@@ -28,10 +28,7 @@ var (
 	date    = "unknown"
 )
 
-const (
-	enrichConcurrency = 10
-	playgroundDelay   = 800 * time.Millisecond
-)
+const playgroundDelay = 800 * time.Millisecond
 
 func buildRegistry() *cli.Registry {
 	r := cli.NewRegistry()
@@ -316,7 +313,7 @@ func runRoot(args []string) {
 			os.Exit(1)
 		}
 
-		worktrees = worktree.EnrichWorktrees(runner, worktrees, enrichConcurrency)
+		worktrees = worktree.EnrichWorktrees(runner, worktrees, worktree.DefaultEnrichConcurrency)
 
 		var filtered []git.Worktree
 		for _, wt := range worktrees {

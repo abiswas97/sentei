@@ -2,9 +2,9 @@ package tui
 
 import (
 	"fmt"
-	"sort"
 	"strings"
 
+	"github.com/abiswas97/sentei/internal/cli"
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 )
@@ -79,28 +79,7 @@ func (c ConfirmationViewModel) View() string {
 }
 
 // BuildCLICommand constructs a CLI command string from a command name and flags.
-// Flags are sorted by key for deterministic output.
+// Delegates to cli.BuildFlagString for consistent flag formatting.
 func BuildCLICommand(command string, flags map[string]string) string {
-	if len(flags) == 0 {
-		return "sentei " + command
-	}
-
-	keys := make([]string, 0, len(flags))
-	for k := range flags {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-
-	var parts []string
-	parts = append(parts, "sentei", command)
-	for _, k := range keys {
-		v := flags[k]
-		if v == "true" {
-			parts = append(parts, "--"+k)
-		} else {
-			parts = append(parts, "--"+k, v)
-		}
-	}
-
-	return strings.Join(parts, " ")
+	return cli.BuildFlagString("sentei "+command, flags)
 }
