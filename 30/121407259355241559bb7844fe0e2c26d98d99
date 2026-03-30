@@ -1,0 +1,37 @@
+cmd/remove_flags.go
+  4a3693f6355ed8c0 107-111
+cmd/create_flags.go
+  4a3693f6355ed8c0 80-84
+cmd/clone_flags_test.go
+  4a3693f6355ed8c0 76-78
+cmd/remove_filter.go
+  4a3693f6355ed8c0 4-5,52-55
+cmd/remove_flags_test.go
+  4a3693f6355ed8c0 179-189
+cmd/create_flags_test.go
+  4a3693f6355ed8c0 164-174
+internal/tui/migrate_confirm.go
+  4a3693f6355ed8c0 151
+cmd/remove.go
+  4a3693f6355ed8c0 55-64,101-103
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.22",
+  "base_commit_sha": "30121407259355241559bb7844fe0e2c26d98d99",
+  "prompts": {
+    "4a3693f6355ed8c0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a9b374a7-9e9c-4fd6-8010-99b0fee4726d",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>",
+      "messages": [],
+      "total_additions": 55,
+      "total_deletions": 17,
+      "accepted_lines": 55,
+      "overriden_lines": 0
+    }
+  }
+}
