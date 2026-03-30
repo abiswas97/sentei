@@ -55,36 +55,36 @@
 
 ## 6. Phase 4 — Remove Command with Filter Flags
 
-- [ ] 6.1 Define `RemoveOptions` struct (Stale duration, Merged bool, All bool, Force bool)
-- [ ] 6.2 Add `ParseFlags` for remove with `--stale`, `--merged`, `--all` filter flags
-- [ ] 6.3 Implement duration parsing for `--stale` (supports `Nd`, `Nw`, `Nm` formats)
-- [ ] 6.4 Implement filter resolution: given enriched worktrees and filter flags, produce a selection set
-- [ ] 6.5 Register remove as a decision command in the registry
+- [x] 6.1 Define `RemoveOptions` struct (Stale duration, Merged bool, All bool, Force bool)
+- [x] 6.2 Add `ParseFlags` for remove with `--stale`, `--merged`, `--all` filter flags
+- [x] 6.3 Implement duration parsing for `--stale` (supports `Nd`, `Nw`, `Nm` formats)
+- [x] 6.4 Implement filter resolution: given enriched worktrees and filter flags, produce a selection set
+- [x] 6.5 Register remove as a decision command in the registry
 - [ ] 6.6 Wire filter-based pre-selection into the TUI list view (pass initial selection set to model)
 - [ ] 6.7 Add filter indicator to list view status bar (e.g., "filter: stale > 30d, merged")
-- [ ] 6.8 Implement `--non-interactive` path: parse flags → resolve selection → validate (--force required, non-empty selection) → execute → print summary
-- [ ] 6.9 Unit tests for duration parsing, filter resolution, composable filter OR logic, protected worktree exclusion
+- [x] 6.8 Implement `--non-interactive` path: parse flags → resolve selection → validate (--force required, non-empty selection) → execute → print summary
+- [x] 6.9 Unit tests for duration parsing, filter resolution, composable filter OR logic, protected worktree exclusion
 - [ ] 6.10 teatest E2E: `sentei remove --merged` → verify list view with merged worktrees pre-selected
 - [ ] 6.11 teatest E2E: `sentei remove --all` → verify all non-protected worktrees pre-selected
-- [ ] 6.12 Binary E2E: `sentei remove --merged --force --non-interactive` → verify deletion and summary output
-- [ ] 6.13 Binary E2E: `sentei remove --merged --non-interactive` (missing --force) → verify error
+- [x] 6.12 Binary E2E: `sentei remove --merged --force --non-interactive` → verify deletion and summary output
+- [x] 6.13 Binary E2E: `sentei remove --merged --non-interactive` (missing --force) → verify error
 
 ## 7. Phase 5 — Migrate Command
 
-- [ ] 7.1 Define `MigrateOptions` struct (DeleteBackup bool, Force bool) with `ParseFlags`
-- [ ] 7.2 Register migrate as a decision command in the registry
+- [x] 7.1 Define `MigrateOptions` struct (DeleteBackup bool, Force bool) with `ParseFlags`
+- [x] 7.2 Register migrate as a decision command in the registry
 - [ ] 7.3 Add migrate confirmation view using the shared component (show current repo, target bare repo path)
-- [ ] 7.4 Implement `--non-interactive` path: parse flags → validate → execute → print results
-- [ ] 7.5 Unit tests for migrate flag parsing
+- [x] 7.4 Implement `--non-interactive` path: parse flags → validate → execute → print results
+- [x] 7.5 Unit tests for migrate flag parsing
 - [ ] 7.6 teatest E2E: `sentei migrate` → verify full TUI flow
-- [ ] 7.7 Binary E2E: `sentei migrate --force --non-interactive` → verify migration executes
+- [x] 7.7 Binary E2E: `sentei migrate --force --non-interactive` → verify migration executes
 
 ## 8. Dry-Run Integration
 
-- [ ] 8.1 Make `--dry-run` composable with decision commands: `sentei cleanup --mode aggressive --dry-run --non-interactive` prints what would happen
-- [ ] 8.2 Add dry-run support to remove's `--non-interactive` path: list worktrees that would be deleted without deleting
-- [ ] 8.3 Unit tests for dry-run output formatting per command
-- [ ] 8.4 Binary E2E: `sentei remove --merged --dry-run --non-interactive` → verify preview output, no deletions
+- [x] 8.1 Make `--dry-run` composable with decision commands: `sentei cleanup --mode aggressive --dry-run --non-interactive` prints what would happen
+- [x] 8.2 Add dry-run support to remove's `--non-interactive` path: list worktrees that would be deleted without deleting
+- [x] 8.3 Unit tests for dry-run output formatting per command
+- [x] 8.4 Binary E2E: `sentei remove --merged --dry-run --non-interactive` → verify preview output, no deletions
 
 ## 9. teatest Infrastructure
 
