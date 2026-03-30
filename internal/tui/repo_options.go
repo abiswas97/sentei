@@ -238,7 +238,7 @@ func (m Model) viewRepoOptions() string {
 		if m.repo.optionsCursor == repoOptVisibility {
 			b.WriteString(styleAccent.Render(cursor) + fmt.Sprintf("      %-15s %s", "Visibility", visVal))
 		} else {
-			b.WriteString(fmt.Sprintf("        %-15s %s", "Visibility", visVal))
+			fmt.Fprintf(&b, "        %-15s %s", "Visibility", visVal)
 		}
 		b.WriteString("\n")
 
@@ -254,7 +254,7 @@ func (m Model) viewRepoOptions() string {
 			if val == "" {
 				val = styleDim.Render("(optional)")
 			}
-			b.WriteString(fmt.Sprintf("        %-15s %s", "Description", val))
+			fmt.Fprintf(&b, "        %-15s %s", "Description", val)
 		}
 		b.WriteString("\n")
 	}

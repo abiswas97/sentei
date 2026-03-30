@@ -81,19 +81,19 @@ func (m Model) viewCreateRepoSummary(result repo.CreateResult) string {
 	b.WriteString("\n\n")
 
 	if ghFailed {
-		b.WriteString(fmt.Sprintf("  %s %s ready (local only)\n\n",
-			styleIndicatorDone.Render(indicatorDone), repoName))
+		fmt.Fprintf(&b, "  %s %s ready (local only)\n\n",
+			styleIndicatorDone.Render(indicatorDone), repoName)
 	} else {
-		b.WriteString(fmt.Sprintf("  %s %s ready\n\n",
-			styleIndicatorDone.Render(indicatorDone), repoName))
+		fmt.Fprintf(&b, "  %s %s ready\n\n",
+			styleIndicatorDone.Render(indicatorDone), repoName)
 	}
 
-	b.WriteString(fmt.Sprintf("    %-10s %s\n", styleDim.Render("Path"), result.RepoPath))
-	b.WriteString(fmt.Sprintf("    %-10s %s\n", styleDim.Render("Branch"), "main"))
+	fmt.Fprintf(&b, "    %-10s %s\n", styleDim.Render("Path"), result.RepoPath)
+	fmt.Fprintf(&b, "    %-10s %s\n", styleDim.Render("Branch"), "main")
 
 	if result.GitHubURL != "" {
-		b.WriteString(fmt.Sprintf("    %-10s %s %s\n", styleDim.Render("GitHub"),
-			result.GitHubURL, styleSuccess.Render("\u25cf")))
+		fmt.Fprintf(&b, "    %-10s %s %s\n", styleDim.Render("GitHub"),
+			result.GitHubURL, styleSuccess.Render("\u25cf"))
 	} else if ghFailed {
 		msg := "failed to publish"
 		if ghErrMsg != "" {
@@ -101,7 +101,7 @@ func (m Model) viewCreateRepoSummary(result repo.CreateResult) string {
 		}
 		errWidth := max(m.width-14, 30) // 14 chars for indentation + label
 		wrappedErr := styleError.Width(errWidth).Render(indicatorFailed + " " + msg)
-		b.WriteString(fmt.Sprintf("    %-10s %s\n", styleDim.Render("GitHub"), wrappedErr))
+		fmt.Fprintf(&b, "    %-10s %s\n", styleDim.Render("GitHub"), wrappedErr)
 	}
 
 	worktreePath := result.WorktreePath
@@ -112,7 +112,7 @@ func (m Model) viewCreateRepoSummary(result repo.CreateResult) string {
 	b.WriteString("\n")
 	b.WriteString(separator(m.width))
 	b.WriteString("\n\n")
-	b.WriteString(fmt.Sprintf("    cd %s\n\n", styleDim.Render(worktreePath)))
+	fmt.Fprintf(&b, "    cd %s\n\n", styleDim.Render(worktreePath))
 	b.WriteString(styleDim.Render("  enter open in sentei \u00b7 q quit"))
 	b.WriteString("\n")
 
@@ -129,13 +129,13 @@ func (m Model) viewCloneRepoSummary(result repo.CloneResult) string {
 	b.WriteString(separator(m.width))
 	b.WriteString("\n\n")
 
-	b.WriteString(fmt.Sprintf("  %s %s ready\n\n",
-		styleIndicatorDone.Render(indicatorDone), repoName))
+	fmt.Fprintf(&b, "  %s %s ready\n\n",
+		styleIndicatorDone.Render(indicatorDone), repoName)
 
-	b.WriteString(fmt.Sprintf("    %-10s %s\n", styleDim.Render("Path"), result.RepoPath))
-	b.WriteString(fmt.Sprintf("    %-10s %s\n", styleDim.Render("Branch"), result.DefaultBranch))
+	fmt.Fprintf(&b, "    %-10s %s\n", styleDim.Render("Path"), result.RepoPath)
+	fmt.Fprintf(&b, "    %-10s %s\n", styleDim.Render("Branch"), result.DefaultBranch)
 	if result.OriginURL != "" {
-		b.WriteString(fmt.Sprintf("    %-10s %s\n", styleDim.Render("Origin"), result.OriginURL))
+		fmt.Fprintf(&b, "    %-10s %s\n", styleDim.Render("Origin"), result.OriginURL)
 	}
 
 	worktreePath := result.WorktreePath
@@ -146,7 +146,7 @@ func (m Model) viewCloneRepoSummary(result repo.CloneResult) string {
 	b.WriteString("\n")
 	b.WriteString(separator(m.width))
 	b.WriteString("\n\n")
-	b.WriteString(fmt.Sprintf("    cd %s\n\n", styleDim.Render(worktreePath)))
+	fmt.Fprintf(&b, "    cd %s\n\n", styleDim.Render(worktreePath))
 	b.WriteString(styleDim.Render("  enter open in sentei \u00b7 q quit"))
 	b.WriteString("\n")
 
