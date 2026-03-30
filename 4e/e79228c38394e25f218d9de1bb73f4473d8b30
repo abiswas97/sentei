@@ -1,0 +1,43 @@
+internal/worktree/deleter_test.go
+  4a3693f6355ed8c0 172-173,175-177,189-190,201,204-207,209,214-215
+internal/tui/model.go
+  4a3693f6355ed8c0 70-87,218-219
+cmd/cleanup_flags.go
+  4a3693f6355ed8c0 55
+cmd/clone_flags.go
+  4a3693f6355ed8c0 6-7,50
+cmd/create_flags.go
+  4a3693f6355ed8c0 7-8,82
+internal/tui/create_confirm.go
+  4a3693f6355ed8c0 8,15,82-98,103
+internal/tui/clone_confirm.go
+  4a3693f6355ed8c0 6,13,43-45,47-48,54
+internal/tui/create_confirm_test.go
+  4a3693f6355ed8c0 13,29,48,58,67,90,140,196,208
+main.go
+  4a3693f6355ed8c0 55-56,186-193,201-204
+internal/tui/clone_confirm_test.go
+  4a3693f6355ed8c0 13,29,48,57,80,127,180,191
+cmd/remove_flags.go
+  4a3693f6355ed8c0 9-10,109
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.22",
+  "base_commit_sha": "4ee79228c38394e25f218d9de1bb73f4473d8b30",
+  "prompts": {
+    "4a3693f6355ed8c0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a9b374a7-9e9c-4fd6-8010-99b0fee4726d",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>",
+      "messages": [],
+      "total_additions": 107,
+      "total_deletions": 97,
+      "accepted_lines": 106,
+      "overriden_lines": 0
+    }
+  }
+}
