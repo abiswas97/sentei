@@ -1,0 +1,35 @@
+main.go
+  4a3693f6355ed8c0 13,58-87,141-142,151-198
+internal/tui/cleanup_e2e_test.go
+  4a3693f6355ed8c0 1-217
+internal/tui/model.go
+  4a3693f6355ed8c0 43,182-183,303-308,358-359,408-409
+internal/tui/cleanup_confirm_test.go
+  4a3693f6355ed8c0 1-198
+internal/tui/menu.go
+  4a3693f6355ed8c0 98-99
+cmd/cli_e2e_test.go
+  4a3693f6355ed8c0 4,6,132-214
+internal/tui/cleanup_confirm.go
+  4a3693f6355ed8c0 1-89
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.22",
+  "base_commit_sha": "5a5238334d91be413c485f421305982be8671986",
+  "prompts": {
+    "4a3693f6355ed8c0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a9b374a7-9e9c-4fd6-8010-99b0fee4726d",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 705,
+      "overriden_lines": 0
+    }
+  }
+}
