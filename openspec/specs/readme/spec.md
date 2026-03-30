@@ -1,3 +1,8 @@
+## Purpose
+Covers the README.md content requirements including project description, installation instructions, usage documentation, and status indicator legend.
+
+## Requirements
+
 ### Requirement: README exists at repository root
 A `README.md` file SHALL exist at the repository root and serve as the primary user-facing documentation.
 

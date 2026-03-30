@@ -1,3 +1,7 @@
+## Purpose
+Covers the TUI confirmation dialog that displays selected worktrees with their status and requires explicit user confirmation before proceeding with deletion.
+
+## Requirements
 
 ### Requirement: Display confirmation dialog with selected worktrees
 The TUI SHALL show a confirmation dialog listing all selected worktrees before deletion, with clear identification of each worktree by branch name and its clean/dirty status.

@@ -1,4 +1,7 @@
-## ADDED Requirements
+## Purpose
+Covers enforcement of conventional commit message format through local git hooks and CI validation on pull requests.
+
+## Requirements
 
 ### Requirement: Local commit-msg hook validates conventional commit format
 An installable git `commit-msg` hook SHALL validate that the commit message follows conventional commit format. The hook SHALL accept messages matching the pattern `<type>[optional scope][optional !]: <description>` where type is one of: feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert. The hook SHALL reject non-conforming messages with a helpful error showing the expected format.

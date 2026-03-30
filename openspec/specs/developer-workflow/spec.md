@@ -1,4 +1,7 @@
-## ADDED Requirements
+## Purpose
+Covers local developer tooling including Makefile targets, gitignore rules, licensing, and README badges.
+
+## Requirements
 
 ### Requirement: Makefile provides local development commands
 The project SHALL include a `Makefile` at the repo root with these targets: `build` (compile binary), `test` (run tests with race detector), `lint` (run golangci-lint), `snapshot` (run goreleaser build --snapshot --clean for local testing), `install-hooks` (run scripts/install-hooks.sh). Each target SHALL work without arguments.
