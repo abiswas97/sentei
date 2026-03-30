@@ -46,17 +46,34 @@ func TestEnableIntegration_RunsSetupOnEachWorktree(t *testing.T) {
 		step     string
 		status   ManagerStatus
 	}
+	// Filter to non-skipped events for setup verification.
+	var setupEvents []ManagerEvent
+	var skipCount int
+	for _, ev := range events {
+		if ev.Status == StatusSkipped {
+			skipCount++
+		} else {
+			setupEvents = append(setupEvents, ev)
+		}
+	}
+
+	// Should have skip events for deps/install (tool already detected).
+	if skipCount == 0 {
+		t.Error("expected some skipped events for deps/install (tool detected)")
+	}
+
+	// Setup events: Running + Done per worktree.
 	want := []wantEvent{
 		{"/repo/main", "Setup code-review-graph", StatusRunning},
 		{"/repo/main", "Setup code-review-graph", StatusDone},
 		{"/repo/feat", "Setup code-review-graph", StatusRunning},
 		{"/repo/feat", "Setup code-review-graph", StatusDone},
 	}
-	if len(events) != len(want) {
-		t.Fatalf("event count = %d, want %d\nevents: %+v", len(events), len(want), events)
+	if len(setupEvents) != len(want) {
+		t.Fatalf("setup event count = %d, want %d\nevents: %+v", len(setupEvents), len(want), setupEvents)
 	}
 	for i, w := range want {
-		got := events[i]
+		got := setupEvents[i]
 		if got.Worktree != w.worktree || got.Step != w.step || got.Status != w.status {
 			t.Errorf("event[%d] = {%s, %s, %d}, want {%s, %s, %d}",
 				i, got.Worktree, got.Step, got.Status, w.worktree, w.step, w.status)
