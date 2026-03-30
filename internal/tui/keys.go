@@ -19,8 +19,6 @@ type keyMap struct {
 	Sort        key.Binding
 	ReverseSort key.Binding
 	Filter      key.Binding
-	IntUp       key.Binding
-	IntDown     key.Binding
 	Left        key.Binding
 	Right       key.Binding
 	Info        key.Binding
@@ -91,21 +89,13 @@ var keys = keyMap{
 		key.WithKeys("/"),
 		key.WithHelp("/", "filter"),
 	),
-	IntUp: key.NewBinding(
-		key.WithKeys("up", "w"),
-		key.WithHelp("w/up", "up"),
-	),
-	IntDown: key.NewBinding(
-		key.WithKeys("down", "s"),
-		key.WithHelp("s/down", "down"),
-	),
 	Left: key.NewBinding(
-		key.WithKeys("left", "a"),
-		key.WithHelp("a/left", "left"),
+		key.WithKeys("left", "h"),
+		key.WithHelp("h/left", "left"),
 	),
 	Right: key.NewBinding(
-		key.WithKeys("right", "d"),
-		key.WithHelp("d/right", "right"),
+		key.WithKeys("right", "l"),
+		key.WithHelp("l/right", "right"),
 	),
 	Info: key.NewBinding(
 		key.WithKeys("?"),

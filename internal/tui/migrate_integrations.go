@@ -52,12 +52,12 @@ func (m Model) updateMigrateIntegrations(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 		switch {
-		case key.Matches(msg, keys.IntDown):
+		case key.Matches(msg, keys.Down):
 			if len(m.integ.integrations) > 0 && m.integ.cursor < len(m.integ.integrations)-1 {
 				m.integ.cursor++
 			}
 
-		case key.Matches(msg, keys.IntUp):
+		case key.Matches(msg, keys.Up):
 			if m.integ.cursor > 0 {
 				m.integ.cursor--
 			}
@@ -194,7 +194,7 @@ func (m Model) viewMigrateIntegrations() string {
 	b.WriteString(legend)
 	b.WriteString("\n\n")
 
-	b.WriteString(styleDim.Render("  w/s navigate \u00b7 space toggle \u00b7 enter continue \u00b7 ? info \u00b7 esc skip"))
+	b.WriteString(styleDim.Render("  j/k navigate \u00b7 space toggle \u00b7 enter continue \u00b7 ? info \u00b7 esc skip"))
 	b.WriteString("\n")
 
 	if m.integ.showInfo {

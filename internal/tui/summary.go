@@ -32,7 +32,7 @@ func (m Model) updateSummary(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m Model) viewSummary() string {
 	var b strings.Builder
 
-	b.WriteString(styleHeader.Render("  Summary  "))
+	b.WriteString(styleHeader.Render("sentei \u2500 Removal Complete"))
 	b.WriteString("\n\n")
 
 	r := m.remove.deletionResult
