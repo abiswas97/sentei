@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/abiswas97/sentei/internal/cleanup"
@@ -67,6 +68,12 @@ func runCleanup(runner git.CommandRunner, repoPath string) tea.Cmd {
 
 func (m Model) updateProgress(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		if key.Matches(msg, keys.Quit) {
+			return m, tea.Quit
+		}
+		return m, nil
+
 	case worktreeDeleteStartedMsg:
 		m.remove.deletionStatuses[msg.Path] = statusRemoving
 		return m, waitForDeletionEvent(m.remove.progressCh)
