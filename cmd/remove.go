@@ -60,11 +60,7 @@ func RunRemove(args []string) error {
 	if opts.DryRun {
 		fmt.Printf("%s(dry run)%s Would remove %d worktree(s):\n", dim, nc, len(filtered))
 		for _, wt := range filtered {
-			branch := wt.Branch
-			if idx := len("refs/heads/"); len(branch) > idx {
-				branch = branch[idx:]
-			}
-			fmt.Printf("  %s\n", branch)
+			fmt.Printf("  %s\n", shortBranch(wt.Branch))
 		}
 		return nil
 	}

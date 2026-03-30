@@ -4,6 +4,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"sort"
 	"strings"
 )
 
@@ -132,7 +133,10 @@ func (r *Registry) UsageString() string {
 	b.WriteString("Usage: sentei [command] [options]\n\n")
 	b.WriteString("Commands:\n")
 
-	for _, cmd := range r.commands {
+	names := r.CommandNames()
+	sort.Strings(names)
+	for _, name := range names {
+		cmd := r.commands[name]
 		label := "output"
 		if cmd.Type == Decision {
 			label = "interactive"

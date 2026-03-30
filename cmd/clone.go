@@ -10,16 +10,14 @@ import (
 )
 
 // RunClone executes the clone command in non-interactive mode.
-func RunClone(args []string) {
+func RunClone(args []string) error {
 	opts, err := ParseCloneFlags(args)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		os.Exit(1)
+		return err
 	}
 
 	if err := ValidateCloneForNonInteractive(opts); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		os.Exit(1)
+		return err
 	}
 
 	name := opts.Name
@@ -29,8 +27,7 @@ func RunClone(args []string) {
 
 	location, err := os.Getwd()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("getting working directory: %w", err)
 	}
 
 	runner := &git.GitRunner{}
@@ -50,11 +47,12 @@ func RunClone(args []string) {
 					fmt.Fprintf(os.Stderr, "%s✗%s %s: %v\n", yellow, nc, step.Name, step.Error)
 				}
 			}
-			os.Exit(1)
+			return fmt.Errorf("clone failed")
 		}
 	}
 
 	fmt.Printf("%s✓%s Cloned to %s\n", green, nc, filepath.Join(location, name))
+	return nil
 }
 
 func printCloneEvent(e repo.Event) {
