@@ -238,6 +238,7 @@ func NewMenuModel(runner git.CommandRunner, shell git.ShellRunner, repoPath stri
 	case repo.ContextBareRepo:
 		items = []menuItem{
 			{label: "Create new worktree", enabled: true},
+			{label: "Manage integrations", enabled: true},
 			{label: "Remove worktrees", hint: "loading\u2026", enabled: false},
 			{label: "Cleanup", hint: "safe mode", enabled: true},
 		}
