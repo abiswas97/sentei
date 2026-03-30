@@ -1,0 +1,29 @@
+cmd/cli_e2e_test.go
+  4a3693f6355ed8c0 38-129
+main.go
+  4a3693f6355ed8c0 60-62,64-70
+cmd/cleanup_flags_test.go
+  4a3693f6355ed8c0 1-102
+cmd/cleanup_flags.go
+  4a3693f6355ed8c0 1-67
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.22",
+  "base_commit_sha": "d178e8dc357426f559d01998b5237a43c8855a68",
+  "prompts": {
+    "4a3693f6355ed8c0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a9b374a7-9e9c-4fd6-8010-99b0fee4726d",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>",
+      "messages": [],
+      "total_additions": 282,
+      "total_deletions": 11,
+      "accepted_lines": 281,
+      "overriden_lines": 0
+    }
+  }
+}
