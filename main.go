@@ -105,6 +105,30 @@ func buildRegistry() *cli.Registry {
 		},
 	})
 
+	r.Register(&cli.Command{
+		Name:        "migrate",
+		Type:        cli.Decision,
+		Destructive: true,
+		ParseFlags: func(args []string) (any, error) {
+			return cmd.ParseMigrateFlags(args)
+		},
+		RunCLI: func(args []string) error {
+			return cmd.RunMigrate(args)
+		},
+	})
+
+	r.Register(&cli.Command{
+		Name:        "remove",
+		Type:        cli.Decision,
+		Destructive: true,
+		ParseFlags: func(args []string) (any, error) {
+			return cmd.ParseRemoveFlags(args)
+		},
+		RunCLI: func(args []string) error {
+			return cmd.RunRemove(args)
+		},
+	})
+
 	return r
 }
 
