@@ -10,6 +10,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/abiswas97/sentei/cmd"
+	"github.com/abiswas97/sentei/internal/cli"
 	"github.com/abiswas97/sentei/internal/config"
 	"github.com/abiswas97/sentei/internal/dryrun"
 	"github.com/abiswas97/sentei/internal/git"
@@ -31,26 +32,93 @@ const (
 	playgroundDelay   = 800 * time.Millisecond
 )
 
+func buildRegistry() *cli.Registry {
+	r := cli.NewRegistry()
+
+	r.Register(&cli.Command{
+		Name: "ecosystems",
+		Type: cli.Output,
+		RunCLI: func(args []string) error {
+			cmd.RunEcosystems(args)
+			return nil
+		},
+	})
+
+	r.Register(&cli.Command{
+		Name: "integrations",
+		Type: cli.Output,
+		RunCLI: func(args []string) error {
+			cmd.RunIntegrations()
+			return nil
+		},
+	})
+
+	r.Register(&cli.Command{
+		Name:        "cleanup",
+		Type:        cli.Decision,
+		Destructive: true,
+		RunCLI: func(args []string) error {
+			cmd.RunCleanup(args)
+			return nil
+		},
+	})
+
+	return r
+}
+
 func main() {
-	if len(os.Args) > 1 && os.Args[1] == "cleanup" {
-		cmd.RunCleanup(os.Args[2:])
-		return
+	registry := buildRegistry()
+
+	result, err := registry.Dispatch(os.Args[1:])
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		if cli.IsUnknownCommand(err) {
+			fmt.Fprint(os.Stderr, registry.UsageString())
+		}
+		os.Exit(1)
 	}
 
-	if len(os.Args) > 1 && os.Args[1] == "ecosystems" {
-		cmd.RunEcosystems(os.Args[2:])
-		return
+	// Dispatch to registered commands.
+	if result.Command != nil {
+		switch result.Command.Type {
+		case cli.Output:
+			if err := result.Command.RunCLI(result.Args); err != nil {
+				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+				os.Exit(1)
+			}
+			return
+
+		case cli.Decision:
+			if result.NonInteractive {
+				if err := result.Command.RunCLI(result.Args); err != nil {
+					fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+					os.Exit(1)
+				}
+				return
+			}
+			// TODO: For decision commands without --non-interactive,
+			// parse flags and launch TUI at the appropriate entry point.
+			// For now, fall through to RunCLI (existing behavior).
+			if err := result.Command.RunCLI(result.Args); err != nil {
+				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+				os.Exit(1)
+			}
+			return
+		}
 	}
 
-	if len(os.Args) > 1 && os.Args[1] == "integrations" {
-		cmd.RunIntegrations()
-		return
-	}
+	// Root: no command specified — handle global flags and launch TUI.
+	runRoot(result.Args)
+}
 
-	versionFlag := flag.Bool("version", false, "Print version and exit")
-	playgroundFlag := flag.Bool("playground", false, "Launch with a temporary test repo")
-	dryRunFlag := flag.Bool("dry-run", false, "Print worktree summary and exit (no interactive TUI)")
-	flag.Parse()
+func runRoot(args []string) {
+	fs := flag.NewFlagSet("sentei", flag.ExitOnError)
+	versionFlag := fs.Bool("version", false, "Print version and exit")
+	playgroundFlag := fs.Bool("playground", false, "Launch with a temporary test repo")
+	dryRunFlag := fs.Bool("dry-run", false, "Print worktree summary and exit (no interactive TUI)")
+	if err := fs.Parse(args); err != nil {
+		os.Exit(1)
+	}
 
 	if *versionFlag {
 		fmt.Printf("sentei %s (%s, %s)\n", version, commit, date)
@@ -58,10 +126,9 @@ func main() {
 	}
 
 	repoPath := "."
-	if flag.NArg() > 0 {
-		repoPath = flag.Arg(0)
+	if fs.NArg() > 0 {
+		repoPath = fs.Arg(0)
 	}
-	// Resolve to absolute path for consistent display
 	if absPath, err := filepath.Abs(repoPath); err == nil {
 		repoPath = absPath
 	}
@@ -81,13 +148,11 @@ func main() {
 	runner := &git.GitRunner{}
 	shell := &git.DefaultShellRunner{}
 
-	// Detect repo context and resolve to bare root if inside a worktree
 	context := repo.DetectContext(runner, repoPath)
 	if context == repo.ContextBareRepo {
 		repoPath = repo.ResolveBareRoot(runner, repoPath)
 	}
 
-	// Dry-run mode only works in bare repos
 	if *dryRunFlag {
 		if context != repo.ContextBareRepo {
 			fmt.Fprintf(os.Stderr, "Error: --dry-run requires a bare repository\n")
@@ -121,7 +186,6 @@ func main() {
 		os.Exit(0)
 	}
 
-	// Load config only for bare repos (config lives in repo)
 	var cfg *config.Config
 	if context == repo.ContextBareRepo {
 		var err error
@@ -139,7 +203,6 @@ func main() {
 		tuiRunner = &git.DelayRunner{Inner: runner, Delay: playgroundDelay}
 	}
 
-	// Start at menu — worktrees loaded lazily
 	model := tui.NewMenuModel(tuiRunner, shell, repoPath, cfg, context)
 	p := tea.NewProgram(model, tea.WithAltScreen())
 
