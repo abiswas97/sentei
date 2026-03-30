@@ -1,0 +1,27 @@
+cmd/clone.go
+  4a3693f6355ed8c0 1-73
+cmd/clone_flags.go
+  4a3693f6355ed8c0 1-49
+cmd/clone_flags_test.go
+  4a3693f6355ed8c0 1-82
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.22",
+  "base_commit_sha": "7c54ab05849be3cbfc67e2a0eab5d700437967fa",
+  "prompts": {
+    "4a3693f6355ed8c0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a9b374a7-9e9c-4fd6-8010-99b0fee4726d",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 909,
+      "overriden_lines": 0
+    }
+  }
+}
