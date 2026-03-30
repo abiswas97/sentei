@@ -50,7 +50,7 @@ func SetupBareRepoWithState(t *testing.T, opts RepoOpts) string {
 	tmpDir := t.TempDir()
 	bareRepo := filepath.Join(tmpDir, "test.git")
 
-	runGit(t, tmpDir, "init", "--bare", bareRepo)
+	runGit(t, tmpDir, "init", "--bare", "--initial-branch=main", bareRepo)
 
 	// Create a temporary clone to make the initial commit.
 	cloneDir := filepath.Join(tmpDir, "clone")

@@ -196,7 +196,7 @@ func setupBareRepo(t *testing.T) string {
 	tmpDir := t.TempDir()
 	bareRepo := filepath.Join(tmpDir, "test.git")
 
-	runGitCmd(t, tmpDir, "init", "--bare", bareRepo)
+	runGitCmd(t, tmpDir, "init", "--bare", "--initial-branch=main", bareRepo)
 
 	cloneDir := filepath.Join(tmpDir, "clone")
 	runGitCmd(t, tmpDir, "clone", bareRepo, cloneDir)

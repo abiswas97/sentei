@@ -57,7 +57,7 @@ func createBareRepoWithWorktrees(t *testing.T, baseDir string) string {
 
 	bareRepo := baseDir + "/test.git"
 
-	runGitCmd(t, baseDir, "init", "--bare", bareRepo)
+	runGitCmd(t, baseDir, "init", "--bare", "--initial-branch=main", bareRepo)
 
 	cloneDir := baseDir + "/clone"
 	runGitCmd(t, baseDir, "clone", bareRepo, cloneDir)
