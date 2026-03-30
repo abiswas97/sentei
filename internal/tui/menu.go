@@ -52,7 +52,7 @@ func (m Model) updateMenu(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case tea.KeyMsg:
 		switch {
-		case key.Matches(msg, keys.Quit):
+		case key.Matches(msg, keys.Quit), key.Matches(msg, keys.Back):
 			return m, tea.Quit
 
 		case key.Matches(msg, keys.Down):
@@ -86,13 +86,18 @@ func (m Model) updateMenu(msg tea.Msg) (tea.Model, tea.Cmd) {
 				case "Create new worktree":
 					m.view = createBranchView
 					return m, m.create.branchInput.Cursor.BlinkCmd()
+				case "Manage integrations":
+					m.view = integrationListView
+					return m, m.loadIntegrationState()
 				case "Remove worktrees":
 					m.view = listView
 					if len(m.remove.worktrees) == 0 {
 						return m, loadWorktreeContext(m.runner, m.repoPath)
 					}
-				case "Cleanup":
-					return m, tea.Quit
+				case "Cleanup & exit":
+					m.view = cleanupResultView
+					m.remove.cleanupResult = nil
+					return m, runStandaloneCleanup(m.runner, m.repoPath)
 				case "Create new repository":
 					m.repo.nameInput.SetValue("")
 					m.repo.locationInput.SetValue(m.repoPath)
@@ -121,16 +126,16 @@ func (m *Model) updateMenuHints() {
 	if m.context != repo.ContextBareRepo {
 		return
 	}
-	if len(m.menuItems) < 2 {
+	if len(m.menuItems) < 3 {
 		return
 	}
 	count := len(m.remove.worktrees)
 	if count > 0 {
-		m.menuItems[1].hint = fmt.Sprintf("%d available", count)
-		m.menuItems[1].enabled = true
+		m.menuItems[2].hint = fmt.Sprintf("%d available", count)
+		m.menuItems[2].enabled = true
 	} else {
-		m.menuItems[1].hint = "none"
-		m.menuItems[1].enabled = false
+		m.menuItems[2].hint = "none"
+		m.menuItems[2].enabled = false
 	}
 }
 

@@ -104,7 +104,7 @@ func (m Model) viewConfirm() string {
 
 	selected := m.selectedWorktrees()
 
-	b.WriteString(styleHeader.Render("  Confirm Deletion  "))
+	b.WriteString(styleTitle.Render("  sentei \u2500 Confirm Deletion"))
 	b.WriteString("\n\n")
 	fmt.Fprintf(&b, "  You are about to delete %d worktree(s):\n\n", len(selected))
 
@@ -175,7 +175,7 @@ func (m Model) viewConfirm() string {
 	}
 
 	b.WriteString("\n")
-	b.WriteString("  [y] Yes, delete  |  [n] No, go back\n")
+	b.WriteString(styleDim.Render("  y delete \u00b7 n go back") + "\n")
 
 	return styleDialogBox.Render(b.String())
 }

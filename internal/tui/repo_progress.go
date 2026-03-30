@@ -200,7 +200,7 @@ func (m Model) viewRepoProgress() string {
 				default:
 					ind = styleIndicatorPending.Render(indicatorPending)
 				}
-				b.WriteString(fmt.Sprintf("    %s %s\n", ind, step.name))
+				fmt.Fprintf(&b, "    %s %s\n", ind, step.name)
 			}
 		}
 

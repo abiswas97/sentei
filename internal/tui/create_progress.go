@@ -140,7 +140,7 @@ func (m Model) viewCreateProgress() string {
 				default:
 					ind = styleIndicatorPending.Render(indicatorPending)
 				}
-				b.WriteString(fmt.Sprintf("  %s %s\n", ind, step.name))
+				fmt.Fprintf(&b, "  %s %s\n", ind, step.name)
 			}
 		}
 
@@ -157,7 +157,7 @@ func (m Model) viewCreateProgress() string {
 	pendingNames := []string{"Setup", "Dependencies", "Integrations"}
 	for _, name := range pendingNames {
 		if !knownPhases[name] {
-			b.WriteString(fmt.Sprintf("\n  %-30s %s\n", stylePhasePending.Render(name), styleDim.Render("pending")))
+			fmt.Fprintf(&b, "\n  %-30s %s\n", stylePhasePending.Render(name), styleDim.Render("pending"))
 		}
 	}
 

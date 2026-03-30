@@ -19,6 +19,9 @@ type keyMap struct {
 	Sort        key.Binding
 	ReverseSort key.Binding
 	Filter      key.Binding
+	Left        key.Binding
+	Right       key.Binding
+	Info        key.Binding
 }
 
 var keys = keyMap{
@@ -85,5 +88,17 @@ var keys = keyMap{
 	Filter: key.NewBinding(
 		key.WithKeys("/"),
 		key.WithHelp("/", "filter"),
+	),
+	Left: key.NewBinding(
+		key.WithKeys("left", "h"),
+		key.WithHelp("h/left", "left"),
+	),
+	Right: key.NewBinding(
+		key.WithKeys("right", "l"),
+		key.WithHelp("l/right", "right"),
+	),
+	Info: key.NewBinding(
+		key.WithKeys("?"),
+		key.WithHelp("?", "info"),
 	),
 }
