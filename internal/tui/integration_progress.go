@@ -2,6 +2,7 @@ package tui
 
 import (
 	"fmt"
+	"maps"
 	"path/filepath"
 	"strings"
 
@@ -49,9 +50,7 @@ func (m Model) finalizeIntegrationApply() tea.Cmd {
 	returnView := m.integ.returnView
 	integrations := m.integ.integrations
 	staged := make(map[string]bool)
-	for k, v := range m.integ.staged {
-		staged[k] = v
-	}
+	maps.Copy(staged, m.integ.staged)
 	repoResult := m.repo.result
 
 	return func() tea.Msg {
@@ -105,7 +104,7 @@ func (m Model) viewIntegrationProgress() string {
 	}
 
 	for _, g := range groups {
-		b.WriteString(fmt.Sprintf("  %s\n", filepath.Base(g.name)))
+		fmt.Fprintf(&b, "  %s\n", filepath.Base(g.name))
 
 		// Deduplicate steps: keep only the last event per step name.
 		type stepEntry struct {
@@ -162,7 +161,7 @@ func (m Model) viewIntegrationProgress() string {
 		filled = (done * barWidth) / total
 	}
 	bar := strings.Repeat("\u2588", filled) + strings.Repeat("\u2591", barWidth-filled)
-	b.WriteString(fmt.Sprintf("  %s %d/%d\n", bar, done, total))
+	fmt.Fprintf(&b, "  %s %d/%d\n", bar, done, total)
 
 	return b.String()
 }
