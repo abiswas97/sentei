@@ -2,9 +2,10 @@ package integration
 
 func codeReviewGraph() Integration {
 	return Integration{
-		Name:        "code-review-graph",
-		Description: "Builds a code graph of your repo for AI agents to understand call flows, dependencies, and blast radius during code review.",
-		URL:         "https://github.com/tirth8205/code-review-graph",
+		Name:             "code-review-graph",
+		ShortDescription: "Code graph for AI-assisted code review",
+		Description:      "Builds a code graph of your repo for AI agents to understand call flows, dependencies, and blast radius during code review.",
+		URL:              "https://github.com/tirth8205/code-review-graph",
 		Dependencies: []Dependency{
 			{
 				Name:   "python3.10+",

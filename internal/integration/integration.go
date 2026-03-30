@@ -3,7 +3,8 @@ package integration
 // Integration describes a dev tool that can be installed and managed per-worktree.
 type Integration struct {
 	Name             string
-	Description      string
+	ShortDescription string // one-line tagline for list views
+	Description      string // full description for info dialog
 	URL              string
 	Dependencies     []Dependency
 	Detect           DetectSpec

@@ -28,3 +28,24 @@ func DetectAllPresent(dir string, integrations []Integration) map[string]bool {
 	}
 	return result
 }
+
+// DetectDeps checks whether each dependency for all integrations is present.
+// Returns a map of dep name → installed.
+func DetectDeps(shell DepDetector, integrations []Integration) map[string]bool {
+	result := make(map[string]bool)
+	for _, integ := range integrations {
+		for _, dep := range integ.Dependencies {
+			if _, checked := result[dep.Name]; checked {
+				continue
+			}
+			_, err := shell.RunShell(".", dep.Detect)
+			result[dep.Name] = err == nil
+		}
+	}
+	return result
+}
+
+// DepDetector is the subset of git.ShellRunner needed for dep detection.
+type DepDetector interface {
+	RunShell(dir string, command string) (string, error)
+}
