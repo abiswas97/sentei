@@ -82,6 +82,53 @@ func TestCleanupNonInteractive_DestructiveWithoutForce(t *testing.T) {
 	}
 }
 
+func TestCleanupNonInteractive_PrunesStaleWorktrees(t *testing.T) {
+	bin := buildBinary(t)
+	bareRepo := setupBareRepo(t)
+
+	// Create a worktree, then delete its directory to make it prunable.
+	wtPath := filepath.Join(bareRepo, "stale-wt")
+	runGitCmd(t, bareRepo, "worktree", "add", "-b", "feat/stale", wtPath, "main")
+	if err := os.RemoveAll(wtPath); err != nil {
+		t.Fatalf("failed to remove worktree dir: %v", err)
+	}
+
+	// Verify it's prunable.
+	out := runGitCmdOutput(t, bareRepo, "worktree", "list", "--porcelain")
+	if !strings.Contains(out, "prunable") {
+		t.Fatalf("expected prunable worktree in porcelain output:\n%s", out)
+	}
+
+	// Run cleanup — should prune the stale worktree.
+	cmd := exec.Command(bin, "cleanup", "--mode", "safe", "--non-interactive", "--force", bareRepo)
+	result, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("sentei cleanup failed: %v\n%s", err, result)
+	}
+
+	output := string(result)
+	if !strings.Contains(output, "Pruned") || !strings.Contains(output, "stale worktree") {
+		t.Errorf("expected 'Pruned ... stale worktree' in output, got:\n%s", output)
+	}
+
+	// Verify it's gone from worktree list.
+	afterOut := runGitCmdOutput(t, bareRepo, "worktree", "list", "--porcelain")
+	if strings.Contains(afterOut, "prunable") {
+		t.Errorf("stale worktree should be gone after cleanup:\n%s", afterOut)
+	}
+}
+
+func runGitCmdOutput(t *testing.T, dir string, args ...string) string {
+	t.Helper()
+	c := exec.Command("git", args...)
+	c.Dir = dir
+	out, err := c.CombinedOutput()
+	if err != nil {
+		t.Fatalf("git %v failed in %s: %v\n%s", args, dir, err, out)
+	}
+	return string(out)
+}
+
 func TestCleanupNonInteractive_SafeMode(t *testing.T) {
 	bin := buildBinary(t)
 
