@@ -70,6 +70,9 @@ func enrichWorktree(runner git.CommandRunner, wt *git.Worktree) {
 	wt.IsEnriched = true
 }
 
+// DefaultEnrichConcurrency is the default parallelism for worktree enrichment.
+const DefaultEnrichConcurrency = 10
+
 func EnrichWorktrees(runner git.CommandRunner, worktrees []git.Worktree, maxConcurrency int) []git.Worktree {
 	if maxConcurrency <= 0 {
 		maxConcurrency = 10

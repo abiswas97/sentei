@@ -10,8 +10,6 @@ import (
 	"github.com/abiswas97/sentei/internal/worktree"
 )
 
-const removeEnrichConcurrency = 10
-
 // RunRemove executes the remove worktrees command in non-interactive mode.
 func RunRemove(args []string) error {
 	opts, err := ParseRemoveFlags(args)
@@ -42,7 +40,7 @@ func RunRemove(args []string) error {
 		return fmt.Errorf("listing worktrees: %w", err)
 	}
 
-	worktrees = worktree.EnrichWorktrees(runner, worktrees, removeEnrichConcurrency)
+	worktrees = worktree.EnrichWorktrees(runner, worktrees, worktree.DefaultEnrichConcurrency)
 
 	var isMerged MergedChecker
 	if opts.Merged {
