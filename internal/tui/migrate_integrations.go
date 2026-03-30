@@ -175,7 +175,7 @@ func (m Model) viewMigrateIntegrations() string {
 			b.WriteString("  " + checkbox + " " + integ.Name + detectedHint)
 		}
 		b.WriteString("\n")
-		b.WriteString("       " + styleDim.Render(integ.Description))
+		b.WriteString("       " + styleDim.Render(integ.ShortDescription))
 		b.WriteString("\n")
 
 		if i < len(m.integ.integrations)-1 {

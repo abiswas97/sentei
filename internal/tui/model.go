@@ -147,6 +147,7 @@ type integrationState struct {
 	current      map[string]bool           // what's on disk right now
 	staged       map[string]bool           // desired state after apply
 	detected     map[string]bool           // what was detected on disk at load time (for "detected" hints)
+	depStatus    map[string]bool           // dep name → installed (for info dialog) //nolint:unused
 	cursor       int                       //nolint:unused
 	colCursor    int                       // 0-based column index for future expansion //nolint:unused
 

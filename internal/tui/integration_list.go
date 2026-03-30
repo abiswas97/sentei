@@ -17,6 +17,7 @@ type integrationStateLoadedMsg struct {
 	integrations []integration.Integration
 	current      map[string]bool
 	enabled      []string
+	depStatus    map[string]bool // dep name → installed
 	err          error
 }
 
@@ -35,12 +36,15 @@ func (m Model) loadIntegrationState() tea.Cmd {
 			current = integration.DetectAllPresent(mainWT, all)
 		}
 
+		depStatus := integration.DetectDeps(m.shell, all)
+
 		bareDir := filepath.Join(m.repoPath, ".bare")
 		st, err := state.Load(bareDir)
 		if err != nil {
 			return integrationStateLoadedMsg{
 				integrations: all,
 				current:      current,
+				depStatus:    depStatus,
 				err:          err,
 			}
 		}
@@ -48,6 +52,7 @@ func (m Model) loadIntegrationState() tea.Cmd {
 		return integrationStateLoadedMsg{
 			integrations: all,
 			current:      current,
+			depStatus:    depStatus,
 			enabled:      st.Integrations,
 		}
 	}
@@ -134,6 +139,7 @@ func (m Model) updateIntegrationList(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case integrationStateLoadedMsg:
 		m.integ.integrations = msg.integrations
 		m.integ.current = msg.current
+		m.integ.depStatus = msg.depStatus
 		m.integ.staged = make(map[string]bool)
 		for _, integ := range msg.integrations {
 			m.integ.staged[integ.Name] = msg.current[integ.Name]
@@ -258,7 +264,7 @@ func (m Model) viewIntegrationList() string {
 			b.WriteString("  " + checkbox + " " + integ.Name)
 		}
 		b.WriteString("\n")
-		b.WriteString("       " + styleDim.Render(integ.Description))
+		b.WriteString("       " + styleDim.Render(integ.ShortDescription))
 		b.WriteString("\n")
 
 		if i < len(m.integ.integrations)-1 {
@@ -312,36 +318,48 @@ func (m Model) renderIntegrationInfo() string {
 	integ := m.integ.integrations[m.integ.infoCursor]
 
 	// Dialog width: responsive to terminal, clamped between 36 and 60 chars
-	// (styleDialogBox adds padding+border, so inner content width is smaller)
 	innerWidth := min(max(m.width-10, 36), 60)
 
 	var content strings.Builder
 
+	// Header: name + page indicator
 	page := styleDim.Render(fmt.Sprintf("%d / %d", m.integ.infoCursor+1, len(m.integ.integrations)))
 	content.WriteString(styleTitle.Render(integ.Name) + "  " + page)
 	content.WriteString("\n\n")
 
-	// Wrap description to fit dialog width
+	// Description: wrapped, normal weight
 	content.WriteString(lipgloss.NewStyle().Width(innerWidth).Render(integ.Description))
-	content.WriteString("\n\n")
-
-	if integ.URL != "" {
-		content.WriteString(styleDim.Render(integ.URL))
-		content.WriteString("\n\n")
-	}
-
-	if len(integ.Dependencies) > 0 {
-		var depNames []string
-		for _, dep := range integ.Dependencies {
-			depNames = append(depNames, dep.Name)
-		}
-		content.WriteString(styleDim.Render("Requires " + strings.Join(depNames, ", ")))
-		content.WriteString("\n\n")
-	}
-
-	content.WriteString(styleDim.Render("\u25c0 a/\u2190 prev \u00b7 d/\u2192 next \u25b6"))
 	content.WriteString("\n")
-	content.WriteString(styleDim.Render("esc to close"))
+
+	// Dependencies: show each with install status
+	if len(integ.Dependencies) > 0 {
+		content.WriteString("\n")
+		content.WriteString(styleDim.Render("  Dependencies"))
+		content.WriteString("\n")
+		for _, dep := range integ.Dependencies {
+			installed := m.integ.depStatus[dep.Name]
+			var indicator, status string
+			if installed {
+				indicator = styleStatusClean.Render(indicatorDone)
+				status = styleStatusClean.Render("installed")
+			} else {
+				indicator = styleIndicatorPending.Render(indicatorPending)
+				status = styleDim.Render("will be installed")
+			}
+			fmt.Fprintf(&content, "    %s %-20s %s\n", indicator, dep.Name, status)
+		}
+	}
+
+	// URL: bottom, dim, reference only
+	if integ.URL != "" {
+		content.WriteString("\n")
+		content.WriteString(styleDim.Render(integ.URL))
+		content.WriteString("\n")
+	}
+
+	// Navigation: single compact line
+	content.WriteString("\n")
+	content.WriteString(styleDim.Render("\u25c0 prev \u00b7 next \u25b6 \u00b7 esc close"))
 
 	dialog := styleDialogBox.Width(innerWidth + 6).Render(content.String())
 	return dialog
