@@ -1,3 +1,8 @@
+## Purpose
+Covers parallel enrichment of worktrees with commit metadata and dirty/untracked status, including graceful per-worktree error handling and the public EnrichWorktrees API.
+
+## Requirements
+
 ### Requirement: Enrich worktrees with commit metadata
 The system SHALL enrich each non-bare, non-prunable worktree with its last commit date by running `git -C <path> log -1 --format=%ai` and last commit subject by running `git -C <path> log -1 --format=%s`.
 

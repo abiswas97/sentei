@@ -39,6 +39,7 @@ func (m Model) updateIntegrationProgress(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.integ.staged[integ.Name] = m.integ.current[integ.Name]
 			}
 		}
+		m.stateStale = true
 		m.view = m.integ.returnView
 		return m, nil
 	}
@@ -123,6 +124,9 @@ func (m Model) viewIntegrationProgress() string {
 		}
 
 		for _, s := range steps {
+			if s.ev.Status == integration.StatusSkipped {
+				continue // Don't display skipped steps.
+			}
 			var ind string
 			switch s.ev.Status {
 			case integration.StatusDone:
@@ -146,13 +150,23 @@ func (m Model) viewIntegrationProgress() string {
 	b.WriteString(separator(m.width))
 	b.WriteString("\n\n")
 
-	// Progress bar.
-	total := len(m.integ.events)
+	// Progress bar — use upfront total, count unique completed steps.
+	total := m.integ.totalSteps
+	stepStatus := make(map[string]bool)
 	done := 0
 	for _, ev := range m.integ.events {
-		if ev.Status == integration.StatusDone || ev.Status == integration.StatusFailed {
+		key := ev.Worktree + ":" + ev.Step
+		if stepStatus[key] {
+			continue // Already counted this step.
+		}
+		if ev.Status == integration.StatusDone || ev.Status == integration.StatusFailed || ev.Status == integration.StatusSkipped {
+			stepStatus[key] = true
 			done++
 		}
+	}
+	// If no upfront total was set, fall back to discovered steps.
+	if total == 0 {
+		total = done
 	}
 
 	const barWidth = 20
@@ -161,7 +175,11 @@ func (m Model) viewIntegrationProgress() string {
 		filled = (done * barWidth) / total
 	}
 	bar := strings.Repeat("\u2588", filled) + strings.Repeat("\u2591", barWidth-filled)
-	fmt.Fprintf(&b, "  %s %d/%d\n", bar, done, total)
+	pct := 0
+	if total > 0 {
+		pct = (done * 100) / total
+	}
+	fmt.Fprintf(&b, "  %s %d%%\n", bar, pct)
 
 	return b.String()
 }

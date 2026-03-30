@@ -10,6 +10,8 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/abiswas97/sentei/cmd"
+	"github.com/abiswas97/sentei/internal/cleanup"
+	"github.com/abiswas97/sentei/internal/cli"
 	"github.com/abiswas97/sentei/internal/config"
 	"github.com/abiswas97/sentei/internal/dryrun"
 	"github.com/abiswas97/sentei/internal/git"
@@ -26,31 +28,239 @@ var (
 	date    = "unknown"
 )
 
-const (
-	enrichConcurrency = 10
-	playgroundDelay   = 800 * time.Millisecond
-)
+const playgroundDelay = 800 * time.Millisecond
+
+func buildRegistry() *cli.Registry {
+	r := cli.NewRegistry()
+
+	r.Register(&cli.Command{
+		Name: "ecosystems",
+		Type: cli.Output,
+		RunCLI: func(args []string) error {
+			cmd.RunEcosystems(args)
+			return nil
+		},
+	})
+
+	r.Register(&cli.Command{
+		Name: "integrations",
+		Type: cli.Output,
+		RunCLI: func(args []string) error {
+			cmd.RunIntegrations()
+			return nil
+		},
+	})
+
+	r.Register(&cli.Command{
+		Name: "clone",
+		Type: cli.Decision,
+		RunCLI: func(args []string) error {
+			return cmd.RunClone(args)
+		},
+	})
+
+	r.Register(&cli.Command{
+		Name: "create",
+		Type: cli.Decision,
+		RunCLI: func(args []string) error {
+			return cmd.RunCreate(args)
+		},
+	})
+
+	r.Register(&cli.Command{
+		Name:        "cleanup",
+		Type:        cli.Decision,
+		Destructive: true,
+		RunCLI: func(args []string) error {
+			return cmd.RunCleanup(args)
+		},
+	})
+
+	r.Register(&cli.Command{
+		Name:        "migrate",
+		Type:        cli.Decision,
+		Destructive: true,
+		RunCLI: func(args []string) error {
+			return cmd.RunMigrate(args)
+		},
+	})
+
+	r.Register(&cli.Command{
+		Name:        "remove",
+		Type:        cli.Decision,
+		Destructive: true,
+		RunCLI: func(args []string) error {
+			return cmd.RunRemove(args)
+		},
+	})
+
+	return r
+}
 
 func main() {
-	if len(os.Args) > 1 && os.Args[1] == "cleanup" {
-		cmd.RunCleanup(os.Args[2:])
-		return
+	registry := buildRegistry()
+
+	result, err := registry.Dispatch(os.Args[1:])
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		if cli.IsUnknownCommand(err) {
+			fmt.Fprint(os.Stderr, registry.UsageString())
+		}
+		os.Exit(1)
 	}
 
-	if len(os.Args) > 1 && os.Args[1] == "ecosystems" {
-		cmd.RunEcosystems(os.Args[2:])
-		return
+	// Dispatch to registered commands.
+	if result.Command != nil {
+		switch result.Command.Type {
+		case cli.Output:
+			if err := result.Command.RunCLI(result.Args); err != nil {
+				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+				os.Exit(1)
+			}
+			return
+
+		case cli.Decision:
+			if result.NonInteractive {
+				if err := result.Command.RunCLI(result.Args); err != nil {
+					fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+					os.Exit(1)
+				}
+				return
+			}
+			// Interactive mode: parse flags and launch TUI at the appropriate view.
+			launchInteractiveDecision(*result)
+			return
+		}
 	}
 
-	if len(os.Args) > 1 && os.Args[1] == "integrations" {
-		cmd.RunIntegrations()
-		return
+	// Root: no command specified — handle global flags and launch TUI.
+	runRoot(result.Args)
+}
+
+func launchInteractiveDecision(result cli.DispatchResult) {
+	repoPath := "."
+	if absPath, err := filepath.Abs(repoPath); err == nil {
+		repoPath = absPath
 	}
 
-	versionFlag := flag.Bool("version", false, "Print version and exit")
-	playgroundFlag := flag.Bool("playground", false, "Launch with a temporary test repo")
-	dryRunFlag := flag.Bool("dry-run", false, "Print worktree summary and exit (no interactive TUI)")
-	flag.Parse()
+	runner := &git.GitRunner{}
+	shell := &git.DefaultShellRunner{}
+
+	context := repo.DetectContext(runner, repoPath)
+	if context == repo.ContextBareRepo {
+		repoPath = repo.ResolveBareRoot(runner, repoPath)
+	}
+
+	var cfg *config.Config
+	if context == repo.ContextBareRepo {
+		var err error
+		cfg, err = config.LoadConfig(repoPath,
+			config.WithRunner(runner),
+			config.WithKnownIntegrations(integration.Names()),
+		)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: failed to load config: %v\n", err)
+		}
+	}
+
+	model := tui.NewMenuModel(runner, shell, repoPath, cfg, context)
+
+	switch result.Command.Name {
+	case "cleanup":
+		opts, err := cmd.ParseCleanupFlags(result.Args)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
+		if opts.Mode == "" {
+			opts.Mode = cleanup.ModeSafe
+		}
+		model.SetCleanupOpts(opts)
+
+	case "create":
+		opts, err := cmd.ParseCreateFlags(result.Args)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
+		model.SetCreateOpts(&tui.CreateOpts{
+			Branch:     opts.Branch,
+			Base:       opts.Base,
+			Ecosystems: opts.Ecosystems,
+			MergeBase:  opts.MergeBase,
+			CopyEnv:    opts.CopyEnv,
+			RepoPath:   opts.RepoPath,
+		})
+
+	case "clone":
+		opts, err := cmd.ParseCloneFlags(result.Args)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
+		model.SetCloneOpts(&tui.CloneOpts{
+			URL:  opts.URL,
+			Name: opts.Name,
+		})
+
+	case "remove":
+		opts, err := cmd.ParseRemoveFlags(result.Args)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
+		if opts.Merged || opts.All || opts.Stale > 0 {
+			worktrees, err := git.ListWorktrees(runner, repoPath)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+				os.Exit(1)
+			}
+			worktrees = worktree.EnrichWorktrees(runner, worktrees, worktree.DefaultEnrichConcurrency)
+
+			var isMerged cmd.MergedChecker
+			if opts.Merged {
+				defaultBranch := cmd.DetectDefaultBranch(runner, repoPath)
+				isMerged = cmd.CheckMerged(runner, repoPath, defaultBranch)
+			}
+			filtered := cmd.ResolveFilters(worktrees, opts, nil, isMerged)
+
+			var paths []string
+			for _, wt := range filtered {
+				paths = append(paths, wt.Path)
+			}
+			model.SetRemoveOpts(tui.RemovePreSelection{
+				Paths:       paths,
+				FilterLabel: cmd.FormatFilterLabel(opts),
+			})
+		}
+
+	case "migrate":
+		opts, err := cmd.ParseMigrateFlags(result.Args)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
+		model.SetMigrateOpts(&tui.MigrateOpts{
+			DeleteBackup: opts.DeleteBackup,
+			RepoPath:     opts.RepoPath,
+		})
+	}
+
+	p := tea.NewProgram(model, tea.WithAltScreen())
+	if _, err := p.Run(); err != nil {
+		fmt.Fprintf(os.Stderr, "Error running TUI: %v\n", err)
+		os.Exit(1)
+	}
+}
+
+func runRoot(args []string) {
+	fs := flag.NewFlagSet("sentei", flag.ExitOnError)
+	versionFlag := fs.Bool("version", false, "Print version and exit")
+	playgroundFlag := fs.Bool("playground", false, "Launch with a temporary test repo")
+	dryRunFlag := fs.Bool("dry-run", false, "Print worktree summary and exit (no interactive TUI)")
+	if err := fs.Parse(args); err != nil {
+		os.Exit(1)
+	}
 
 	if *versionFlag {
 		fmt.Printf("sentei %s (%s, %s)\n", version, commit, date)
@@ -58,10 +268,9 @@ func main() {
 	}
 
 	repoPath := "."
-	if flag.NArg() > 0 {
-		repoPath = flag.Arg(0)
+	if fs.NArg() > 0 {
+		repoPath = fs.Arg(0)
 	}
-	// Resolve to absolute path for consistent display
 	if absPath, err := filepath.Abs(repoPath); err == nil {
 		repoPath = absPath
 	}
@@ -81,13 +290,11 @@ func main() {
 	runner := &git.GitRunner{}
 	shell := &git.DefaultShellRunner{}
 
-	// Detect repo context and resolve to bare root if inside a worktree
 	context := repo.DetectContext(runner, repoPath)
 	if context == repo.ContextBareRepo {
 		repoPath = repo.ResolveBareRoot(runner, repoPath)
 	}
 
-	// Dry-run mode only works in bare repos
 	if *dryRunFlag {
 		if context != repo.ContextBareRepo {
 			fmt.Fprintf(os.Stderr, "Error: --dry-run requires a bare repository\n")
@@ -100,7 +307,7 @@ func main() {
 			os.Exit(1)
 		}
 
-		worktrees = worktree.EnrichWorktrees(runner, worktrees, enrichConcurrency)
+		worktrees = worktree.EnrichWorktrees(runner, worktrees, worktree.DefaultEnrichConcurrency)
 
 		var filtered []git.Worktree
 		for _, wt := range worktrees {
@@ -121,7 +328,6 @@ func main() {
 		os.Exit(0)
 	}
 
-	// Load config only for bare repos (config lives in repo)
 	var cfg *config.Config
 	if context == repo.ContextBareRepo {
 		var err error
@@ -139,7 +345,6 @@ func main() {
 		tuiRunner = &git.DelayRunner{Inner: runner, Delay: playgroundDelay}
 	}
 
-	// Start at menu — worktrees loaded lazily
 	model := tui.NewMenuModel(tuiRunner, shell, repoPath, cfg, context)
 	p := tea.NewProgram(model, tea.WithAltScreen())
 

@@ -24,10 +24,10 @@ func loadWorktreeContext(runner git.CommandRunner, repoPath string) tea.Cmd {
 		if err != nil {
 			return worktreeContextMsg{err: err}
 		}
-		wts = worktree.EnrichWorktrees(runner, wts, 10)
+		wts = worktree.EnrichWorktrees(runner, wts, worktree.DefaultEnrichConcurrency)
 		var filtered []git.Worktree
 		for _, wt := range wts {
-			if !wt.IsBare {
+			if !wt.IsBare && !wt.IsPrunable {
 				filtered = append(filtered, wt)
 			}
 		}
@@ -36,6 +36,12 @@ func loadWorktreeContext(runner git.CommandRunner, repoPath string) tea.Cmd {
 }
 
 func (m Model) updateMenu(msg tea.Msg) (tea.Model, tea.Cmd) {
+	// Lazy state refresh: reload worktrees if any mutation marked state stale.
+	if m.stateStale {
+		m.stateStale = false
+		return m, loadWorktreeContext(m.runner, m.repoPath)
+	}
+
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
@@ -95,9 +101,8 @@ func (m Model) updateMenu(msg tea.Msg) (tea.Model, tea.Cmd) {
 						return m, loadWorktreeContext(m.runner, m.repoPath)
 					}
 				case "Cleanup & exit":
-					m.view = cleanupResultView
-					m.remove.cleanupResult = nil
-					return m, runStandaloneCleanup(m.runner, m.repoPath)
+					m.view = cleanupConfirmView
+					return m, nil
 				case "Create new repository":
 					m.repo.nameInput.SetValue("")
 					m.repo.locationInput.SetValue(m.repoPath)

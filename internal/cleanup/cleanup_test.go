@@ -149,3 +149,24 @@ func TestRun_ErrorContinues(t *testing.T) {
 		t.Error("config dedup should have run despite prune failure")
 	}
 }
+
+func TestCountPrunable_NoPrunable(t *testing.T) {
+	porcelain := "worktree /repo\nbare\n\nworktree /repo/main\nHEAD abc123\nbranch refs/heads/main\n"
+	if got := countPrunable(porcelain); got != 0 {
+		t.Errorf("expected 0, got %d", got)
+	}
+}
+
+func TestCountPrunable_OnePrunable(t *testing.T) {
+	porcelain := "worktree /repo\nbare\n\nworktree /repo/stale\nHEAD def456\nbranch refs/heads/feat/stale\nprunable gitdir file points to non-existent location\n"
+	if got := countPrunable(porcelain); got != 1 {
+		t.Errorf("expected 1, got %d", got)
+	}
+}
+
+func TestCountPrunable_MultiplePrunable(t *testing.T) {
+	porcelain := "worktree /a\nHEAD a1\nprunable\n\nworktree /b\nHEAD b1\nprunable\n\nworktree /c\nHEAD c1\nbranch refs/heads/main\n"
+	if got := countPrunable(porcelain); got != 2 {
+		t.Errorf("expected 2, got %d", got)
+	}
+}

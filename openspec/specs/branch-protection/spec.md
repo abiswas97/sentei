@@ -1,3 +1,8 @@
+## Purpose
+Defines how the system identifies protected branches (main, master, develop, dev) and prevents their worktrees from being selected for deletion.
+
+## Requirements
+
 ### Requirement: Identify protected branches by convention
 The system SHALL consider a worktree protected if its branch name (after stripping `refs/heads/` prefix) exactly matches one of: `main`, `master`, `develop`, `dev`. The match SHALL be case-sensitive. Bare and detached worktrees SHALL NOT be considered protected.
 

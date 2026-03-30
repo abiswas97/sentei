@@ -1,3 +1,7 @@
+## Purpose
+Covers pruning orphaned worktree metadata via `git worktree prune` after deletions complete.
+
+## Requirements
 
 ### Requirement: Prune orphaned worktree metadata
 The system SHALL prune orphaned worktree metadata by executing `git worktree prune` against the repository after all worktree deletions complete.

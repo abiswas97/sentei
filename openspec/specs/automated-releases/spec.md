@@ -1,4 +1,7 @@
-## ADDED Requirements
+## Purpose
+Covers automated release pipeline including release-please for versioning, GoReleaser for cross-compilation and distribution, and Homebrew tap publishing.
+
+## Requirements
 
 ### Requirement: release-please creates Release PRs from conventional commits
 A GitHub Actions workflow SHALL run on pushes to `main` and invoke release-please. release-please SHALL analyze conventional commits since the last release and create or update a Release PR that includes a version bump and CHANGELOG.md updates. The release type SHALL be `go`. The manifest file (`.release-please-manifest.json`) with initial version `0.1.0` serves as the bootstrap — no manual tag is needed.

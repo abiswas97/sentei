@@ -1,4 +1,7 @@
-## MODIFIED Requirements
+## Purpose
+Covers the main TUI list view including worktree display, multi-select, status bar, legend, and quit behavior.
+
+## Requirements
 
 ### Requirement: Display enriched worktrees in a scrollable list
 The TUI SHALL display worktrees using a `visibleIndices` mapping rather than iterating `m.worktrees` directly. The visible list SHALL reflect the current sort order and any active filter. All column layout, status indicators, and rendering behavior SHALL remain unchanged. Protected worktrees SHALL display `[P]` in the checkbox column instead of `[ ]` or `[x]`.

@@ -5,7 +5,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/abiswas97/sentei/internal/git"
@@ -51,27 +50,58 @@ func (m Model) updateMigrateConfirm(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 
-	case tea.KeyMsg:
-		switch {
-		case key.Matches(msg, keys.Back):
-			m.view = menuView
-			return m, nil
-
-		case key.Matches(msg, keys.Confirm):
-			opts := repo.MigrateOptions{
-				RepoPath: m.repoPath,
-			}
-			m.repo.events = nil
-			m.repo.result = nil
-			m.repo.opType = "migrate"
-			m.view = migrateProgressView
-			return m, m.startRepoPipeline(opts)
+	case ConfirmProceedMsg:
+		opts := repo.MigrateOptions{
+			RepoPath: m.repoPath,
 		}
+		m.repo.events = nil
+		m.repo.result = nil
+		m.repo.opType = "migrate"
+		m.view = migrateProgressView
+		return m, m.startRepoPipeline(opts)
+
+	case ConfirmBackMsg:
+		if m.migrateOpts != nil {
+			return m, tea.Quit
+		}
+		m.view = menuView
+		return m, nil
 	}
+
+	if cmd := UpdateConfirmation(msg); cmd != nil {
+		return m, cmd
+	}
+
 	return m, nil
 }
 
+// migrateConfirmationVM builds a ConfirmationViewModel for the migrate flow.
+func (m Model) migrateConfirmationVM() ConfirmationViewModel {
+	deleteBackup := "no"
+	if m.migrateOpts != nil && m.migrateOpts.DeleteBackup {
+		deleteBackup = "yes"
+	}
+
+	flags := make(map[string]string)
+	if m.migrateOpts != nil && m.migrateOpts.DeleteBackup {
+		flags["delete-backup"] = "true"
+	}
+
+	return ConfirmationViewModel{
+		Title: "Confirm Migration",
+		Items: []ConfirmationItem{
+			{Label: "Repo path:", Value: m.repoPath},
+			{Label: "Delete backup:", Value: deleteBackup},
+		},
+		CLICommand: BuildCLICommand("migrate", flags),
+	}
+}
+
 func (m Model) viewMigrateConfirm() string {
+	if m.migrateOpts != nil {
+		return m.migrateConfirmationVM().View()
+	}
+
 	var b strings.Builder
 
 	b.WriteString(styleTitle.Render(fmt.Sprintf("  sentei %s Migrate to Bare Repository", "\u2500")))
@@ -118,7 +148,7 @@ func (m Model) viewMigrateConfirm() string {
 	b.WriteString("\n")
 	b.WriteString(separator(m.width))
 	b.WriteString("\n\n")
-	b.WriteString(styleDim.Render("  enter migrate \u00b7 esc back"))
+	b.WriteString(styleDim.Render("  enter confirm  •  esc back  •  q quit"))
 	b.WriteString("\n")
 
 	return b.String()

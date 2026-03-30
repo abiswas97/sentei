@@ -1,0 +1,17 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/no-flaky-tests.sh",
+            "timeout": 5,
+            "statusMessage": "Checking for flaky test patterns..."
+          }
+        ]
+      }
+    ]
+  }
+}
