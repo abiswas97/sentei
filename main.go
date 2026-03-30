@@ -211,6 +211,22 @@ func launchInteractiveDecision(result cli.DispatchResult) {
 			opts.Mode = cleanup.ModeSafe
 		}
 		model.SetCleanupOpts(opts)
+
+	case "create":
+		opts, err := cmd.ParseCreateFlags(result.Args)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
+		model.SetCreateOpts(opts)
+
+	case "clone":
+		opts, err := cmd.ParseCloneFlags(result.Args)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
+		model.SetCloneOpts(opts)
 	}
 
 	p := tea.NewProgram(model, tea.WithAltScreen())

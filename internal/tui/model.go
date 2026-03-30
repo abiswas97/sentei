@@ -7,6 +7,7 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/abiswas97/sentei/cmd"
 	"github.com/abiswas97/sentei/internal/cleanup"
 	"github.com/abiswas97/sentei/internal/config"
 	"github.com/abiswas97/sentei/internal/creator"
@@ -42,6 +43,8 @@ const (
 	migrateIntegrationsView
 	cleanupConfirmView
 	cleanupResultView
+	createConfirmView
+	cloneConfirmView
 )
 
 type SortField int
@@ -50,6 +53,20 @@ const (
 	SortByAge SortField = iota
 	SortByBranch
 )
+
+// RemovePreSelection holds pre-selected worktree paths and a label describing
+// the filter that produced them. This avoids importing the cmd package.
+type RemovePreSelection struct {
+	Paths       []string
+	FilterLabel string
+}
+
+// MigrateOpts holds migrate options passed to the TUI from the CLI layer.
+// This mirrors cmd.MigrateOptions without creating a dependency on cmd.
+type MigrateOpts struct {
+	DeleteBackup bool
+	RepoPath     string
+}
 
 // removeState holds all state for the worktree removal flow.
 type removeState struct {
@@ -65,6 +82,7 @@ type removeState struct {
 	filterText   string
 	filterActive bool
 	filterInput  textinput.Model
+	filterLabel  string // describes filter that produced pre-selection (e.g. "merged", "stale > 30d")
 
 	deletionStatuses map[string]string
 	deletionResult   worktree.DeletionResult
@@ -180,6 +198,9 @@ type Model struct {
 	menuCursor int
 
 	cleanupOpts *cleanup.Options
+	createOpts  *cmd.CreateOptions
+	cloneOpts   *cmd.CloneOptions
+	migrateOpts *MigrateOpts
 
 	remove removeState
 	create createState
@@ -306,6 +327,32 @@ func (m *Model) SetCleanupOpts(opts *cleanup.Options) {
 	m.view = cleanupConfirmView
 }
 
+// SetRemoveOpts pre-selects worktrees matching the given paths and enters the
+// list view. The filterLabel is displayed in the status bar to indicate what
+// filter produced the selection (e.g. "merged", "stale > 30d").
+func (m *Model) SetRemoveOpts(preSelection RemovePreSelection) {
+	pathSet := make(map[string]bool, len(preSelection.Paths))
+	for _, p := range preSelection.Paths {
+		pathSet[p] = true
+	}
+	for _, wt := range m.remove.worktrees {
+		if pathSet[wt.Path] {
+			m.remove.selected[wt.Path] = true
+		}
+	}
+	m.remove.filterLabel = preSelection.FilterLabel
+	m.view = listView
+}
+
+// SetMigrateOpts sets the migrate options and starts at the migrate confirmation view.
+func (m *Model) SetMigrateOpts(opts *MigrateOpts) {
+	m.migrateOpts = opts
+	if opts.RepoPath != "" {
+		m.repoPath = opts.RepoPath
+	}
+	m.view = migrateConfirmView
+}
+
 func (m Model) Init() tea.Cmd {
 	if m.view == menuView && m.context == repo.ContextBareRepo {
 		return loadWorktreeContext(m.runner, m.repoPath)
@@ -359,6 +406,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.updateCleanupConfirm(msg)
 	case cleanupResultView:
 		return m.updateCleanupResult(msg)
+	case createConfirmView:
+		return m.updateCreateConfirm(msg)
+	case cloneConfirmView:
+		return m.updateCloneConfirm(msg)
 	}
 	return m, nil
 }
@@ -409,6 +460,10 @@ func (m Model) View() string {
 		return m.viewCleanupConfirm()
 	case cleanupResultView:
 		return m.viewCleanupResult()
+	case createConfirmView:
+		return m.viewCreateConfirm()
+	case cloneConfirmView:
+		return m.viewCloneConfirm()
 	}
 	return ""
 }
