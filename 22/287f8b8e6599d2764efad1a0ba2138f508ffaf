@@ -1,0 +1,39 @@
+internal/tui/model.go
+  4a3693f6355ed8c0 217
+internal/tui/create_progress.go
+  4a3693f6355ed8c0 45
+internal/tui/menu.go
+  4a3693f6355ed8c0 39-44
+internal/tui/integration_progress.go
+  4a3693f6355ed8c0 42
+internal/tui/progress.go
+  4a3693f6355ed8c0 110
+internal/tui/repo_progress.go
+  4a3693f6355ed8c0 84
+internal/tui/cleanup_result.go
+  4a3693f6355ed8c0 26
+internal/tui/create_summary.go
+  4a3693f6355ed8c0 20
+internal/tui/summary.go
+  4a3693f6355ed8c0 18,24
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.22",
+  "base_commit_sha": "22287f8b8e6599d2764efad1a0ba2138f508ffaf",
+  "prompts": {
+    "4a3693f6355ed8c0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a9b374a7-9e9c-4fd6-8010-99b0fee4726d",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>",
+      "messages": [],
+      "total_additions": 15,
+      "total_deletions": 3,
+      "accepted_lines": 15,
+      "overriden_lines": 0
+    }
+  }
+}
