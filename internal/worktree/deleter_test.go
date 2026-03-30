@@ -169,8 +169,12 @@ func TestDeleteWorktrees_EmptyInput(t *testing.T) {
 }
 
 func TestDeleteWorktrees_ConcurrencyBound(t *testing.T) {
+	const maxConcurrency = 2
+
 	var current, maxConcurrent atomic.Int32
-	// Gate controls when removers complete — holds all goroutines until we release.
+	// arrived signals that a worker has entered the remover.
+	arrived := make(chan struct{}, 10)
+	// gate holds workers until released.
 	gate := make(chan struct{})
 
 	remover := func(path string) error {
@@ -182,7 +186,8 @@ func TestDeleteWorktrees_ConcurrencyBound(t *testing.T) {
 				break
 			}
 		}
-		<-gate // Wait for release instead of sleeping.
+		arrived <- struct{}{} // Signal arrival.
+		<-gate                // Wait for release.
 		return nil
 	}
 
@@ -193,17 +198,21 @@ func TestDeleteWorktrees_ConcurrencyBound(t *testing.T) {
 
 	progress := make(chan DeletionEvent, 50)
 	go func() {
-		DeleteWorktrees(remover, worktrees, 2, progress)
+		DeleteWorktrees(remover, worktrees, maxConcurrency, progress)
 	}()
 
-	// Release all goroutines.
+	// Wait for maxConcurrency workers to arrive (proves they're running concurrently).
+	for range maxConcurrency {
+		<-arrived
+	}
+
+	// Release all workers.
 	close(gate)
 
-	// Collect all events (waits for channel close).
 	collectEvents(progress)
 
-	if maxConcurrent.Load() > 2 {
-		t.Errorf("max concurrent = %d, want <= 2", maxConcurrent.Load())
+	if maxConcurrent.Load() > int32(maxConcurrency) {
+		t.Errorf("max concurrent = %d, want <= %d", maxConcurrent.Load(), maxConcurrency)
 	}
 }
 

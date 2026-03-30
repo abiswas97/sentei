@@ -6,6 +6,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/abiswas97/sentei/internal/cli"
 )
 
 // RemoveOptions holds parsed flags for the remove command.
@@ -104,7 +106,7 @@ func RemoveCLICommand(opts *RemoveOptions) string {
 	if opts.DryRun {
 		flags["dry-run"] = "true"
 	}
-	cmd := buildFlagString("sentei remove", flags)
+	cmd := cli.BuildFlagString("sentei remove", flags)
 	if opts.RepoPath != "" {
 		cmd += " " + opts.RepoPath
 	}

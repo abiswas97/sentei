@@ -23,9 +23,6 @@ func newTestRegistry() *Registry {
 		RunCLI: func(args []string) error {
 			return nil
 		},
-		ParseFlags: func(args []string) (any, error) {
-			return nil, nil
-		},
 	})
 
 	r.Register(&Command{
@@ -33,9 +30,6 @@ func newTestRegistry() *Registry {
 		Type: Decision,
 		RunCLI: func(args []string) error {
 			return nil
-		},
-		ParseFlags: func(args []string) (any, error) {
-			return nil, nil
 		},
 	})
 

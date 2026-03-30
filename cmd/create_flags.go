@@ -4,6 +4,8 @@ import (
 	"flag"
 	"fmt"
 	"strings"
+
+	"github.com/abiswas97/sentei/internal/cli"
 )
 
 // CreateOptions holds parsed flags for the create command.
@@ -77,7 +79,7 @@ func CreateCLICommand(opts *CreateOptions) string {
 	if opts.CopyEnv {
 		flags["copy-env"] = "true"
 	}
-	cmd := buildFlagString("sentei create", flags)
+	cmd := cli.BuildFlagString("sentei create", flags)
 	if opts.RepoPath != "" {
 		cmd += " " + opts.RepoPath
 	}

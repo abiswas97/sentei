@@ -3,14 +3,14 @@ package tui
 import (
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/abiswas97/sentei/cmd"
+	"github.com/abiswas97/sentei/internal/cli"
 	"github.com/abiswas97/sentei/internal/repo"
 )
 
 // SetCloneOpts sets the clone options and starts at the appropriate view.
 // If URL is set, starts at cloneConfirmView.
 // If nothing is set, starts at cloneInputView (normal flow).
-func (m *Model) SetCloneOpts(opts *cmd.CloneOptions) {
+func (m *Model) SetCloneOpts(opts *CloneOpts) {
 	m.cloneOpts = opts
 
 	if opts.URL != "" {
@@ -40,16 +40,18 @@ func (m Model) cloneConfirmationVM() ConfirmationViewModel {
 		items = append(items, ConfirmationItem{Label: "Name:", Value: name})
 	}
 
-	opts := &cmd.CloneOptions{
-		URL:  url,
-		Name: name,
+	flags := make(map[string]string)
+	if url != "" {
+		flags["url"] = url
 	}
-	cliCmd := cmd.CloneCLICommand(opts)
+	if name != "" {
+		flags["name"] = name
+	}
 
 	return ConfirmationViewModel{
 		Title:      "Confirm Clone",
 		Items:      items,
-		CLICommand: cliCmd,
+		CLICommand: cli.BuildFlagString("sentei clone", flags),
 	}
 }
 
