@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/abiswas97/sentei/internal/fileutil"
 	"github.com/abiswas97/sentei/internal/git"
 	"github.com/abiswas97/sentei/internal/integration"
 )
@@ -19,15 +20,26 @@ func runIntegrations(shell git.ShellRunner, wtPath string, opts Options, emit fu
 	}
 
 	for _, integ := range opts.Integrations {
-		steps := setupIntegration(shell, wtPath, opts.RepoPath, integ, emit)
+		steps := setupIntegration(shell, wtPath, opts.RepoPath, opts.SourceWorktree, integ, emit)
 		phase.Steps = append(phase.Steps, steps...)
 	}
 
 	return phase
 }
 
-func setupIntegration(shell git.ShellRunner, wtPath, repoPath string, integ integration.Integration, emit func(Event)) []StepResult {
+func setupIntegration(shell git.ShellRunner, wtPath, repoPath, sourceWorktree string, integ integration.Integration, emit func(Event)) []StepResult {
 	var steps []StepResult
+
+	if integ.IndexCopyDir != "" && sourceWorktree != "" {
+		stepName := "Copy index from main"
+		emit(Event{Phase: "Integrations", Step: stepName, Status: StepRunning})
+		if err := copyIntegrationIndex(sourceWorktree, wtPath, integ.IndexCopyDir); err != nil {
+			emit(Event{Phase: "Integrations", Step: stepName, Status: StepSkipped, Message: err.Error()})
+		} else {
+			emit(Event{Phase: "Integrations", Step: stepName, Status: StepDone})
+			steps = append(steps, StepResult{Name: stepName, Status: StepDone})
+		}
+	}
 
 	installed := detectIntegration(shell, wtPath, integ)
 
@@ -166,6 +178,19 @@ func runSetupCommand(shell git.ShellRunner, wtPath, repoPath string, integ integ
 
 	emit(Event{Phase: "Integrations", Step: stepName, Status: StepDone})
 	return StepResult{Name: stepName, Status: StepDone}
+}
+
+// copyIntegrationIndex copies the IndexCopyDir from source to target worktree.
+func copyIntegrationIndex(sourceWT, targetWT, indexDir string) error {
+	srcDir := filepath.Join(sourceWT, indexDir)
+	if _, err := os.Stat(srcDir); os.IsNotExist(err) {
+		return fmt.Errorf("no index at %s", srcDir)
+	}
+
+	dstDir := filepath.Join(targetWT, indexDir)
+	_ = os.RemoveAll(dstDir)
+
+	return fileutil.CopyDir(srcDir, dstDir)
 }
 
 func appendGitignore(dir string, entries []string) error {
