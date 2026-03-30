@@ -24,7 +24,8 @@ func RunCleanup(args []string) error {
 	if err := ValidateCleanupForNonInteractive(opts); err != nil {
 		return err
 	}
-	return RunCleanupWithOpts(opts, ".")
+	repoPath := ParseCleanupRepoPath(args)
+	return RunCleanupWithOpts(opts, repoPath)
 }
 
 // RunCleanupWithOpts executes cleanup with pre-parsed options.

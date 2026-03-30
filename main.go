@@ -215,7 +215,7 @@ func launchInteractiveDecision(result cli.DispatchResult) {
 				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 				os.Exit(1)
 			}
-			worktrees = worktree.EnrichWorktrees(runner, worktrees, 10)
+			worktrees = worktree.EnrichWorktrees(runner, worktrees, worktree.DefaultEnrichConcurrency)
 
 			var isMerged cmd.MergedChecker
 			if opts.Merged {
