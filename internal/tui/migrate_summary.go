@@ -188,11 +188,13 @@ func (m Model) viewMigrateNext() string {
 	b.WriteString(fmt.Sprintf("    cd %s\n", styleDim.Render(worktreePath)))
 	b.WriteString("\n")
 
+	b.WriteString(styleDim.Render("  Your repo is ready for worktrees."))
+	b.WriteString("\n")
 	b.WriteString(styleDim.Render("  Continue in sentei to create worktrees"))
 	b.WriteString("\n")
-	b.WriteString(styleDim.Render("  and set up integrations (code-review-graph,"))
+	b.WriteString(styleDim.Render("  and set up your workspace, or exit"))
 	b.WriteString("\n")
-	b.WriteString(styleDim.Render("  cocoindex-code), or exit to your shell."))
+	b.WriteString(styleDim.Render("  to your shell."))
 	b.WriteString("\n")
 
 	b.WriteString("\n")
