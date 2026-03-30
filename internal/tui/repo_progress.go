@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/abiswas97/sentei/internal/creator"
@@ -63,6 +64,12 @@ func (m Model) waitForRepoEvent() tea.Cmd {
 
 func (m Model) updateRepoProgress(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		if key.Matches(msg, keys.Quit) {
+			return m, tea.Quit
+		}
+		return m, nil
+
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = max(msg.Height-6, 5)

@@ -17,7 +17,7 @@ func (m Model) updateCreateSummary(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(msg, keys.Confirm):
 			if m.menuItems != nil {
 				m.view = menuView
-				return m, nil
+				return m, loadWorktreeContext(m.runner, m.repoPath)
 			}
 			return m, tea.Quit
 		case key.Matches(msg, keys.Quit):
