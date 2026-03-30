@@ -39,6 +39,7 @@ func (m Model) updateIntegrationProgress(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.integ.staged[integ.Name] = m.integ.current[integ.Name]
 			}
 		}
+		m.stateStale = true
 		m.view = m.integ.returnView
 		return m, nil
 	}

@@ -107,6 +107,7 @@ func (m Model) updateProgress(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case cleanupCompleteMsg:
 		m.remove.cleanupResult = &msg.Result
+		m.stateStale = true
 		m.view = summaryView
 	}
 	return m, nil

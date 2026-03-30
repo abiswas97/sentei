@@ -15,13 +15,13 @@ func (m Model) updateSummary(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(msg, keys.Quit), key.Matches(msg, keys.Confirm):
 			if m.menuItems != nil {
 				m.view = menuView
-				return m, loadWorktreeContext(m.runner, m.repoPath)
+				return m, nil
 			}
 			return m, tea.Quit
 		case key.Matches(msg, keys.Back):
 			if m.menuItems != nil {
 				m.view = menuView
-				return m, loadWorktreeContext(m.runner, m.repoPath)
+				return m, nil
 			}
 			return m, tea.Quit
 		}

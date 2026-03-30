@@ -23,6 +23,7 @@ func (m Model) updateCleanupResult(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case standaloneCleanupDoneMsg:
 		m.remove.cleanupResult = &msg.result
+		m.stateStale = true
 		return m, nil
 
 	case tea.KeyMsg:

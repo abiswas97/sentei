@@ -36,6 +36,12 @@ func loadWorktreeContext(runner git.CommandRunner, repoPath string) tea.Cmd {
 }
 
 func (m Model) updateMenu(msg tea.Msg) (tea.Model, tea.Cmd) {
+	// Lazy state refresh: reload worktrees if any mutation marked state stale.
+	if m.stateStale {
+		m.stateStale = false
+		return m, loadWorktreeContext(m.runner, m.repoPath)
+	}
+
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width

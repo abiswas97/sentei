@@ -214,6 +214,7 @@ type Model struct {
 
 	menuItems  []menuItem
 	menuCursor int
+	stateStale bool // Set true after mutations; menu reloads on next render.
 
 	cleanupOpts *cleanup.Options
 	createOpts  *CreateOpts
