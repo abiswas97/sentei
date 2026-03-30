@@ -34,23 +34,23 @@
 - [x] 4.1 Extract `CreateOptions` struct from TUI state (Branch, Base, Ecosystems, MergeBase, CopyEnvFiles)
 - [x] 4.2 Add `ParseFlags` for create command flags (--branch, --base, --ecosystems, --merge-base, --copy-env)
 - [x] 4.3 Register create as a decision command in the registry
-- [ ] 4.4 Refactor create flow to determine entry screen based on which options are populated
-- [ ] 4.5 Add create confirmation view using the shared component
+- [x] 4.4 Refactor create flow to determine entry screen based on which options are populated
+- [x] 4.5 Add create confirmation view using the shared component
 - [x] 4.6 Implement `--non-interactive` path: parse flags → validate (branch + base required) → execute → print results
 - [x] 4.7 Unit tests for create flag parsing, option validation, screen-skip logic
-- [ ] 4.8 teatest E2E: `sentei create --branch foo` → verify enters at base selection step
-- [ ] 4.9 teatest E2E: `sentei create --branch foo --base main` → verify enters at confirmation view
+- [x] 4.8 teatest E2E: `sentei create --branch foo` → verify enters at base selection step
+- [x] 4.9 teatest E2E: `sentei create --branch foo --base main` → verify enters at confirmation view
 - [x] 4.10 Binary E2E: `sentei create --branch foo --base main --non-interactive` against real bare repo
 
 ## 5. Phase 3 — Clone Command
 
 - [x] 5.1 Define `CloneOptions` struct (URL, Name) with `ParseFlags`
 - [x] 5.2 Register clone as a decision command in the registry
-- [ ] 5.3 Add clone confirmation view using the shared component
-- [ ] 5.4 Implement TUI entry: no flags → full flow, --url → enter at name step, all flags → confirmation
+- [x] 5.3 Add clone confirmation view using the shared component
+- [x] 5.4 Implement TUI entry: no flags → full flow, --url → enter at name step, all flags → confirmation
 - [x] 5.5 Implement `--non-interactive` path: parse flags → validate (url required) → execute → print results
 - [x] 5.6 Unit tests for clone flag parsing
-- [ ] 5.7 teatest E2E: `sentei clone --url <url>` → verify enters at name step
+- [x] 5.7 teatest E2E: `sentei clone --url <url>` → verify enters at name step
 - [x] 5.8 Binary E2E: `sentei clone --url <url> --name myrepo --non-interactive` → verify clone executes
 
 ## 6. Phase 4 — Remove Command with Filter Flags
@@ -60,12 +60,12 @@
 - [x] 6.3 Implement duration parsing for `--stale` (supports `Nd`, `Nw`, `Nm` formats)
 - [x] 6.4 Implement filter resolution: given enriched worktrees and filter flags, produce a selection set
 - [x] 6.5 Register remove as a decision command in the registry
-- [ ] 6.6 Wire filter-based pre-selection into the TUI list view (pass initial selection set to model)
-- [ ] 6.7 Add filter indicator to list view status bar (e.g., "filter: stale > 30d, merged")
+- [x] 6.6 Wire filter-based pre-selection into the TUI list view (pass initial selection set to model)
+- [x] 6.7 Add filter indicator to list view status bar (e.g., "filter: stale > 30d, merged")
 - [x] 6.8 Implement `--non-interactive` path: parse flags → resolve selection → validate (--force required, non-empty selection) → execute → print summary
 - [x] 6.9 Unit tests for duration parsing, filter resolution, composable filter OR logic, protected worktree exclusion
-- [ ] 6.10 teatest E2E: `sentei remove --merged` → verify list view with merged worktrees pre-selected
-- [ ] 6.11 teatest E2E: `sentei remove --all` → verify all non-protected worktrees pre-selected
+- [x] 6.10 teatest E2E: `sentei remove --merged` → verify list view with merged worktrees pre-selected
+- [x] 6.11 teatest E2E: `sentei remove --all` → verify all non-protected worktrees pre-selected
 - [x] 6.12 Binary E2E: `sentei remove --merged --force --non-interactive` → verify deletion and summary output
 - [x] 6.13 Binary E2E: `sentei remove --merged --non-interactive` (missing --force) → verify error
 
@@ -73,10 +73,10 @@
 
 - [x] 7.1 Define `MigrateOptions` struct (DeleteBackup bool, Force bool) with `ParseFlags`
 - [x] 7.2 Register migrate as a decision command in the registry
-- [ ] 7.3 Add migrate confirmation view using the shared component (show current repo, target bare repo path)
+- [x] 7.3 Add migrate confirmation view using the shared component (show current repo, target bare repo path)
 - [x] 7.4 Implement `--non-interactive` path: parse flags → validate → execute → print results
 - [x] 7.5 Unit tests for migrate flag parsing
-- [ ] 7.6 teatest E2E: `sentei migrate` → verify full TUI flow
+- [x] 7.6 teatest E2E: `sentei migrate` → verify full TUI flow
 - [x] 7.7 Binary E2E: `sentei migrate --force --non-interactive` → verify migration executes
 
 ## 8. Dry-Run Integration
