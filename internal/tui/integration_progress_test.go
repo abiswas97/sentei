@@ -128,6 +128,27 @@ func TestViewIntegrationProgress_ShowsProgressBar(t *testing.T) {
 	}
 }
 
+func TestViewIntegrationProgress_ProgressCountsUniqueSteps(t *testing.T) {
+	m := makeIntegrationModel()
+	m.view = integrationProgressView
+	// Each step emits Running then Done — 6 raw events but only 3 unique steps.
+	m.integ.events = []integration.ManagerEvent{
+		{Worktree: "/repo/main", Step: "Setup code-review-graph", Status: integration.StatusRunning},
+		{Worktree: "/repo/main", Step: "Setup code-review-graph", Status: integration.StatusDone},
+		{Worktree: "/repo/main", Step: "Install cocoindex-code", Status: integration.StatusRunning},
+		{Worktree: "/repo/main", Step: "Install cocoindex-code", Status: integration.StatusDone},
+		{Worktree: "/repo/main", Step: "Setup cocoindex-code", Status: integration.StatusRunning},
+		{Worktree: "/repo/main", Step: "Setup cocoindex-code", Status: integration.StatusDone},
+	}
+
+	output := stripAnsi(m.viewIntegrationProgress())
+
+	// Should show 3/3 (3 unique steps, all done), not 6/6.
+	if !strings.Contains(output, "3/3") {
+		t.Errorf("expected progress '3/3' (unique steps), got:\n%s", output)
+	}
+}
+
 func TestViewIntegrationProgress_Loading(t *testing.T) {
 	m := makeIntegrationModel()
 	m.view = integrationProgressView

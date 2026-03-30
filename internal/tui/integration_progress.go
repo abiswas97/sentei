@@ -146,11 +146,16 @@ func (m Model) viewIntegrationProgress() string {
 	b.WriteString(separator(m.width))
 	b.WriteString("\n\n")
 
-	// Progress bar.
-	total := len(m.integ.events)
-	done := 0
+	// Progress bar — count unique steps, not raw events.
+	stepStatus := make(map[string]integration.ManagerStatus)
 	for _, ev := range m.integ.events {
-		if ev.Status == integration.StatusDone || ev.Status == integration.StatusFailed {
+		key := ev.Worktree + ":" + ev.Step
+		stepStatus[key] = ev.Status
+	}
+	total := len(stepStatus)
+	done := 0
+	for _, status := range stepStatus {
+		if status == integration.StatusDone || status == integration.StatusFailed {
 			done++
 		}
 	}
