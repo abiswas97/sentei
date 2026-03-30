@@ -126,7 +126,7 @@ func (m Model) viewProgress() string {
 		} else {
 			statusText += " " + styleIndicatorDone.Render(indicatorDone)
 		}
-		b.WriteString(fmt.Sprintf("  %-30s %s\n", stylePhaseDone.Render("Teardown"), styleDim.Render(statusText)))
+		fmt.Fprintf(&b, "  %-30s %s\n", stylePhaseDone.Render("Teardown"), styleDim.Render(statusText))
 		b.WriteString("\n")
 	}
 
@@ -136,9 +136,9 @@ func (m Model) viewProgress() string {
 	phaseStatus := fmt.Sprintf("%d/%d", done, m.remove.deletionTotal)
 	if done == m.remove.deletionTotal && m.remove.deletionTotal > 0 {
 		phaseStatus += " " + styleIndicatorDone.Render(indicatorDone)
-		b.WriteString(fmt.Sprintf("  %-30s %s\n", stylePhaseDone.Render("Removing worktrees"), styleDim.Render(phaseStatus)))
+		fmt.Fprintf(&b, "  %-30s %s\n", stylePhaseDone.Render("Removing worktrees"), styleDim.Render(phaseStatus))
 	} else {
-		b.WriteString(fmt.Sprintf("  %-30s %s\n", stylePhaseActive.Render("Removing worktrees"), styleDim.Render(phaseStatus)))
+		fmt.Fprintf(&b, "  %-30s %s\n", stylePhaseActive.Render("Removing worktrees"), styleDim.Render(phaseStatus))
 
 		selected := m.selectedWorktrees()
 		for _, wt := range selected {
@@ -157,7 +157,7 @@ func (m Model) viewProgress() string {
 				ind = styleIndicatorPending.Render(indicatorPending)
 			}
 
-			b.WriteString(fmt.Sprintf("  %s %s\n", ind, branch))
+			fmt.Fprintf(&b, "  %s %s\n", ind, branch)
 		}
 	}
 
@@ -165,11 +165,11 @@ func (m Model) viewProgress() string {
 
 	// Prune & cleanup phase
 	if m.remove.pruneErr != nil {
-		b.WriteString(fmt.Sprintf("  %-30s %s\n", stylePhaseDone.Render("Prune & cleanup"), styleDim.Render(styleIndicatorDone.Render(indicatorDone))))
+		fmt.Fprintf(&b, "  %-30s %s\n", stylePhaseDone.Render("Prune & cleanup"), styleDim.Render(styleIndicatorDone.Render(indicatorDone)))
 	} else if done == m.remove.deletionTotal && m.remove.deletionTotal > 0 {
-		b.WriteString(fmt.Sprintf("  %-30s %s\n", stylePhaseActive.Render("Prune & cleanup"), styleDim.Render(styleIndicatorActive.Render(indicatorActive))))
+		fmt.Fprintf(&b, "  %-30s %s\n", stylePhaseActive.Render("Prune & cleanup"), styleDim.Render(styleIndicatorActive.Render(indicatorActive)))
 	} else {
-		b.WriteString(fmt.Sprintf("  %-30s %s\n", stylePhasePending.Render("Prune & cleanup"), styleDim.Render("pending")))
+		fmt.Fprintf(&b, "  %-30s %s\n", stylePhasePending.Render("Prune & cleanup"), styleDim.Render("pending"))
 	}
 
 	return b.String()
