@@ -403,6 +403,9 @@ func (m Model) viewStatusBar() string {
 	if m.remove.filterText != "" {
 		filterInfo = fmt.Sprintf(" \u00b7 filter: %q (%d/%d)", m.remove.filterText, len(m.remove.visibleIndices), len(m.remove.worktrees))
 	}
+	if m.remove.filterLabel != "" {
+		filterInfo += fmt.Sprintf(" \u00b7 pre-filter: %s", m.remove.filterLabel)
+	}
 
 	return styleStatusBar.Render(
 		fmt.Sprintf("  %d selected%s \u00b7 space toggle \u00b7 a all \u00b7 enter delete \u00b7 / filter \u00b7 s sort \u00b7 q quit", count, filterInfo),
