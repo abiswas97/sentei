@@ -5,7 +5,6 @@ import (
 	"os"
 	"sync/atomic"
 	"testing"
-	"time"
 
 	"github.com/abiswas97/sentei/internal/git"
 )
@@ -171,6 +170,8 @@ func TestDeleteWorktrees_EmptyInput(t *testing.T) {
 
 func TestDeleteWorktrees_ConcurrencyBound(t *testing.T) {
 	var current, maxConcurrent atomic.Int32
+	// Gate controls when removers complete — holds all goroutines until we release.
+	gate := make(chan struct{})
 
 	remover := func(path string) error {
 		cur := current.Add(1)
@@ -181,7 +182,7 @@ func TestDeleteWorktrees_ConcurrencyBound(t *testing.T) {
 				break
 			}
 		}
-		time.Sleep(10 * time.Millisecond)
+		<-gate // Wait for release instead of sleeping.
 		return nil
 	}
 
@@ -191,7 +192,14 @@ func TestDeleteWorktrees_ConcurrencyBound(t *testing.T) {
 	}
 
 	progress := make(chan DeletionEvent, 50)
-	DeleteWorktrees(remover, worktrees, 2, progress)
+	go func() {
+		DeleteWorktrees(remover, worktrees, 2, progress)
+	}()
+
+	// Release all goroutines.
+	close(gate)
+
+	// Collect all events (waits for channel close).
 	collectEvents(progress)
 
 	if maxConcurrent.Load() > 2 {

@@ -94,7 +94,12 @@ func BuildCLICommand(command string, flags map[string]string) string {
 	var parts []string
 	parts = append(parts, "sentei", command)
 	for _, k := range keys {
-		parts = append(parts, "--"+k, flags[k])
+		v := flags[k]
+		if v == "true" {
+			parts = append(parts, "--"+k)
+		} else {
+			parts = append(parts, "--"+k, v)
+		}
 	}
 
 	return strings.Join(parts, " ")

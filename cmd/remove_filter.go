@@ -9,9 +9,8 @@ import (
 	"github.com/abiswas97/sentei/internal/git"
 )
 
-// MergedChecker is a function that checks whether a branch is fully merged
-// into the default branch. It takes the repo path and the short branch name.
-type MergedChecker func(repoPath, branch string) bool
+// MergedChecker checks whether a branch is fully merged into the default branch.
+type MergedChecker func(branch string) bool
 
 // ResolveFilters returns the worktrees that match the given filter options.
 // Filters combine with OR logic: a worktree matching any active filter is included.
@@ -58,7 +57,7 @@ func matchesFilters(wt git.Worktree, opts *RemoveOptions, now time.Time, isMerge
 	}
 
 	if opts.Merged && isMerged != nil && branch != "" {
-		if isMerged("", branch) {
+		if isMerged(branch) {
 			return true
 		}
 	}
@@ -73,7 +72,7 @@ func shortBranch(branch string) string {
 // CheckMerged creates a MergedChecker that uses git merge-base --is-ancestor
 // to determine if a branch is fully merged into the default branch.
 func CheckMerged(runner git.CommandRunner, repoPath string, defaultBranch string) MergedChecker {
-	return func(_ string, branch string) bool {
+	return func(branch string) bool {
 		_, err := runner.Run(repoPath, "merge-base", "--is-ancestor", branch, defaultBranch)
 		return err == nil
 	}

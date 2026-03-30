@@ -209,7 +209,7 @@ func TestResolveFilters_MergedFilter(t *testing.T) {
 		{Path: "/unmerged", Branch: "refs/heads/feature/unmerged"},
 	}
 	// Mock: only "feature/merged" is merged
-	isMerged := func(repoPath, branch string) bool {
+	isMerged := func(branch string) bool {
 		return branch == "feature/merged"
 	}
 	opts := &RemoveOptions{Merged: true}
@@ -272,7 +272,7 @@ func TestResolveFilters_CombinedORLogic(t *testing.T) {
 		{Path: "/merged", Branch: "refs/heads/feature/merged", LastCommitDate: now.Add(-1 * 24 * time.Hour)},
 		{Path: "/active", Branch: "refs/heads/feature/active", LastCommitDate: now.Add(-1 * 24 * time.Hour)},
 	}
-	isMerged := func(repoPath, branch string) bool {
+	isMerged := func(branch string) bool {
 		return branch == "feature/merged"
 	}
 	opts := &RemoveOptions{Stale: 30 * 24 * time.Hour, Merged: true}

@@ -85,15 +85,7 @@ func buildRegistry() *cli.Registry {
 			return cmd.ParseCleanupFlags(args)
 		},
 		RunCLI: func(args []string) error {
-			opts, err := cmd.ParseCleanupFlags(args)
-			if err != nil {
-				return err
-			}
-			if err := cmd.ValidateCleanupForNonInteractive(opts); err != nil {
-				return err
-			}
-			cmd.RunCleanup(args)
-			return nil
+			return cmd.RunCleanup(args)
 		},
 	})
 
