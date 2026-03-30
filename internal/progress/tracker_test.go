@@ -190,6 +190,32 @@ func TestBar_HalfFilled(t *testing.T) {
 	}
 }
 
+func TestPercent_Zero(t *testing.T) {
+	tr := New(0)
+	if tr.Percent() != 0 {
+		t.Errorf("expected 0%%, got %d%%", tr.Percent())
+	}
+}
+
+func TestPercent_Half(t *testing.T) {
+	tr := New(4)
+	tr.Update("g", "s1", Done, "")
+	tr.Update("g", "s2", Done, "")
+	if tr.Percent() != 50 {
+		t.Errorf("expected 50%%, got %d%%", tr.Percent())
+	}
+}
+
+func TestPercent_Full(t *testing.T) {
+	tr := New(3)
+	tr.Update("g", "s1", Done, "")
+	tr.Update("g", "s2", Done, "")
+	tr.Update("g", "s3", Done, "")
+	if tr.Percent() != 100 {
+		t.Errorf("expected 100%%, got %d%%", tr.Percent())
+	}
+}
+
 func TestBar_FullyComplete(t *testing.T) {
 	tr := New(2)
 	tr.Update("g", "s1", Done, "")

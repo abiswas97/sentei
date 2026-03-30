@@ -120,7 +120,7 @@ func (m Model) viewProgress() string {
 			}
 		}
 
-		statusText := fmt.Sprintf("%d/%d", len(m.remove.teardownResults), len(m.remove.teardownResults))
+		statusText := "100%"
 		if hasFailed {
 			statusText += " " + styleIndicatorWarning.Render(indicatorWarning)
 		} else {
@@ -133,7 +133,11 @@ func (m Model) viewProgress() string {
 	// Remove phase
 	done := len(m.remove.deletionResult.Outcomes)
 
-	phaseStatus := fmt.Sprintf("%d/%d", done, m.remove.deletionTotal)
+	pct := 0
+	if m.remove.deletionTotal > 0 {
+		pct = (done * 100) / m.remove.deletionTotal
+	}
+	phaseStatus := fmt.Sprintf("%d%%", pct)
 	if done == m.remove.deletionTotal && m.remove.deletionTotal > 0 {
 		phaseStatus += " " + styleIndicatorDone.Render(indicatorDone)
 		fmt.Fprintf(&b, "  %-30s %s\n", stylePhaseDone.Render("Removing worktrees"), styleDim.Render(phaseStatus))

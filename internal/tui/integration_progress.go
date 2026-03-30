@@ -174,7 +174,11 @@ func (m Model) viewIntegrationProgress() string {
 		filled = (done * barWidth) / total
 	}
 	bar := strings.Repeat("\u2588", filled) + strings.Repeat("\u2591", barWidth-filled)
-	fmt.Fprintf(&b, "  %s %d/%d\n", bar, done, total)
+	pct := 0
+	if total > 0 {
+		pct = (done * 100) / total
+	}
+	fmt.Fprintf(&b, "  %s %d%%\n", bar, pct)
 
 	return b.String()
 }

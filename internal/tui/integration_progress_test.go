@@ -126,17 +126,16 @@ func TestViewIntegrationProgress_ShowsProgressBar(t *testing.T) {
 
 	output := stripAnsi(m.viewIntegrationProgress())
 
-	// 2 done out of 3 total (known upfront).
-	if !strings.Contains(output, "2/3") {
-		t.Errorf("expected output to contain progress '2/3', got:\n%s", output)
+	// 2 done out of 3 total → 66%.
+	if !strings.Contains(output, "66%") {
+		t.Errorf("expected output to contain progress '66%%', got:\n%s", output)
 	}
 }
 
 func TestViewIntegrationProgress_ProgressCountsUniqueSteps(t *testing.T) {
 	m := makeIntegrationModel()
 	m.view = integrationProgressView
-	m.integ.totalSteps = 3 // Known upfront: 3 steps total.
-	// Each step emits Running then Done — 6 raw events but only 3 unique steps.
+	m.integ.totalSteps = 3
 	m.integ.events = []integration.ManagerEvent{
 		{Worktree: "/repo/main", Step: "Setup code-review-graph", Status: integration.StatusRunning},
 		{Worktree: "/repo/main", Step: "Setup code-review-graph", Status: integration.StatusDone},
@@ -148,17 +147,16 @@ func TestViewIntegrationProgress_ProgressCountsUniqueSteps(t *testing.T) {
 
 	output := stripAnsi(m.viewIntegrationProgress())
 
-	// Should show 3/3 (3 unique steps, all done), not 6/6.
-	if !strings.Contains(output, "3/3") {
-		t.Errorf("expected progress '3/3' (unique steps), got:\n%s", output)
+	// 3/3 done → 100%.
+	if !strings.Contains(output, "100%") {
+		t.Errorf("expected progress '100%%', got:\n%s", output)
 	}
 }
 
 func TestViewIntegrationProgress_TotalKnownUpfront(t *testing.T) {
 	m := makeIntegrationModel()
 	m.view = integrationProgressView
-	m.integ.totalSteps = 9 // 3 worktrees × 3 steps = 9 total.
-	// Only 2 steps done so far.
+	m.integ.totalSteps = 9
 	m.integ.events = []integration.ManagerEvent{
 		{Worktree: "/repo/main", Step: "Setup crg", Status: integration.StatusDone},
 		{Worktree: "/repo/main", Step: "Install ccc", Status: integration.StatusRunning},
@@ -166,9 +164,9 @@ func TestViewIntegrationProgress_TotalKnownUpfront(t *testing.T) {
 
 	output := stripAnsi(m.viewIntegrationProgress())
 
-	// Should show 1/9 (total is fixed upfront, not growing).
-	if !strings.Contains(output, "1/9") {
-		t.Errorf("expected progress '1/9' (upfront total), got:\n%s", output)
+	// 1 done out of 9 → 11%.
+	if !strings.Contains(output, "11%") {
+		t.Errorf("expected progress '11%%' (upfront total), got:\n%s", output)
 	}
 }
 
