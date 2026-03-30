@@ -1,0 +1,31 @@
+internal/fileutil/copy_test.go
+  836686c23c36f641 1-28
+internal/creator/integrations.go
+  836686c23c36f641 10,23,30,33-42,183-195
+internal/integration/manager.go
+  836686c23c36f641 10,56
+internal/creator/integrations_test.go
+  836686c23c36f641 159-187
+internal/fileutil/copy.go
+  836686c23c36f641 5,20-39
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.22",
+  "base_commit_sha": "6777dbcc1f2432a9599366ecabda96f047b7cbae",
+  "prompts": {
+    "836686c23c36f641": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "3900c7b6-8b79-42a7-b749-c875614dd86f",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>",
+      "messages": [],
+      "total_additions": 109,
+      "total_deletions": 55,
+      "accepted_lines": 108,
+      "overriden_lines": 0
+    }
+  }
+}
