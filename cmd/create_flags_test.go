@@ -161,6 +161,17 @@ func TestCreateCLICommand_AllFlags(t *testing.T) {
 	}
 }
 
+func TestCreateCLICommand_WithRepoPath(t *testing.T) {
+	opts := &CreateOptions{Branch: "feat/x", Base: "main", RepoPath: "/some/repo"}
+	cmd := CreateCLICommand(opts)
+	if !strings.HasSuffix(cmd, " /some/repo") {
+		t.Errorf("expected command to end with repo path, got %s", cmd)
+	}
+	if !strings.Contains(cmd, "--branch feat/x") {
+		t.Errorf("expected '--branch feat/x', got %s", cmd)
+	}
+}
+
 func TestCreateCLICommand_NoOptionalFlags(t *testing.T) {
 	opts := &CreateOptions{Branch: "feat/z", Base: "main"}
 	cmd := CreateCLICommand(opts)

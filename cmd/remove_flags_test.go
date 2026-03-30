@@ -176,6 +176,17 @@ func TestRemoveCLICommand_All(t *testing.T) {
 	}
 }
 
+func TestRemoveCLICommand_WithRepoPath(t *testing.T) {
+	opts := &RemoveOptions{All: true, RepoPath: "/some/repo"}
+	cmd := RemoveCLICommand(opts)
+	if !strings.HasSuffix(cmd, " /some/repo") {
+		t.Errorf("expected command to end with repo path, got %s", cmd)
+	}
+	if !strings.Contains(cmd, "--all") {
+		t.Errorf("expected '--all', got %s", cmd)
+	}
+}
+
 func TestResolveFilters_StaleFilter(t *testing.T) {
 	now := time.Now()
 	worktrees := []git.Worktree{

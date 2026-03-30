@@ -52,6 +52,16 @@ func RunRemove(args []string) error {
 
 	filtered := ResolveFilters(worktrees, opts, nil, isMerged)
 
+	var protectedCount int
+	for _, wt := range worktrees {
+		if wt.IsBare || wt.IsLocked {
+			continue
+		}
+		if git.IsProtectedBranch(wt.Branch) {
+			protectedCount++
+		}
+	}
+
 	if len(filtered) == 0 {
 		fmt.Println("No worktrees matched the specified filters.")
 		return nil
@@ -87,6 +97,9 @@ func RunRemove(args []string) error {
 				fmt.Printf("  %s\n", o.Error)
 			}
 		}
+	}
+	if protectedCount > 0 {
+		fmt.Printf("%sSkipped (protected):%s %d worktree(s)\n", dim, nc, protectedCount)
 	}
 
 	return nil

@@ -73,10 +73,8 @@ func TestCloneCLICommand_URLOnly(t *testing.T) {
 func TestCloneCLICommand_URLAndName(t *testing.T) {
 	opts := &CloneOptions{URL: "https://github.com/org/repo.git", Name: "my-repo"}
 	result := CloneCLICommand(opts)
-	// Order of flags in map iteration is nondeterministic, so check both
-	want1 := "sentei clone --url https://github.com/org/repo.git --name my-repo"
-	want2 := "sentei clone --name my-repo --url https://github.com/org/repo.git"
-	if result != want1 && result != want2 {
-		t.Errorf("CloneCLICommand = %q, want %q or %q", result, want1, want2)
+	want := "sentei clone --name my-repo --url https://github.com/org/repo.git"
+	if result != want {
+		t.Errorf("CloneCLICommand = %q, want %q", result, want)
 	}
 }

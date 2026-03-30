@@ -77,5 +77,9 @@ func CreateCLICommand(opts *CreateOptions) string {
 	if opts.CopyEnv {
 		flags["copy-env"] = "true"
 	}
-	return buildFlagString("sentei create", flags)
+	cmd := buildFlagString("sentei create", flags)
+	if opts.RepoPath != "" {
+		cmd += " " + opts.RepoPath
+	}
+	return cmd
 }

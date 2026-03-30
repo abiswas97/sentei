@@ -2,7 +2,6 @@ package cli
 
 import (
 	"errors"
-	"flag"
 	"fmt"
 	"sort"
 	"strings"
@@ -152,12 +151,6 @@ func (r *Registry) UsageString() string {
 // returning the flag values and the remaining args. This uses a simple scan
 // rather than flag.FlagSet to avoid conflicting with command-specific flags.
 func extractGlobalFlags(args []string) (nonInteractive bool, force bool, remaining []string) {
-	fs := flag.NewFlagSet("global", flag.ContinueOnError)
-	fs.BoolVar(&nonInteractive, "non-interactive", false, "")
-	fs.BoolVar(&force, "force", false, "")
-
-	// We need to extract our flags but leave command-specific flags untouched.
-	// Scan args manually since flag.FlagSet doesn't support mixed parsing well.
 	for _, arg := range args {
 		switch arg {
 		case "--non-interactive":

@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -47,8 +49,10 @@ func matchesFilters(wt git.Worktree, opts *RemoveOptions, now time.Time, isMerge
 		return true
 	}
 
-	if opts.Stale > 0 && !wt.LastCommitDate.IsZero() {
-		if now.Sub(wt.LastCommitDate) > opts.Stale {
+	if opts.Stale > 0 {
+		if wt.LastCommitDate.IsZero() {
+			fmt.Fprintf(os.Stderr, "Warning: skipping worktree %s (no commit date available)\n", wt.Path)
+		} else if now.Sub(wt.LastCommitDate) > opts.Stale {
 			return true
 		}
 	}
