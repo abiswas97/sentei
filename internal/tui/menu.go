@@ -52,7 +52,7 @@ func (m Model) updateMenu(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case tea.KeyMsg:
 		switch {
-		case key.Matches(msg, keys.Quit):
+		case key.Matches(msg, keys.Quit), key.Matches(msg, keys.Back):
 			return m, tea.Quit
 
 		case key.Matches(msg, keys.Down):
