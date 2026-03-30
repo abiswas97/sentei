@@ -1,0 +1,23 @@
+internal/tui/integration_list.go
+  836686c23c36f641 4,6,10,23-28,56-94,96-100,102-124,152-155,157-187,203-211,213-218,224-352
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.22",
+  "base_commit_sha": "324f484931f1487dfc9ccc3bcfaac382994a7bc4",
+  "prompts": {
+    "836686c23c36f641": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "3900c7b6-8b79-42a7-b749-c875614dd86f",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>",
+      "messages": [],
+      "total_additions": 265,
+      "total_deletions": 3,
+      "accepted_lines": 264,
+      "overriden_lines": 0
+    }
+  }
+}
