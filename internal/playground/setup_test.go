@@ -3,11 +3,22 @@ package playground
 import (
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"testing"
 )
 
+// overridePlaygroundDir sets PlaygroundDir to a test-specific temp dir,
+// preventing parallel test interference. Restores on cleanup.
+func overridePlaygroundDir(t *testing.T) {
+	t.Helper()
+	original := PlaygroundDir
+	PlaygroundDir = filepath.Join(t.TempDir(), "sentei-playground")
+	t.Cleanup(func() { PlaygroundDir = original })
+}
+
 func TestSetup_CreatesExpectedWorktrees(t *testing.T) {
+	overridePlaygroundDir(t)
 	repoPath, cleanup, err := Setup()
 	if err != nil {
 		t.Fatalf("Setup() error: %v", err)
@@ -51,6 +62,7 @@ func TestSetup_CreatesExpectedWorktrees(t *testing.T) {
 }
 
 func TestSetup_Idempotent(t *testing.T) {
+	overridePlaygroundDir(t)
 	_, cleanup1, err := Setup()
 	if err != nil {
 		t.Fatalf("first Setup() error: %v", err)
@@ -65,6 +77,7 @@ func TestSetup_Idempotent(t *testing.T) {
 }
 
 func TestSetup_CleanupRemovesDir(t *testing.T) {
+	overridePlaygroundDir(t)
 	_, cleanup, err := Setup()
 	if err != nil {
 		t.Fatalf("Setup() error: %v", err)
