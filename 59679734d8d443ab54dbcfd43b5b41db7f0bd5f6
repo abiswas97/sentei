@@ -1,0 +1,29 @@
+internal/creator/deps.go
+  836686c23c36f641 62-67,79
+internal/creator/setup_test.go
+  836686c23c36f641 7,12,24,26,35,37
+internal/tui/create_progress.go
+  836686c23c36f641 143,160
+internal/tui/create_summary.go
+  836686c23c36f641 50-51,53-54,57-58,79,87
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.22",
+  "base_commit_sha": "59679734d8d443ab54dbcfd43b5b41db7f0bd5f6",
+  "prompts": {
+    "836686c23c36f641": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "3900c7b6-8b79-42a7-b749-c875614dd86f",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>",
+      "messages": [],
+      "total_additions": 23,
+      "total_deletions": 11,
+      "accepted_lines": 23,
+      "overriden_lines": 0
+    }
+  }
+}
