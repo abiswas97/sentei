@@ -8,18 +8,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/abiswas97/sentei/internal/cleanup"
-	"github.com/abiswas97/sentei/internal/git"
 )
-
-// runStandaloneCleanup runs cleanup from the menu (not after deletion).
-func runStandaloneCleanup(runner git.CommandRunner, repoPath string) tea.Cmd {
-	return func() tea.Msg {
-		result := cleanup.Run(runner, repoPath, cleanup.Options{
-			Mode: cleanup.ModeSafe,
-		}, func(_ cleanup.Event) {})
-		return standaloneCleanupDoneMsg{result: result}
-	}
-}
 
 type standaloneCleanupDoneMsg struct {
 	result cleanup.Result

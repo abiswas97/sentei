@@ -40,6 +40,7 @@ const (
 	integrationListView
 	integrationProgressView
 	migrateIntegrationsView
+	cleanupConfirmView
 	cleanupResultView
 )
 
@@ -178,6 +179,8 @@ type Model struct {
 	menuItems  []menuItem
 	menuCursor int
 
+	cleanupOpts *cleanup.Options
+
 	remove removeState
 	create createState
 	repo   repoState
@@ -297,6 +300,12 @@ func NewMenuModel(runner git.CommandRunner, shell git.ShellRunner, repoPath stri
 	return m
 }
 
+// SetCleanupOpts sets the cleanup options and starts at the cleanup confirmation view.
+func (m *Model) SetCleanupOpts(opts *cleanup.Options) {
+	m.cleanupOpts = opts
+	m.view = cleanupConfirmView
+}
+
 func (m Model) Init() tea.Cmd {
 	if m.view == menuView && m.context == repo.ContextBareRepo {
 		return loadWorktreeContext(m.runner, m.repoPath)
@@ -346,6 +355,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.updateIntegrationProgress(msg)
 	case migrateIntegrationsView:
 		return m.updateMigrateIntegrations(msg)
+	case cleanupConfirmView:
+		return m.updateCleanupConfirm(msg)
 	case cleanupResultView:
 		return m.updateCleanupResult(msg)
 	}
@@ -394,6 +405,8 @@ func (m Model) View() string {
 		return m.viewIntegrationProgress()
 	case migrateIntegrationsView:
 		return m.viewMigrateIntegrations()
+	case cleanupConfirmView:
+		return m.viewCleanupConfirm()
 	case cleanupResultView:
 		return m.viewCleanupResult()
 	}

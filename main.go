@@ -10,6 +10,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/abiswas97/sentei/cmd"
+	"github.com/abiswas97/sentei/internal/cleanup"
 	"github.com/abiswas97/sentei/internal/cli"
 	"github.com/abiswas97/sentei/internal/config"
 	"github.com/abiswas97/sentei/internal/dryrun"
@@ -50,6 +51,37 @@ func buildRegistry() *cli.Registry {
 		RunCLI: func(args []string) error {
 			cmd.RunIntegrations()
 			return nil
+		},
+	})
+
+	r.Register(&cli.Command{
+		Name:        "clone",
+		Type:        cli.Decision,
+		Destructive: false,
+		ParseFlags: func(args []string) (any, error) {
+			return cmd.ParseCloneFlags(args)
+		},
+		RunCLI: func(args []string) error {
+			opts, err := cmd.ParseCloneFlags(args)
+			if err != nil {
+				return err
+			}
+			if err := cmd.ValidateCloneForNonInteractive(opts); err != nil {
+				return err
+			}
+			cmd.RunClone(args)
+			return nil
+		},
+	})
+
+	r.Register(&cli.Command{
+		Name: "create",
+		Type: cli.Decision,
+		ParseFlags: func(args []string) (any, error) {
+			return cmd.ParseCreateFlags(args)
+		},
+		RunCLI: func(args []string) error {
+			return cmd.RunCreate(args)
 		},
 	})
 
@@ -106,19 +138,62 @@ func main() {
 				}
 				return
 			}
-			// TODO: For decision commands without --non-interactive,
-			// parse flags and launch TUI at the appropriate entry point.
-			// For now, fall through to RunCLI (existing behavior).
-			if err := result.Command.RunCLI(result.Args); err != nil {
-				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-				os.Exit(1)
-			}
+			// Interactive mode: parse flags and launch TUI at the appropriate view.
+			launchInteractiveDecision(*result)
 			return
 		}
 	}
 
 	// Root: no command specified — handle global flags and launch TUI.
 	runRoot(result.Args)
+}
+
+func launchInteractiveDecision(result cli.DispatchResult) {
+	repoPath := "."
+	if absPath, err := filepath.Abs(repoPath); err == nil {
+		repoPath = absPath
+	}
+
+	runner := &git.GitRunner{}
+	shell := &git.DefaultShellRunner{}
+
+	context := repo.DetectContext(runner, repoPath)
+	if context == repo.ContextBareRepo {
+		repoPath = repo.ResolveBareRoot(runner, repoPath)
+	}
+
+	var cfg *config.Config
+	if context == repo.ContextBareRepo {
+		var err error
+		cfg, err = config.LoadConfig(repoPath,
+			config.WithRunner(runner),
+			config.WithKnownIntegrations(integration.Names()),
+		)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: failed to load config: %v\n", err)
+		}
+	}
+
+	model := tui.NewMenuModel(runner, shell, repoPath, cfg, context)
+
+	switch result.Command.Name {
+	case "cleanup":
+		opts, err := cmd.ParseCleanupFlags(result.Args)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
+		if opts.Mode == "" {
+			opts.Mode = cleanup.ModeSafe
+		}
+		model.SetCleanupOpts(opts)
+	}
+
+	p := tea.NewProgram(model, tea.WithAltScreen())
+	if _, err := p.Run(); err != nil {
+		fmt.Fprintf(os.Stderr, "Error running TUI: %v\n", err)
+		os.Exit(1)
+	}
 }
 
 func runRoot(args []string) {
