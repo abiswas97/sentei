@@ -10,7 +10,7 @@ import (
 
 	"github.com/abiswas97/sentei/internal/creator"
 	"github.com/abiswas97/sentei/internal/ecosystem"
-	"github.com/abiswas97/sentei/internal/integration"
+	"github.com/abiswas97/sentei/internal/state"
 )
 
 type branchValidationError struct {
@@ -125,15 +125,19 @@ func (m *Model) prepareCreateOptions() {
 		}
 	}
 
-	// Load integrations
-	m.create.integrations = nil
-	enabledSet := make(map[string]bool)
-	for _, name := range m.cfg.IntegrationsEnabled {
-		enabledSet[name] = true
-	}
-	for _, integ := range integration.All() {
-		m.create.integrations = append(m.create.integrations, integ)
-		m.create.intEnabled[integ.Name] = enabledSet[integ.Name]
+	// Load active integration names from repo state for display
+	bareDir := filepath.Join(m.repoPath, ".bare")
+	st, _ := state.Load(bareDir)
+	m.create.activeIntegrationNames = nil
+	for _, name := range st.Integrations {
+		switch name {
+		case "code-review-graph":
+			m.create.activeIntegrationNames = append(m.create.activeIntegrationNames, "crg")
+		case "cocoindex-code":
+			m.create.activeIntegrationNames = append(m.create.activeIntegrationNames, "ccc")
+		default:
+			m.create.activeIntegrationNames = append(m.create.activeIntegrationNames, name)
+		}
 	}
 }
 

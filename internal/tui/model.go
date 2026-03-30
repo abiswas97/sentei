@@ -89,13 +89,12 @@ type createState struct {
 	focusedField  int // 0 = branch, 1 = base
 	validationErr string
 
-	ecosystems    []config.EcosystemConfig
-	integrations  []integration.Integration
-	ecoEnabled    map[string]bool
-	intEnabled    map[string]bool
-	mergeBase     bool
-	copyEnvFiles  bool
-	optionsCursor int
+	ecosystems             []config.EcosystemConfig
+	ecoEnabled             map[string]bool
+	activeIntegrationNames []string // loaded from state, displayed as info line
+	mergeBase              bool
+	copyEnvFiles           bool
+	optionsCursor          int
 
 	eventCh  chan creator.Event
 	resultCh chan creator.Result
@@ -275,7 +274,6 @@ func NewMenuModel(runner git.CommandRunner, shell git.ShellRunner, repoPath stri
 			branchInput:  branchInput,
 			baseInput:    baseInput,
 			ecoEnabled:   make(map[string]bool),
-			intEnabled:   make(map[string]bool),
 			mergeBase:    true,
 			copyEnvFiles: true,
 		},
