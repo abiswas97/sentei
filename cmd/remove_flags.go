@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -110,4 +111,19 @@ func RemoveCLICommand(opts *RemoveOptions) string {
 func FormatStaleDuration(d time.Duration) string {
 	days := int(d / (24 * time.Hour))
 	return fmt.Sprintf("%dd", days)
+}
+
+// FormatFilterLabel generates a human-readable label for the active filters.
+func FormatFilterLabel(opts *RemoveOptions) string {
+	var parts []string
+	if opts.All {
+		return "all"
+	}
+	if opts.Merged {
+		parts = append(parts, "merged")
+	}
+	if opts.Stale > 0 {
+		parts = append(parts, "stale > "+FormatStaleDuration(opts.Stale))
+	}
+	return strings.Join(parts, ", ")
 }
