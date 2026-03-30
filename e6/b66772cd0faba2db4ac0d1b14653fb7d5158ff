@@ -1,0 +1,35 @@
+openspec/specs/filter-flags/spec.md
+  4a3693f6355ed8c0 1-71
+openspec/specs/worktree-deletion/spec.md
+  4a3693f6355ed8c0 53-79
+openspec/specs/confirmation-view/spec.md
+  4a3693f6355ed8c0 1-49
+openspec/specs/tui-list-view/spec.md
+  4a3693f6355ed8c0 101-138
+openspec/specs/dry-run/spec.md
+  4a3693f6355ed8c0 7,21-27
+openspec/specs/tui-confirmation/spec.md
+  4a3693f6355ed8c0 7,12,43-49
+openspec/specs/cli-tui-handoff/spec.md
+  4a3693f6355ed8c0 1-90
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.22",
+  "base_commit_sha": "e6b66772cd0faba2db4ac0d1b14653fb7d5158ff",
+  "prompts": {
+    "4a3693f6355ed8c0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a9b374a7-9e9c-4fd6-8010-99b0fee4726d",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>",
+      "messages": [],
+      "total_additions": 293,
+      "total_deletions": 2,
+      "accepted_lines": 293,
+      "overriden_lines": 0
+    }
+  }
+}
