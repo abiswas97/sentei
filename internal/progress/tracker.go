@@ -123,6 +123,15 @@ func (t *Tracker) IsComplete() bool {
 	return t.Done() >= t.Total() && t.Total() > 0
 }
 
+// Percent returns the completion percentage (0-100).
+func (t *Tracker) Percent() int {
+	total := t.Total()
+	if total == 0 {
+		return 0
+	}
+	return (t.Done() * 100) / total
+}
+
 // FailedCount returns the number of steps with Failed status.
 func (t *Tracker) FailedCount() int {
 	count := 0
