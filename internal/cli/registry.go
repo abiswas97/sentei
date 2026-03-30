@@ -30,11 +30,6 @@ type Command struct {
 	// ParseFlags parses command-specific flags into an opaque options value.
 	// Only used for decision commands; nil for output commands.
 	ParseFlags func(args []string) (any, error)
-
-	// BuildTUI configures the TUI model for this command's flow.
-	// Receives the parsed options (may be nil if no flags provided).
-	// Only used for decision commands; nil for output commands.
-	BuildTUI func(opts any) error
 }
 
 // Registry holds registered commands and dispatches based on os.Args.
@@ -71,9 +66,8 @@ type DispatchResult struct {
 }
 
 var (
-	ErrUnknownCommand           = errors.New("unknown command")
-	ErrMissingForce             = errors.New("destructive operation requires --force with --non-interactive")
-	ErrNonInteractiveNotAllowed = errors.New("--non-interactive is not supported for output commands")
+	ErrUnknownCommand = errors.New("unknown command")
+	ErrMissingForce   = errors.New("destructive operation requires --force with --non-interactive")
 )
 
 // IsUnknownCommand returns true if the error wraps ErrUnknownCommand.

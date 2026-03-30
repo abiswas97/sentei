@@ -227,6 +227,48 @@ func launchInteractiveDecision(result cli.DispatchResult) {
 			os.Exit(1)
 		}
 		model.SetCloneOpts(opts)
+
+	case "remove":
+		opts, err := cmd.ParseRemoveFlags(result.Args)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
+		if opts.Merged || opts.All || opts.Stale > 0 {
+			worktrees, err := git.ListWorktrees(runner, repoPath)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+				os.Exit(1)
+			}
+			worktrees = worktree.EnrichWorktrees(runner, worktrees, 10)
+
+			var isMerged cmd.MergedChecker
+			if opts.Merged {
+				defaultBranch := cmd.DetectDefaultBranch(runner, repoPath)
+				isMerged = cmd.CheckMerged(runner, repoPath, defaultBranch)
+			}
+			filtered := cmd.ResolveFilters(worktrees, opts, nil, isMerged)
+
+			var paths []string
+			for _, wt := range filtered {
+				paths = append(paths, wt.Path)
+			}
+			model.SetRemoveOpts(tui.RemovePreSelection{
+				Paths:       paths,
+				FilterLabel: cmd.FormatFilterLabel(opts),
+			})
+		}
+
+	case "migrate":
+		opts, err := cmd.ParseMigrateFlags(result.Args)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
+		model.SetMigrateOpts(&tui.MigrateOpts{
+			DeleteBackup: opts.DeleteBackup,
+			RepoPath:     opts.RepoPath,
+		})
 	}
 
 	p := tea.NewProgram(model, tea.WithAltScreen())

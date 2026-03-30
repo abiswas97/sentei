@@ -3,6 +3,7 @@ package cmd
 import (
 	"flag"
 	"fmt"
+	"sort"
 
 	"github.com/abiswas97/sentei/internal/cleanup"
 )
@@ -55,8 +56,15 @@ func CleanupCLICommand(opts *cleanup.Options) string {
 }
 
 func buildFlagString(base string, flags map[string]string) string {
+	keys := make([]string, 0, len(flags))
+	for k := range flags {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
 	result := base
-	for k, v := range flags {
+	for _, k := range keys {
+		v := flags[k]
 		if v == "true" {
 			result += " --" + k
 		} else {
