@@ -123,6 +123,9 @@ func (m Model) viewIntegrationProgress() string {
 		}
 
 		for _, s := range steps {
+			if s.ev.Status == integration.StatusSkipped {
+				continue // Don't display skipped steps.
+			}
 			var ind string
 			switch s.ev.Status {
 			case integration.StatusDone:
@@ -155,7 +158,7 @@ func (m Model) viewIntegrationProgress() string {
 		if stepStatus[key] {
 			continue // Already counted this step.
 		}
-		if ev.Status == integration.StatusDone || ev.Status == integration.StatusFailed {
+		if ev.Status == integration.StatusDone || ev.Status == integration.StatusFailed || ev.Status == integration.StatusSkipped {
 			stepStatus[key] = true
 			done++
 		}
