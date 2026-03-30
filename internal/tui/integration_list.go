@@ -311,16 +311,18 @@ func (m Model) renderIntegrationInfo() string {
 
 	integ := m.integ.integrations[m.integ.infoCursor]
 
+	// Dialog width: responsive to terminal, clamped between 36 and 60 chars
+	// (styleDialogBox adds padding+border, so inner content width is smaller)
+	innerWidth := min(max(m.width-10, 36), 60)
+
 	var content strings.Builder
 
-	header := fmt.Sprintf("%s  %s",
-		styleTitle.Render(integ.Name),
-		styleDim.Render(fmt.Sprintf("%d / %d", m.integ.infoCursor+1, len(m.integ.integrations))),
-	)
-	content.WriteString(header)
+	page := styleDim.Render(fmt.Sprintf("%d / %d", m.integ.infoCursor+1, len(m.integ.integrations)))
+	content.WriteString(styleTitle.Render(integ.Name) + "  " + page)
 	content.WriteString("\n\n")
 
-	content.WriteString(integ.Description)
+	// Wrap description to fit dialog width
+	content.WriteString(lipgloss.NewStyle().Width(innerWidth).Render(integ.Description))
 	content.WriteString("\n\n")
 
 	if integ.URL != "" {
@@ -341,7 +343,7 @@ func (m Model) renderIntegrationInfo() string {
 	content.WriteString("\n")
 	content.WriteString(styleDim.Render("esc to close"))
 
-	dialog := styleDialogBox.Render(content.String())
+	dialog := styleDialogBox.Width(innerWidth + 6).Render(content.String())
 	return dialog
 }
 
