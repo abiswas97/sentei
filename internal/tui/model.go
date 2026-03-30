@@ -40,6 +40,7 @@ const (
 	integrationListView
 	integrationProgressView
 	migrateIntegrationsView
+	cleanupResultView
 )
 
 type SortField int
@@ -345,6 +346,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.updateIntegrationProgress(msg)
 	case migrateIntegrationsView:
 		return m.updateMigrateIntegrations(msg)
+	case cleanupResultView:
+		return m.updateCleanupResult(msg)
 	}
 	return m, nil
 }
@@ -391,6 +394,8 @@ func (m Model) View() string {
 		return m.viewIntegrationProgress()
 	case migrateIntegrationsView:
 		return m.viewMigrateIntegrations()
+	case cleanupResultView:
+		return m.viewCleanupResult()
 	}
 	return ""
 }
