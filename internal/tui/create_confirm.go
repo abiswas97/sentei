@@ -5,14 +5,14 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/abiswas97/sentei/cmd"
+	"github.com/abiswas97/sentei/internal/cli"
 )
 
 // SetCreateOpts sets the create options and starts at the appropriate view.
 // If branch and base are both set, starts at createConfirmView.
 // If only branch is set, starts at createOptionsView (base selection done).
 // If nothing is set, starts at createBranchView (normal flow).
-func (m *Model) SetCreateOpts(opts *cmd.CreateOptions) {
+func (m *Model) SetCreateOpts(opts *CreateOpts) {
 	m.createOpts = opts
 
 	if opts.Branch != "" {
@@ -79,31 +79,29 @@ func (m Model) createConfirmationVM() ConfirmationViewModel {
 	}
 	items = append(items, ConfirmationItem{Label: "Copy env:", Value: copyEnv})
 
-	// Build CLI command from options.
-	opts := m.resolvedCreateOpts()
-	cliCmd := cmd.CreateCLICommand(opts)
+	// Build CLI command from current model state.
+	flags := make(map[string]string)
+	if branch != "" {
+		flags["branch"] = branch
+	}
+	if base != "" {
+		flags["base"] = base
+	}
+	if len(enabledEcos) > 0 {
+		flags["ecosystems"] = strings.Join(enabledEcos, ",")
+	}
+	if m.create.mergeBase {
+		flags["merge-base"] = "true"
+	}
+	if m.create.copyEnvFiles {
+		flags["copy-env"] = "true"
+	}
 
 	return ConfirmationViewModel{
 		Title:      "Confirm Create",
 		Items:      items,
-		CLICommand: cliCmd,
+		CLICommand: cli.BuildFlagString("sentei create", flags),
 	}
-}
-
-// resolvedCreateOpts returns the effective CreateOptions from the current model state.
-func (m Model) resolvedCreateOpts() *cmd.CreateOptions {
-	opts := &cmd.CreateOptions{
-		Branch:    m.create.branchInput.Value(),
-		Base:      m.create.baseInput.Value(),
-		MergeBase: m.create.mergeBase,
-		CopyEnv:   m.create.copyEnvFiles,
-	}
-	for _, eco := range m.create.ecosystems {
-		if m.create.ecoEnabled[eco.Name] {
-			opts.Ecosystems = append(opts.Ecosystems, eco.Name)
-		}
-	}
-	return opts
 }
 
 func (m Model) updateCreateConfirm(msg tea.Msg) (tea.Model, tea.Cmd) {

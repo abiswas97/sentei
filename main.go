@@ -52,12 +52,8 @@ func buildRegistry() *cli.Registry {
 	})
 
 	r.Register(&cli.Command{
-		Name:        "clone",
-		Type:        cli.Decision,
-		Destructive: false,
-		ParseFlags: func(args []string) (any, error) {
-			return cmd.ParseCloneFlags(args)
-		},
+		Name: "clone",
+		Type: cli.Decision,
 		RunCLI: func(args []string) error {
 			return cmd.RunClone(args)
 		},
@@ -66,9 +62,6 @@ func buildRegistry() *cli.Registry {
 	r.Register(&cli.Command{
 		Name: "create",
 		Type: cli.Decision,
-		ParseFlags: func(args []string) (any, error) {
-			return cmd.ParseCreateFlags(args)
-		},
 		RunCLI: func(args []string) error {
 			return cmd.RunCreate(args)
 		},
@@ -78,9 +71,6 @@ func buildRegistry() *cli.Registry {
 		Name:        "cleanup",
 		Type:        cli.Decision,
 		Destructive: true,
-		ParseFlags: func(args []string) (any, error) {
-			return cmd.ParseCleanupFlags(args)
-		},
 		RunCLI: func(args []string) error {
 			return cmd.RunCleanup(args)
 		},
@@ -90,9 +80,6 @@ func buildRegistry() *cli.Registry {
 		Name:        "migrate",
 		Type:        cli.Decision,
 		Destructive: true,
-		ParseFlags: func(args []string) (any, error) {
-			return cmd.ParseMigrateFlags(args)
-		},
 		RunCLI: func(args []string) error {
 			return cmd.RunMigrate(args)
 		},
@@ -102,9 +89,6 @@ func buildRegistry() *cli.Registry {
 		Name:        "remove",
 		Type:        cli.Decision,
 		Destructive: true,
-		ParseFlags: func(args []string) (any, error) {
-			return cmd.ParseRemoveFlags(args)
-		},
 		RunCLI: func(args []string) error {
 			return cmd.RunRemove(args)
 		},
@@ -199,7 +183,14 @@ func launchInteractiveDecision(result cli.DispatchResult) {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
-		model.SetCreateOpts(opts)
+		model.SetCreateOpts(&tui.CreateOpts{
+			Branch:     opts.Branch,
+			Base:       opts.Base,
+			Ecosystems: opts.Ecosystems,
+			MergeBase:  opts.MergeBase,
+			CopyEnv:    opts.CopyEnv,
+			RepoPath:   opts.RepoPath,
+		})
 
 	case "clone":
 		opts, err := cmd.ParseCloneFlags(result.Args)
@@ -207,7 +198,10 @@ func launchInteractiveDecision(result cli.DispatchResult) {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
-		model.SetCloneOpts(opts)
+		model.SetCloneOpts(&tui.CloneOpts{
+			URL:  opts.URL,
+			Name: opts.Name,
+		})
 
 	case "remove":
 		opts, err := cmd.ParseRemoveFlags(result.Args)

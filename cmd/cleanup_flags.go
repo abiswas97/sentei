@@ -52,9 +52,5 @@ func CleanupCLICommand(opts *cleanup.Options) string {
 	if opts.DryRun {
 		flags["dry-run"] = "true"
 	}
-	return buildFlagString("sentei cleanup", flags)
-}
-
-func buildFlagString(base string, flags map[string]string) string {
-	return cli.BuildFlagString(base, flags)
+	return cli.BuildFlagString("sentei cleanup", flags)
 }

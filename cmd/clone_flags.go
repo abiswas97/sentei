@@ -3,6 +3,8 @@ package cmd
 import (
 	"flag"
 	"fmt"
+
+	"github.com/abiswas97/sentei/internal/cli"
 )
 
 // CloneOptions holds the parsed flags for the clone command.
@@ -45,5 +47,5 @@ func CloneCLICommand(opts *CloneOptions) string {
 	if opts.Name != "" {
 		flags["name"] = opts.Name
 	}
-	return buildFlagString("sentei clone", flags)
+	return cli.BuildFlagString("sentei clone", flags)
 }

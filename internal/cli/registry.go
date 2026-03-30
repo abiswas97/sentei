@@ -26,10 +26,6 @@ type Command struct {
 	// For output commands, this is the only execution path.
 	// For decision commands, this runs when --non-interactive is provided.
 	RunCLI func(args []string) error
-
-	// ParseFlags parses command-specific flags into an opaque options value.
-	// Only used for decision commands; nil for output commands.
-	ParseFlags func(args []string) (any, error)
 }
 
 // Registry holds registered commands and dispatches based on os.Args.

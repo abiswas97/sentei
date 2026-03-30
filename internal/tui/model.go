@@ -7,7 +7,6 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/abiswas97/sentei/cmd"
 	"github.com/abiswas97/sentei/internal/cleanup"
 	"github.com/abiswas97/sentei/internal/config"
 	"github.com/abiswas97/sentei/internal/creator"
@@ -66,6 +65,24 @@ type RemovePreSelection struct {
 type MigrateOpts struct {
 	DeleteBackup bool
 	RepoPath     string
+}
+
+// CreateOpts holds create options passed to the TUI from the CLI layer.
+// This mirrors cmd.CreateOptions without creating a dependency on cmd.
+type CreateOpts struct {
+	Branch     string
+	Base       string
+	Ecosystems []string
+	MergeBase  bool
+	CopyEnv    bool
+	RepoPath   string
+}
+
+// CloneOpts holds clone options passed to the TUI from the CLI layer.
+// This mirrors cmd.CloneOptions without creating a dependency on cmd.
+type CloneOpts struct {
+	URL  string
+	Name string
 }
 
 // removeState holds all state for the worktree removal flow.
@@ -198,8 +215,8 @@ type Model struct {
 	menuCursor int
 
 	cleanupOpts *cleanup.Options
-	createOpts  *cmd.CreateOptions
-	cloneOpts   *cmd.CloneOptions
+	createOpts  *CreateOpts
+	cloneOpts   *CloneOpts
 	migrateOpts *MigrateOpts
 
 	remove removeState

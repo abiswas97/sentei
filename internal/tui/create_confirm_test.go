@@ -6,12 +6,11 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/abiswas97/sentei/cmd"
 	"github.com/abiswas97/sentei/internal/config"
 	"github.com/abiswas97/sentei/internal/repo"
 )
 
-func makeCreateConfirmModel(opts *cmd.CreateOptions) Model {
+func makeCreateConfirmModel(opts *CreateOpts) Model {
 	m := NewMenuModel(nil, nil, "/repo", &config.Config{}, repo.ContextBareRepo)
 	if opts != nil {
 		m.SetCreateOpts(opts)
@@ -27,7 +26,7 @@ func makeCreateConfirmModel(opts *cmd.CreateOptions) Model {
 
 func TestSetCreateOpts_BranchAndBase_EntersConfirmView(t *testing.T) {
 	m := NewMenuModel(nil, nil, "/repo", &config.Config{}, repo.ContextBareRepo)
-	opts := &cmd.CreateOptions{Branch: "feature/foo", Base: "main"}
+	opts := &CreateOpts{Branch: "feature/foo", Base: "main"}
 	m.SetCreateOpts(opts)
 
 	if m.view != createConfirmView {
@@ -46,7 +45,7 @@ func TestSetCreateOpts_BranchAndBase_EntersConfirmView(t *testing.T) {
 
 func TestSetCreateOpts_OnlyBranch_EntersOptionsView(t *testing.T) {
 	m := NewMenuModel(nil, nil, "/repo", &config.Config{}, repo.ContextBareRepo)
-	opts := &cmd.CreateOptions{Branch: "feature/bar"}
+	opts := &CreateOpts{Branch: "feature/bar"}
 	m.SetCreateOpts(opts)
 
 	if m.view != createOptionsView {
@@ -56,7 +55,7 @@ func TestSetCreateOpts_OnlyBranch_EntersOptionsView(t *testing.T) {
 
 func TestSetCreateOpts_NothingSet_EntersBranchView(t *testing.T) {
 	m := NewMenuModel(nil, nil, "/repo", &config.Config{}, repo.ContextBareRepo)
-	opts := &cmd.CreateOptions{}
+	opts := &CreateOpts{}
 	m.SetCreateOpts(opts)
 
 	if m.view != createBranchView {
@@ -65,7 +64,7 @@ func TestSetCreateOpts_NothingSet_EntersBranchView(t *testing.T) {
 }
 
 func TestCreateConfirmationVM_RendersBranchAndBase(t *testing.T) {
-	m := makeCreateConfirmModel(&cmd.CreateOptions{
+	m := makeCreateConfirmModel(&CreateOpts{
 		Branch: "feature/test",
 		Base:   "main",
 	})
@@ -88,7 +87,7 @@ func TestCreateConfirmationVM_RendersBranchAndBase(t *testing.T) {
 }
 
 func TestCreateConfirmationVM_ShowsMergeBaseAndCopyEnv(t *testing.T) {
-	m := makeCreateConfirmModel(&cmd.CreateOptions{
+	m := makeCreateConfirmModel(&CreateOpts{
 		Branch:    "feature/test",
 		Base:      "main",
 		MergeBase: true,
@@ -138,7 +137,7 @@ func TestUpdateCreateConfirm_BackReturnsToOptions(t *testing.T) {
 }
 
 func TestUpdateCreateConfirm_BackQuitsWhenLaunchedDirectly(t *testing.T) {
-	m := makeCreateConfirmModel(&cmd.CreateOptions{Branch: "feat/x", Base: "main"})
+	m := makeCreateConfirmModel(&CreateOpts{Branch: "feat/x", Base: "main"})
 
 	_, c := m.updateCreateConfirm(ConfirmBackMsg{})
 	if c == nil {
@@ -194,7 +193,7 @@ func TestViewCreateConfirm_RendersContent(t *testing.T) {
 }
 
 func TestCreateConfirm_UpdateDispatch(t *testing.T) {
-	m := makeCreateConfirmModel(&cmd.CreateOptions{Branch: "feat/x", Base: "main"})
+	m := makeCreateConfirmModel(&CreateOpts{Branch: "feat/x", Base: "main"})
 
 	// Verify Update dispatches to createConfirm handler.
 	updated, _ := m.Update(tea.WindowSizeMsg{Width: 100, Height: 30})
@@ -206,7 +205,7 @@ func TestCreateConfirm_UpdateDispatch(t *testing.T) {
 }
 
 func TestCreateConfirm_ViewDispatch(t *testing.T) {
-	m := makeCreateConfirmModel(&cmd.CreateOptions{Branch: "feat/x", Base: "main"})
+	m := makeCreateConfirmModel(&CreateOpts{Branch: "feat/x", Base: "main"})
 
 	output := m.View()
 

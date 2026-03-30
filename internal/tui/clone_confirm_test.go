@@ -6,12 +6,11 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/abiswas97/sentei/cmd"
 	"github.com/abiswas97/sentei/internal/config"
 	"github.com/abiswas97/sentei/internal/repo"
 )
 
-func makeCloneConfirmModel(opts *cmd.CloneOptions) Model {
+func makeCloneConfirmModel(opts *CloneOpts) Model {
 	m := NewMenuModel(nil, nil, "/repo", &config.Config{}, repo.ContextNoRepo)
 	if opts != nil {
 		m.SetCloneOpts(opts)
@@ -27,7 +26,7 @@ func makeCloneConfirmModel(opts *cmd.CloneOptions) Model {
 
 func TestSetCloneOpts_URLSet_EntersConfirmView(t *testing.T) {
 	m := NewMenuModel(nil, nil, "/repo", &config.Config{}, repo.ContextNoRepo)
-	opts := &cmd.CloneOptions{URL: "git@github.com:user/repo.git", Name: "my-repo"}
+	opts := &CloneOpts{URL: "git@github.com:user/repo.git", Name: "my-repo"}
 	m.SetCloneOpts(opts)
 
 	if m.view != cloneConfirmView {
@@ -46,7 +45,7 @@ func TestSetCloneOpts_URLSet_EntersConfirmView(t *testing.T) {
 
 func TestSetCloneOpts_NothingSet_EntersInputView(t *testing.T) {
 	m := NewMenuModel(nil, nil, "/repo", &config.Config{}, repo.ContextNoRepo)
-	opts := &cmd.CloneOptions{}
+	opts := &CloneOpts{}
 	m.SetCloneOpts(opts)
 
 	if m.view != cloneInputView {
@@ -55,7 +54,7 @@ func TestSetCloneOpts_NothingSet_EntersInputView(t *testing.T) {
 }
 
 func TestCloneConfirmationVM_RendersURLAndName(t *testing.T) {
-	m := makeCloneConfirmModel(&cmd.CloneOptions{
+	m := makeCloneConfirmModel(&CloneOpts{
 		URL:  "git@github.com:user/repo.git",
 		Name: "my-repo",
 	})
@@ -78,7 +77,7 @@ func TestCloneConfirmationVM_RendersURLAndName(t *testing.T) {
 }
 
 func TestCloneConfirmationVM_URLOnly(t *testing.T) {
-	m := makeCloneConfirmModel(&cmd.CloneOptions{
+	m := makeCloneConfirmModel(&CloneOpts{
 		URL: "git@github.com:user/repo.git",
 	})
 	vm := m.cloneConfirmationVM()
@@ -125,7 +124,7 @@ func TestUpdateCloneConfirm_BackReturnsToInput(t *testing.T) {
 }
 
 func TestUpdateCloneConfirm_BackQuitsWhenLaunchedDirectly(t *testing.T) {
-	m := makeCloneConfirmModel(&cmd.CloneOptions{URL: "git@github.com:user/repo.git"})
+	m := makeCloneConfirmModel(&CloneOpts{URL: "git@github.com:user/repo.git"})
 
 	_, c := m.updateCloneConfirm(ConfirmBackMsg{})
 	if c == nil {
@@ -178,7 +177,7 @@ func TestViewCloneConfirm_RendersContent(t *testing.T) {
 }
 
 func TestCloneConfirm_UpdateDispatch(t *testing.T) {
-	m := makeCloneConfirmModel(&cmd.CloneOptions{URL: "git@github.com:user/repo.git"})
+	m := makeCloneConfirmModel(&CloneOpts{URL: "git@github.com:user/repo.git"})
 
 	updated, _ := m.Update(tea.WindowSizeMsg{Width: 100, Height: 30})
 	result := updated.(Model)
@@ -189,7 +188,7 @@ func TestCloneConfirm_UpdateDispatch(t *testing.T) {
 }
 
 func TestCloneConfirm_ViewDispatch(t *testing.T) {
-	m := makeCloneConfirmModel(&cmd.CloneOptions{URL: "git@github.com:user/repo.git"})
+	m := makeCloneConfirmModel(&CloneOpts{URL: "git@github.com:user/repo.git"})
 
 	output := m.View()
 
