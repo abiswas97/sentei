@@ -62,15 +62,7 @@ func buildRegistry() *cli.Registry {
 			return cmd.ParseCloneFlags(args)
 		},
 		RunCLI: func(args []string) error {
-			opts, err := cmd.ParseCloneFlags(args)
-			if err != nil {
-				return err
-			}
-			if err := cmd.ValidateCloneForNonInteractive(opts); err != nil {
-				return err
-			}
-			cmd.RunClone(args)
-			return nil
+			return cmd.RunClone(args)
 		},
 	})
 
