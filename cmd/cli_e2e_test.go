@@ -212,6 +212,132 @@ func TestCreateNonInteractive_MissingBranch(t *testing.T) {
 	}
 }
 
+func TestMigrateNonInteractive_DestructiveWithoutForce(t *testing.T) {
+	bin := buildBinary(t)
+
+	cmd := exec.Command(bin, "migrate", "--non-interactive")
+	out, err := cmd.CombinedOutput()
+	if err == nil {
+		t.Fatal("expected non-zero exit for destructive without --force")
+	}
+
+	output := string(out)
+	if !strings.Contains(output, "destructive operation requires --force") {
+		t.Errorf("expected '--force required' error, got:\n%s", output)
+	}
+}
+
+func TestMigrateNonInteractive_Success(t *testing.T) {
+	bin := buildBinary(t)
+
+	// Create a non-bare repo with a commit (migrate converts non-bare to bare).
+	repoDir := filepath.Join(t.TempDir(), "myrepo")
+	runGitCmd(t, t.TempDir(), "init", repoDir)
+	runGitCmd(t, repoDir, "config", "user.email", "test@test.com")
+	runGitCmd(t, repoDir, "config", "user.name", "Test")
+
+	// Need an initial commit so there's a branch to detect.
+	if err := os.WriteFile(filepath.Join(repoDir, "README.md"), []byte("# test\n"), 0644); err != nil {
+		t.Fatalf("failed to write file: %v", err)
+	}
+	runGitCmd(t, repoDir, "add", ".")
+	runGitCmd(t, repoDir, "commit", "-m", "initial commit")
+
+	cmd := exec.Command(bin, "migrate", "--force", "--non-interactive", repoDir)
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("sentei migrate --force --non-interactive failed: %v\n%s", err, out)
+	}
+
+	output := string(out)
+	if !strings.Contains(output, "Migration complete") {
+		t.Errorf("expected 'Migration complete' in output, got:\n%s", output)
+	}
+
+	// Verify .bare directory exists (confirms migration happened).
+	barePath := filepath.Join(repoDir, ".bare")
+	if _, err := os.Stat(barePath); os.IsNotExist(err) {
+		t.Errorf("expected .bare directory at %s", barePath)
+	}
+}
+
+func setupBareRepoWithMergedBranch(t *testing.T) string {
+	t.Helper()
+	bareRepo := setupBareRepo(t)
+	tmpDir := filepath.Dir(bareRepo)
+	cloneDir := filepath.Join(tmpDir, "clone2")
+
+	runGitCmd(t, tmpDir, "clone", bareRepo, cloneDir)
+	runGitCmd(t, cloneDir, "config", "user.email", "test@test.com")
+	runGitCmd(t, cloneDir, "config", "user.name", "Test")
+
+	// Create a feature branch, add a commit, push it.
+	runGitCmd(t, cloneDir, "checkout", "-b", "feature/merged-branch")
+	if err := os.WriteFile(filepath.Join(cloneDir, "feature.txt"), []byte("feature\n"), 0644); err != nil {
+		t.Fatalf("failed to write file: %v", err)
+	}
+	runGitCmd(t, cloneDir, "add", ".")
+	runGitCmd(t, cloneDir, "commit", "-m", "feature commit")
+	runGitCmd(t, cloneDir, "push", "origin", "feature/merged-branch")
+
+	// Merge the feature branch into main.
+	runGitCmd(t, cloneDir, "checkout", "main")
+	runGitCmd(t, cloneDir, "merge", "feature/merged-branch")
+	runGitCmd(t, cloneDir, "push", "origin", "main")
+
+	// Create a worktree in the bare repo for the merged branch.
+	wtPath := filepath.Join(bareRepo, "feature-merged-branch")
+	runGitCmd(t, bareRepo, "worktree", "add", wtPath, "feature/merged-branch")
+
+	return bareRepo
+}
+
+func TestRemoveNonInteractive_MergedBranch(t *testing.T) {
+	bin := buildBinary(t)
+	bareRepo := setupBareRepoWithMergedBranch(t)
+
+	cmd := exec.Command(bin, "remove", "--merged", "--force", "--non-interactive", bareRepo)
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("sentei remove --merged --force --non-interactive failed: %v\n%s", err, out)
+	}
+
+	output := string(out)
+	if !strings.Contains(output, "Removed") {
+		t.Errorf("expected 'Removed' in output, got:\n%s", output)
+	}
+}
+
+func TestRemoveNonInteractive_DestructiveWithoutForce(t *testing.T) {
+	bin := buildBinary(t)
+
+	cmd := exec.Command(bin, "remove", "--merged", "--non-interactive")
+	out, err := cmd.CombinedOutput()
+	if err == nil {
+		t.Fatal("expected non-zero exit for destructive without --force")
+	}
+
+	output := string(out)
+	if !strings.Contains(output, "destructive operation requires --force") {
+		t.Errorf("expected '--force required' error, got:\n%s", output)
+	}
+}
+
+func TestRemoveNonInteractive_NoFilters(t *testing.T) {
+	bin := buildBinary(t)
+
+	cmd := exec.Command(bin, "remove", "--force", "--non-interactive")
+	out, err := cmd.CombinedOutput()
+	if err == nil {
+		t.Fatal("expected non-zero exit for no filters")
+	}
+
+	output := string(out)
+	if !strings.Contains(output, "at least one filter") {
+		t.Errorf("expected 'at least one filter' error, got:\n%s", output)
+	}
+}
+
 func TestIntegrationsCLI(t *testing.T) {
 	bin := buildBinary(t)
 
