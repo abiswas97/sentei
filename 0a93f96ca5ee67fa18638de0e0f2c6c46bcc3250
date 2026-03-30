@@ -1,0 +1,81 @@
+openspec/specs/tui-progress/spec.md
+  4a3693f6355ed8c0 1-4
+openspec/changes/cli-tui-handoff/specs/worktree-deletion/spec.md
+  4a3693f6355ed8c0 1-28
+openspec/changes/cli-tui-handoff/specs/confirmation-view/spec.md
+  4a3693f6355ed8c0 1-46
+openspec/changes/cli-tui-handoff/.openspec.yaml
+  4a3693f6355ed8c0 1
+openspec/changes/cli-tui-handoff/specs/tui-list-view/spec.md
+  4a3693f6355ed8c0 1-39
+openspec/config.yaml
+  4a3693f6355ed8c0 1,4,13-14,26-28,31-32,34-38
+openspec/specs/dry-run/spec.md
+  4a3693f6355ed8c0 1-4
+openspec/specs/tui-confirmation/spec.md
+  4a3693f6355ed8c0 1-4
+openspec/specs/worktree-deletion/spec.md
+  4a3693f6355ed8c0 1-4
+openspec/specs/worktree-discovery/spec.md
+  4a3693f6355ed8c0 1-5
+openspec/specs/ci-pipeline/spec.md
+  4a3693f6355ed8c0 1-4
+openspec/specs/worktree-prune/spec.md
+  4a3693f6355ed8c0 1-4
+openspec/specs/tui-list-view/spec.md
+  4a3693f6355ed8c0 1-4
+openspec/specs/developer-workflow/spec.md
+  4a3693f6355ed8c0 1-4
+openspec/specs/worktree-sorting/spec.md
+  4a3693f6355ed8c0 1-4
+openspec/specs/version-flag/spec.md
+  4a3693f6355ed8c0 1-5
+openspec/specs/branch-protection/spec.md
+  4a3693f6355ed8c0 1-5
+openspec/specs/commit-enforcement/spec.md
+  4a3693f6355ed8c0 1-4
+openspec/specs/readme/spec.md
+  4a3693f6355ed8c0 1-5
+openspec/changes/cli-tui-handoff/specs/cli-tui-handoff/spec.md
+  4a3693f6355ed8c0 1-87
+openspec/specs/playground-setup/spec.md
+  4a3693f6355ed8c0 1-4
+openspec/changes/cli-tui-handoff/tasks.md
+  4a3693f6355ed8c0 1-95
+openspec/changes/cli-tui-handoff/specs/tui-confirmation/spec.md
+  4a3693f6355ed8c0 1-26
+openspec/changes/cli-tui-handoff/specs/dry-run/spec.md
+  4a3693f6355ed8c0 1-24
+openspec/specs/worktree-enrichment/spec.md
+  4a3693f6355ed8c0 1-5
+openspec/changes/cli-tui-handoff/design.md
+  4a3693f6355ed8c0 1-132
+openspec/specs/automated-releases/spec.md
+  4a3693f6355ed8c0 1-4
+openspec/changes/cli-tui-handoff/specs/filter-flags/spec.md
+  4a3693f6355ed8c0 1-68
+openspec/specs/worktree-filtering/spec.md
+  4a3693f6355ed8c0 1-4
+openspec/changes/cli-tui-handoff/proposal.md
+  4a3693f6355ed8c0 1-35
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.22",
+  "base_commit_sha": "0a93f96ca5ee67fa18638de0e0f2c6c46bcc3250",
+  "prompts": {
+    "4a3693f6355ed8c0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a9b374a7-9e9c-4fd6-8010-99b0fee4726d",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>",
+      "messages": [],
+      "total_additions": 1167,
+      "total_deletions": 41,
+      "accepted_lines": 1160,
+      "overriden_lines": 0
+    }
+  }
+}
