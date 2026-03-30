@@ -20,38 +20,38 @@
 
 - [x] 3.1 Define `CleanupOptions` struct (Mode, Force, DryRun) if not already present; add `ParseFlags` function
 - [x] 3.2 Register cleanup as a decision command in the registry
-- [ ] 3.3 Add cleanup confirmation view: display mode, force, dry-run settings with CLI command echo (deferred: cleanup has no TUI flow yet)
-- [ ] 3.4 Implement TUI entry: no flags → full flow, partial flags → enter at first missing, all flags → confirmation view (deferred: cleanup has no TUI flow yet)
+- [x] 3.3 Add cleanup confirmation view: display mode, force, dry-run settings with CLI command echo
+- [x] 3.4 Implement TUI entry: no flags → full flow, partial flags → enter at first missing, all flags → confirmation view
 - [x] 3.5 Implement `--non-interactive` path: parse flags → validate required (mode) → execute → print results to stdout
 - [x] 3.6 Unit tests for cleanup flag parsing, option validation, missing flag errors
-- [ ] 3.7 teatest E2E: launch cleanup TUI with no flags, navigate full flow, verify screens (deferred: cleanup has no TUI flow yet)
-- [ ] 3.8 teatest E2E: launch cleanup TUI with `--mode safe`, verify enters at confirmation view (deferred: cleanup has no TUI flow yet)
+- [x] 3.7 teatest E2E: launch cleanup TUI with no flags, navigate full flow, verify screens
+- [x] 3.8 teatest E2E: launch cleanup TUI with `--mode safe`, verify enters at confirmation view
 - [x] 3.9 Binary E2E: `sentei cleanup --mode safe --non-interactive` against real bare repo, verify stdout output
 - [x] 3.10 Binary E2E: `sentei cleanup --non-interactive` (missing --mode), verify error message and exit code 1
 
 ## 4. Phase 2 — Create Worktree Command
 
-- [ ] 4.1 Extract `CreateOptions` struct from TUI state (Branch, Base, Ecosystems, MergeBase, CopyEnvFiles)
-- [ ] 4.2 Add `ParseFlags` for create command flags (--branch, --base, --ecosystems, --merge-base, --copy-env)
-- [ ] 4.3 Register create as a decision command in the registry
+- [x] 4.1 Extract `CreateOptions` struct from TUI state (Branch, Base, Ecosystems, MergeBase, CopyEnvFiles)
+- [x] 4.2 Add `ParseFlags` for create command flags (--branch, --base, --ecosystems, --merge-base, --copy-env)
+- [x] 4.3 Register create as a decision command in the registry
 - [ ] 4.4 Refactor create flow to determine entry screen based on which options are populated
 - [ ] 4.5 Add create confirmation view using the shared component
-- [ ] 4.6 Implement `--non-interactive` path: parse flags → validate (branch + base required) → execute → print results
-- [ ] 4.7 Unit tests for create flag parsing, option validation, screen-skip logic
+- [x] 4.6 Implement `--non-interactive` path: parse flags → validate (branch + base required) → execute → print results
+- [x] 4.7 Unit tests for create flag parsing, option validation, screen-skip logic
 - [ ] 4.8 teatest E2E: `sentei create --branch foo` → verify enters at base selection step
 - [ ] 4.9 teatest E2E: `sentei create --branch foo --base main` → verify enters at confirmation view
-- [ ] 4.10 Binary E2E: `sentei create --branch foo --base main --non-interactive` against real bare repo
+- [x] 4.10 Binary E2E: `sentei create --branch foo --base main --non-interactive` against real bare repo
 
 ## 5. Phase 3 — Clone Command
 
-- [ ] 5.1 Define `CloneOptions` struct (URL, Name) with `ParseFlags`
-- [ ] 5.2 Register clone as a decision command in the registry
+- [x] 5.1 Define `CloneOptions` struct (URL, Name) with `ParseFlags`
+- [x] 5.2 Register clone as a decision command in the registry
 - [ ] 5.3 Add clone confirmation view using the shared component
 - [ ] 5.4 Implement TUI entry: no flags → full flow, --url → enter at name step, all flags → confirmation
-- [ ] 5.5 Implement `--non-interactive` path: parse flags → validate (url required) → execute → print results
-- [ ] 5.6 Unit tests for clone flag parsing
+- [x] 5.5 Implement `--non-interactive` path: parse flags → validate (url required) → execute → print results
+- [x] 5.6 Unit tests for clone flag parsing
 - [ ] 5.7 teatest E2E: `sentei clone --url <url>` → verify enters at name step
-- [ ] 5.8 Binary E2E: `sentei clone --url <url> --name myrepo --non-interactive` → verify clone executes
+- [x] 5.8 Binary E2E: `sentei clone --url <url> --name myrepo --non-interactive` → verify clone executes
 
 ## 6. Phase 4 — Remove Command with Filter Flags
 
