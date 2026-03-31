@@ -1,0 +1,27 @@
+internal/cleanup/refs_test.go
+  f2534d24a032860f 35,53-85,88
+internal/cleanup/cleanup_test.go
+  f2534d24a032860f 90
+internal/cleanup/refs.go
+  f2534d24a032860f 13-21,46-54
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.22",
+  "base_commit_sha": "d292e836fcfdfa0d3283b2cbcce11b581914f6fd",
+  "prompts": {
+    "f2534d24a032860f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "cb8591af-0f5b-4e2c-ba06-4bf22a795b19",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>",
+      "messages": [],
+      "total_additions": 54,
+      "total_deletions": 0,
+      "accepted_lines": 513,
+      "overriden_lines": 0
+    }
+  }
+}
