@@ -1,0 +1,90 @@
+internal/repo/repo.go
+  8a68b1169cb405a2 92-95
+internal/repo/repo_test.go
+  8a68b1169cb405a2 123-130,137
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.22",
+  "base_commit_sha": "c04a4d4100644319167e2f2e31db0e00ae54f437",
+  "prompts": {
+    "08d601d7d3abe07d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "476861dc-1c2d-489d-b6d7-e64dcac051f6",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>",
+      "messages": [],
+      "total_additions": 2023,
+      "total_deletions": 802,
+      "accepted_lines": 1813,
+      "overriden_lines": 0
+    },
+    "5fb1413eac01f67f": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019d4308-201b-73b3-9951-41529ac6de4d",
+        "model": "gpt-5.4"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>",
+      "messages": [],
+      "total_additions": 2,
+      "total_deletions": 8,
+      "accepted_lines": 0,
+      "overriden_lines": 0
+    },
+    "7dbd4d6b69a44fb3": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019d42fe-8837-7bb0-a4f7-417fb1fa18d4",
+        "model": "gpt-5.4"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>",
+      "messages": [],
+      "total_additions": 188,
+      "total_deletions": 16,
+      "accepted_lines": 10,
+      "overriden_lines": 0
+    },
+    "8a68b1169cb405a2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "130c770c-ce04-4bfe-a06a-832e745e53c3",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>",
+      "messages": [],
+      "total_additions": 22,
+      "total_deletions": 11,
+      "accepted_lines": 15,
+      "overriden_lines": 0
+    },
+    "c3ddc7354df5bddf": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019d42f7-c759-7971-a4f1-c9fa5efae017",
+        "model": "gpt-5.4"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>",
+      "messages": [],
+      "total_additions": 31,
+      "total_deletions": 12,
+      "accepted_lines": 29,
+      "overriden_lines": 0
+    },
+    "c51816207c4c24e5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c45565c0-41bb-40a7-b10f-7a9279d1b68c",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>",
+      "messages": [],
+      "total_additions": 1359,
+      "total_deletions": 0,
+      "accepted_lines": 1307,
+      "overriden_lines": 2
+    }
+  }
+}
