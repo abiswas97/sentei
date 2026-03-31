@@ -82,12 +82,11 @@ func (m Model) updateRepoProgress(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case repoDoneMsg:
 		m.repo.result = msg.result
 		m.stateStale = true
+		targetView := repoSummaryView
 		if m.repo.opType == "migrate" {
-			m.view = migrateSummaryView
-		} else {
-			m.view = repoSummaryView
+			targetView = migrateSummaryView
 		}
-		return m, nil
+		return m.holdOrAdvance(targetView)
 	}
 	return m, nil
 }
