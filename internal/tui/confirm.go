@@ -23,7 +23,7 @@ func unlockLockedWorktrees(runner git.CommandRunner, repoPath string, worktrees 
 	for _, wt := range worktrees {
 		if wt.IsLocked {
 			if err := worktree.UnlockWorktree(runner, repoPath, wt.Path); err != nil {
-				fmt.Fprintf(os.Stderr, "[testing] warning: failed to unlock %s: %v\n", wt.Path, err)
+				fmt.Fprintf(os.Stderr, "Warning: failed to unlock %s: %v\n", wt.Path, err)
 			}
 		}
 	}
