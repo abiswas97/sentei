@@ -1,0 +1,27 @@
+cmd/remove_filter.go
+  f2534d24a032860f 17-18,29
+cmd/remove.go
+  f2534d24a032860f 55,63-68
+cmd/remove_flags_test.go
+  f2534d24a032860f 307,309,311,315-318,320-322,324-328
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.22",
+  "base_commit_sha": "01a42b230d9cd1ed9d6fa0fe7046b83eaa4cbf62",
+  "prompts": {
+    "f2534d24a032860f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "cb8591af-0f5b-4e2c-ba06-4bf22a795b19",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>",
+      "messages": [],
+      "total_additions": 30,
+      "total_deletions": 11,
+      "accepted_lines": 488,
+      "overriden_lines": 0
+    }
+  }
+}
