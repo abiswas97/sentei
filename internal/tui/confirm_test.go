@@ -10,6 +10,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/abiswas97/sentei/internal/git"
+	"github.com/abiswas97/sentei/internal/playground"
 	"github.com/abiswas97/sentei/internal/worktree"
 )
 
@@ -147,6 +148,70 @@ func TestConfirmDeletion_UnlocksLockedWorktrees(t *testing.T) {
 	out, _ := exec.Command("git", "-C", repoPath, "worktree", "list", "--porcelain").CombinedOutput()
 	if strings.Contains(string(out), "locked-branch") {
 		t.Error("locked worktree should not appear in git worktree list after deletion and prune")
+	}
+
+	_ = model // silence unused variable warning
+}
+
+func TestPlayground_DeleteAll_IncludesLockedWorktree(t *testing.T) {
+	repoPath, cleanup, err := playground.Setup()
+	if err != nil {
+		t.Fatalf("playground setup: %v", err)
+	}
+	defer cleanup()
+
+	runner := &git.GitRunner{}
+	worktrees, err := git.ListWorktrees(runner, repoPath)
+	if err != nil {
+		t.Fatalf("ListWorktrees: %v", err)
+	}
+	worktrees = worktree.EnrichWorktrees(runner, worktrees, 5)
+
+	// Verify there's exactly one locked worktree
+	var lockedCount int
+	var lockedPath string
+	for _, wt := range worktrees {
+		if wt.IsLocked {
+			lockedCount++
+			lockedPath = wt.Path
+		}
+	}
+	if lockedCount != 1 {
+		t.Fatalf("expected 1 locked worktree, got %d", lockedCount)
+	}
+
+	m := NewModel(worktrees, runner, repoPath)
+	// Select all non-bare, non-protected worktrees (including locked)
+	for _, wt := range worktrees {
+		if !wt.IsBare && !git.IsProtectedBranch(wt.Branch) {
+			m.remove.selected[wt.Path] = true
+		}
+	}
+	m.view = confirmView
+
+	// Confirm deletion
+	model, cmd := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'y'}})
+	for cmd != nil {
+		msg := cmd()
+		if msg == nil {
+			break
+		}
+		model, cmd = model.Update(msg)
+	}
+
+	// After deletion + prune, re-list worktrees
+	remaining, err := git.ListWorktrees(runner, repoPath)
+	if err != nil {
+		t.Fatalf("ListWorktrees after delete: %v", err)
+	}
+
+	for _, wt := range remaining {
+		if wt.Path == lockedPath {
+			t.Errorf("locked worktree %s should have been removed but still appears in git worktree list", lockedPath)
+		}
+		if wt.IsLocked {
+			t.Errorf("no locked worktrees should remain, found: %s", wt.Path)
+		}
 	}
 
 	_ = model // silence unused variable warning
