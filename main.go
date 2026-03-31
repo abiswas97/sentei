@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -27,8 +26,6 @@ var (
 	commit  = "none"
 	date    = "unknown"
 )
-
-const playgroundDelay = 800 * time.Millisecond
 
 func buildRegistry() *cli.Registry {
 	r := cli.NewRegistry()
@@ -340,12 +337,7 @@ func runRoot(args []string) {
 		}
 	}
 
-	var tuiRunner git.CommandRunner = runner
-	if *playgroundFlag {
-		tuiRunner = &git.DelayRunner{Inner: runner, Delay: playgroundDelay}
-	}
-
-	model := tui.NewMenuModel(tuiRunner, shell, repoPath, cfg, context)
+	model := tui.NewMenuModel(runner, shell, repoPath, cfg, context)
 	p := tea.NewProgram(model, tea.WithAltScreen())
 
 	if _, err := p.Run(); err != nil {
