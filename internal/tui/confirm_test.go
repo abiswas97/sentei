@@ -1,10 +1,16 @@
 package tui
 
 import (
+	"os"
+	"os/exec"
+	"path/filepath"
 	"strings"
 	"testing"
 
+	tea "github.com/charmbracelet/bubbletea"
+
 	"github.com/abiswas97/sentei/internal/git"
+	"github.com/abiswas97/sentei/internal/worktree"
 )
 
 func TestViewConfirm_CleanWorktrees(t *testing.T) {
@@ -78,4 +84,70 @@ func TestViewConfirm_UntrackedFiles(t *testing.T) {
 	if !strings.Contains(output, "untracked files") {
 		t.Error("should warn about untracked files")
 	}
+}
+
+func TestConfirmDeletion_UnlocksLockedWorktrees(t *testing.T) {
+	tmp := t.TempDir()
+
+	run := func(dir string, args ...string) {
+		t.Helper()
+		cmd := exec.Command("git", args...)
+		cmd.Dir = dir
+		out, err := cmd.CombinedOutput()
+		if err != nil {
+			t.Fatalf("git %v: %s", args, out)
+		}
+	}
+
+	repoPath := filepath.Join(tmp, "repo")
+	run(tmp, "init", "--bare", "--initial-branch=main", repoPath)
+	seed := filepath.Join(tmp, "_seed")
+	run(tmp, "clone", repoPath, seed)
+	run(seed, "commit", "--allow-empty", "-m", "init")
+	run(seed, "push", "origin", "main")
+
+	wtPath := filepath.Join(tmp, "locked-wt")
+	run(repoPath, "worktree", "add", "-b", "locked-branch", wtPath)
+	run(repoPath, "worktree", "lock", wtPath)
+
+	runner := &git.GitRunner{}
+	worktrees, err := git.ListWorktrees(runner, repoPath)
+	if err != nil {
+		t.Fatalf("ListWorktrees: %v", err)
+	}
+	worktrees = worktree.EnrichWorktrees(runner, worktrees, 1)
+
+	m := NewModel(worktrees, runner, repoPath)
+	// Select only the locked worktree
+	for _, wt := range worktrees {
+		if wt.IsLocked {
+			m.remove.selected[wt.Path] = true
+		}
+	}
+	m.view = confirmView
+
+	// Send 'y' to confirm
+	model, cmd := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'y'}})
+
+	// Pump all commands until no more
+	for cmd != nil {
+		msg := cmd()
+		if msg == nil {
+			break
+		}
+		model, cmd = model.Update(msg)
+	}
+
+	// Verify: directory should be gone
+	if _, err := os.Stat(wtPath); !os.IsNotExist(err) {
+		t.Error("locked worktree directory should have been removed")
+	}
+
+	// Verify: git worktree list should not show the locked worktree
+	out, _ := exec.Command("git", "-C", repoPath, "worktree", "list", "--porcelain").CombinedOutput()
+	if strings.Contains(string(out), "locked-branch") {
+		t.Error("locked worktree should not appear in git worktree list after deletion and prune")
+	}
+
+	_ = model // silence unused variable warning
 }
