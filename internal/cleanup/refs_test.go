@@ -32,6 +32,7 @@ func TestPruneRemoteRefs(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			runner := &mockRunner{responses: map[string]mockResponse{
+				"/repo:[remote]":                        {output: "origin"},
 				"/repo:[remote prune origin --dry-run]": {output: tt.pruneOutput},
 				"/repo:[fetch --prune origin]":          {output: ""},
 			}}
@@ -49,8 +50,42 @@ func TestPruneRemoteRefs(t *testing.T) {
 	}
 }
 
+func TestPruneRemoteRefs_NoRemotes(t *testing.T) {
+	tests := []struct {
+		name         string
+		remoteOutput string
+	}{
+		{name: "no remotes at all", remoteOutput: ""},
+		{name: "remote exists but not origin", remoteOutput: "upstream"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			runner := &mockRunner{responses: map[string]mockResponse{
+				"/repo:[remote]": {output: tt.remoteOutput},
+			}}
+			events := collectEvents(t)
+
+			count, err := PruneRemoteRefs(runner, "/repo", Options{}, events.emit)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if count != 0 {
+				t.Errorf("count = %d, want 0", count)
+			}
+
+			for _, call := range runner.calls {
+				if call == "/repo:[remote prune origin --dry-run]" {
+					t.Error("should not call remote prune when origin doesn't exist")
+				}
+			}
+		})
+	}
+}
+
 func TestPruneRemoteRefs_DryRunDoesNotFetch(t *testing.T) {
 	runner := &mockRunner{responses: map[string]mockResponse{
+		"/repo:[remote]":                        {output: "origin"},
 		"/repo:[remote prune origin --dry-run]": {output: " * [would prune] origin/old"},
 	}}
 	opts := Options{DryRun: true}
