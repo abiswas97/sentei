@@ -17,6 +17,10 @@ import (
 	"github.com/abiswas97/sentei/internal/worktree"
 )
 
+// progressHoldExpiredMsg fires when the minimum progress view duration has elapsed.
+// The token must match model.progressToken to guard against stale messages.
+type progressHoldExpiredMsg struct{ token int }
+
 type viewState int
 
 const (
@@ -229,9 +233,9 @@ type Model struct {
 
 	// Progress hold state — used to enforce minimum visible duration for progress views.
 	minProgressDuration time.Duration // 0 = no hold; set via WithMinProgressDuration
-	progressStartedAt   time.Time     //nolint:unused // set when entering any progress view
-	progressToken       int           //nolint:unused // bumped on each entry; guards stale timers
-	progressTargetView  viewState     //nolint:unused // where to transition when hold expires
+	progressStartedAt   time.Time     // set when entering any progress view
+	progressToken       int           // bumped on each entry; guards stale timers
+	progressTargetView  viewState     // where to transition when hold expires
 }
 
 // ModelOption configures a Model at construction time.
@@ -363,6 +367,22 @@ func NewMenuModel(runner git.CommandRunner, shell git.ShellRunner, repoPath stri
 	return m
 }
 
+// holdOrAdvance either transitions to targetView immediately (if minProgressDuration
+// is zero or has already elapsed) or schedules a tea.Tick for the remaining time.
+// The caller must store all result state into the model before calling.
+func (m Model) holdOrAdvance(targetView viewState) (tea.Model, tea.Cmd) {
+	m.progressTargetView = targetView
+	if m.minProgressDuration == 0 || time.Since(m.progressStartedAt) >= m.minProgressDuration {
+		m.view = targetView
+		return m, nil
+	}
+	remaining := m.minProgressDuration - time.Since(m.progressStartedAt)
+	token := m.progressToken
+	return m, tea.Tick(remaining, func(time.Time) tea.Msg {
+		return progressHoldExpiredMsg{token: token}
+	})
+}
+
 // SetCleanupOpts sets the cleanup options and starts at the cleanup confirmation view.
 func (m *Model) SetCleanupOpts(opts *cleanup.Options) {
 	m.cleanupOpts = opts
@@ -403,6 +423,13 @@ func (m Model) Init() tea.Cmd {
 }
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	if holdMsg, ok := msg.(progressHoldExpiredMsg); ok {
+		if holdMsg.token == m.progressToken {
+			m.view = m.progressTargetView
+		}
+		return m, nil
+	}
+
 	switch m.view {
 	case menuView:
 		return m.updateMenu(msg)
