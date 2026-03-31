@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/abiswas97/sentei/internal/git"
+	"github.com/abiswas97/sentei/internal/repo"
 	"github.com/abiswas97/sentei/internal/worktree"
 )
 
@@ -165,5 +167,14 @@ func TestViewSummary_PruneFailure(t *testing.T) {
 	}
 	if !strings.Contains(output, "permission denied") {
 		t.Error("should include the prune error message")
+	}
+}
+
+func TestWithMinProgressDuration_SetsField(t *testing.T) {
+	m := NewMenuModel(nil, nil, "/repo", nil, repo.ContextNoRepo,
+		WithMinProgressDuration(500*time.Millisecond))
+
+	if m.minProgressDuration != 500*time.Millisecond {
+		t.Errorf("minProgressDuration = %v, want 500ms", m.minProgressDuration)
 	}
 }
