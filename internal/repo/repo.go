@@ -89,6 +89,10 @@ func ResolveBareRoot(runner git.CommandRunner, path string) string {
 	if !filepath.IsAbs(commonDir) {
 		commonDir = filepath.Join(path, commonDir)
 	}
+	// Already at the bare root (--git-common-dir returned ".")
+	if commonDir == path {
+		return path
+	}
 	// If commonDir is .bare, parent is the bare repo root
 	if filepath.Base(commonDir) == ".bare" {
 		return filepath.Dir(commonDir)
