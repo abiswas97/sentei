@@ -3,6 +3,7 @@ package tui
 import (
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
@@ -225,6 +226,24 @@ type Model struct {
 	create createState
 	repo   repoState
 	integ  integrationState
+
+	// Progress hold state — used to enforce minimum visible duration for progress views.
+	minProgressDuration time.Duration // 0 = no hold; set via WithMinProgressDuration
+	progressStartedAt   time.Time     //nolint:unused // set when entering any progress view
+	progressToken       int           //nolint:unused // bumped on each entry; guards stale timers
+	progressTargetView  viewState     //nolint:unused // where to transition when hold expires
+}
+
+// ModelOption configures a Model at construction time.
+type ModelOption func(*Model)
+
+// WithMinProgressDuration sets the minimum time any progress view stays
+// visible before the model auto-advances to the summary/result view.
+// Default is 0 (advance immediately). Set to ~1.5s in playground mode.
+func WithMinProgressDuration(d time.Duration) ModelOption {
+	return func(m *Model) {
+		m.minProgressDuration = d
+	}
 }
 
 func NewModel(worktrees []git.Worktree, runner git.CommandRunner, repoPath string) Model {
@@ -249,7 +268,7 @@ func NewModel(worktrees []git.Worktree, runner git.CommandRunner, repoPath strin
 	return m
 }
 
-func NewMenuModel(runner git.CommandRunner, shell git.ShellRunner, repoPath string, cfg *config.Config, context repo.RepoContext) Model {
+func NewMenuModel(runner git.CommandRunner, shell git.ShellRunner, repoPath string, cfg *config.Config, context repo.RepoContext, opts ...ModelOption) Model {
 	branchInput := textinput.New()
 	branchInput.Placeholder = "feature/my-branch"
 	branchInput.Focus()
@@ -335,6 +354,10 @@ func NewMenuModel(runner git.CommandRunner, shell git.ShellRunner, repoPath stri
 			staged:   make(map[string]bool),
 			detected: make(map[string]bool),
 		},
+	}
+
+	for _, opt := range opts {
+		opt(&m)
 	}
 
 	return m
