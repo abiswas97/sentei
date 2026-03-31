@@ -1,0 +1,77 @@
+internal/tui/confirm_test.go
+  f2534d24a032860f 4-6,10-11,13,88-153
+internal/tui/confirm.go
+  f2534d24a032860f 22-31,55-56
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.22",
+  "base_commit_sha": "f999344252ce42b70c3dee53a0a96fd676dbcee3",
+  "prompts": {
+    "57fb71956275760f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "3af1244c-a353-4bfb-a33b-9f0a379aeb4e",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>",
+      "messages": [],
+      "total_additions": 3,
+      "total_deletions": 3,
+      "accepted_lines": 2,
+      "overriden_lines": 0
+    },
+    "764a16f68cca6469": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ac54152b-b011-4656-a2ab-f030775dff6b",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>",
+      "messages": [],
+      "total_additions": 98,
+      "total_deletions": 21,
+      "accepted_lines": 93,
+      "overriden_lines": 0
+    },
+    "836686c23c36f641": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "3900c7b6-8b79-42a7-b749-c875614dd86f",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>",
+      "messages": [],
+      "total_additions": 754,
+      "total_deletions": 22,
+      "accepted_lines": 2,
+      "overriden_lines": 0
+    },
+    "8a68b1169cb405a2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "130c770c-ce04-4bfe-a06a-832e745e53c3",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>",
+      "messages": [],
+      "total_additions": 39,
+      "total_deletions": 0,
+      "accepted_lines": 3,
+      "overriden_lines": 0
+    },
+    "f2534d24a032860f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "cb8591af-0f5b-4e2c-ba06-4bf22a795b19",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>",
+      "messages": [],
+      "total_additions": 88,
+      "total_deletions": 4,
+      "accepted_lines": 543,
+      "overriden_lines": 0
+    }
+  }
+}
