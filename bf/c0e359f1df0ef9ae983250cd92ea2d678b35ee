@@ -1,0 +1,25 @@
+internal/tui/confirm.go
+  f2534d24a032860f 22-29,53-54,71
+internal/tui/confirm_test.go
+  f2534d24a032860f 4-6,10-11,13,88-153
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.22",
+  "base_commit_sha": "bfc0e359f1df0ef9ae983250cd92ea2d678b35ee",
+  "prompts": {
+    "f2534d24a032860f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "cb8591af-0f5b-4e2c-ba06-4bf22a795b19",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>",
+      "messages": [],
+      "total_additions": 83,
+      "total_deletions": 0,
+      "accepted_lines": 542,
+      "overriden_lines": 0
+    }
+  }
+}
