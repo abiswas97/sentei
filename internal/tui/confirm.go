@@ -19,6 +19,16 @@ type teardownCompleteMsg struct {
 	results []creator.StepResult
 }
 
+func unlockLockedWorktrees(runner git.CommandRunner, repoPath string, worktrees []git.Worktree) {
+	for _, wt := range worktrees {
+		if wt.IsLocked {
+			if err := worktree.UnlockWorktree(runner, repoPath, wt.Path); err != nil {
+				fmt.Fprintf(os.Stderr, "[testing] warning: failed to unlock %s: %v\n", wt.Path, err)
+			}
+		}
+	}
+}
+
 func (m Model) updateConfirm(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
@@ -41,6 +51,8 @@ func (m Model) updateConfirm(msg tea.Msg) (tea.Model, tea.Cmd) {
 					break
 				}
 			}
+
+			unlockLockedWorktrees(m.runner, m.repoPath, selected)
 
 			if hasTeardown {
 				return m, m.runTeardownPhase(selected, integrations)
