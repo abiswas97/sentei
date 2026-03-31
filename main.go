@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -337,7 +338,11 @@ func runRoot(args []string) {
 		}
 	}
 
-	model := tui.NewMenuModel(runner, shell, repoPath, cfg, context)
+	var menuOpts []tui.ModelOption
+	if *playgroundFlag {
+		menuOpts = append(menuOpts, tui.WithMinProgressDuration(1500*time.Millisecond))
+	}
+	model := tui.NewMenuModel(runner, shell, repoPath, cfg, context, menuOpts...)
 	p := tea.NewProgram(model, tea.WithAltScreen())
 
 	if _, err := p.Run(); err != nil {
