@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
@@ -23,6 +24,8 @@ func (m Model) updateConfirm(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		switch {
 		case key.Matches(msg, keys.Yes):
+			m.progressStartedAt = time.Now()
+			m.progressToken++
 			m.view = progressView
 			selected := m.selectedWorktrees()
 			m.remove.deletionTotal = len(selected)

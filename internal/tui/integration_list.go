@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
@@ -206,6 +207,8 @@ func (m Model) updateIntegrationList(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.integrationHasPendingChanges() {
 				m.integ.events = nil
 				m.integ.returnView = integrationListView
+				m.progressStartedAt = time.Now()
+				m.progressToken++
 				m.view = integrationProgressView
 				updated, cmd := m.startIntegrationApply()
 				return updated, cmd

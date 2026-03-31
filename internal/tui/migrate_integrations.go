@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
@@ -85,6 +86,8 @@ func (m Model) updateMigrateIntegrations(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if hasStagedSelections {
 				m.integ.events = nil
 				m.integ.returnView = migrateNextView
+				m.progressStartedAt = time.Now()
+				m.progressToken++
 				m.view = integrationProgressView
 				updated, cmd := m.startMigrateIntegrationApply()
 				return updated, cmd
