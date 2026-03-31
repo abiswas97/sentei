@@ -1,0 +1,25 @@
+internal/worktree/deleter.go
+  f2534d24a032860f 5,42-49
+internal/worktree/deleter_test.go
+  f2534d24a032860f 6-8,247-334
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.22",
+  "base_commit_sha": "6df225b8801d2161adbf0c15ed77fda3b26a5a6e",
+  "prompts": {
+    "f2534d24a032860f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "cb8591af-0f5b-4e2c-ba06-4bf22a795b19",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>",
+      "messages": [],
+      "total_additions": 562,
+      "total_deletions": 3,
+      "accepted_lines": 559,
+      "overriden_lines": 0
+    }
+  }
+}
