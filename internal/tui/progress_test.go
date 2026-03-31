@@ -248,6 +248,45 @@ func TestProgressHoldExpiredMsg_CorrectToken_Transitions(t *testing.T) {
 	}
 }
 
+func TestHoldCycle_CompletionHoldsUntilExpiry(t *testing.T) {
+	// Model just entered progressView with a 50ms hold.
+	m := NewModel([]git.Worktree{}, nil, "/repo")
+	m.view = progressView
+	m.minProgressDuration = 50 * time.Millisecond
+	m.progressStartedAt = time.Now()
+	m.progressToken = 1
+
+	// Operation completes immediately.
+	result, cmd := m.updateProgress(cleanupCompleteMsg{})
+	model := result.(Model)
+
+	// Should NOT have transitioned yet — min duration not elapsed.
+	if model.view == summaryView {
+		t.Fatal("should not transition to summaryView before min duration elapses")
+	}
+	if cmd == nil {
+		t.Fatal("expected a hold cmd (tea.Tick)")
+	}
+
+	// Execute the cmd — blocks for remaining hold time, returns progressHoldExpiredMsg.
+	msg := cmd()
+	holdMsg, ok := msg.(progressHoldExpiredMsg)
+	if !ok {
+		t.Fatalf("expected progressHoldExpiredMsg, got %T", msg)
+	}
+	if holdMsg.token != 1 {
+		t.Errorf("token = %d, want 1", holdMsg.token)
+	}
+
+	// Deliver the expired message.
+	result2, _ := model.Update(holdMsg)
+	model2 := result2.(Model)
+
+	if model2.view != summaryView {
+		t.Errorf("expected summaryView after hold expired, got %d", model2.view)
+	}
+}
+
 func TestProgressHoldExpiredMsg_StaleToken_Ignored(t *testing.T) {
 	m := NewModel([]git.Worktree{}, nil, "/repo")
 	m.view = progressView
