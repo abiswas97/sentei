@@ -304,17 +304,27 @@ func TestResolveFilters_ExcludesBareWorktrees(t *testing.T) {
 	}
 }
 
-func TestResolveFilters_ExcludesLockedWorktrees(t *testing.T) {
+func TestResolveFilters_IncludesLockedWorktrees(t *testing.T) {
 	worktrees := []git.Worktree{
+		{Path: "/bare", IsBare: true},
 		{Path: "/locked", Branch: "refs/heads/feature/locked", IsLocked: true},
-		{Path: "/feature", Branch: "refs/heads/feature/x"},
+		{Path: "/clean", Branch: "refs/heads/feature/clean"},
 	}
 	opts := &RemoveOptions{All: true}
 	result := ResolveFilters(worktrees, opts, nil, nil)
-	if len(result) != 1 {
-		t.Fatalf("expected 1 worktree, got %d", len(result))
+
+	paths := make(map[string]bool)
+	for _, wt := range result {
+		paths[wt.Path] = true
 	}
-	if result[0].Path != "/feature" {
-		t.Errorf("expected /feature, got %s", result[0].Path)
+
+	if !paths["/locked"] {
+		t.Error("locked worktree should be included in --all filter results")
+	}
+	if !paths["/clean"] {
+		t.Error("clean worktree should be included")
+	}
+	if paths["/bare"] {
+		t.Error("bare worktree should still be excluded")
 	}
 }
