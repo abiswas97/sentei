@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
@@ -134,6 +135,8 @@ func (m Model) updateRepoOptions(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.repo.events = nil
 			m.repo.result = nil
 			m.repo.opType = "create"
+			m.progressStartedAt = time.Now()
+			m.progressToken++
 			m.view = repoProgressView
 			return m, m.startRepoPipeline(opts)
 		}

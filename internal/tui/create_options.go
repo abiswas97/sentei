@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
@@ -115,6 +116,8 @@ func (m Model) updateCreateOptions(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		case key.Matches(msg, keys.Confirm):
 			m.startCreation()
+			m.progressStartedAt = time.Now()
+			m.progressToken++
 			m.view = createProgressView
 			return m, m.waitForCreateEvent()
 		}

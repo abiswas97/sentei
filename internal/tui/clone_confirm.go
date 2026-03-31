@@ -1,6 +1,8 @@
 package tui
 
 import (
+	"time"
+
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/abiswas97/sentei/internal/cli"
@@ -70,6 +72,8 @@ func (m Model) updateCloneConfirm(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.repo.events = nil
 		m.repo.result = nil
 		m.repo.opType = "clone"
+		m.progressStartedAt = time.Now()
+		m.progressToken++
 		m.view = repoProgressView
 
 		cloneOpts := repo.CloneOptions{

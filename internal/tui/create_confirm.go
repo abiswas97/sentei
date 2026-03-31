@@ -2,6 +2,7 @@ package tui
 
 import (
 	"strings"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -113,6 +114,8 @@ func (m Model) updateCreateConfirm(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case ConfirmProceedMsg:
 		m.startCreation()
+		m.progressStartedAt = time.Now()
+		m.progressToken++
 		m.view = createProgressView
 		return m, m.waitForCreateEvent()
 
