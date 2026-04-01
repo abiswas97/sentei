@@ -42,7 +42,7 @@ The TUI SHALL consume deletion progress events using a Cmd-chaining pattern wher
 - **THEN** the wait Cmd SHALL return a completion message and the TUI SHALL transition to the summary view
 
 ### Requirement: Transition to summary after all deletions
-The TUI SHALL run `git worktree prune` via a Cmd after all deletions complete, then transition to the summary view with the prune result.
+The TUI SHALL run `git worktree prune` via a Cmd after all deletions complete, then run cleanup, then fire an eager worktree reload alongside the transition to summary view.
 
 #### Scenario: All deletions complete triggers prune
 - **WHEN** every selected worktree has either succeeded or failed
@@ -55,6 +55,10 @@ The TUI SHALL run `git worktree prune` via a Cmd after all deletions complete, t
 #### Scenario: Prune fails
 - **WHEN** the prune Cmd returns with an error
 - **THEN** the TUI SHALL store the error on the model and transition to the summary view
+
+#### Scenario: Cleanup complete fires eager reload
+- **WHEN** the cleanup Cmd completes (the final step before summary transition)
+- **THEN** the handler SHALL increment `worktreeGeneration`, fire `loadWorktreeContext` via `tea.Batch` alongside the `holdOrAdvance` command, and NOT set `stateStale`
 
 ### Requirement: Post-deletion summary
 The TUI SHALL display a summary showing the count of successfully removed worktrees, the count of failures, details for any failures, and the prune result.
