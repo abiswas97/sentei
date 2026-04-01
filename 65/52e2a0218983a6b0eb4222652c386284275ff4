@@ -1,0 +1,59 @@
+openspec/changes/eager-worktree-reload/specs/tui-progress/spec.md
+  c0c5d5001d9a038b 1-20
+openspec/changes/eager-worktree-reload/specs/eager-state-refresh/spec.md
+  c0c5d5001d9a038b 1-71
+openspec/changes/eager-worktree-reload/proposal.md
+  c0c5d5001d9a038b 1-33
+openspec/changes/eager-worktree-reload/tasks.md
+  c0c5d5001d9a038b 1-41
+openspec/changes/eager-worktree-reload/design.md
+  c0c5d5001d9a038b 1-70
+openspec/config.yaml
+  c0c5d5001d9a038b 1,31
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.23",
+  "base_commit_sha": "6552e2a0218983a6b0eb4222652c386284275ff4",
+  "prompts": {
+    "c0c5d5001d9a038b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ef84fa24-598a-4810-9c8e-a6e722c62f5f",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>",
+      "messages": [],
+      "total_additions": 253,
+      "total_deletions": 19,
+      "accepted_lines": 237,
+      "overriden_lines": 0
+    },
+    "f2534d24a032860f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "cb8591af-0f5b-4e2c-ba06-4bf22a795b19",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 459,
+      "overriden_lines": 0
+    },
+    "fd5af032502b054f": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019d440d-fb6f-7421-a6e1-c1eea1f204d4",
+        "model": "gpt-5.4"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 0,
+      "overriden_lines": 0
+    }
+  }
+}
