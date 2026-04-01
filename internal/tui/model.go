@@ -217,9 +217,9 @@ type Model struct {
 	width    int
 	height   int
 
-	menuItems  []menuItem
-	menuCursor int
-	stateStale bool // Set true after mutations; menu reloads on next render.
+	menuItems          []menuItem
+	menuCursor         int
+	worktreeGeneration uint64 // Monotonic token passed to loadWorktreeContext; global handler discards mismatched responses.
 
 	cleanupOpts *cleanup.Options
 	createOpts  *CreateOpts
@@ -322,15 +322,21 @@ func NewMenuModel(runner git.CommandRunner, shell git.ShellRunner, repoPath stri
 		}
 	}
 
+	var initGeneration uint64
+	if context == repo.ContextBareRepo {
+		initGeneration = 1
+	}
+
 	m := Model{
-		view:      menuView,
-		runner:    runner,
-		shell:     shell,
-		repoPath:  repoPath,
-		cfg:       cfg,
-		context:   context,
-		height:    20,
-		menuItems: items,
+		view:               menuView,
+		runner:             runner,
+		shell:              shell,
+		repoPath:           repoPath,
+		cfg:                cfg,
+		context:            context,
+		height:             20,
+		menuItems:          items,
+		worktreeGeneration: initGeneration,
 		remove: removeState{
 			selected:         make(map[string]bool),
 			sortField:        SortByAge,
@@ -417,7 +423,7 @@ func (m *Model) SetMigrateOpts(opts *MigrateOpts) {
 
 func (m Model) Init() tea.Cmd {
 	if m.view == menuView && m.context == repo.ContextBareRepo {
-		return loadWorktreeContext(m.runner, m.repoPath)
+		return loadWorktreeContext(m.runner, m.repoPath, m.worktreeGeneration)
 	}
 	return nil
 }
@@ -426,6 +432,15 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if holdMsg, ok := msg.(progressHoldExpiredMsg); ok {
 		if holdMsg.token == m.progressToken {
 			m.view = m.progressTargetView
+		}
+		return m, nil
+	}
+
+	if ctx, ok := msg.(worktreeContextMsg); ok {
+		if ctx.generation == m.worktreeGeneration && ctx.err == nil {
+			m.remove.worktrees = ctx.worktrees
+			m.reindex()
+			m.updateMenuHints()
 		}
 		return m, nil
 	}

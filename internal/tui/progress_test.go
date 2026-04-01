@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	tea "github.com/charmbracelet/bubbletea"
+
 	"github.com/abiswas97/sentei/internal/git"
 	"github.com/abiswas97/sentei/internal/repo"
 	"github.com/abiswas97/sentei/internal/worktree"
@@ -268,11 +270,29 @@ func TestHoldCycle_CompletionHoldsUntilExpiry(t *testing.T) {
 		t.Fatal("expected a hold cmd (tea.Tick)")
 	}
 
-	// Execute the cmd — blocks for remaining hold time, returns progressHoldExpiredMsg.
+	// Execute the cmd — returns a tea.BatchMsg containing the hold tick and reload.
 	msg := cmd()
-	holdMsg, ok := msg.(progressHoldExpiredMsg)
+	batch, ok := msg.(tea.BatchMsg)
 	if !ok {
-		t.Fatalf("expected progressHoldExpiredMsg, got %T", msg)
+		t.Fatalf("expected tea.BatchMsg, got %T", msg)
+	}
+
+	// Find the hold tick in the batch and execute it.
+	var holdMsg progressHoldExpiredMsg
+	found := false
+	for _, batchCmd := range batch {
+		if batchCmd == nil {
+			continue
+		}
+		batchMsg := batchCmd()
+		if hm, ok := batchMsg.(progressHoldExpiredMsg); ok {
+			holdMsg = hm
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatal("expected progressHoldExpiredMsg in batch")
 	}
 	if holdMsg.token != 1 {
 		t.Errorf("token = %d, want 1", holdMsg.token)
