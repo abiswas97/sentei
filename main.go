@@ -28,8 +28,6 @@ var (
 	date    = "unknown"
 )
 
-const playgroundDelay = 800 * time.Millisecond
-
 func buildRegistry() *cli.Registry {
 	r := cli.NewRegistry()
 
@@ -340,12 +338,11 @@ func runRoot(args []string) {
 		}
 	}
 
-	var tuiRunner git.CommandRunner = runner
+	var menuOpts []tui.ModelOption
 	if *playgroundFlag {
-		tuiRunner = &git.DelayRunner{Inner: runner, Delay: playgroundDelay}
+		menuOpts = append(menuOpts, tui.WithMinProgressDuration(1500*time.Millisecond))
 	}
-
-	model := tui.NewMenuModel(tuiRunner, shell, repoPath, cfg, context)
+	model := tui.NewMenuModel(runner, shell, repoPath, cfg, context, menuOpts...)
 	p := tea.NewProgram(model, tea.WithAltScreen())
 
 	if _, err := p.Run(); err != nil {

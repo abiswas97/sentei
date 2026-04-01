@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
@@ -75,6 +76,8 @@ func (m Model) updateCreateBranch(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.create.validationErr = ""
 			m.prepareCreateOptions()
 			m.startCreation()
+			m.progressStartedAt = time.Now()
+			m.progressToken++
 			m.view = createProgressView
 			return m, m.waitForCreateEvent()
 

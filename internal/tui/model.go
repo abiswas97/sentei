@@ -3,6 +3,7 @@ package tui
 import (
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
@@ -15,6 +16,10 @@ import (
 	"github.com/abiswas97/sentei/internal/repo"
 	"github.com/abiswas97/sentei/internal/worktree"
 )
+
+// progressHoldExpiredMsg fires when the minimum progress view duration has elapsed.
+// The token must match model.progressToken to guard against stale messages.
+type progressHoldExpiredMsg struct{ token int }
 
 type viewState int
 
@@ -212,9 +217,9 @@ type Model struct {
 	width    int
 	height   int
 
-	menuItems  []menuItem
-	menuCursor int
-	stateStale bool // Set true after mutations; menu reloads on next render.
+	menuItems          []menuItem
+	menuCursor         int
+	worktreeGeneration uint64 // Monotonic token passed to loadWorktreeContext; global handler discards mismatched responses.
 
 	cleanupOpts *cleanup.Options
 	createOpts  *CreateOpts
@@ -225,6 +230,24 @@ type Model struct {
 	create createState
 	repo   repoState
 	integ  integrationState
+
+	// Progress hold state — used to enforce minimum visible duration for progress views.
+	minProgressDuration time.Duration // 0 = no hold; set via WithMinProgressDuration
+	progressStartedAt   time.Time     // set when entering any progress view
+	progressToken       int           // bumped on each entry; guards stale timers
+	progressTargetView  viewState     // where to transition when hold expires
+}
+
+// ModelOption configures a Model at construction time.
+type ModelOption func(*Model)
+
+// WithMinProgressDuration sets the minimum time any progress view stays
+// visible before the model auto-advances to the summary/result view.
+// Default is 0 (advance immediately). Set to ~1.5s in playground mode.
+func WithMinProgressDuration(d time.Duration) ModelOption {
+	return func(m *Model) {
+		m.minProgressDuration = d
+	}
 }
 
 func NewModel(worktrees []git.Worktree, runner git.CommandRunner, repoPath string) Model {
@@ -249,7 +272,7 @@ func NewModel(worktrees []git.Worktree, runner git.CommandRunner, repoPath strin
 	return m
 }
 
-func NewMenuModel(runner git.CommandRunner, shell git.ShellRunner, repoPath string, cfg *config.Config, context repo.RepoContext) Model {
+func NewMenuModel(runner git.CommandRunner, shell git.ShellRunner, repoPath string, cfg *config.Config, context repo.RepoContext, opts ...ModelOption) Model {
 	branchInput := textinput.New()
 	branchInput.Placeholder = "feature/my-branch"
 	branchInput.Focus()
@@ -299,15 +322,21 @@ func NewMenuModel(runner git.CommandRunner, shell git.ShellRunner, repoPath stri
 		}
 	}
 
+	var initGeneration uint64
+	if context == repo.ContextBareRepo {
+		initGeneration = 1
+	}
+
 	m := Model{
-		view:      menuView,
-		runner:    runner,
-		shell:     shell,
-		repoPath:  repoPath,
-		cfg:       cfg,
-		context:   context,
-		height:    20,
-		menuItems: items,
+		view:               menuView,
+		runner:             runner,
+		shell:              shell,
+		repoPath:           repoPath,
+		cfg:                cfg,
+		context:            context,
+		height:             20,
+		menuItems:          items,
+		worktreeGeneration: initGeneration,
 		remove: removeState{
 			selected:         make(map[string]bool),
 			sortField:        SortByAge,
@@ -337,7 +366,27 @@ func NewMenuModel(runner git.CommandRunner, shell git.ShellRunner, repoPath stri
 		},
 	}
 
+	for _, opt := range opts {
+		opt(&m)
+	}
+
 	return m
+}
+
+// holdOrAdvance either transitions to targetView immediately (if minProgressDuration
+// is zero or has already elapsed) or schedules a tea.Tick for the remaining time.
+// The caller must store all result state into the model before calling.
+func (m Model) holdOrAdvance(targetView viewState) (tea.Model, tea.Cmd) {
+	m.progressTargetView = targetView
+	if m.minProgressDuration == 0 || time.Since(m.progressStartedAt) >= m.minProgressDuration {
+		m.view = targetView
+		return m, nil
+	}
+	remaining := m.minProgressDuration - time.Since(m.progressStartedAt)
+	token := m.progressToken
+	return m, tea.Tick(remaining, func(time.Time) tea.Msg {
+		return progressHoldExpiredMsg{token: token}
+	})
 }
 
 // SetCleanupOpts sets the cleanup options and starts at the cleanup confirmation view.
@@ -374,12 +423,28 @@ func (m *Model) SetMigrateOpts(opts *MigrateOpts) {
 
 func (m Model) Init() tea.Cmd {
 	if m.view == menuView && m.context == repo.ContextBareRepo {
-		return loadWorktreeContext(m.runner, m.repoPath)
+		return loadWorktreeContext(m.runner, m.repoPath, m.worktreeGeneration)
 	}
 	return nil
 }
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	if holdMsg, ok := msg.(progressHoldExpiredMsg); ok {
+		if holdMsg.token == m.progressToken {
+			m.view = m.progressTargetView
+		}
+		return m, nil
+	}
+
+	if ctx, ok := msg.(worktreeContextMsg); ok {
+		if ctx.generation == m.worktreeGeneration && ctx.err == nil {
+			m.remove.worktrees = ctx.worktrees
+			m.reindex()
+			m.updateMenuHints()
+		}
+		return m, nil
+	}
+
 	switch m.view {
 	case menuView:
 		return m.updateMenu(msg)

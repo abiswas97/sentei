@@ -87,6 +87,7 @@ func setupOrchestratorTest(t *testing.T) (*mockRunner, string) {
 
 	runner := &mockRunner{responses: map[string]mockResponse{
 		tmpDir + ":[rev-parse --git-common-dir]":       {output: bareDir},
+		tmpDir + ":[remote]":                           {output: "origin"},
 		tmpDir + ":[remote prune origin --dry-run]":    {output: ""},
 		tmpDir + ":[fetch --prune origin]":             {output: ""},
 		tmpDir + ":[branch -vv]":                       {output: "  main abc123 [origin/main] latest"},

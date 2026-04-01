@@ -2,6 +2,7 @@ package worktree
 
 import (
 	"fmt"
+	"strings"
 	"sync"
 
 	"github.com/abiswas97/sentei/internal/git"
@@ -35,6 +36,14 @@ type DeletionResult struct {
 
 func PruneWorktrees(runner git.CommandRunner, repoPath string) error {
 	_, err := runner.Run(repoPath, "worktree", "prune")
+	return err
+}
+
+func UnlockWorktree(runner git.CommandRunner, repoPath, wtPath string) error {
+	_, err := runner.Run(repoPath, "worktree", "unlock", wtPath)
+	if err != nil && strings.Contains(err.Error(), "is not locked") {
+		return nil // already unlocked — not an error
+	}
 	return err
 }
 

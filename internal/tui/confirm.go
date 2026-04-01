@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
@@ -18,11 +19,23 @@ type teardownCompleteMsg struct {
 	results []creator.StepResult
 }
 
+func unlockLockedWorktrees(runner git.CommandRunner, repoPath string, worktrees []git.Worktree) {
+	for _, wt := range worktrees {
+		if wt.IsLocked {
+			if err := worktree.UnlockWorktree(runner, repoPath, wt.Path); err != nil {
+				fmt.Fprintf(os.Stderr, "Warning: failed to unlock %s: %v\n", wt.Path, err)
+			}
+		}
+	}
+}
+
 func (m Model) updateConfirm(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch {
 		case key.Matches(msg, keys.Yes):
+			m.progressStartedAt = time.Now()
+			m.progressToken++
 			m.view = progressView
 			selected := m.selectedWorktrees()
 			m.remove.deletionTotal = len(selected)
@@ -38,6 +51,8 @@ func (m Model) updateConfirm(msg tea.Msg) (tea.Model, tea.Cmd) {
 					break
 				}
 			}
+
+			unlockLockedWorktrees(m.runner, m.repoPath, selected)
 
 			if hasTeardown {
 				return m, m.runTeardownPhase(selected, integrations)

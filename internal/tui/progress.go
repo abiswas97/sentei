@@ -107,8 +107,9 @@ func (m Model) updateProgress(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case cleanupCompleteMsg:
 		m.remove.cleanupResult = &msg.Result
-		m.stateStale = true
-		m.view = summaryView
+		m.worktreeGeneration++
+		updated, holdCmd := m.holdOrAdvance(summaryView)
+		return updated, tea.Batch(holdCmd, loadWorktreeContext(m.runner, m.repoPath, m.worktreeGeneration))
 	}
 	return m, nil
 }
