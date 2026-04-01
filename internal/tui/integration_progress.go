@@ -38,8 +38,10 @@ func (m Model) updateIntegrationProgress(msg tea.Msg) (tea.Model, tea.Cmd) {
 			for _, integ := range m.integ.integrations {
 				m.integ.staged[integ.Name] = m.integ.current[integ.Name]
 			}
+			m.worktreeGeneration++
+			updated, holdCmd := m.holdOrAdvance(m.integ.returnView)
+			return updated, tea.Batch(holdCmd, loadWorktreeContext(m.runner, m.repoPath, m.worktreeGeneration))
 		}
-		m.stateStale = true
 		return m.holdOrAdvance(m.integ.returnView)
 	}
 	return m, nil
