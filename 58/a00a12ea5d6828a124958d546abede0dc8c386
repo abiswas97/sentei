@@ -1,0 +1,23 @@
+internal/tui/menu_test.go
+  c0c5d5001d9a038b 97-115
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.23",
+  "base_commit_sha": "58a00a12ea5d6828a124958d546abede0dc8c386",
+  "prompts": {
+    "c0c5d5001d9a038b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ef84fa24-598a-4810-9c8e-a6e722c62f5f",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>",
+      "messages": [],
+      "total_additions": 19,
+      "total_deletions": 0,
+      "accepted_lines": 19,
+      "overriden_lines": 0
+    }
+  }
+}
