@@ -94,6 +94,25 @@ func TestGlobalHandler_DiscardsOnGenerationMismatch(t *testing.T) {
 	}
 }
 
+func TestEmptyListReload_IncrementsGeneration(t *testing.T) {
+	m := NewMenuModel(nil, nil, "/repo", &config.Config{}, repo.ContextBareRepo)
+	m.view = menuView
+	// Init uses generation 1. Worktrees are empty (Init response hasn't arrived yet).
+	// Navigate cursor to "Remove worktrees" (index 2) and enable it.
+	m.menuCursor = 2
+	m.menuItems[2].enabled = true
+
+	updated, cmd := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	model := updated.(Model)
+
+	if model.worktreeGeneration != 2 {
+		t.Errorf("worktreeGeneration = %d, want 2 (must differ from Init's generation 1)", model.worktreeGeneration)
+	}
+	if cmd == nil {
+		t.Fatal("expected a loadWorktreeContext cmd for empty list")
+	}
+}
+
 func TestInit_BareRepo_SetsGenerationAndReturnsCmd(t *testing.T) {
 	m := NewMenuModel(nil, nil, "/repo", &config.Config{}, repo.ContextBareRepo)
 	if m.worktreeGeneration != 1 {
