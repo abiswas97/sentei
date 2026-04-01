@@ -104,6 +104,8 @@ func TestConfirmDeletion_UnlocksLockedWorktrees(t *testing.T) {
 	run(tmp, "init", "--bare", "--initial-branch=main", repoPath)
 	seed := filepath.Join(tmp, "_seed")
 	run(tmp, "clone", repoPath, seed)
+	run(seed, "config", "user.email", "test@test.com")
+	run(seed, "config", "user.name", "Test")
 	run(seed, "commit", "--allow-empty", "-m", "init")
 	run(seed, "push", "origin", "main")
 
