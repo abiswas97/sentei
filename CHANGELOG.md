@@ -1,5 +1,58 @@
 # Changelog
 
+## [1.4.0](https://github.com/abiswas97/sentei/compare/v1.3.0...v1.4.0) (2026-04-01)
+
+
+### Features
+
+* activate playground min-progress-duration (1.5s hold) ([e3ee831](https://github.com/abiswas97/sentei/commit/e3ee83104499d798affa4ba8a6901a376ad077ca))
+* add --dry-run support to remove command ([0a140c8](https://github.com/abiswas97/sentei/commit/0a140c860fa8bebd20153a04bdffd8aa3c660aaa))
+* add cleanup confirmation view and TUI entry for decision commands ([5a52383](https://github.com/abiswas97/sentei/commit/5a5238334d91be413c485f421305982be8671986))
+* add clone command with --non-interactive support ([7c54ab0](https://github.com/abiswas97/sentei/commit/7c54ab05849be3cbfc67e2a0eab5d700437967fa))
+* add command registry for CLI/TUI handoff ([638e6d2](https://github.com/abiswas97/sentei/commit/638e6d2854e04641438acb3481c6a5787f528db5))
+* add create worktree command with --non-interactive support ([1fb2556](https://github.com/abiswas97/sentei/commit/1fb25563ca6ed457b4005ffec79b80295fbd7eb0))
+* add holdOrAdvance helper and progressHoldExpiredMsg for min-duration hold ([a578e83](https://github.com/abiswas97/sentei/commit/a578e83083fd323391bddff0b6bb3a5d04da1a87))
+* add migrate command with --non-interactive support ([968134c](https://github.com/abiswas97/sentei/commit/968134c1bb922e8aed22e9d6789359525bc78476))
+* add ModelOption + WithMinProgressDuration to tui.Model ([8fa5bf2](https://github.com/abiswas97/sentei/commit/8fa5bf292ea9bdc86e2cf82f921756351a0b6b61))
+* add progress tracker package, fix integration progress to use upfront total ([bfd8130](https://github.com/abiswas97/sentei/commit/bfd8130ee75b4373597edce30e6bd04c7e19f50e))
+* add remove command with filter flags and --non-interactive ([efa4108](https://github.com/abiswas97/sentei/commit/efa41087a697d34024ca4d06cdbbe453d1356af5))
+* add remove filter pre-selection and TUI tests ([4e4e2d0](https://github.com/abiswas97/sentei/commit/4e4e2d002e23a4fa5a045ac85908882766b1e9fb))
+* add reusable confirmation view component ([3008561](https://github.com/abiswas97/sentei/commit/30085616fa10889d65b976a790373217c39942ef))
+* add teatest infrastructure for TUI E2E testing ([ad31b0e](https://github.com/abiswas97/sentei/commit/ad31b0e8d13346b034b426ca6c1af61369ccf252))
+* add TUI confirmation views for create, clone, and migrate ([a37091f](https://github.com/abiswas97/sentei/commit/a37091ff8cb542c8f7c9139576bd1250982a7965))
+* add UnlockWorktree for safe locked worktree deletion ([4c1b048](https://github.com/abiswas97/sentei/commit/4c1b048fa56eb08e0b88912f6c596a51bcb3c577))
+* CLI/TUI handoff with command registry and --non-interactive support ([06be0b8](https://github.com/abiswas97/sentei/commit/06be0b8c61fa132fa1cc8ea0f498305cbde45801))
+* record progress view start time at all entry points ([665449f](https://github.com/abiswas97/sentei/commit/665449fe982d417b17f39b7e34883827f6aba7bd))
+* show percentage instead of step counts in all progress views ([91445ee](https://github.com/abiswas97/sentei/commit/91445ee9e17b9489a606955623671c6b21e024e9))
+* UI alignment - locked deletion, progress hold, eager reload ([779aa0d](https://github.com/abiswas97/sentei/commit/779aa0d045f0e0aa90745489a7e653b3e8873eca))
+* use holdOrAdvance in all progress completion handlers ([686d99f](https://github.com/abiswas97/sentei/commit/686d99ff58f5f560e4b165b7236a10011d8ce8a1))
+* wire cleanup command into registry with --non-interactive support ([d178e8d](https://github.com/abiswas97/sentei/commit/d178e8dc357426f559d01998b5237a43c8855a68))
+
+
+### Bug Fixes
+
+* add Ctrl+C/q handler to all progress views, refresh worktree list ([72f36ce](https://github.com/abiswas97/sentei/commit/72f36cefa574f7a17c1fc70e383e74f506550119))
+* address all remaining review suggestions ([3012140](https://github.com/abiswas97/sentei/commit/30121407259355241559bb7844fe0e2c26d98d99))
+* address all review findings from final review round ([a9048c7](https://github.com/abiswas97/sentei/commit/a9048c78d52acfe5e802a88e09949a782fccb330))
+* address code review findings from codex/gemini ([e4e40ec](https://github.com/abiswas97/sentei/commit/e4e40ec79a4d3a49dfb924901d8aea032136c780))
+* address codex final review — remove architectural inversion and dead code ([4ee7922](https://github.com/abiswas97/sentei/commit/4ee79228c38394e25f218d9de1bb73f4473d8b30))
+* address verification findings — routing, dead code, determinism ([f84c7a3](https://github.com/abiswas97/sentei/commit/f84c7a3f41833c38cc112fa52f4e975e73cda870))
+* cleanup now prunes stale worktrees, TUI filters prunable entries ([d578757](https://github.com/abiswas97/sentei/commit/d578757158c7f16535f40cde045672a85c19fe74))
+* eliminate all time.Sleep from tests, enforce condition-based waiting ([717efe0](https://github.com/abiswas97/sentei/commit/717efe04b78c7e29e5bfe38e95a8cb8ffda9fb5d))
+* emit StatusSkipped for steps not run, fixing progress bar total ([ee8295d](https://github.com/abiswas97/sentei/commit/ee8295d815dc603cdd7e5c89cc82b95c68e246f4))
+* include locked worktrees in CLI deletion with unlock-first strategy ([175e4a5](https://github.com/abiswas97/sentei/commit/175e4a5993d29f214c69de2da0796978c44c264d))
+* integration progress bar counts unique steps, not raw events ([0f37618](https://github.com/abiswas97/sentei/commit/0f37618ceed7b87c805e361d1a5061aa050921a7))
+* isolate playground tests with per-test temp dirs ([b301fe5](https://github.com/abiswas97/sentei/commit/b301fe5b21b772004630dc66a15f92ac8fdc7d31))
+* refresh worktree list when returning to menu from deletion summary ([f883965](https://github.com/abiswas97/sentei/commit/f883965cb45a5baef73705dfd9b4d15f07b32261))
+* replace lazy stateStale reload with eager worktree context refresh ([dd8293c](https://github.com/abiswas97/sentei/commit/dd8293ca307fc96a6e9d2086a2c65834159a2efe))
+* resolveBareRoot returns correct path for plain bare repos ([34a21c0](https://github.com/abiswas97/sentei/commit/34a21c0e6865c30d6e33f41401db64776848dbb0))
+* restore --force flag and repo path for cleanup, fix magic constant ([5c55522](https://github.com/abiswas97/sentei/commit/5c5552221690197a53553ff9f586ac6845c23502))
+* set git user identity in confirm test for CI ([5abf438](https://github.com/abiswas97/sentei/commit/5abf438bdab08c59ae33c92bafe338ed1ddfa8c2))
+* set git user identity in unlock worktree tests for CI ([6e187ca](https://github.com/abiswas97/sentei/commit/6e187ca089d4848df326ec84d541e6a3e85155ca))
+* skip remote ref pruning when origin remote doesn't exist ([d6cc1be](https://github.com/abiswas97/sentei/commit/d6cc1be3daac7d1956ba1ff6dac9788273df6453))
+* unlock locked worktrees before deletion in TUI ([6b489f1](https://github.com/abiswas97/sentei/commit/6b489f11a90c0883531b9fe8d453b1e40fd43847))
+* use --initial-branch=main in all test bare repo setups ([9e0e2e0](https://github.com/abiswas97/sentei/commit/9e0e2e0a28e164d9094b1dd54281b035cc9ec074))
+
 ## [1.3.0](https://github.com/abiswas97/sentei/compare/v1.2.0...v1.3.0) (2026-03-30)
 
 
