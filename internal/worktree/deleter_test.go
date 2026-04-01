@@ -289,6 +289,8 @@ func TestUnlockWorktree_UnlocksLockedWorktree(t *testing.T) {
 
 	seed := filepath.Join(tmp, "_seed")
 	run(tmp, "clone", repoPath, seed)
+	run(seed, "config", "user.email", "test@test.com")
+	run(seed, "config", "user.name", "Test")
 	run(seed, "commit", "--allow-empty", "-m", "init")
 	run(seed, "push", "origin", "main")
 
@@ -345,6 +347,8 @@ func TestUnlockWorktree_AlreadyUnlocked_NoError(t *testing.T) {
 
 	seed := filepath.Join(tmp, "_seed")
 	run(tmp, "clone", repoPath, seed)
+	run(seed, "config", "user.email", "test@test.com")
+	run(seed, "config", "user.name", "Test")
 	run(seed, "commit", "--allow-empty", "-m", "init")
 	run(seed, "push", "origin", "main")
 
