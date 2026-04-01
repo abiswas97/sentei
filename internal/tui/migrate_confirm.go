@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -57,6 +58,8 @@ func (m Model) updateMigrateConfirm(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.repo.events = nil
 		m.repo.result = nil
 		m.repo.opType = "migrate"
+		m.progressStartedAt = time.Now()
+		m.progressToken++
 		m.view = migrateProgressView
 		return m, m.startRepoPipeline(opts)
 

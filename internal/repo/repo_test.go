@@ -120,14 +120,21 @@ func TestResolveBareRoot(t *testing.T) {
 		wantSelf  bool   // if true, expect the input dir back
 	}{
 		{
-			name: "from worktree resolves to bare root",
+			name: "plain bare repo returns itself (git-common-dir is dot)",
+			responses: map[string]mockResponse{
+				"{dir}:[rev-parse --git-common-dir]": {output: "."},
+			},
+			wantSelf: true,
+		},
+		{
+			name: "from worktree resolves to bare root via absolute .bare path",
 			responses: map[string]mockResponse{
 				"{dir}:[rev-parse --git-common-dir]": {output: "/code/myproject/.bare"},
 			},
 			wantExact: "/code/myproject",
 		},
 		{
-			name: "git fails returns original path",
+			name: "git command fails returns original path",
 			responses: map[string]mockResponse{
 				"{dir}:[rev-parse --git-common-dir]": {output: "", err: fmt.Errorf("not a git repo")},
 			},

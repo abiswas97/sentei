@@ -3,6 +3,9 @@ package worktree
 import (
 	"fmt"
 	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
 	"sync/atomic"
 	"testing"
 
@@ -239,5 +242,123 @@ func TestPruneWorktrees_Failure(t *testing.T) {
 	err := PruneWorktrees(runner, "/repo")
 	if err == nil {
 		t.Error("PruneWorktrees() error = nil, want error")
+	}
+}
+
+func TestUnlockWorktree_Success(t *testing.T) {
+	runner := &mockRunner{
+		responses: map[string]mockResponse{
+			"/repo worktree unlock /repo/wt": {output: ""},
+		},
+	}
+
+	err := UnlockWorktree(runner, "/repo", "/repo/wt")
+	if err != nil {
+		t.Errorf("UnlockWorktree() error = %v, want nil", err)
+	}
+}
+
+func TestUnlockWorktree_NotLocked_NoError(t *testing.T) {
+	runner := &mockRunner{
+		responses: map[string]mockResponse{
+			"/repo worktree unlock /repo/wt": {err: fmt.Errorf("git worktree unlock: fatal: '/repo/wt' is not locked")},
+		},
+	}
+
+	err := UnlockWorktree(runner, "/repo", "/repo/wt")
+	if err != nil {
+		t.Errorf("UnlockWorktree() error = %v, want nil for already-unlocked worktree", err)
+	}
+}
+
+func TestUnlockWorktree_UnlocksLockedWorktree(t *testing.T) {
+	tmp := t.TempDir()
+
+	run := func(dir string, args ...string) {
+		t.Helper()
+		cmd := exec.Command("git", args...)
+		cmd.Dir = dir
+		out, err := cmd.CombinedOutput()
+		if err != nil {
+			t.Fatalf("git %v: %s", args, out)
+		}
+	}
+
+	repoPath := filepath.Join(tmp, "repo")
+	run(tmp, "init", "--bare", "--initial-branch=main", repoPath)
+
+	seed := filepath.Join(tmp, "_seed")
+	run(tmp, "clone", repoPath, seed)
+	run(seed, "config", "user.email", "test@test.com")
+	run(seed, "config", "user.name", "Test")
+	run(seed, "commit", "--allow-empty", "-m", "init")
+	run(seed, "push", "origin", "main")
+
+	wtPath := filepath.Join(tmp, "locked-wt")
+	run(repoPath, "worktree", "add", "-b", "test-locked", wtPath)
+	run(repoPath, "worktree", "lock", wtPath)
+
+	// Verify it's locked — check for "locked" as a standalone line in porcelain output
+	out, _ := exec.Command("git", "-C", repoPath, "worktree", "list", "--porcelain").CombinedOutput()
+	if !containsLockedLine(string(out)) {
+		t.Fatal("worktree should be locked")
+	}
+
+	runner := &git.GitRunner{}
+	err := UnlockWorktree(runner, repoPath, wtPath)
+	if err != nil {
+		t.Fatalf("UnlockWorktree: %v", err)
+	}
+
+	// Verify it's no longer locked
+	out, _ = exec.Command("git", "-C", repoPath, "worktree", "list", "--porcelain").CombinedOutput()
+	if containsLockedLine(string(out)) {
+		t.Fatal("worktree should no longer be locked after UnlockWorktree")
+	}
+}
+
+// containsLockedLine reports whether s contains "locked" as a standalone line,
+// as produced by git worktree list --porcelain. This avoids false positives from
+// worktree paths that include the word "locked" (e.g. "locked-wt").
+func containsLockedLine(s string) bool {
+	for _, line := range strings.Split(s, "\n") {
+		if strings.TrimSpace(line) == "locked" {
+			return true
+		}
+	}
+	return false
+}
+
+func TestUnlockWorktree_AlreadyUnlocked_NoError(t *testing.T) {
+	tmp := t.TempDir()
+
+	run := func(dir string, args ...string) {
+		t.Helper()
+		cmd := exec.Command("git", args...)
+		cmd.Dir = dir
+		out, err := cmd.CombinedOutput()
+		if err != nil {
+			t.Fatalf("git %v: %s", args, out)
+		}
+	}
+
+	repoPath := filepath.Join(tmp, "repo")
+	run(tmp, "init", "--bare", "--initial-branch=main", repoPath)
+
+	seed := filepath.Join(tmp, "_seed")
+	run(tmp, "clone", repoPath, seed)
+	run(seed, "config", "user.email", "test@test.com")
+	run(seed, "config", "user.name", "Test")
+	run(seed, "commit", "--allow-empty", "-m", "init")
+	run(seed, "push", "origin", "main")
+
+	wtPath := filepath.Join(tmp, "unlocked-wt")
+	run(repoPath, "worktree", "add", "-b", "test-unlocked", wtPath)
+
+	runner := &git.GitRunner{}
+	err := UnlockWorktree(runner, repoPath, wtPath)
+	// Should not error — unlocking an already-unlocked worktree is a no-op
+	if err != nil {
+		t.Fatalf("UnlockWorktree on unlocked worktree: %v", err)
 	}
 }

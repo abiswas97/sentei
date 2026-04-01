@@ -52,11 +52,20 @@ func RunRemove(args []string) error {
 
 	var protectedCount int
 	for _, wt := range worktrees {
-		if wt.IsBare || wt.IsLocked {
+		if wt.IsBare {
 			continue
 		}
 		if git.IsProtectedBranch(wt.Branch) {
 			protectedCount++
+		}
+	}
+
+	// Unlock locked worktrees so removal + prune can clean them up
+	for _, wt := range filtered {
+		if wt.IsLocked {
+			if err := worktree.UnlockWorktree(runner, repoPath, wt.Path); err != nil {
+				fmt.Fprintf(os.Stderr, "Warning: failed to unlock %s: %v\n", wt.Path, err)
+			}
 		}
 	}
 

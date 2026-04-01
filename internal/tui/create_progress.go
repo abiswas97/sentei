@@ -42,9 +42,9 @@ func (m Model) updateCreateProgress(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case createCompleteMsg:
 		m.create.result = &msg.Result
-		m.stateStale = true
-		m.view = createSummaryView
-		return m, nil
+		m.worktreeGeneration++
+		updated, holdCmd := m.holdOrAdvance(createSummaryView)
+		return updated, tea.Batch(holdCmd, loadWorktreeContext(m.runner, m.repoPath, m.worktreeGeneration))
 	}
 	return m, nil
 }

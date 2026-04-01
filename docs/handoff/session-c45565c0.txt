@@ -1,0 +1,2240 @@
+ ▐▛███▜▌   Claude Code v2.1.87
+▝▜█████▛▘  Opus 4.6 (1M context) · Claude Max
+  ▘▘ ▝▝    ~/code/personal/sentei/feature-ui-alignment
+
+❯ /clear                                                                        
+  ⎿  (no content)
+
+❯ WE are continuing on a handoff from @docs/handoff/ - in our previous session, 
+ we created some UI discrepancies that we want to fix. WE want the prioritize   
+the UI from the integration management screens.                                 
+                                                                                
+Use @.impeccable.md and all impeccable skills to manage UI standardization and  
+questions. Consider if @impeccable.md needs any updates / polishing             
+                                                                                
+As part of this session, it is paramount that we follow TDD (including E2E      
+tests) and have full test coverage.                                             
+                                                                                
+Code cleanliness is paramount. If errors show up that are pre-existing, it is   
+still your responsbibility to fix it (consider if this should be part of my     
+overall claude md in ~/.cloak/base/ )                                           
+                                                                                
+Use /brainstorming style questionnaire to gather info                           
+Openspec is our main source of truth for specs                                  
+                                                                                
+When iterating on UI, use detailed ascii art to brainstorm with me.             
+                                                                                
+As part of this task, we will standardize our design language. Consider how we  
+can encapsulate this using charmbracelet best practicies (use context7 for      
+their docs ) and how we can enforce our design language. Also consider how we   
+can enforce that @.impeccable.md and impeccable skills must ALWAYS be applied.  
+                                                                                
+/opsx:new                                                                       
+
+⏺ Skill(opsx:new)
+  ⎿  Successfully loaded skill
+
+  Read 2 files (ctrl+o to expand)
+
+⏺ Let me start by reading the handoff docs and setting up the change.
+
+⏺ Bash(openspec new change "ui-alignment")
+  ⎿  Error: Exit code 1
+     - Creating change 'ui-alignment'...
+     ✖ Failed to create change 'ui-alignment'
+
+     ✖ Error: Unknown schema 'sentei'. Available: spec-driven
+
+⏺ Bash(openspec schemas --json 2>/dev/null || openspec schemas)
+  ⎿  [
+       {
+         "name": "spec-driven",
+     … +11 lines (ctrl+o to expand)
+
+⏺ Bash(openspec new change "ui-alignment" --schema spec-driven)
+  ⎿  - Creating change 'ui-alignment' with schema 'spec-driven'...
+     ✔ Created change 'ui-alignment' at openspec/changes/ui-alignment/ (sch
+     ema: spec-driven)
+
+⏺ Bash(openspec status --change "ui-alignment")
+  ⎿  - Loading change status...
+     Change: ui-alignment
+     Schema: spec-driven
+     … +6 lines (ctrl+o to expand)
+
+⏺ Bash(openspec instructions proposal --change "ui-alignment")
+  ⎿  - Generating instructions...
+     Unknown artifact ID in rules: "verification". Valid IDs for schema "sp
+     ec-driven": design, proposal, specs, tasks
+     … +59 lines (ctrl+o to expand)
+
+⏺ Good. Here's where we are:
+
+  Change: ui-alignment
+  Location: openspec/changes/ui-alignment/
+  Schema: spec-driven (proposal → specs + design → tasks)
+  Progress: 0/4 artifacts complete
+
+  Artifact sequence:
+  1. proposal — ready now
+  2. design + specs — unlocked after proposal
+  3. tasks — unlocked after design + specs
+
+  Before I draft the proposal, I need to understand the current state of the
+  codebase — specifically the integration progress view (our reference) and the
+  other progress views that need alignment. Let me also check existing specs and
+   then kick off the brainstorming questionnaire as you requested.
+
+  Read 2 files (ctrl+o to expand)
+
+⏺ Skill(superpowers:brainstorming)
+  ⎿  Successfully loaded skill
+⏺ Let me explore the key files to understand the current visual state.
+
+  Read 7 files (ctrl+o to expand)
+
+⏺ Now let me also check the summary views and the confirmation component.
+
+  Read 6 files (ctrl+o to expand)
+
+⏺ Good — I've now read all the key views. Since this work involves TUI design
+  and you've specifically asked for ASCII art brainstorming, let me offer the
+  visual companion approach.
+
+  You mentioned wanting detailed ASCII art for brainstorming — I'll use
+  terminal-based ASCII mockups throughout our design discussion. This keeps
+  everything in the terminal where the actual TUI lives, and makes it easy to
+  compare side-by-side. No need for a browser companion.
+
+⏺ Now, here's what I've gathered from exploring the codebase. Let me start with
+  the first clarifying question.
+
+  ---
+  Context summary: I've read all 12 view files across progress, summary,
+  confirmation, and result screens. Here's the landscape of visual
+  inconsistencies I see:
+
+  ┌─────────────┬───────────────┬──────────┬─────────┬───────────┬──────┐
+  │             │               │ Has Sepa │ Has Pro │ Step Indi │ Key  │
+  │    View     │  Title Style  │  rator   │ gress   │  cators   │ Hint │
+  │             │               │          │   Bar   │           │  s   │
+  ├─────────────┼───────────────┼──────────┼─────────┼───────────┼──────┤
+  │ Integration │               │          │ yes     │           │      │
+  │  Progress   │ styleTitle    │ yes      │ (block  │ ● ◐ ✗     │ no   │
+  │             │               │          │ bar)    │           │      │
+  ├─────────────┼───────────────┼──────────┼─────────┼───────────┼──────┤
+  │ Create      │ styleTitle    │ yes      │ no      │ ● ◐ ✗ ·   │ no   │
+  │ Progress    │               │          │         │           │      │
+  ├─────────────┼───────────────┼──────────┼─────────┼───────────┼──────┤
+  │ Repo        │ styleTitle    │ yes      │ no      │ ● ◐ ✗ ·   │ no   │
+  │ Progress    │               │          │         │           │      │
+  ├─────────────┼───────────────┼──────────┼─────────┼───────────┼──────┤
+  │ Remove      │ styleHeader   │ no       │ no      │ ● ◐ ✗ ·   │ no   │
+  │ Progress    │ (bg!)         │          │         │           │      │
+  ├─────────────┼───────────────┼──────────┼─────────┼───────────┼──────┤
+  │ Summary     │ styleTitle    │ no (part │ n/a     │ n/a       │ yes  │
+  │ (remove)    │               │ ial)     │         │           │      │
+  ├─────────────┼───────────────┼──────────┼─────────┼───────────┼──────┤
+  │ Create      │ styleTitle    │ yes      │ n/a     │ ● ✗       │ yes  │
+  │ Summary     │               │          │         │           │      │
+  ├─────────────┼───────────────┼──────────┼─────────┼───────────┼──────┤
+  │ Repo        │ styleTitle    │ yes      │ n/a     │ ● ✗       │ yes  │
+  │ Summaries   │               │          │         │           │      │
+  ├─────────────┼───────────────┼──────────┼─────────┼───────────┼──────┤
+  │ Cleanup     │ styleTitle    │ yes      │ n/a     │ ● · ✗     │ yes  │
+  │ Result      │               │          │         │           │      │
+  ├─────────────┼───────────────┼──────────┼─────────┼───────────┼──────┤
+  │ Cleanup     │ styleTitle +  │ yes      │         │           │      │
+  │ Confirm     │ styleDialogBo │ (inside  │ n/a     │ n/a       │ yes  │
+  │             │ x             │ box)     │         │           │      │
+  ├─────────────┼───────────────┼──────────┼─────────┼───────────┼──────┤
+  │ Confirmatio │ styleDialogBo │ yes      │ n/a     │ n/a       │ yes  │
+  │ n           │ x border      │          │         │           │      │
+  └─────────────┴───────────────┴──────────┴─────────┴───────────┴──────┘
+
+  First question: The handoff doc says "canonicalize on integration progress
+  style." But I notice the integration progress view is actually the simplest —
+  it groups by worktree with steps, has a progress bar, but has no key hints and
+   no separator above the bar. Meanwhile, create/repo progress views are more
+  feature-rich (phase headers with percentage + status indicators, pending phase
+   display, separators).
+
+  Which direction do you want to go?
+
+  (a) Lift integration progress up to match the richer patterns already in
+  create/repo progress (add separators, pending phases, etc.), then use that
+  unified pattern everywhere
+
+  (b) Simplify create/repo progress down to match integration progress's minimal
+   style, then add the progress bar
+
+  (c) Cherry-pick the best of both: keep the phase-based layout from
+  create/repo, add the progress bar from integration, and standardize chrome
+  (title + separators + key hints) across all views
+
+✻ Churned for 1m 58s
+
+❯ C.                                                                            
+
+⏺ Got it — cherry-pick the best of both. Next question:
+
+  The remove progress view (viewProgress) is the biggest outlier. It uses
+  styleHeader (white-on-purple background badge) instead of the styleTitle (bold
+   white text) that every other view uses. It also has no separators and no
+  progress bar.
+
+  Here's what it looks like now vs. what the standardized pattern would look
+  like:
+
+  CURRENT (remove progress):                STANDARDIZED:
+  ┌─────────────────────────────────┐       ┌─────────────────────────────────┐
+  │                                 │       │                                 │
+  │  ┌──────────────────────┐       │       │  sentei ─ Removing Worktrees    │
+  │  │  Removing Worktrees  │ ← bg  │       │                                 │
+  │  └──────────────────────┘       │       │  ┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄  │
+  │                                 │       │                                 │
+  │  Teardown              100% ●   │       │  Teardown              100% ●   │
+  │                                 │       │                                 │
+  │  Removing worktrees        33%  │       │  Removing worktrees        33%  │
+  │  ◐ feature/foo                  │       │    ◐ feature/foo                │
+  │  · feature/bar                  │       │    · feature/bar                │
+  │                                 │       │                                 │
+  │  Prune & cleanup      pending   │       │  Prune & cleanup      pending   │
+  │                                 │       │                                 │
+  │                                 │       │  ┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄  │
+  │                                 │       │                                 │
+  │                                 │       │  ████████░░░░░░░░░░░░ 33%      │
+  │                                 │       │                                 │
+  │                                 │       │  ctrl+c quit                    │
+  │                                 │       │                                 │
+  └─────────────────────────────────┘       └─────────────────────────────────┘
+
+  The step indentation also differs — remove uses   ◐ (2-space indent, same as
+  phase), while create/repo use     ◐ (4-space, indented under the phase
+  header). Should we standardize on the 4-space indent (steps visually nested
+  under their phase) across all progress views?
+
+❯ 4 space view should be our standard. For removal, it can get complicated and  
+overwhelming when remove 10+ worktrees at once (which I do a lot at work). So a 
+ cleaner reporting style might be benficial here. But the spinner UI is a       
+keeper                                                                          
+
+⏺ Good insight. So for removal specifically, we want to handle the "many
+  worktrees" case gracefully. Let me think through this.
+
+  Question: When removing 10+ worktrees, the per-worktree step list would scroll
+   off screen. Here are some options for how to handle this in the remove
+  progress view:
+
+  OPTION A: Collapse completed, show active + recent
+  ┌─────────────────────────────────────┐
+  │                                     │
+  │  sentei ─ Removing Worktrees        │
+  │                                     │
+  │  ┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄  │
+  │                                     │
+  │  Teardown                  100% ●   │
+  │                                     │
+  │  Removing worktrees           40%   │
+  │    ● feature/auth                   │
+  │    ● feature/billing                │
+  │    ● feature/search                 │
+  │    ● fix/login-bug                  │
+  │    ◐ feature/dashboard              │
+  │    · feature/api-v2                 │
+  │    · feature/notifications          │
+  │    · fix/memory-leak                │
+  │    · chore/deps-update              │
+  │    · chore/ci-pipeline              │
+  │                                     │
+  │  Prune & cleanup          pending   │
+  │                                     │
+  │  ┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄  │
+  │                                     │
+  │  ████████░░░░░░░░░░░░ 40%          │
+  │                                     │
+  │  ctrl+c quit                        │
+  │                                     │
+  └─────────────────────────────────────┘
+
+  OPTION B: Counter summary + only show active/failed
+  ┌─────────────────────────────────────┐
+  │                                     │
+  │  sentei ─ Removing Worktrees        │
+  │                                     │
+  │  ┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄  │
+  │                                     │
+  │  Teardown                  100% ●   │
+  │                                     │
+  │  Removing worktrees      4/10  40%  │
+  │    ◐ feature/dashboard              │
+  │                                     │
+  │  Prune & cleanup          pending   │
+  │                                     │
+  │  ┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄  │
+  │                                     │
+  │  ████████░░░░░░░░░░░░ 40%          │
+  │                                     │
+  │  ctrl+c quit                        │
+  │                                     │
+  └─────────────────────────────────────┘
+
+  OPTION C: Hybrid — counter + active + last N completed
+  ┌─────────────────────────────────────┐
+  │                                     │
+  │  sentei ─ Removing Worktrees        │
+  │                                     │
+  │  ┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄  │
+  │                                     │
+  │  Teardown                  100% ●   │
+  │                                     │
+  │  Removing worktrees      4/10  40%  │
+  │    ● fix/login-bug                  │
+  │    ◐ feature/dashboard              │
+  │                                     │
+  │  Prune & cleanup          pending   │
+  │                                     │
+  │  ┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄  │
+  │                                     │
+  │  ████████░░░░░░░░░░░░ 40%          │
+  │                                     │
+  │  ctrl+c quit                        │
+  │                                     │
+  └─────────────────────────────────────┘
+
+  Option B is the most minimal — the progress bar already tells you how far
+  along you are, and the counter gives the exact numbers. You only see what's
+  actively happening. Option C adds a bit of "movement" by showing the last
+  completed item rolling off. Option A is the full list which gets long.
+
+  Which feels right for your workflow with 10+ worktrees?
+
+❯ I like C. But let's discuss. Not that there can be 30 even. This would be     
+bizarre back in the day, but is possible now with how AI makes us move faster   
+on worktrees. Worktrees have become my new branches - as in instead of git      
+checkout -b, I just do git worktree add (now through sentei). So it's very easy 
+ for me to build up worktrees. This is the personal problem I'm solving FOR ME. 
+ Hopefully others too, but mainly to solve my problem in the most fun, pretty   
+way possible while being efficieint and informative. (this personal context     
+should not be committed in code, keep it claude memory instead).                
+                                                                                
+Also note that we parallelise removal - so muiltiple will be getting removed at 
+ once.                                                                          
+                                                                                
+A could be the most informative, but could need long terminals to be useful     
+(even though 30-50 lines isn't really much, think through what is responsive,   
+even in TUI.                                                                    
+
+⏺ Let me save that context to memory first.
+
+  Recalled 1 memory, wrote 2 memories (ctrl+o to expand)
+
+⏺ Good point about parallel removal. That changes the picture significantly —
+  with parallel deletion, you could have 5-10 items in ◐ state simultaneously,
+  plus completed ones stacking up. Let me think through what's actually
+  responsive.
+
+  The real constraint: Terminal height. A typical terminal is 40-50 lines. Let's
+   budget:
+
+  Title + blank                    3 lines
+  Separator                        2 lines
+  Teardown phase (if present)      2 lines
+  Remove phase header              1 line
+    ...worktree items...           N lines  ← this is the variable
+  Blank + Prune phase              2 lines
+  Separator                        2 lines
+  Progress bar                     2 lines
+  Key hints                        2 lines
+                                  ─────────
+  Fixed chrome:                   ~16 lines
+  Available for items:            ~24-34 lines
+
+  So even 30 items in Option A would just barely fit in a tall terminal (46
+  lines), but would overflow a shorter one. And during parallel removal, the
+  "movement" is the interesting part — seeing items flip from ◐ to ●.
+
+  Here's a refined take on Option C that handles the parallel case:
+
+  OPTION C-REFINED: Adaptive — show all active + rolling window
+
+  When total ≤ ~8 (fits easily):         When total = 30, parallel removal:
+  ┌────────────────────────────────┐     ┌────────────────────────────────┐
+  │                                │     │                                │
+  │  sentei ─ Removing Worktrees   │     │  sentei ─ Removing Worktrees   │
+  │                                │     │                                │
+  │  ┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄  │     │  ┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄  │
+  │                                │     │                                │
+  │  Teardown              100% ●  │     │  Teardown              100% ●  │
+  │                                │     │                                │
+  │  Removing worktrees   3/5 60%  │     │  Removing worktrees 12/30 40%  │
+  │    ● feature/auth              │     │    ● fix/login-bug             │
+  │    ● feature/billing           │     │    ● feature/search            │
+  │    ● fix/login-bug             │     │    ◐ feature/dashboard         │
+  │    ◐ feature/dashboard         │     │    ◐ feature/api-v2            │
+  │    · feature/search            │     │    ◐ chore/deps-update         │
+  │                                │     │    · feature/notifications     │
+  │  Prune & cleanup     pending   │     │                                │
+  │                                │     │  Prune & cleanup     pending   │
+  │  ┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄  │     │                                │
+  │                                │     │  ┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄  │
+  │  ████████████░░░░░░░░ 60%      │     │                                │
+  │                                │     │  ████████░░░░░░░░░░░░ 40%      │
+  │  ctrl+c quit                   │     │                                │
+  │                                │     │  ctrl+c quit                   │
+  └────────────────────────────────┘     └────────────────────────────────┘
+
+  The logic:
+  - If total items <= threshold (say 8): show all items (like Option A)
+  - If total items > threshold: show a sliding window — last 2 completed + all
+  active (◐) + next 1-2 pending. The 12/30 counter tells you the full picture
+  - Failed items (✗) always stay visible (you need to see what went wrong)
+  - The threshold could be terminal-height aware — use tea.WindowSizeMsg to
+  compute available lines and adjust dynamically
+
+  This gives you the "movement" feel (items scrolling through the window as they
+   complete) while staying bounded. The counter + progress bar always tell you
+  where you are globally.
+
+  Does the adaptive threshold approach feel right, or would you prefer a fixed
+  cutoff?
+
+✻ Baked for 47s
+
+❯ Yes. And we should see stats so we know the window is working, and don't feel 
+ like "options suddenly disappeared".                                           
+                                                                                
+The window should also be adaptive to terminal height - if tall enough, we      
+don't need windows at all. Should be truly responsive (IF this is possible) -   
+AND we need tests for the responsive behavior (like playwright) if possible.    
+                                                                                
+For the existing e2e tests and parallelizatoin, use ccc to find existing        
+implementation                                                                  
+
+⏺ Good — so the window needs a "showing X of Y" stat line to make the windowing
+  transparent. Let me search the codebase for existing E2E test patterns and the
+   parallelization implementation.
+
+⏺ Skill(ccc)
+  ⎿  Successfully loaded skill
+
+⏺ Bash(ccc search "E2E test patterns teatest simulate key presses wait for
+      output" --limit 10)
+  ⎿  --- Result 1 (score: 0.542) ---
+     File: internal/tui/cleanup_result_test.go:38-68 [go]
+     func TestUpdateCleanupResult_QuitKeys(t *testing.T) {
+     … +105 lines (ctrl+o to expand)
+
+⏺ Bash(ccc search "parallel worktree deletion removal concurrent" --limit 10)
+  ⎿  --- Result 1 (score: 0.770) ---
+     File: openspec/changes/archive/2026-02-06-interactive-tui-list/specs/w
+     orktree-deletion/spec.md:14-23 [markdown]
+     … +102 lines (ctrl+o to expand)
+
+⏺ Now let me find the TUI E2E tests specifically.
+⏺ Bash(ccc search "teatest TUI end-to-end test WaitFor terminal model" --limit
+      10)
+  ⎿  --- Result 1 (score: 0.562) ---
+     File: openspec/specs/playground-setup/spec.md:70-83 [markdown]
+     ### Requirement: Playground uses delayed runner for TUI
+     … +112 lines (ctrl+o to expand)
+
+  Searched for 1 pattern, read 1 file (ctrl+o to expand)
+
+⏺ Good — now I have the full picture. Let me check the existing progress test
+  too.
+
+  Read 1 file (ctrl+o to expand)
+
+⏺ Now I have the full picture. Here's where I'm at on this question:
+
+  Responsive windowing with stats — refined mockup:
+
+  SMALL TERMINAL (height ~30):                TALL TERMINAL (height 50+):
+  ┌─────────────────────────────────┐        ┌─────────────────────────────────┐
+  │                                 │        │                                 │
+  │  sentei ─ Removing Worktrees    │        │  sentei ─ Removing Worktrees    │
+  │                                 │        │                                 │
+  │  ┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄  │        │  ┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄  │
+  │                                 │        │                                 │
+  │  Teardown              100% ●   │        │  Teardown              100% ●   │
+  │                                 │        │                                 │
+  │  Removing worktrees 12/30  40%  │        │  Removing worktrees 12/30  40%  │
+  │    ● fix/login-bug              │        │    ● feature/auth               │
+  │    ● feature/search             │        │    ● feature/billing            │
+  │    ◐ feature/dashboard          │        │    ● feature/search             │
+  │    ◐ feature/api-v2             │        │    ● fix/login-bug              │
+  │    ◐ chore/deps-update          │        │    ...all 30 items shown...     │
+  │    · feature/notifications      │        │    · chore/ci-pipeline          │
+  │    showing 6 of 30              │ ← stat │                                 │
+  │                                 │        │  Prune & cleanup      pending   │
+  │  Prune & cleanup      pending   │        │                                 │
+  │                                 │        │  ┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄  │
+  │  ┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄  │        │                                 │
+  │                                 │        │  ████████░░░░░░░░░░░░ 40%       │
+  │  ████████░░░░░░░░░░░░ 40%       │        │                                 │
+  │                                 │        │  ctrl+c quit                    │
+  │  ctrl+c quit                    │        │                                 │
+  │                                 │        └─────────────────────────────────┘
+  └─────────────────────────────────┘        (no "showing X of Y" — all fit)
+
+  The logic:
+  1. Compute availableLines = terminalHeight - fixedChrome (title, separators,
+  other phases, bar, hints)
+  2. If totalItems <= availableLines → show all, no stat line
+  3. If totalItems > availableLines → windowed mode:
+    - Always show: all active (◐) items + all failed (✗) items
+    - Fill remaining space: last N completed (●) + next M pending (·)
+    - Show showing X of Y stat line in dim text
+    - Window slides as items complete — feels like a conveyor belt
+
+  For testing: The key insight is that viewProgress() is a pure function of
+  model state + terminal dimensions. We can test responsive behavior with unit
+  tests:
+  - Set m.width / m.height to different sizes
+  - Populate m.remove.deletionStatuses with 30 items in various states
+  - Assert the rendered output contains/omits the right items and the stat line
+
+  This is much more reliable than Playwright-style visual testing. The teatest
+  E2E tests can then verify the full flow (events → view transitions), while the
+   responsive windowing is tested as a pure rendering function.
+
+  Next question: The showing X of Y stat line — should it also indicate what's
+  hidden? For example:
+
+  - (a) showing 6 of 30 — simple count
+  - (b) showing 6 of 30 · 10 completed hidden — explains what's not shown
+  - (c) 4 ● · 2 ◐ · 1 · of 30 — mini-legend showing counts by status
+
+✻ Baked for 60s
+
+❯ I like b but also like c. I would like something that is labelled (c but      
+CLEARLY labelled)                                                               
+
+⏺ So a labelled mini-legend. Something like:
+
+  OPTION 1: Horizontal, labelled
+      10 done · 3 active · 17 pending        showing 6 of 30
+
+  OPTION 2: Horizontal, with indicators
+      ● 10 done · ◐ 3 active · · 17 pending  showing 6 of 30
+
+  OPTION 3: Compact with indicators, no words
+      ● 10  ◐ 3  · 17                         6 of 30 shown
+
+  Option 2 gives you both the indicator symbol (so you learn the visual
+  language) and the label (so it's unambiguous). It also reinforces the
+  indicator vocabulary across the app.
+
+  The showing 6 of 30 on the right side tells you windowing is active. When all
+  items fit, neither the legend nor the "showing" text appears — no noise.
+
+  Which format? Or a different take?
+
+❯ 2 looks good to me, and of course we need this to be consistent with rest of  
+the app's design lanuagge. since we will discuss a lot of design language       
+today, consider where this shouild be documented.                               
+
+⏺ Agreed — Option 2 it is. And good call on documentation. The design language
+  should live in .impeccable.md since that's already the canonical design
+  context file referenced by CLAUDE.md. We'll expand it with a "Component
+  Patterns" section covering indicators, stat lines, progress layout, etc. That
+  way any future view work automatically inherits the vocabulary.
+
+  Next question: Let's talk about the summary/result views. Right now there are
+  5 different summary screens and they're all bespoke:
+
+  CURRENT SUMMARY VIEWS:
+
+  1. Removal Summary              2. Create Summary              3. Cleanup
+  Result
+  ┌──────────────────────┐       ┌──────────────────────┐
+  ┌──────────────────────┐
+  │                      │       │                      │       │
+         │
+  │  sentei ─ Removal    │       │  sentei ─ Worktree   │       │  sentei ─
+  Cleanup    │
+  │  Complete            │       │  Created             │       │  Complete
+         │
+  │                      │       │                      │       │
+         │
+  │  2 worktree(s)       │       │  ┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄  │       │
+  ┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄  │
+  │  removed             │       │                      │       │
+         │
+  │  successfully        │       │  ● feature/foo ready │       │  ● No stale
+  refs     │
+  │                      │       │                      │       │  · No config
+  dupes   │
+  │  Pruned orphaned     │       │    Path  /repo/foo   │       │  ● Pruned 1
+  worktree │
+  │  worktree metadata   │       │    Branch feature/foo│       │
+         │
+  │                      │       │                      │       │
+  ┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄  │
+  │  Cleanup:            │       │  ┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄  │       │
+        │
+  │    v Pruned 2 refs   │       │    cd /repo/foo      │       │  enter quit
+         │
+  │                      │       │                      │       │
+         │
+  │  enter menu · q quit │       │  enter menu · q quit │
+  └──────────────────────┘
+  │                      │       │                      │
+  └──────────────────────┘       └──────────────────────┘
+
+  4. Repo Create Summary          5. Migration Summary
+  ┌──────────────────────┐       ┌──────────────────────┐
+  │  sentei ─ Repository │       │  sentei ─ Migration  │
+  │  Created             │       │  Complete            │
+  │  ┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄  │       │  ┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄  │
+  │  ● my-repo ready     │       │  ● my-repo migrated  │
+  │    Path  /repo       │       │    Path  /repo       │
+  │    Branch main       │       │    Backup .bak (2MB) │
+  │    GitHub url ●      │       │                      │
+  │  ┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄  │       │  Delete backup?      │
+  │    cd /repo/main     │       │  y delete · n keep   │
+  │  enter open · q quit │       │                      │
+  └──────────────────────┘       └──────────────────────┘
+
+  They share a common structure (title → separator → status + details →
+  separator → action hint) but each implements it from scratch. The removal
+  summary is the most different — it uses "v" as a success marker instead of ●,
+  has no separator after the title, and mixes cleanup results inline.
+
+  Should we:
+
+  (a) Extract a shared SummaryLayout component (like ConfirmationViewModel) that
+   takes title, status line, detail rows, optional tip, and key hints — then
+  each view just populates the data
+
+  (b) Keep them as separate views but standardize the visual chrome manually
+  (same title format, same separator placement, same key hint format)
+
+  (c) Hybrid — extract just the shared chrome (title + separators + key hints)
+  as helpers, but let each view own its content section since the content varies
+   a lot
+
+❯ c                                                                             
+
+⏺ Good — that keeps flexibility where it matters. The chrome helpers would
+  enforce consistency (title bar, separators, key hints footer) while the
+  content middle stays bespoke per view since each summary has genuinely
+  different data shapes.
+
+  Next question: The cleanup confirmation view is the one that uses
+  styleDialogBox (rounded border). It's the only view in the whole app that
+  wraps content in a border box. The handoff doc flagged this:
+
+  CURRENT:                                    EVERY OTHER VIEW:
+  ╭──────────────────────────────────╮
+  ┌──────────────────────────────────┐
+  │                                  │       │
+  │
+  │  sentei ─ Confirm Cleanup        │       │  sentei ─ Creating Worktree
+  │
+  │                                  │       │
+  │
+  │  Mode:     safe                  │       │  ┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄  │
+  │  Dry run:  no                    │       │
+  │
+  │                                  │       │  (content fills full width)
+  │
+  │  ┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄  │       │                                  │
+  │                                  │       │  ┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄  │
+  │  sentei cleanup --mode=safe      │       │
+  │
+  │                                  │       │  ctrl+c quit
+  │
+  │  enter confirm · esc back · q    │       │
+  │
+  │                                  │
+  └──────────────────────────────────┘
+  ╰──────────────────────────────────╯
+
+  The border box creates a visual disconnect — it looks like a modal dialog
+  floating over something, but there's nothing behind it. The other confirmation
+   views (create confirm, clone confirm, migrate confirm) all use this same
+  ConfirmationViewModel with the border.
+
+  Two questions in one since they're tightly coupled:
+
+  1. Drop the border box from confirmations so they match the standard chrome
+  (title + separator + content + separator + hints)?
+  2. The handoff doc also asked: should the cleanup confirmation even appear
+  when launched from the TUI menu? The user already chose "Cleanup & exit" — the
+   confirmation is redundant. But when launched via sentei cleanup 
+  --mode=aggressive, it makes sense to confirm. Should we skip confirmation in 
+  the menu flow?
+
+❯ But good call - create as many shared components as you can, like you would   
+in react frontgend projects. Extract into as many SHARED components as          
+possible.                                                                       
+                                                                                
+1. We can have a confirmation dialog component that is standardized, which is   
+DIFFERENT from regular TUI views (study opencode and other tools by             
+charmbracelet for how to do dialogs / modals).                                  
+                                                                                
+2. Depends. Do any other views have confirmation? The goal was that cli without 
+ --non-interactive would need confirmation. Which is valid in my opinion. But   
+we can have a --yes or similar flag. Thoughts? Debate with me.                  
+
+⏺ Good questions. Let me research charmbracelet dialog patterns first, then
+  we'll debate.
+
+⏺ Skill(mcp__plugin_context7_context7__resolve-library-id)
+  ⎿  Initializing…
+  ⎿  Error: Unknown skill: mcp__plugin_context7_context7__resolve-library-id
+
+⏺ plugin:context7:context7 - resolve-library-id (MCP)(libraryName:
+                                                     "charmbracelet bubbletea",
+                                                     query: "modal dialog
+                                                     overlay confirmation
+                                                     pattern in bubbletea TUI")
+  ⎿  Available Libraries:
+
+     - Title: Bubbletea
+     … +23 lines (ctrl+o to expand)
+
+⏺ plugin:context7:context7 - resolve-library-id (MCP)(libraryName:
+                                                     "charmbracelet lipgloss",
+                                                     query: "dialog box overlay
+                                                     modal rendering with
+                                                     borders")
+  ⎿  Available Libraries:
+
+     - Title: Lip Gloss
+     … +21 lines (ctrl+o to expand)
+
+⏺ plugin:context7:context7 - query-docs (MCP)(libraryId:
+                                             "/rmhubbert/bubbletea-overlay",
+                                             query: "how to create modal dialog
+                                             overlay confirmation in bubbletea")
+  ⎿  ### Build Complete Modal System with Bubble Tea Overlay
+
+     Source: https://context7.com/rmhubbert/bubbletea-overlay/llms.txt
+     … +154 lines (ctrl+o to expand)
+
+⏺ plugin:context7:context7 - query-docs (MCP)(libraryId:
+                                             "/charmbracelet/lipgloss", query:
+                                             "dialog box border rendering place
+                                             overlay centering layout")
+  ⎿  ### Borders: Basic, Rounded, and Custom in Go with Lip Gloss
+
+     Source: https://github.com/charmbracelet/lipgloss/blob/main/README.md
+     … +95 lines (ctrl+o to expand)
+
+⏺ Good research. Now I have the charmbracelet patterns. Let me check how other
+  charm tools handle confirmations.
+
+⏺ plugin:context7:context7 - query-docs (MCP)(libraryId: "/charmbracelet/huh",
+                                             query: "confirmation dialog confirm
+                                              yes no prompt accessible")
+  ⎿  ### Create a Confirmation Field (Yes/No) in Go
+
+     Source: https://github.com/charmbracelet/huh/blob/main/README.md
+     … +80 lines (ctrl+o to expand)
+
+⏺ Good — now I have the full picture on charmbracelet dialog patterns. There are
+   two approaches:
+
+  1. bubbletea-overlay — true modal overlays composited on top of a background
+  view (like React portals)
+  2. huh confirm — standalone confirmation prompts that take over the screen
+  (simpler, no overlay)
+
+  For sentei, I think a true overlay is overkill since confirmations aren't
+  interrupting an active background — they're a step in a flow. But the current
+  bordered box without anything behind it looks odd. Let me propose a
+  standardized confirmation component in the debate below.
+
+  ---
+  Now, the debate on confirmation in menu flow:
+
+  The case for skipping confirmation in menu flow:
+  - User already made a deliberate choice: navigated to menu → selected "Cleanup
+   & exit" → that's already two actions expressing intent
+  - Confirmation adds friction to the common case without adding safety —
+  cleanup in safe mode is non-destructive (prune stale refs, remove gone
+  branches)
+  - The CLI command echo is useful for discoverability, but there are better
+  places for it (summary view, --help)
+
+  The case for keeping confirmation everywhere:
+  - Consistency — the mental model is "confirmation before any mutation." If
+  some flows skip it and others don't, users can't predict the behavior
+  - Safe mode is non-destructive, but aggressive mode deletes branches. If we
+  skip confirmation, we need to be sure the mode is always what the user expects
+  - The confirmation screen shows the effective options — mode, dry-run status.
+  Even from the menu, this gives the user a moment to verify
+
+  My take: I think the answer depends on whether the menu itself shows the mode.
+   Right now:
+
+  CURRENT MENU:                         WHAT IF MENU SHOWED MODE:
+  ┌────────────────────────┐           ┌──────────────────────────────┐
+  │  > Create worktree     │           │  > Create worktree           │
+  │    Remove worktrees    │           │    Remove worktrees          │
+  │    Manage integrations │           │    Manage integrations       │
+  │    Cleanup & exit      │ ← opaque  │    Cleanup & exit (safe)     │ ←
+  transparent
+  └────────────────────────┘           └──────────────────────────────┘
+
+  If the menu item already tells you the mode, the confirmation is truly
+  redundant. If it doesn't, the confirmation is the only place you see what's
+  about to happen.
+
+  On --yes / --non-interactive: This is the right escape hatch for CI/scripting.
+   The pattern I'd recommend:
+
+  - sentei cleanup — interactive, shows confirmation
+  - sentei cleanup --yes — skip confirmation, run immediately
+  - From TUI menu — skip confirmation (user already chose interactively), go
+  straight to progress/result
+  - The CLI command echo moves to the summary view: "Equivalent: sentei cleanup 
+  --mode=safe"
+
+  This means confirmation is a CLI-only concept — it exists to verify flags you
+  passed on the command line. In the TUI, you're already in an interactive
+  context where every action is deliberate.
+
+  The --yes flag also gives you the non-interactive path for scripting (sentei 
+  cleanup --mode=aggressive --yes).
+
+  What do you think — does the "confirmation is CLI-only" framing feel right?
+  And should --yes also apply to other CLI subcommands that have confirmations
+  (like sentei remove if that ever becomes a CLI path)?
+
+✻ Baked for 56s
+
+❯ WE can use the portal for the help view though. And standardize there. I like 
+ that UX a lot. But agree that for confirmation, we can go simpler - OR just go 
+ all the way since I want to incorporate it - if it doesn't defeat ux best      
+practices.                                                                      
+                                                                                
+Confirmation is CLI only does feel right. My only hiccup is - we should have    
+explicit confirmation on aggresive cleanup and worktree removal, as these are   
+non reversible. Unlike create worktree and manage integrations. Especially when 
+ branches have untracked changes.                                               
+                                                                                
+We could also gate confirmation to removal of dirty branches (also clean        
+working tree IF not pushed to remote), and for cleanup. For cleanup, I think we 
+ should be able to CHOOSE to go aggressive IN THE TUI if there are things that  
+aggressive can clean - and we should be transparent on what would be cleaned in 
+ aggressive and why                                                             
+⏺ Excellent thinking. Let me make sure I understand the nuance:
+
+  Confirmation matrix:
+
+  ┌────────────────────────────────┬──────────────────────────┬─────────────┐
+  │             Action             │         From CLI         │  From TUI   │
+  │                                │                          │    Menu     │
+  ├────────────────────────────────┼──────────────────────────┼─────────────┤
+  │ Create worktree                │ No confirm               │ No confirm  │
+  ├────────────────────────────────┼──────────────────────────┼─────────────┤
+  │ Manage integrations            │ No confirm               │ No confirm  │
+  ├────────────────────────────────┼──────────────────────────┼─────────────┤
+  │ Cleanup (safe)                 │ Confirm (skippable with  │ No confirm  │
+  │                                │ --yes)                   │             │
+  ├────────────────────────────────┼──────────────────────────┼─────────────┤
+  │ Cleanup (aggressive)           │ Confirm always           │ Confirm     │
+  │                                │                          │ always      │
+  ├────────────────────────────────┼──────────────────────────┼─────────────┤
+  │ Remove worktrees (all clean +  │ Confirm (skippable)      │ No confirm  │
+  │ pushed)                        │                          │             │
+  ├────────────────────────────────┼──────────────────────────┼─────────────┤
+  │ Remove worktrees (any          │ Confirm always           │ Confirm     │
+  │ dirty/unpushed)                │                          │ always      │
+  └────────────────────────────────┴──────────────────────────┴─────────────┘
+
+  So the rule is: confirmation gates destructive-and-irreversible actions, not
+  all mutations. Clean worktree removal where branches are pushed to remote is
+  recoverable (re-create the worktree, branch is still on remote). But
+  dirty/unpushed removal means potential data loss.
+
+  For the TUI cleanup flow, here's what I'm picturing:
+
+  USER SELECTS "CLEANUP" FROM MENU:
+
+  Step 1: Scan & Preview (always)          Step 2: Upgrade offer (conditional)
+  ┌────────────────────────────────────┐  ┌────────────────────────────────────┐
+  │                                    │  │                                    │
+  │  sentei ─ Cleanup Preview          │  │  sentei ─ Cleanup Preview          │
+  │                                    │  │                                    │
+  │  ┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄  │  │  ┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄  │
+  │                                    │  │                                    │
+  │  Safe cleanup:                     │  │  Safe cleanup:                     │
+  │    ● 3 stale remote refs           │  │    ● 3 stale remote refs           │
+  │    ● 1 config duplicate            │  │    ● 1 config duplicate            │
+  │    · No stale worktrees            │  │    · No stale worktrees            │
+  │                                    │  │                                    │
+  │  ┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄  │  │  Aggressive cleanup available:     │
+  │                                    │  │    5 local branches not in any     │
+  │  Nothing else to clean.            │  │    worktree (merged into main):    │
+  │                                    │  │      feature/old-auth              │
+  │  enter run · esc back              │  │      feature/billing-v1            │
+  │                                    │  │      fix/typo-readme               │
+  │                                    │  │      chore/deps-jan                │
+  │                                    │  │      chore/ci-fix                  │
+  │                                    │  │                                    │
+  │                                    │  │  ┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄  │
+  │                                    │  │                                    │
+  │                                    │  │  enter run safe · a run aggressive │
+  │                                    │  │  esc back                          │
+  │                                    │  │                                    │
+  └────────────────────────────────────┘  └────────────────────────────────────┘
+
+  IF NOTHING TO CLEAN:
+  ┌────────────────────────────────────┐
+  │                                    │
+  │  sentei ─ Cleanup                  │
+  │                                    │
+  │  ┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄  │
+  │                                    │
+  │  ● Repository is clean             │
+  │                                    │
+  │  Nothing to do.                    │
+  │                                    │
+  │  enter back · q quit               │
+  │                                    │
+  └────────────────────────────────────┘
+
+  This replaces the current "blind confirmation" with an informed preview. The
+  user sees what will happen before it happens. And if aggressive cleanup is
+  available, they see exactly which branches would be deleted and why — total
+  transparency.
+
+  For worktree removal with dirty/unpushed branches:
+
+  REMOVE SELECTION HAS DIRTY BRANCHES:
+  ┌────────────────────────────────────────┐
+  │                                        │
+  │  sentei ─ Confirm Removal              │
+  │                                        │
+  │  ┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄  │
+  │                                        │
+  │  3 worktrees selected                  │
+  │                                        │
+  │    ● feature/auth           clean      │
+  │    ⚠ feature/dashboard      dirty      │
+  │      2 uncommitted changes             │
+  │    ⚠ fix/hotfix             not pushed │
+  │      3 commits ahead of remote         │
+  │                                        │
+  │  ┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄  │
+  │                                        │
+  │  2 worktrees have potential data loss  │
+  │                                        │
+  │  enter confirm · esc back              │
+  │                                        │
+  └────────────────────────────────────────┘
+
+  On the overlay/portal for help: I like that direction. The bubbletea-overlay
+  library is well-suited for help views — a help panel composited over whatever
+  view you're on, dismissed with ? or esc. We can standardize the portal
+  component now and use it for help first, then potentially for other overlays
+  later.
+
+  Question: For the cleanup preview — should it do a dry-run scan first
+  (actually run the cleanup logic in dry-run mode to get real counts), or should
+   it use a lighter pre-check? The dry-run approach is more accurate but adds a
+  brief loading moment. The pre-check would be faster but might not catch
+  everything.
+
+✻ Worked for 33s
+
+❯ Yes I agree on the design. Note on cleanup - since cleanup destructive can    
+have a large bit of text depending on what is found, it should be a summary. ?  
+should be available if MORE details are available that are hidden, and a        
+scrollable dialog/portal should show the detailed view.                         
+Thoughts? Debate with me, partner.                                              
+                                                                                
+Should always do dry-run, but we should be transparent and have a waiting UI    
+that it is running                                                              
+
+⏺ I love this. Let me think through the layers here.
+
+  The summary + detail portal pattern:
+
+  CLEANUP PREVIEW (summary):              PRESS ? FOR DETAILS (portal):
+  ┌────────────────────────────────┐      ┌────────────────────────────────┐
+  │                                │      │┌──────────────────────────────┐│
+  │  sentei ─ Cleanup Preview      │      ││                              ││
+  │                                │      ││  Aggressive Cleanup Details  ││
+  │  ┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄  │      ││                              ││
+  │                                │      ││  5 branches not in any       ││
+  │  Safe cleanup:                 │      ││  worktree, merged into main: ││
+  │    ● 3 stale refs              │      ││                              ││
+  │    ● 1 config duplicate        │      ││  feature/old-auth            ││
+  │                                │      ││    merged 2026-02-15          ││
+  │  Aggressive available:         │      ││    last commit: "add oauth"  ││
+  │    5 merged branches           │      ││                              ││
+  │    2 orphaned config sections  │      ││  feature/billing-v1          ││
+  │                                │      ││    merged 2026-01-20          ││
+  │  ┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄  │      ││    last commit: "billing.."  ││
+  │                                │      ││                              ││
+  │  enter safe · a aggressive     │      ││  ...scrollable...            ││
+  │  ? details · esc back          │      ││                              ││
+  │                                │      ││  esc close · j/k scroll      ││
+  └────────────────────────────────┘      │└──────────────────────────────┘│
+                                          └────────────────────────────────┘
+
+  My pushback / refinements:
+
+  1. The ? key conflict. Right now ? is a natural choice because it means
+  "help/more info" universally. But we just said ? would open the help overlay.
+  We need to decide: is ? contextual (shows relevant details in the current
+  view) or global (always opens help)? I'd argue contextual — ? means "tell me
+  more about what I'm looking at." A separate key for global help (like F1 or h
+  when not in a text input). This is what vim does — ? is context-dependent, and
+   :help is the global help.
+  2. When the detail portal is scrollable, we're really building a viewport 
+  component. The bubbletea-overlay gives us the compositing, and
+  bubbles/viewport gives us the scrollable content inside. This is a real shared
+   component: DetailPortal = overlay + viewport + consistent chrome (title,
+  scroll hints, dismiss key). We'd reuse it for:
+    - Cleanup aggressive details
+    - Help overlay
+    - Potentially: worktree detail view (full commit log, status, etc.)
+    - Error details when something fails
+  3. The dry-run loading state — I think this is a good opportunity to use the
+  shared progress chrome we're designing:
+
+  SCANNING:                                SCAN COMPLETE:
+  ┌────────────────────────────────┐      ┌────────────────────────────────┐
+  │                                │      │                                │
+  │  sentei ─ Cleanup Preview      │      │  sentei ─ Cleanup Preview      │
+  │                                │      │                                │
+  │  ┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄  │      │  ┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄  │
+  │                                │      │                                │
+  │  ◐ Scanning repository…       │      │  Safe cleanup:                 │
+  │                                │      │    ...results...               │
+  │  ┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄  │      │                                │
+  │                                │      │                                │
+  │  esc back                      │      └────────────────────────────────┘
+  │                                │
+  └────────────────────────────────┘
+
+  Simple, honest, uses our indicator vocabulary (◐ = active). No fake progress
+  bar — just "I'm working on it."
+
+  One thing I want to debate back: The summary view showing "5 merged branches"
+  as a single line is clean, but is it enough? If I'm about to delete 5
+  branches, even seeing the count might not give me confidence.
+  Counter-argument: the summary with ? for details gives both audiences what
+  they want — the power user who knows what they're doing sees "5 merged, go"
+  and hits a, while the cautious user hits ? first.
+
+  But consider: what if we showed the first 2-3 branch names inline in the
+  summary, with a "and N more — ? for details" hint? Like how GitHub shows "3
+  files changed" but previews the first few:
+
+    Aggressive available:
+      5 merged branches
+        feature/old-auth, feature/billing-v1
+        and 3 more — ? for details
+      2 orphaned config sections
+
+  This gives a quick sanity check without requiring the portal. The names alone
+  might jog your memory — "oh right, those are done." Versus just seeing "5" and
+   wondering "which 5?"
+
+  Too much? Or does the inline preview add enough value to justify the extra
+  lines?
+
+✻ Churned for 33s
+
+❯ 1. I'm okay with your suggestion as long as we standardize. WE would need a   
+documented file of key mapping / meaning - can be a config / const file in Go,  
+and we should never stray from it.                                              
+2. Sounds fine to me.                                                           
+3. Also sounds good. And if it's too fast, we should still buffer so it doesn't 
+ look like alien flicker to the user. This applies to all potentially instant   
+ops, such as create worktree - all should "animate" with buffers so we don't    
+think something glitched. Again, configurable and kept as consts that are used  
+throoghout, uniformly.                                                          
+                                                                                
+your pushback debate makes sense and I agree. Anyhtring else you want to add    
+before we proceed?>                                                             
+
+⏺ A few things worth flagging before we move on:
+
+  1. Component package structure. Right now everything lives flat in
+  internal/tui/. As we extract shared components (progress layout, summary
+  chrome, detail portal, confirmation dialog, stat line), we'll have a
+  meaningful set of reusable pieces. Should these stay flat in internal/tui/ as
+  separate files (e.g., component_progress.go, component_portal.go), or do we
+  want a sub-package like internal/tui/components/? In Go, a sub-package means
+  explicit exports and a real interface boundary. Flat files mean simpler
+  imports but less enforced separation. Given the Elm architecture where the
+  Model is the center of everything, I'd lean toward flat files with a naming 
+  convention — a sub-package would force us to export types just to share them
+  with the parent, which creates ceremony without benefit.
+
+  2. styleHeader cleanup. The white-on-purple background badge (styleHeader) is
+  only used in viewProgress() — the remove progress view. Every other view uses
+  styleTitle (bold white text). Once we standardize remove progress, styleHeader
+   becomes dead code. We should delete it.
+
+  3. The animation buffer principle. You mentioned this should be configurable
+  consts. I want to make sure we agree on the UX intent: this is a minimum 
+  display time, not an artificial delay. If an operation takes 500ms, show it
+  for 500ms. If it takes 50ms, still show the progress state for the minimum
+  (say 300ms) so the user registers it happened. The const would be something
+  like minProgressDisplayMs = 300. This applies to: cleanup scan, create
+  worktree phases, integration apply. It does NOT add delay to the overall
+  operation — just ensures the UI doesn't flash.
+
+  4. Scope check. We've discussed a lot. Let me inventory what's in scope:
+
+  - Unified progress chrome (title + separator + phases + bar + hints)
+  - Adaptive windowing for large item lists
+  - Stat line with indicator legend
+  - Summary chrome helpers
+  - Cleanup preview with dry-run scan + upgrade offer
+  - Dirty/unpushed confirmation gate for removal
+  - Detail portal (overlay + viewport) — for cleanup details + help
+  - Contextual ? key + separate global help key
+  - Key mapping documented in const file
+  - Animation buffer constants
+  - .impeccable.md expanded with component patterns + design vocabulary
+  - Delete styleHeader, standardize all titles
+  - --yes flag for CLI confirmation skip
+
+  That's a big change. Should we scope this as one change or split it? My
+  instinct: the progress/summary/chrome unification is one coherent change. The
+  cleanup preview redesign (dry-run + aggressive upgrade + detail portal) is a
+  second. The overlay/portal component could be a third that the cleanup change
+  depends on. What's your preference — one big change or phased?
+
+✻ Brewed for 33s
+
+❯ 1. I agree with you. But think about testability in isolation too.            
+2. Agree                                                                        
+3. Yes, agree with your understanding                                           
+4. Sounds good, break up into scope WITH depedencies noted. We will do this     
+sequentially and NOT in parallel. You can create three opsx changes - you can   
+edit the current one if you need to. But we will have 3 changes as you          
+described, and will take this session to flesh the specs / changes / tasks out. 
+ Please proceed one by one through the changes and let's create them            
+progressively.                                                                  
+
+⏺ Good. Here's the breakdown with dependencies:
+
+  Change 1: ui-chrome-unification (current change, rename from ui-alignment)
+  - Unified progress chrome (title + separator + phases + bar + hints)
+  - Summary chrome helpers
+  - Adaptive windowing for large item lists + stat line
+  - Animation buffer constants
+  - Key mapping const file (contextual ? vs global help key)
+  - Delete styleHeader, standardize all titles
+  - .impeccable.md expanded with component patterns
+  - No dependencies
+
+  Change 2: detail-portal-component
+  - Overlay + viewport shared component (DetailPortal)
+  - Help overlay (first consumer)
+  - Depends on: Change 1 (uses standardized chrome, key mapping)
+
+  Change 3: cleanup-preview-redesign
+  - Cleanup preview with dry-run scan + loading state
+  - Aggressive upgrade offer with inline preview
+  - Detail portal for aggressive cleanup details (second consumer)
+  - Dirty/unpushed confirmation gate for worktree removal
+  - --yes flag for CLI
+  - Depends on: Change 1 (chrome), Change 2 (portal)
+
+  Let me update the current change and create the other two.
+
+⏺ Bash(openspec status --change "ui-alignment")
+  ⎿  - Loading change status...
+     Change: ui-alignment
+     Schema: spec-driven
+     … +6 lines (ctrl+o to expand)
+
+⏺ Let me rename the current change and create the other two.
+
+⏺ Bash(mv openspec/changes/ui-alignment openspec/changes/ui-chrome-unification)
+  ⎿  Done
+
+⏺ Bash(openspec new change "detail-portal-component" --schema spec-driven &&
+      openspec new change "cleanup-preview-redesign" --schema spec-driven)
+  ⎿  - Creating change 'detail-portal-component' with schema 'spec-driven'.
+     ..
+     ✔ Created change 'detail-portal-component' at openspec/changes/detail-
+     … +5 lines (ctrl+o to expand)
+
+⏺ Good. Now let me draft the proposal for Change 1. Let me first check existing
+  specs to understand what capabilities exist.
+
+  Read 3 files (ctrl+o to expand)
+
+⏺ Good — now I have full context on existing specs. The approaches phase and
+  design presentation are merging naturally since we've already converged
+  through debate. Let me skip to presenting the design for Change 1, since we've
+   effectively done the approaches discussion through our Q&A.
+
+⏺ Here's the design for Change 1: ui-chrome-unification. I'll present section by
+   section.
+
+  ---
+  Section 1: Shared Chrome Components
+
+  Three chrome helpers extracted as functions in internal/tui/chrome.go:
+
+  // viewTitle renders: "  sentei ─ <title>"
+  func viewTitle(title string) string
+
+  // viewSeparator renders the dotted line at given width
+  // (replaces current separator() — same logic, renamed for consistency)
+  func viewSeparator(width int) string
+
+  // viewKeyHints renders dim key hints: "  enter confirm · esc back · q quit"
+  func viewKeyHints(hints ...KeyHint) string
+
+  type KeyHint struct {
+      Key   string  // "enter", "esc", "?", "a"
+      Label string  // "confirm", "back", "details", "aggressive"
+  }
+
+  Every view uses these three. No view rolls its own title, separator, or hint
+  line. The existing separator() function and styleTitle usage get replaced by
+  these.
+
+  For testability: These are pure functions — string in, string out.
+  Unit-testable in isolation without any Model dependency.
+
+  Does this section look right?
+
+❯ Yes. also remember the following is paramoutn in each cahnge                  
+- Full test suite (e2e and unit)                                                
+- Any updates to documentation , sentei --help, documtation, metadata, design   
+system, impeccable md as needed                                                 
+- We can keep some sort of uncommitted meta doc that covers all we need to      
+across this set of changes. Consider where to keep it, how to structure it, and 
+ how to track it. We WILL NOT commit these meta doc. This will allow me retain  
+the context of this discussion even once we start on each change. Consider a    
+dump of the current chat as well (use claude code cli to do this, I can give    
+you the session id)                                                             
+
+⏺ Good call on the meta doc. Let me set that up first, then continue with the
+  design.
+
+  Read 1 file (ctrl+o to expand)
+
+⏺ Write(docs/handoff/session-meta.md)
+  ⎿  Wrote 141 lines to docs/handoff/session-meta.md
+       1 # UI Alignment Session Meta
+       2 
+       3 > **Status:** In progress — brainstorming phase
+       4 > **Date:** 2026-03-31
+       5 > **Branch:** feature/ui-alignment
+       6 > **DO NOT COMMIT** — working context for multi-session continui
+         ty
+       7 
+       8 ## Changes Overview
+       9 
+      10 Three sequential changes, each depends on the previous:
+     … +131 lines (ctrl+o to expand)
+
+⏺ Now let me make sure this doesn't get committed accidentally.
+  Read 1 file (ctrl+o to expand)
+
+⏺ Update(.gitignore)
+  ⎿  Added 3 lines
+      31  # Code analysis indexes
+      32  .code-review-graph/
+      33  .cocoindex_code/
+      34 +                                                               
+      35 +# Session handoff (uncommitted working context)                
+      36 +docs/handoff/session-meta.md                                   
+
+⏺ Good. Meta doc is set up and gitignored. For the chat dump — do you want to
+  give me the session ID? I can export it with claude sessions export <id>. Or
+  we can do that at the end of the session.
+
+  Now, back to the design. You confirmed Section 1 (chrome helpers) looks good.
+  Let me continue.
+
+  ---
+  Section 2: Unified Progress Layout
+
+  The core rendering pattern shared by all 4 progress views. This is a rendering
+   function, not a component with its own Model — it takes data and returns a
+  string.
+
+  // internal/tui/chrome.go (or progress_layout.go)
+
+  type ProgressPhase struct {
+      Name    string
+      Steps   []ProgressStep
+      Done    int
+      Total   int
+      Failed  int
+  }
+
+  type ProgressStep struct {
+      Name   string
+      Status StepStatus  // done, active, failed, pending
+      Error  error
+  }
+
+  type ProgressLayout struct {
+      Title      string
+      Subtitle   string          // optional — e.g., "feature/foo → from main"
+      Phases     []ProgressPhase
+      Width      int
+      Height     int             // for adaptive windowing
+  }
+
+  func (p ProgressLayout) View() string
+
+  The View() renders this standard layout:
+
+    sentei ─ <Title>
+
+    <Subtitle>                        ← only if set
+
+    ┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+
+    <Phase 1>                100% ●
+                                      ← steps hidden when complete (unless
+  failed)
+    <Phase 2>              3/10  30%
+      ● step-done
+      ◐ step-active
+      · step-pending
+      ● 4 done · ◐ 1 active · · 5 pending  showing 3 of 10
+                                      ← stat line only when windowed
+    <Phase 3>              pending
+
+    ┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+
+    ████████░░░░░░░░░░░░ 30%         ← overall progress bar
+
+    ctrl+c quit
+
+  Windowing logic (inside View()):
+  1. Compute fixedLines = title + subtitle + separators + bar + hints + other
+  phases
+  2. availableForSteps = p.Height - fixedLines
+  3. If phase.Total <= availableForSteps: show all steps, no stat line
+  4. If phase.Total > availableForSteps:
+    - Always show: all failed (✗) + all active (◐)
+    - Fill remaining: last N completed (●) + next M pending (·)
+    - Add stat line: ● X done · ◐ Y active · · Z pending  showing W of Total
+    - Reserve 1 line for stat line in the budget
+
+  Overall progress bar computes across all phases: totalDone / totalSteps.
+
+  Each existing view becomes a thin adapter that builds a ProgressLayout from
+  its domain-specific events and calls .View(). For example, viewProgress()
+  (removal) maps deletionStatuses to ProgressPhase/ProgressStep,
+  viewCreateProgress() maps creator.Event to the same types.
+
+  Does this section look right?
+
+❯ Our session id is c45565c0-41bb-40a7-b10f-7a9279d1b68c                        
+And yes, you can export once we are done discussing.                            
+                                                                                
+This looks good                                                                 
+
+⏺ Good, I'll export at the end. Let me continue with Section 3.
+
+  ---
+  Section 3: Adaptive Windowing
+
+  A pure function that selects which steps to display given a budget:
+
+  // internal/tui/window.go
+
+  type WindowResult struct {
+      Visible []ProgressStep  // steps to render
+      Stats   WindowStats     // for the stat line
+      Windowed bool           // whether windowing is active
+  }
+
+  type WindowStats struct {
+      Done    int
+      Active  int
+      Pending int
+      Failed  int
+      Total   int
+      Showing int
+  }
+
+  // WindowSteps selects which steps to display given available lines.
+  // Priority: failed (always) > active (always) > last N done > next M pending.
+  func WindowSteps(steps []ProgressStep, availableLines int) WindowResult
+
+  Rules:
+  1. Failed items are always visible (pinned) — you need to see what broke
+  2. Active items are always visible — that's the current action
+  3. Remaining budget fills with: last completed (most recent first) + next
+  pending
+  4. If len(steps) <= availableLines: return all, Windowed = false
+  5. Stat line consumes 1 line from budget when Windowed = true
+
+  Stat line rendering (in chrome.go):
+  func viewStatLine(stats WindowStats) string
+  // renders: "    ● 10 done · ◐ 3 active · · 17 pending  showing 6 of 30"
+
+  This is pure logic — no Model, no TUI state. Testable with table-driven tests
+  across terminal sizes and item counts.
+
+  Does this look right?
+
+❯ Looks good. I liek the decision to have mostly pure functions. Pin that in    
+our rules                                                                       
+
+  Recalled 1 memory, wrote 3 memories (ctrl+o to expand)
+
+⏺ Pinned. Next section.
+
+  ---
+  Section 4: Key Mapping & Animation Constants
+
+  A single source of truth for key bindings and timing:
+
+  // internal/tui/keys.go (extend existing file)
+
+  // Contextual keys — meaning depends on the current view
+  var keyDetails = key.NewBinding(
+      key.WithKeys("?"),
+      key.WithHelp("?", "details"),
+  )
+
+  // Global keys — same meaning everywhere
+  var keyGlobalHelp = key.NewBinding(
+      key.WithKeys("f1"),
+      key.WithHelp("F1", "help"),
+  )
+
+  // internal/tui/constants.go (NEW)
+
+  const (
+      // MinProgressDisplay is the minimum time a progress state is shown
+      // before transitioning, preventing flicker on fast operations.
+      MinProgressDisplay = 300 * time.Millisecond
+
+      // Windowing thresholds
+      WindowCompletedTrail = 2  // completed items shown before active
+      WindowPendingLead    = 1  // pending items shown after active
+  )
+
+  The MinProgressDisplay gets used via a helper:
+
+  // bufferTransition wraps a tea.Cmd to ensure at least MinProgressDisplay
+  // elapses before delivering the message. If the cmd completes faster,
+  // it waits the remainder. If slower, no delay is added.
+  func bufferTransition(started time.Time, cmd tea.Cmd) tea.Cmd
+
+  This is the Bubble Tea way — it's still a Cmd, so no blocking the Update loop.
+   The phase records its start time, and when the completion message arrives,
+  bufferTransition absorbs the remainder of the minimum display time.
+
+  Does this look right?
+
+✻ Worked for 36s
+
+❯ Yes                                                                           
+
+⏺ Section 5: Summary Chrome & Confirmation Standardization
+
+  Summary views keep their bespoke content but use shared chrome:
+
+  BEFORE (each view hand-rolls):         AFTER (shared chrome + bespoke middle):
+
+    styleTitle.Render("  sentei ─ X")      viewTitle("Removal Complete")
+    "\n\n"                                 viewSeparator(m.width)
+    separator(m.width)
+    "\n\n"                                 // --- bespoke content ---
+    // ... content ...                     // each view owns this section
+    "\n"                                   // --- end bespoke ---
+    styleDim.Render("  enter menu...")
+                                           viewSeparator(m.width)
+                                           viewKeyHints(
+                                               KeyHint{"enter", "menu"},
+                                               KeyHint{"q", "quit"},
+                                           )
+
+  Specific fixes during migration:
+  - summary.go: Replace "v" success marker with
+  styleIndicatorDone.Render(indicatorDone) (●)
+  - summary.go: Add missing separator after title
+  - All summaries: Standardize key hints format (key action · key action)
+
+  Confirmation views — drop styleDialogBox border, use standard chrome:
+
+  BEFORE:                                 AFTER:
+  ╭──────────────────────────────╮       ┌──────────────────────────────┐
+  │  sentei ─ Confirm Cleanup    │       │  sentei ─ Confirm Cleanup    │
+  │                              │       │                              │
+  │  Mode:     safe              │       │  ┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄  │
+  │  Dry run:  no                │       │                              │
+  │  ┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄  │       │  Mode:     safe              │
+  │                              │       │  Dry run:  no                │
+  │  sentei cleanup --mode=safe  │       │                              │
+  │                              │       │  ┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄  │
+  │  enter confirm · esc back    │       │                              │
+  ╰──────────────────────────────╯       │  sentei cleanup --mode=safe  │
+                                         │                              │
+                                         │  enter confirm · esc back    │
+                                         └──────────────────────────────┘
+
+  ConfirmationViewModel.View() stops wrapping in styleDialogBox.Render() and
+  instead uses viewTitle(), viewSeparator(), viewKeyHints(). The styleDialogBox
+  style gets deleted from styles.go along with styleHeader.
+
+  Does this look right?
+
+❯ Yes                                                                           
+
+⏺ Section 6: .impeccable.md Design System Expansion
+
+  Let me read the current state first.
+
+  Read 1 file (ctrl+o to expand)
+
+⏺ This needs a "Component Patterns" section. Here's what I'd add:
+
+  ### Component Patterns
+
+  #### View Chrome
+  Every view follows a consistent layout skeleton:
+  - **Title:** `sentei ─ <Title>` via `viewTitle()` — bold white, 2-space left
+  pad
+  - **Separator:** Dotted line `┄┄┄` via `viewSeparator()` — gray 241, full
+  width
+  - **Key hints:** `key action · key action` via `viewKeyHints()` — gray 241,
+  2-space left pad
+  - Layout: title → separator → content → separator → key hints
+
+  #### Progress Views
+  Phase-based layout with status indicators:
+  - Phase headers: 2-space indent, phase name left-aligned, status right-aligned
+  - Steps: 4-space indent (nested under phase)
+  - Completed phases collapse to single line with `●`
+  - Active phases expand to show steps
+  - Overall progress bar below bottom separator: `████░░░░ XX%`
+
+  #### Status Indicators
+  | Symbol | Name | Color | Meaning |
+  |--------|------|-------|---------|
+  | ● | done | green 42 | Complete/success |
+  | ◐ | active | purple 62 | In progress |
+  | · | pending | gray 241 | Not started |
+  | ✗ | failed | red 196 | Error/failure |
+  | ⚠ | warning | yellow 214 | Needs attention |
+
+  #### Stat Line
+  When item lists are windowed: `● N done · ◐ N active · · N pending  showing X
+  of Y`
+  — gray 241, 4-space indent. Only shown when windowing is active.
+
+  #### Timing
+  Fast operations (< 300ms) are buffered to show progress state for at least
+  `MinProgressDisplay` (300ms), preventing flicker.
+
+  #### Key Mapping
+  - `?` — contextual: show details for current view
+  - `F1` — global: help overlay
+  - `j/k` or `↑/↓` — navigate
+  - `enter` — confirm/proceed
+  - `esc` — back/cancel
+  - `q` / `ctrl+c` — quit
+  - `space` — toggle selection (list views)
+
+  This becomes the enforced contract — any future view work references these
+  patterns. Does this section look right?
+
+❯ Yes                                                                           
+
+⏺ Section 7: Testing Strategy
+
+  Three layers for Change 1:
+
+  Layer 1: Pure function unit tests (table-driven, fast)
+
+  chrome_test.go:
+    - viewTitle renders correct format
+    - viewSeparator handles edge widths (0, 4, 80, 200)
+    - viewKeyHints single/multiple/empty hints
+
+  window_test.go:
+    - WindowSteps with 5 items, budget 10 → all shown, Windowed=false
+    - WindowSteps with 30 items, budget 8 → windowed, stats correct
+    - WindowSteps with 30 items, 5 active → all active shown even if > budget
+    - WindowSteps with failed items → always pinned regardless of budget
+    - WindowSteps budget exactly equal to items → no windowing
+    - WindowSteps budget 0 → still shows active + failed
+    - Stats counts match actual visible items
+
+  stat_line_test.go:
+    - viewStatLine renders correct indicator + label format
+    - viewStatLine with zero counts for some statuses
+
+  progress_layout_test.go:
+    - ProgressLayout.View() at different Heights triggers/skips windowing
+    - ProgressLayout.View() with no phases → just chrome
+    - ProgressLayout.View() with subtitle vs without
+    - ProgressLayout.View() overall bar percentage across multiple phases
+    - ProgressLayout.View() completed phase collapses steps
+    - ProgressLayout.View() active phase with failures keeps steps visible
+
+  Layer 2: View adapter tests (verify each view builds correct ProgressLayout)
+
+  progress_test.go (extend existing):
+    - viewProgress builds ProgressLayout with correct phases from deletion state
+    - Removal with 30 worktrees at height=25 → windowing active
+    - Removal with 3 worktrees at height=25 → no windowing
+
+  create_progress_test.go:
+    - viewCreateProgress builds ProgressLayout from creator events
+
+  repo_progress_test.go:
+    - viewRepoProgress builds ProgressLayout from repo events
+
+  integration_progress_test.go (extend existing):
+    - viewIntegrationProgress builds ProgressLayout from integration events
+
+  Layer 3: E2E tests (teatest, full flow)
+
+  cleanup_e2e_test.go (extend existing):
+    - Full cleanup flow renders with new chrome
+
+  progress_e2e_test.go (new):
+    - Removal flow: select worktrees → progress view renders title + bar →
+  summary
+    - Verify ctrl+c/q quits from progress view
+    - Verify WindowSizeMsg updates adaptive windowing
+
+  Responsive behavior testing — this is the key innovation. Since WindowSteps
+  and ProgressLayout.View() are pure functions that take Height, we test
+  responsiveness as unit tests:
+
+  func TestProgressLayout_ResponsiveWindowing(t *testing.T) {
+      phases := []ProgressPhase{{
+          Name:  "Removing worktrees",
+          Steps: makeSteps(30, 10, 3, 17), // 10 done, 3 active, 17 pending
+          Done:  10, Total: 30,
+      }}
+
+      tests := []struct {
+          name     string
+          height   int
+          wantWindowed bool
+          wantShowing  int
+      }{
+          {"tall terminal shows all", 60, false, 30},
+          {"medium terminal windows", 30, true, 12},
+          {"short terminal windows tight", 20, true, 6},
+          {"active+failed always visible", 15, true, /* at least */ 3},
+      }
+      // ...
+  }
+
+  No Playwright needed — the responsive behavior is tested through pure function
+   inputs. The E2E tests verify the plumbing (events → model → view), not the
+  layout math.
+
+  Does this look right?
+
+❯ Yes                                                                           
+
+⏺ That's the full design for Change 1. Let me recap, then we'll write it up.
+
+  ---
+  Change 1: ui-chrome-unification — Design Summary
+
+  ┌───────────────────────┬─────────────────────────────────────────────────┐
+  │        Section        │                      What                       │
+  ├───────────────────────┼─────────────────────────────────────────────────┤
+  │ 1. Chrome helpers     │ viewTitle(), viewSeparator(), viewKeyHints() —  │
+  │                       │ pure functions, used by every view              │
+  ├───────────────────────┼─────────────────────────────────────────────────┤
+  │ 2. Progress layout    │ ProgressLayout struct with View() — phases,     │
+  │                       │ steps, bar, adaptive windowing                  │
+  ├───────────────────────┼─────────────────────────────────────────────────┤
+  │ 3. Windowing          │ WindowSteps() pure function — priority: failed  │
+  │                       │ > active > recent done > next pending           │
+  ├───────────────────────┼─────────────────────────────────────────────────┤
+  │ 4. Constants          │ MinProgressDisplay, window thresholds, key      │
+  │                       │ bindings in single source of truth              │
+  ├───────────────────────┼─────────────────────────────────────────────────┤
+  │ 5.                    │ Shared chrome, bespoke content middle. Drop     │
+  │ Summary/Confirmation  │ styleDialogBox border. Fix "v" → ●              │
+  ├───────────────────────┼─────────────────────────────────────────────────┤
+  │ 6. .impeccable.md     │ Component Patterns section — enforced design    │
+  │                       │ contract                                        │
+  ├───────────────────────┼─────────────────────────────────────────────────┤
+  │                       │ 3 layers: pure function units, view adapter     │
+  │ 7. Testing            │ tests, E2E flows. Responsive tested via pure    │
+  │                       │ functions                                       │
+  └───────────────────────┴─────────────────────────────────────────────────┘
+
+  Deletions: styleHeader, styleDialogBox
+
+  Does the overall design look right for Change 1? If yes, I'll write the
+  proposal artifact and proceed through the openspec workflow.
+
+❯ Yes                                                                           
+
+⏺ Now let me write the proposal artifact for Change 1, then fast-forward through
+   the remaining artifacts.
+
+⏺ Write(openspec/changes/ui-chrome-unification/proposal.md)
+  ⎿  Wrote 32 lines to openspec/changes/ui-chrome-unification/proposal.md
+       1 ## Why
+       2 
+       3 sentei's TUI views were built incrementally across multiple chan
+         ges, leading to visual inconsistencies: the removal progress use
+         s a white-on-purple background badge while every other view uses
+          bold white text titles; create/repo progress views lack the pro
+         gress bar that integration progress has; summary views use diffe
+         rent success markers (`"v"` vs `●`); and the confirmation dialog
+          wraps in a bordered box that nothing else uses. With 12+ views,
+          this divergence undermines the polished, Charm-style experience
+          sentei targets. Standardizing now — before adding more views (p
+         ortal, cleanup preview) — prevents compounding the debt.
+       4 
+       5 ## What Changes
+       6 
+       7 - Extract shared chrome helpers (`viewTitle`, `viewSeparator`, `
+         viewKeyHints`) as pure functions used by every view
+       8 - Extract `ProgressLayout` — a shared rendering struct for all p
+         rogress views with phase-based layout, step indicators, and an o
+         verall progress bar
+       9 - Add adaptive windowing for large item lists (30+ worktrees) th
+         at responds to terminal height, with a stat line showing indicat
+         or legend and counts
+      10 - Add animation buffer constants (`MinProgressDisplay = 300ms`) 
+         to prevent flicker on fast operations
+     … +22 lines (ctrl+o to expand)
+
+⏺ Bash(openspec status --change "ui-chrome-unification")
+  ⎿  - Loading change status...
+     Change: ui-chrome-unification
+     Schema: spec-driven
+     … +6 lines (ctrl+o to expand)
+
+⏺ Proposal accepted. Now let me fast-forward through design and specs. Let me
+  get the instructions for both.
+
+⏺ Bash(openspec instructions design --change "ui-chrome-unification")
+  ⎿  - Generating instructions...
+     Unknown artifact ID in rules: "verification". Valid IDs for schema "sp
+     ec-driven": design, proposal, specs, tasks
+     … +55 lines (ctrl+o to expand)
+⏺ Bash(openspec instructions specs --change "ui-chrome-unification")
+  ⎿  - Generating instructions...
+     Unknown artifact ID in rules: "verification". Valid IDs for schema "sp
+     ec-driven": design, proposal, specs, tasks
+     … +65 lines (ctrl+o to expand)
+
+⏺ Now let me write both the design and specs.
+
+⏺ Write(openspec/changes/ui-chrome-unification/design.md)
+  ⎿  Wrote 81 lines to openspec/changes/ui-chrome-unification/design.md
+       1 ## Context
+       2 
+       3 sentei has 12+ TUI views built incrementally across 6 changes. E
+         ach view hand-rolls its own title, separator, and key hint rende
+         ring, leading to visual inconsistencies. The integration progres
+         s view is the closest to the target aesthetic but lacks features
+          other views have (phase headers, pending phase display). The re
+         moval progress view is the biggest outlier — it uses a white-on-
+         purple background badge (`styleHeader`) that nothing else uses a
+         nd has no progress bar. Summary views use different success mark
+         ers. The confirmation dialog wraps in a bordered box (`styleDial
+         ogBox`) unlike any other view.
+       4 
+       5 Two downstream changes depend on this work: a detail portal comp
+         onent (Change 2) and a cleanup preview redesign (Change 3). Both
+          need standardized chrome to build on.
+       6 
+       7 ## Goals / Non-Goals
+       8 
+       9 **Goals:**
+      10 - Every view uses identical chrome (title format, separators, ke
+         y hints)
+     … +71 lines (ctrl+o to expand)
+
+⏺ Now the specs. Need to create directories for both new and modified
+  capabilities.
+
+⏺ Bash(mkdir -p openspec/changes/ui-chrome-unification/specs/tui-chrome
+      openspec/changes/ui-chrome-unification/specs/tui-design-system
+      openspec/changes/ui-chrome-unifi…)
+  ⎿  Done
+
+⏺ Write(openspec/changes/ui-chrome-unification/specs/tui-chrome/spec.md)
+  ⎿  Wrote 130 lines to
+     openspec/changes/ui-chrome-unification/specs/tui-chrome/spec.md
+       1 ## ADDED Requirements
+       2 
+       3 ### Requirement: View title rendering
+       4 The system SHALL provide a `viewTitle(title string) string` func
+         tion that renders `  sentei ─ <title>` using bold white (color 1
+         5) styling.
+       5 
+       6 #### Scenario: Standard title
+       7 - **WHEN** `viewTitle("Removing Worktrees")` is called
+       8 - **THEN** the output SHALL contain "sentei ─ Removing Worktrees
+         " with bold white styling and 2-space left padding
+       9 
+      10 #### Scenario: Empty title
+     … +120 lines (ctrl+o to expand)
+
+⏺ Write(openspec/changes/ui-chrome-unification/specs/tui-design-system/spec.md)
+  ⎿  Wrote 42 lines to
+     openspec/changes/ui-chrome-unification/specs/tui-design-system/spec.md
+       1 ## ADDED Requirements
+       2 
+       3 ### Requirement: Component patterns documented in .impeccable.md
+       4 The `.impeccable.md` file SHALL include a "Component Patterns" s
+         ection documenting the standard view chrome, progress layout, st
+         atus indicators, stat line format, timing constants, and key map
+         ping.
+       5 
+       6 #### Scenario: View chrome documented
+       7 - **WHEN** a developer reads `.impeccable.md`
+       8 - **THEN** the Component Patterns section SHALL specify: title f
+         ormat (`sentei ─ <Title>` via `viewTitle()`), separator format (
+         dotted `┄` line via `viewSeparator()`), and key hints format (`k
+         ey action · key action` via `viewKeyHints()`)
+       9 
+      10 #### Scenario: Status indicators documented
+     … +32 lines (ctrl+o to expand)
+
+⏺ Write(openspec/changes/ui-chrome-unification/specs/tui-progress/spec.md)
+  ⎿  Wrote 125 lines to
+     openspec/changes/ui-chrome-unification/specs/tui-progress/spec.md
+       1 ## MODIFIED Requirements
+       2 
+       3 ### Requirement: Display deletion progress
+       4 The TUI SHALL display a progress view during deletion using the 
+         shared `ProgressLayout` renderer, showing a title (`sentei ─ Rem
+         oving Worktrees`), phase-based layout (Teardown, Removing worktr
+         ees, Prune & cleanup), per-worktree status indicators under the 
+         active phase with 4-space indentation, adaptive windowing for la
+         rge selections, an overall progress bar, and key hints. The view
+          SHALL update in real-time as each deletion event is received fr
+         om the deletion channel.
+       5 
+       6 #### Scenario: Progress bar updates incrementally
+       7 - **WHEN** a worktree deletion completes (success or failure) an
+         d 2 out of 5 total have now finished
+       8 - **THEN** the overall progress bar SHALL re-render showing 40% 
+         completion
+       9 
+      10 #### Scenario: Per-worktree status on deletion start
+     … +115 lines (ctrl+o to expand)
+
+⏺ Write(openspec/changes/ui-chrome-unification/specs/confirmation-view/spec.md)
+  ⎿  Wrote 50 lines to
+     openspec/changes/ui-chrome-unification/specs/confirmation-view/spec.md
+       1 ## MODIFIED Requirements
+       2 
+       3 ### Requirement: Confirmation view displays resolved options as 
+         key-value summary
+       4 The TUI SHALL provide a reusable confirmation view component tha
+         t renders using standard view chrome (`viewTitle`, `viewSeparato
+         r`, `viewKeyHints`) instead of a bordered dialog box. The view S
+         HALL display a title and a list of key-value pairs representing 
+         the resolved options for a command.
+       5 
+       6 #### Scenario: Create worktree confirmation
+       7 - **WHEN** the confirmation view is shown for a create operation
+          with Branch="feature/foo", Base="main"
+       8 - **THEN** the view SHALL display `viewTitle("Create Worktree")`
+          followed by a separator, then each option as a labeled row, wit
+         hout any border wrapping
+       9 
+      10 #### Scenario: Cleanup confirmation
+     … +40 lines (ctrl+o to expand)
+
+⏺ Bash(openspec status --change "ui-chrome-unification")
+  ⎿  - Loading change status...
+     Change: ui-chrome-unification
+     Schema: spec-driven
+     … +6 lines (ctrl+o to expand)
+
+⏺ Now the tasks artifact. Let me get instructions.
+
+⏺ Bash(openspec instructions tasks --change "ui-chrome-unification")
+  ⎿  - Generating instructions...
+     Unknown artifact ID in rules: "verification". Valid IDs for schema "sp
+     ec-driven": design, proposal, specs, tasks
+     … +53 lines (ctrl+o to expand)
+
+⏺ Write(openspec/changes/ui-chrome-unification/tasks.md)
+  ⎿  Wrote 82 lines to openspec/changes/ui-chrome-unification/tasks.md
+       1 ## 1. Foundation: Constants and Key Bindings
+       2 
+       3 - [ ] 1.1 Create `internal/tui/constants.go` with `MinProgressDi
+         splay` (300ms, `var` for test override), `WindowCompletedTrail` 
+         (2), `WindowPendingLead` (1), and progress bar width (20)
+       4 - [ ] 1.2 Add contextual `keyDetails` (`?`) and global `keyGloba
+         lHelp` (`F1`) bindings to `internal/tui/keys.go`
+       5 - [ ] 1.3 Write unit tests for constants accessibility and key b
+         inding definitions
+       6 
+       7 ## 2. Chrome Helpers
+       8 
+       9 - [ ] 2.1 Write failing tests for `viewTitle`, `viewSeparator`, 
+         `viewKeyHints` in `internal/tui/chrome_test.go` — cover standard
+          cases, edge cases (empty title, narrow width, single hint, no h
+         ints)
+      10 - [ ] 2.2 Create `internal/tui/chrome.go` with `KeyHint` type an
+         d `viewTitle()`, `viewSeparator()`, `viewKeyHints()` implementat
+         ions to pass tests
+     … +72 lines (ctrl+o to expand)
+
+⏺ Bash(openspec status --change "ui-chrome-unification")
+  ⎿  - Loading change status...
+     Change: ui-chrome-unification
+     Schema: spec-driven
+     … +8 lines (ctrl+o to expand)
+
+⏺ Change 1 is fully specced. Now let me move to Change 2: 
+  detail-portal-component.
+
+⏺ Bash(openspec instructions proposal --change "detail-portal-component")
+  ⎿  - Generating instructions...
+     Unknown artifact ID in rules: "verification". Valid IDs for schema "sp
+     ec-driven": design, proposal, specs, tasks
+     … +59 lines (ctrl+o to expand)
+
+⏺ Write(openspec/changes/detail-portal-component/proposal.md)
+  ⎿  Wrote 28 lines to openspec/changes/detail-portal-component/proposal.md
+       1 ## Why
+       2 
+       3 sentei needs a way to show detailed, scrollable content on deman
+         d — cleanup details (which branches would be deleted and why), c
+         ontextual help for the current view, and eventually worktree det
+         ail views. Currently there's no overlay or modal capability. The
+          `bubbletea-overlay` library provides compositing, and `bubbles/
+         viewport` provides scrolling. Combining these into a reusable `D
+         etailPortal` component gives every view access to progressive di
+         sclosure: summary by default, `?` for details.
+       4 
+       5 ## What Changes
+       6 
+       7 - Add `bubbletea-overlay` as a dependency for overlay compositin
+         g
+       8 - Create a `DetailPortal` shared component: overlay + viewport w
+         ith consistent chrome (title, scroll indicator, dismiss key)
+       9 - Implement a global help overlay as the first consumer — access
+         ible via `F1` from any view, showing contextual key bindings and
+          descriptions for the current view
+      10 - Wire `?` (contextual details) and `F1` (global help) key handl
+         ing into the main Model update loop
+     … +18 lines (ctrl+o to expand)
+
+⏺ Bash(mkdir -p openspec/changes/detail-portal-component/specs/tui-portal
+      openspec/changes/detail-portal-component/specs/tui-help)
+  ⎿  Done
+
+⏺ Write(openspec/changes/detail-portal-component/design.md)
+  ⎿  Wrote 57 lines to openspec/changes/detail-portal-component/design.md
+       1 ## Context
+       2 
+       3 Change 1 (`ui-chrome-unification`) established shared chrome hel
+         pers, contextual `?` and global `F1` key bindings, and the `.imp
+         eccable.md` design system. This change builds on that foundation
+          to add overlay capability — a scrollable detail view composited
+          on top of the current view.
+       4 
+       5 The `bubbletea-overlay` library handles the compositing (foregro
+         und rendered on top of background at a specified position). The 
+         `bubbles/viewport` component handles scrollable content. Combini
+         ng these gives us a `DetailPortal` that any view can open with a
+         rbitrary content.
+       6 
+       7 ## Goals / Non-Goals
+       8 
+       9 **Goals:**
+      10 - Reusable `DetailPortal` component usable by any view
+     … +47 lines (ctrl+o to expand)
+⏺ Write(openspec/changes/detail-portal-component/specs/tui-portal/spec.md)
+  ⎿  Wrote 68 lines to
+     openspec/changes/detail-portal-component/specs/tui-portal/spec.md
+       1 ## ADDED Requirements
+       2 
+       3 ### Requirement: DetailPortal renders scrollable overlay
+       4 The system SHALL provide a `DetailPortal` component that renders
+          pre-formatted content in a scrollable viewport composited over 
+         the current background view using `bubbletea-overlay`.
+       5 
+       6 #### Scenario: Portal displayed over background
+       7 - **WHEN** the portal is opened with content and the current vie
+         w is the removal progress view
+       8 - **THEN** the portal SHALL render as a bordered, styled box cen
+         tered over the dimmed background view
+       9 
+      10 #### Scenario: Scrollable content
+     … +58 lines (ctrl+o to expand)
+
+⏺ Write(openspec/changes/detail-portal-component/specs/tui-help/spec.md)
+  ⎿  Wrote 46 lines to
+     openspec/changes/detail-portal-component/specs/tui-help/spec.md
+       1 ## ADDED Requirements
+       2 
+       3 ### Requirement: Global help overlay via F1
+       4 The system SHALL display a help overlay when the user presses `F
+         1` from any view, showing key bindings and descriptions contextu
+         al to the active view.
+       5 
+       6 #### Scenario: Help from list view
+       7 - **WHEN** the user presses `F1` while on the worktree list view
+       8 - **THEN** the portal SHALL open with a title "Help — Worktree L
+         ist" and content listing all available keys for that view (j/k n
+         avigate, space select, enter confirm, / filter, etc.)
+       9 
+      10 #### Scenario: Help from progress view
+     … +36 lines (ctrl+o to expand)
+
+⏺ Write(openspec/changes/detail-portal-component/tasks.md)
+  ⎿  Wrote 45 lines to openspec/changes/detail-portal-component/tasks.md
+       1 ## 1. Dependency Setup
+       2 
+       3 - [ ] 1.1 Add `github.com/rmhubbert/bubbletea-overlay` to `go.mo
+         d` via `go get`
+       4 - [ ] 1.2 Verify dependency resolves and `go build` succeeds
+       5 
+       6 ## 2. DetailPortal Component
+       7 
+       8 - [ ] 2.1 Write failing tests for `DetailPortal` in `internal/tu
+         i/portal_test.go` — open/close lifecycle, scroll position resets
+          on open, key interception (scroll keys work, navigation keys bl
+         ocked, quit passes through)
+       9 - [ ] 2.2 Create `internal/tui/portal.go` with `DetailPortal` st
+         ruct (title, content, visible, viewport), `Open(title, content)`
+         , `Close()`, `Update(msg)`, `View(background)` methods to pass t
+         ests
+      10 - [ ] 2.3 Write tests for portal sizing — standard terminal (80x
+         24), resize while open, margin calculation
+     … +35 lines (ctrl+o to expand)
+
+⏺ Bash(openspec status --change "detail-portal-component")
+  ⎿  - Loading change status...
+     Change: detail-portal-component
+     Schema: spec-driven
+     … +8 lines (ctrl+o to expand)
+
+⏺ Now Change 3: cleanup-preview-redesign.
+
+⏺ Write(openspec/changes/cleanup-preview-redesign/proposal.md)
+  ⎿  Wrote 34 lines to openspec/changes/cleanup-preview-redesign/proposal.md
+
+       1 ## Why
+       2 
+       3 The current cleanup flow has two UX problems: (1) the confirmati
+         on dialog asks "are you sure?" without showing what will happen,
+          and (2) aggressive cleanup is only accessible via CLI flag — TU
+         I users can't upgrade from safe to aggressive when the tool find
+         s branches to clean. Replacing the blind confirmation with an in
+         formed preview (dry-run scan → show results → choose action) mak
+         es the cleanup flow transparent and gives TUI users access to ag
+         gressive cleanup with full visibility into what will be deleted.
+       4 
+       5 Additionally, worktree removal currently has no safety gate for 
+         dirty/unpushed branches — removing a worktree with uncommitted c
+         hanges is irreversible data loss. Adding a confirmation gate spe
+         cifically for at-risk worktrees protects against accidental loss
+          while keeping the flow fast for clean worktrees.
+       6 
+       7 ## What Changes
+       8 
+       9 - Replace the cleanup confirmation dialog (TUI menu path) with a
+          cleanup preview: dry-run scan with loading state → results grou
+         ped by safe/aggressive → choose action
+      10 - Add aggressive cleanup upgrade offer in TUI: when dry-run dete
+         cts branches that aggressive mode would clean, show inline previ
+         ew (first 2-3 names + "and N more") with `a` key to run aggressi
+         ve
+     … +24 lines (ctrl+o to expand)
+
+⏺ Bash(mkdir -p openspec/changes/cleanup-preview-redesign/specs/cleanup-preview
+      openspec/changes/cleanup-preview-redesign/specs/removal-safety-gate
+      openspec/changes/cl…)
+  ⎿  Done
+
+⏺ Write(openspec/changes/cleanup-preview-redesign/design.md)
+  ⎿  Wrote 68 lines to openspec/changes/cleanup-preview-redesign/design.md
+       1 ## Context
+       2 
+       3 Changes 1 and 2 provide the foundation: shared chrome, progress 
+         layout, animation buffer, detail portal, and contextual `?` key.
+          This change uses all of those to redesign the cleanup flow and 
+         add a safety gate to worktree removal.
+       4 
+       5 The current cleanup flow is: menu → confirmation (blind) → run →
+          result. The new flow is: menu → dry-run scan (with loading) → p
+         review (safe results + aggressive offer) → run → result.
+       6 
+       7 ## Goals / Non-Goals
+       8 
+       9 **Goals:**
+      10 - Cleanup preview shows exactly what will happen before any muta
+         tion
+     … +58 lines (ctrl+o to expand)
+
+⏺ Write(openspec/changes/cleanup-preview-redesign/specs/cleanup-preview/spec.md)
+  ⎿  Wrote 87 lines to
+     openspec/changes/cleanup-preview-redesign/specs/cleanup-preview/spec.md
+       1 ## ADDED Requirements
+       2 
+       3 ### Requirement: Dry-run scan with loading state
+       4 The system SHALL run a dry-run cleanup scan when the user select
+         s cleanup from the TUI menu, displaying a loading indicator whil
+         e scanning.
+       5 
+       6 #### Scenario: Loading state during scan
+       7 - **WHEN** the user selects cleanup from the TUI menu
+       8 - **THEN** the view SHALL display `viewTitle("Cleanup Preview")`
+         , a separator, and `◐ Scanning repository…` using the active ind
+         icator
+       9 
+      10 #### Scenario: Scan completes and shows preview
+     … +77 lines (ctrl+o to expand)
+
+⏺ Write(openspec/changes/cleanup-preview-redesign/specs/removal-safety-gate/spec
+       .md)
+  ⎿  Wrote 54 lines to
+     openspec/changes/cleanup-preview-redesign/specs/removal-safety-gate/spec.md
+       1 ## ADDED Requirements
+       2 
+       3 ### Requirement: Confirmation gate for dirty/unpushed worktrees
+       4 The system SHALL display a confirmation view when the user proce
+         eds with worktree removal and the selection includes worktrees w
+         ith uncommitted changes, untracked files, or commits not pushed 
+         to remote.
+       5 
+       6 #### Scenario: All clean and pushed — no gate
+       7 - **WHEN** the user confirms removal of 5 worktrees, all clean w
+         ith branches pushed to remote
+       8 - **THEN** the system SHALL proceed directly to removal progress
+          with no confirmation gate
+       9 
+      10 #### Scenario: Dirty worktree triggers gate
+     … +44 lines (ctrl+o to expand)
+
+⏺ Write(openspec/changes/cleanup-preview-redesign/specs/confirmation-view/spec.m
+       d)
+  ⎿  Wrote 16 lines to
+     openspec/changes/cleanup-preview-redesign/specs/confirmation-view/spec.md
+       1 ## MODIFIED Requirements
+       2 
+       3 ### Requirement: Confirmation view shows equivalent CLI command
+       4 The confirmation view SHALL display the equivalent CLI command i
+         n summary/result views instead of in the confirmation dialog, so
+          users discover the CLI equivalent after seeing what happened.
+       5 
+       6 #### Scenario: CLI command in removal summary
+       7 - **WHEN** the removal summary view is rendered after deleting w
+         orktrees
+       8 - **THEN** the summary SHALL include the equivalent CLI command 
+         (e.g., `sentei remove --branches feature-a,feature-b`)
+       9 
+      10 #### Scenario: CLI command in cleanup result
+     … +6 lines (ctrl+o to expand)
+
+⏺ Write(openspec/changes/cleanup-preview-redesign/specs/cli-tui-handoff/spec.md)
+  ⎿  Wrote 24 lines to
+     openspec/changes/cleanup-preview-redesign/specs/cli-tui-handoff/spec.md
+       1 ## MODIFIED Requirements
+       2 
+       3 ### Requirement: --yes flag skips CLI confirmation
+       4 CLI subcommands that show confirmation dialogs SHALL accept a `-
+         -yes` / `-y` flag to skip the confirmation and proceed immediate
+         ly.
+       5 
+       6 #### Scenario: Cleanup with --yes
+       7 - **WHEN** the user runs `sentei cleanup --mode safe --yes`
+       8 - **THEN** the system SHALL skip the confirmation dialog and run
+          cleanup immediately
+       9 
+      10 #### Scenario: Remove with --yes
+     … +14 lines (ctrl+o to expand)
+
+⏺ Write(openspec/changes/cleanup-preview-redesign/tasks.md)
+  ⎿  Wrote 80 lines to openspec/changes/cleanup-preview-redesign/tasks.md
+       1 ## 1. Dry-Run Scan API
+       2 
+       3 - [ ] 1.1 Write failing tests for `cleanup.DryRun` in `internal/
+         cleanup/dryrun_test.go` — clean repo (all zeros), repo with stal
+         e refs + config duplicates, repo with non-worktree branches (agg
+         ressive targets), BranchInfo contains name + merge date + last c
+         ommit
+       4 - [ ] 1.2 Extract shared scan helpers from `cleanup.Run` into re
+         usable functions
+       5 - [ ] 1.3 Implement `cleanup.DryRun(runner, repoPath) DryRunResu
+         lt` and `BranchInfo` type to pass tests
+       6 - [ ] 1.4 Write E2E test for `DryRun` against a real bare repo w
+         ith stale branches
+       7 
+       8 ## 2. Cleanup Preview View
+       9 
+      10 - [ ] 2.1 Write failing tests for `viewCleanupPreview` in `inter
+         nal/tui/cleanup_preview_test.go` — loading state, safe results w
+         ith actions, safe results all clean, aggressive offer with inlin
+         e preview (2-3 names + "and N more"), no aggressive section when
+          nothing to clean
+     … +70 lines (ctrl+o to expand)
+
+⏺ Bash(openspec status --change "cleanup-preview-redesign")
+  ⎿  - Loading change status...
+     Change: cleanup-preview-redesign
+     Schema: spec-driven
+     … +8 lines (ctrl+o to expand)
+
+⏺ Now let me update the session meta doc and do the self-review.
+
+  Read 1 file (ctrl+o to expand)
+
+⏺ Update(docs/handoff/session-meta.md)
+  ⎿  Added 1 line, removed 1 line
+      1  # UI Alignment Session Meta
+      2  
+      3 -> **Status:** In progress — brainstorming phase                 
+      3 +> **Status:** All 3 changes fully specced (proposal + design + s
+        +pecs + tasks). Ready for implementation.                        
+      4  > **Date:** 2026-03-31
+      5  > **Branch:** feature/ui-alignment
+      6  > **DO NOT COMMIT** — working context for multi-session continui
+         ty
+
+⏺ All three changes are fully specced. Let me do a quick self-review across all
+  artifacts.
+⏺ Bash(echo "=== Change 1 ===" && openspec status --change
+      "ui-chrome-unification" && echo && echo "=== Change 2 ===" && openspec
+      status --change "detail-portal-compon…)
+  ⎿  === Change 1 ===
+     - Loading change status...
+     Change: ui-chrome-unification
+     … +35 lines (ctrl+o to expand)
+
+⏺ All three changes are 4/4 complete. Now let me export the session for context
+  preservation.
+
+⏺ Bash(claude sessions export c45565c0-41bb-40a7-b10f-7a9279d1b68c >
+      /Users/abiswas/code/personal/sentei/feature-ui-alignment/docs/handoff/sess
+      ion-c45565c0.md 2>&1 | h…)
+  ⎿  claude:34: command not found: _cloak_merge_settings
+     Could you clarify what you mean by "sessions"? Are you referring to so
+     mething specific in the sentei codebase, one of the OpenSpec changes,
+     or something else?
+
+⏺ The claude sessions export command doesn't seem to work in this context. Let
+  me try the alternative approach.
+
+  Read 2 files (ctrl+o to expand)
+  ⎿  Interrupted · What should Claude do instead?
+
+❯ /export /Users/abiswas/code/personal/sentei/feature-ui-alignment/docs/handoff 
+/session-c45565c0.md                                                            
+  ⎿  Failed to export conversation: ENOENT: no such file or directory, open
+     '/Users/abiswas/code/personal/sentei/feature-ui-alignment/Users/abiswas/cod
+     e/personal/sentei/feature-ui-alignment/docs/handoff/session-c45565c0.txt'

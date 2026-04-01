@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
@@ -72,6 +73,8 @@ func (m Model) updateCloneInput(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.repo.events = nil
 			m.repo.result = nil
 			m.repo.opType = "clone"
+			m.progressStartedAt = time.Now()
+			m.progressToken++
 			m.view = repoProgressView
 			return m, m.startRepoPipeline(opts)
 		}

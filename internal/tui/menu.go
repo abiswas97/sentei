@@ -14,15 +14,16 @@ import (
 )
 
 type worktreeContextMsg struct {
-	worktrees []git.Worktree
-	err       error
+	worktrees  []git.Worktree
+	err        error
+	generation uint64
 }
 
-func loadWorktreeContext(runner git.CommandRunner, repoPath string) tea.Cmd {
+func loadWorktreeContext(runner git.CommandRunner, repoPath string, generation uint64) tea.Cmd {
 	return func() tea.Msg {
 		wts, err := git.ListWorktrees(runner, repoPath)
 		if err != nil {
-			return worktreeContextMsg{err: err}
+			return worktreeContextMsg{err: err, generation: generation}
 		}
 		wts = worktree.EnrichWorktrees(runner, wts, worktree.DefaultEnrichConcurrency)
 		var filtered []git.Worktree
@@ -31,29 +32,15 @@ func loadWorktreeContext(runner git.CommandRunner, repoPath string) tea.Cmd {
 				filtered = append(filtered, wt)
 			}
 		}
-		return worktreeContextMsg{worktrees: filtered}
+		return worktreeContextMsg{worktrees: filtered, generation: generation}
 	}
 }
 
 func (m Model) updateMenu(msg tea.Msg) (tea.Model, tea.Cmd) {
-	// Lazy state refresh: reload worktrees if any mutation marked state stale.
-	if m.stateStale {
-		m.stateStale = false
-		return m, loadWorktreeContext(m.runner, m.repoPath)
-	}
-
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = max(msg.Height-6, 5)
-		return m, nil
-
-	case worktreeContextMsg:
-		if msg.err == nil {
-			m.remove.worktrees = msg.worktrees
-			m.reindex()
-			m.updateMenuHints()
-		}
 		return m, nil
 
 	case tea.KeyMsg:
@@ -98,7 +85,8 @@ func (m Model) updateMenu(msg tea.Msg) (tea.Model, tea.Cmd) {
 				case "Remove worktrees":
 					m.view = listView
 					if len(m.remove.worktrees) == 0 {
-						return m, loadWorktreeContext(m.runner, m.repoPath)
+						m.worktreeGeneration++
+						return m, loadWorktreeContext(m.runner, m.repoPath, m.worktreeGeneration)
 					}
 				case "Cleanup & exit":
 					m.view = cleanupConfirmView
