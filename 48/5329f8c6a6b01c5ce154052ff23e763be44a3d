@@ -1,0 +1,25 @@
+openspec/specs/eager-state-refresh/spec.md
+  c0c5d5001d9a038b 1-74
+openspec/specs/tui-progress/spec.md
+  c0c5d5001d9a038b 45,59-62
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.23",
+  "base_commit_sha": "485329f8c6a6b01c5ce154052ff23e763be44a3d",
+  "prompts": {
+    "c0c5d5001d9a038b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ef84fa24-598a-4810-9c8e-a6e722c62f5f",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>",
+      "messages": [],
+      "total_additions": 79,
+      "total_deletions": 1,
+      "accepted_lines": 79,
+      "overriden_lines": 0
+    }
+  }
+}
