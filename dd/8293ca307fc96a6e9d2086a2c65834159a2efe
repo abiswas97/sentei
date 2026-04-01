@@ -1,0 +1,50 @@
+internal/tui/model.go
+  c0c5d5001d9a038b 220-222,325-329,331-339,426,439-447
+internal/tui/create_progress.go
+  c0c5d5001d9a038b 45-47
+internal/tui/menu.go
+  c0c5d5001d9a038b 17-19,22,26,35,88-89
+internal/tui/progress.go
+  c0c5d5001d9a038b 110-112
+internal/tui/integration_progress.go
+  c0c5d5001d9a038b 41-43
+openspec/changes/eager-worktree-reload/tasks.md
+  c0c5d5001d9a038b 3-4,8-10,14-15,19-24,28-31,35-36,40-41
+internal/tui/progress_test.go
+  c0c5d5001d9a038b 9-10,273,275,277-295
+internal/tui/menu_test.go
+  c0c5d5001d9a038b 1-298
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.23",
+  "base_commit_sha": "dd8293ca307fc96a6e9d2086a2c65834159a2efe",
+  "prompts": {
+    "c0c5d5001d9a038b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ef84fa24-598a-4810-9c8e-a6e722c62f5f",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>",
+      "messages": [],
+      "total_additions": 390,
+      "total_deletions": 67,
+      "accepted_lines": 386,
+      "overriden_lines": 0
+    },
+    "f2534d24a032860f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "cb8591af-0f5b-4e2c-ba06-4bf22a795b19",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 459,
+      "overriden_lines": 0
+    }
+  }
+}

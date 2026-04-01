@@ -1,0 +1,64 @@
+internal/tui/progress_test.go
+  8a68b1169cb405a2 7,10,172-180
+internal/tui/model.go
+  8a68b1169cb405a2 6,229-234,237-246,271,359-362
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.22",
+  "base_commit_sha": "8fa5bf292ea9bdc86e2cf82f921756351a0b6b61",
+  "prompts": {
+    "08d601d7d3abe07d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "476861dc-1c2d-489d-b6d7-e64dcac051f6",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 99,
+      "overriden_lines": 0
+    },
+    "239e14a7ebb8866c": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019d437d-2bef-75f1-93ea-abed911d6951",
+        "model": "gpt-5.4"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 2,
+      "overriden_lines": 0
+    },
+    "8a68b1169cb405a2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "130c770c-ce04-4bfe-a06a-832e745e53c3",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>",
+      "messages": [],
+      "total_additions": 41,
+      "total_deletions": 7,
+      "accepted_lines": 35,
+      "overriden_lines": 0
+    },
+    "c51816207c4c24e5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c45565c0-41bb-40a7-b10f-7a9279d1b68c",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 1302,
+      "overriden_lines": 0
+    }
+  }
+}

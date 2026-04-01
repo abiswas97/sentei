@@ -1,0 +1,23 @@
+main.go
+  8a68b1169cb405a2 8,341-345
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.22",
+  "base_commit_sha": "e3ee83104499d798affa4ba8a6901a376ad077ca",
+  "prompts": {
+    "8a68b1169cb405a2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "130c770c-ce04-4bfe-a06a-832e745e53c3",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>",
+      "messages": [],
+      "total_additions": 6,
+      "total_deletions": 1,
+      "accepted_lines": 6,
+      "overriden_lines": 0
+    }
+  }
+}

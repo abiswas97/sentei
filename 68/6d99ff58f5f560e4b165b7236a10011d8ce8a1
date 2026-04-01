@@ -1,0 +1,29 @@
+internal/tui/progress.go
+  8a68b1169cb405a2 111
+internal/tui/repo_progress.go
+  8a68b1169cb405a2 85,87,89
+internal/tui/integration_progress.go
+  8a68b1169cb405a2 43
+internal/tui/create_progress.go
+  8a68b1169cb405a2 46
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.22",
+  "base_commit_sha": "686d99ff58f5f560e4b165b7236a10011d8ce8a1",
+  "prompts": {
+    "8a68b1169cb405a2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "130c770c-ce04-4bfe-a06a-832e745e53c3",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>",
+      "messages": [],
+      "total_additions": 6,
+      "total_deletions": 9,
+      "accepted_lines": 6,
+      "overriden_lines": 0
+    }
+  }
+}

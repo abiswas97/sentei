@@ -1,0 +1,124 @@
+internal/tui/migrate_confirm.go
+  8a68b1169cb405a2 7,61-62
+docs/handoff/change1-init-prompt.md
+  c51816207c4c24e5 1-64
+openspec/changes/cleanup-preview-redesign/proposal.md
+  c51816207c4c24e5 1-34
+openspec/changes/cleanup-preview-redesign/tasks.md
+  c51816207c4c24e5 1-80
+internal/tui/clone_input.go
+  8a68b1169cb405a2 8,76-77
+openspec/changes/cleanup-preview-redesign/specs/confirmation-view/spec.md
+  c51816207c4c24e5 1-16
+openspec/changes/detail-portal-component/tasks.md
+  c51816207c4c24e5 1-45
+internal/tui/create_options.go
+  8a68b1169cb405a2 7,119-120
+openspec/changes/cleanup-preview-redesign/design.md
+  c51816207c4c24e5 1-68
+openspec/changes/ui-chrome-unification/specs/tui-design-system/spec.md
+  c51816207c4c24e5 1-42
+openspec/changes/detail-portal-component/specs/tui-portal/spec.md
+  c51816207c4c24e5 1-68
+openspec/changes/ui-chrome-unification/proposal.md
+  c51816207c4c24e5 1-32
+docs/handoff/session-meta.md
+  c51816207c4c24e5 1-2,4-12,14-141
+  239e14a7ebb8866c 3,13
+openspec/changes/ui-chrome-unification/specs/tui-chrome/spec.md
+  c51816207c4c24e5 1-130
+internal/tui/migrate_integrations.go
+  8a68b1169cb405a2 7,89-90
+openspec/changes/detail-portal-component/proposal.md
+  c51816207c4c24e5 1-28
+openspec/changes/ui-chrome-unification/specs/confirmation-view/spec.md
+  c51816207c4c24e5 1-50
+internal/tui/repo_options.go
+  8a68b1169cb405a2 7,138-139
+openspec/changes/cleanup-preview-redesign/specs/cleanup-preview/spec.md
+  c51816207c4c24e5 1-87
+openspec/changes/cleanup-preview-redesign/specs/cli-tui-handoff/spec.md
+  c51816207c4c24e5 1-24
+openspec/changes/ui-chrome-unification/design.md
+  c51816207c4c24e5 1-81
+internal/tui/integration_list.go
+  8a68b1169cb405a2 7,210-211
+openspec/changes/ui-chrome-unification/tasks.md
+  08d601d7d3abe07d 3-5,9-12,16-18,22-25,29-37,41-50,54-56,60-62,66-67,71-74,78-131
+  c51816207c4c24e5 1-2,6-8,13-15,19-21,26-28,38-40,51-53,57-59,63-65,68-70,75-77
+openspec/changes/cleanup-preview-redesign/specs/removal-safety-gate/spec.md
+  c51816207c4c24e5 1-54
+internal/tui/confirm.go
+  8a68b1169cb405a2 7,27-28
+internal/tui/create_confirm.go
+  8a68b1169cb405a2 5,117-118
+internal/tui/create_branch.go
+  8a68b1169cb405a2 7,79-80
+openspec/changes/ui-chrome-unification/specs/tui-progress/spec.md
+  c51816207c4c24e5 1-125
+openspec/changes/detail-portal-component/design.md
+  c51816207c4c24e5 1-57
+internal/tui/clone_confirm.go
+  8a68b1169cb405a2 4-5,75-76
+openspec/changes/detail-portal-component/specs/tui-help/spec.md
+  c51816207c4c24e5 1-46
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.22",
+  "base_commit_sha": "665449fe982d417b17f39b7e34883827f6aba7bd",
+  "prompts": {
+    "08d601d7d3abe07d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "476861dc-1c2d-489d-b6d7-e64dcac051f6",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 99,
+      "overriden_lines": 0
+    },
+    "239e14a7ebb8866c": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019d437d-2bef-75f1-93ea-abed911d6951",
+        "model": "gpt-5.4"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 2,
+      "overriden_lines": 0
+    },
+    "8a68b1169cb405a2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "130c770c-ce04-4bfe-a06a-832e745e53c3",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>",
+      "messages": [],
+      "total_additions": 31,
+      "total_deletions": 0,
+      "accepted_lines": 31,
+      "overriden_lines": 0
+    },
+    "c51816207c4c24e5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c45565c0-41bb-40a7-b10f-7a9279d1b68c",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 1302,
+      "overriden_lines": 0
+    }
+  }
+}
