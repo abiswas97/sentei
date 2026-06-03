@@ -40,7 +40,7 @@ func TestClone_Successful(t *testing.T) {
 		// Structure phase
 		fmt.Sprintf("%s:[config remote.origin.fetch +refs/heads/*:refs/remotes/origin/*]", barePath): {output: ""},
 		// Worktree phase
-		fmt.Sprintf("%s:[symbolic-ref refs/remotes/origin/HEAD]", barePath):     {output: "refs/remotes/origin/main"},
+		fmt.Sprintf("%s:[symbolic-ref --short HEAD]", barePath):                 {output: "main"},
 		fmt.Sprintf("%s:[worktree add main main]", repoPath):                    {output: ""},
 		fmt.Sprintf("%s/main:[branch --set-upstream-to=origin/main]", repoPath): {output: ""},
 	}}
@@ -78,7 +78,7 @@ func TestClone_DefaultBranchFallback(t *testing.T) {
 		fmt.Sprintf("%s:[clone --bare git@github.com:user/repo.git %s]", dir, barePath):              {output: ""},
 		fmt.Sprintf("%s:[config remote.origin.fetch +refs/heads/*:refs/remotes/origin/*]", barePath): {output: ""},
 		// symbolic-ref fails — fallback to main
-		fmt.Sprintf("%s:[symbolic-ref refs/remotes/origin/HEAD]", barePath):     {output: "", err: fmt.Errorf("not found")},
+		fmt.Sprintf("%s:[symbolic-ref --short HEAD]", barePath):                 {output: "", err: fmt.Errorf("not found")},
 		fmt.Sprintf("%s:[show-ref --verify refs/heads/main]", barePath):         {output: "abc123"},
 		fmt.Sprintf("%s:[worktree add main main]", repoPath):                    {output: ""},
 		fmt.Sprintf("%s/main:[branch --set-upstream-to=origin/main]", repoPath): {output: ""},
@@ -90,6 +90,37 @@ func TestClone_DefaultBranchFallback(t *testing.T) {
 
 	if result.DefaultBranch != "main" {
 		t.Errorf("DefaultBranch = %q, want %q (fallback)", result.DefaultBranch, "main")
+	}
+}
+
+func TestClone_NonStandardDefaultBranch(t *testing.T) {
+	dir := t.TempDir()
+	repoName := "repo"
+	repoPath := filepath.Join(dir, repoName)
+	barePath := filepath.Join(repoPath, ".bare")
+
+	runner := &mockRunner{responses: map[string]mockResponse{
+		fmt.Sprintf("%s:[clone --bare git@github.com:user/repo.git %s]", dir, barePath):              {output: ""},
+		fmt.Sprintf("%s:[config remote.origin.fetch +refs/heads/*:refs/remotes/origin/*]", barePath): {output: ""},
+		// Default branch is neither main nor master; a bare clone records it in HEAD.
+		fmt.Sprintf("%s:[symbolic-ref --short HEAD]", barePath):                             {output: "production"},
+		fmt.Sprintf("%s:[worktree add production production]", repoPath):                    {output: ""},
+		fmt.Sprintf("%s/production:[branch --set-upstream-to=origin/production]", repoPath): {output: ""},
+	}}
+
+	ec := &eventCollector{}
+	opts := CloneOptions{URL: "git@github.com:user/repo.git", Location: dir, Name: repoName}
+	result := Clone(runner, opts, ec.emit)
+
+	if result.DefaultBranch != "production" {
+		t.Errorf("DefaultBranch = %q, want %q", result.DefaultBranch, "production")
+	}
+	for _, phase := range result.Phases {
+		for _, step := range phase.Steps {
+			if step.Status == StepFailed {
+				t.Errorf("step %q failed: %v", step.Name, step.Error)
+			}
+		}
 	}
 }
 

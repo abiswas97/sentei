@@ -170,13 +170,11 @@ func runCloneWorktree(runner git.CommandRunner, repoPath, barePath string, emit 
 }
 
 func detectDefaultBranch(runner git.CommandRunner, barePath string) string {
-	output, err := runner.Run(barePath, "symbolic-ref", "refs/remotes/origin/HEAD")
-	if err == nil {
-		// "refs/remotes/origin/main" → "main"
-		branch := strings.TrimPrefix(output, "refs/remotes/origin/")
-		if branch != output && branch != "" {
-			return branch
-		}
+	// A bare clone records the remote's default branch in HEAD. This is the only
+	// source that survives a non-standard default (e.g. "production"); a bare clone
+	// does not create refs/remotes/origin/HEAD, so reading that always fails.
+	if branch, err := runner.Run(barePath, "symbolic-ref", "--short", "HEAD"); err == nil && branch != "" {
+		return branch
 	}
 
 	// Fallback: try main, then master
