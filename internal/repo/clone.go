@@ -126,6 +126,19 @@ func runCloneStructure(runner git.CommandRunner, repoPath, barePath string, emit
 	phase.Steps = append(phase.Steps, StepResult{Name: "Configure refspec", Status: StepDone})
 	emit(Event{Phase: phaseName, Step: "Configure refspec", Status: StepDone})
 
+	// Populate remote-tracking refs. `git clone --bare` only writes refs/heads/*,
+	// so refs/remotes/origin/* stays empty until a fetch — without this the later
+	// `--set-upstream-to=origin/<branch>` step fails and the clone has no tracking.
+	emit(Event{Phase: phaseName, Step: "Fetch tracking refs", Status: StepRunning})
+	if _, err := runner.Run(barePath, "fetch", "origin"); err != nil {
+		step := StepResult{Name: "Fetch tracking refs", Status: StepFailed, Error: err}
+		phase.Steps = append(phase.Steps, step)
+		emit(Event{Phase: phaseName, Step: step.Name, Status: StepFailed, Error: err})
+		return phase
+	}
+	phase.Steps = append(phase.Steps, StepResult{Name: "Fetch tracking refs", Status: StepDone})
+	emit(Event{Phase: phaseName, Step: "Fetch tracking refs", Status: StepDone})
+
 	return phase
 }
 

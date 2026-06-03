@@ -107,6 +107,44 @@ func TestE2E_CloneRepo(t *testing.T) {
 	}
 }
 
+func TestE2E_CloneNonMainDefaultSetsUpstream(t *testing.T) {
+	// Source repo whose default branch is neither main nor master.
+	sourceDir := t.TempDir()
+	runner := &git.GitRunner{}
+
+	runner.Run(sourceDir, "init")
+	runner.Run(sourceDir, "checkout", "-b", "production")
+	os.WriteFile(filepath.Join(sourceDir, "file.txt"), []byte("hello"), 0644)
+	runner.Run(sourceDir, "add", "-A")
+	runner.Run(sourceDir, "-c", "user.email=test@test.com", "-c", "user.name=Test", "commit", "-m", "init")
+
+	cloneDir := t.TempDir()
+	ec := &eventCollector{}
+	opts := CloneOptions{URL: sourceDir, Location: cloneDir, Name: "cloned"}
+	result := Clone(runner, opts, ec.emit)
+
+	for _, phase := range result.Phases {
+		for _, step := range phase.Steps {
+			if step.Status == StepFailed {
+				t.Errorf("step %q failed: %v", step.Name, step.Error)
+			}
+		}
+	}
+
+	if result.DefaultBranch != "production" {
+		t.Errorf("DefaultBranch = %q, want %q", result.DefaultBranch, "production")
+	}
+
+	wtPath := filepath.Join(cloneDir, "cloned", "production")
+	upstream, err := runner.Run(wtPath, "rev-parse", "--abbrev-ref", "@{upstream}")
+	if err != nil {
+		t.Fatalf("worktree has no upstream tracking configured: %v", err)
+	}
+	if upstream != "origin/production" {
+		t.Errorf("upstream = %q, want %q", upstream, "origin/production")
+	}
+}
+
 func TestE2E_MigrateRepo(t *testing.T) {
 	// Create a regular git repo
 	dir := t.TempDir()
