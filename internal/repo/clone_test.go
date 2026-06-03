@@ -39,6 +39,7 @@ func TestClone_Successful(t *testing.T) {
 		fmt.Sprintf("%s:[clone --bare git@github.com:user/repo.git %s]", dir, barePath): {output: ""},
 		// Structure phase
 		fmt.Sprintf("%s:[config remote.origin.fetch +refs/heads/*:refs/remotes/origin/*]", barePath): {output: ""},
+		fmt.Sprintf("%s:[fetch origin]", barePath):                                                   {output: ""},
 		// Worktree phase
 		fmt.Sprintf("%s:[symbolic-ref --short HEAD]", barePath):                 {output: "main"},
 		fmt.Sprintf("%s:[worktree add main main]", repoPath):                    {output: ""},
@@ -77,6 +78,7 @@ func TestClone_DefaultBranchFallback(t *testing.T) {
 	runner := &mockRunner{responses: map[string]mockResponse{
 		fmt.Sprintf("%s:[clone --bare git@github.com:user/repo.git %s]", dir, barePath):              {output: ""},
 		fmt.Sprintf("%s:[config remote.origin.fetch +refs/heads/*:refs/remotes/origin/*]", barePath): {output: ""},
+		fmt.Sprintf("%s:[fetch origin]", barePath):                                                   {output: ""},
 		// symbolic-ref fails — fallback to main
 		fmt.Sprintf("%s:[symbolic-ref --short HEAD]", barePath):                 {output: "", err: fmt.Errorf("not found")},
 		fmt.Sprintf("%s:[show-ref --verify refs/heads/main]", barePath):         {output: "abc123"},
@@ -102,6 +104,7 @@ func TestClone_NonStandardDefaultBranch(t *testing.T) {
 	runner := &mockRunner{responses: map[string]mockResponse{
 		fmt.Sprintf("%s:[clone --bare git@github.com:user/repo.git %s]", dir, barePath):              {output: ""},
 		fmt.Sprintf("%s:[config remote.origin.fetch +refs/heads/*:refs/remotes/origin/*]", barePath): {output: ""},
+		fmt.Sprintf("%s:[fetch origin]", barePath):                                                   {output: ""},
 		// Default branch is neither main nor master; a bare clone records it in HEAD.
 		fmt.Sprintf("%s:[symbolic-ref --short HEAD]", barePath):                             {output: "production"},
 		fmt.Sprintf("%s:[worktree add production production]", repoPath):                    {output: ""},
