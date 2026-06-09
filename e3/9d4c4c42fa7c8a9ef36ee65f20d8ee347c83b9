@@ -1,0 +1,34 @@
+internal/repo/clone.go
+  s_157240fea52147::t_172472491ac46a 32-40
+  s_157240fea52147::t_c5f9ee259eeab5 64-76,81,89,103-107,112-131
+  s_157240fea52147::t_2fb8d1a32ef2af 214-222
+  s_157240fea52147::t_1e407566e9e53d 4
+internal/repo/repo_test.go
+  s_157240fea52147::t_938a2aeb1c6634 12-14,23-25
+internal/repo/e2e_test.go
+  s_157240fea52147::t_b73027a895d81b 13-33
+  s_157240fea52147::t_187b595765eacc 35,85,96,133,142,171
+internal/repo/clone_test.go
+  s_157240fea52147::t_24e5fe8c31b46e 155-225,233-247
+  s_157240fea52147::t_610a63781cb5d0 226-232
+  s_157240fea52147::t_ef73b4e71f7133 5
+  s_157240fea52147::t_f5692968c90b9e 20-23
+  s_157240fea52147::t_5ee39ba2f5d963 116
+  s_157240fea52147::t_fc8db0c21e63a3 50
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "e39d4c4c42fa7c8a9ef36ee65f20d8ee347c83b9",
+  "prompts": {},
+  "sessions": {
+    "s_157240fea52147": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "42f7cf1c-c025-449a-89c8-fab9aa10c61e",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Test <t@t.com>"
+    }
+  }
+}
