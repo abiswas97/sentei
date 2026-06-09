@@ -183,19 +183,6 @@ func runCloneStructure(runner git.CommandRunner, repoPath, barePath string, emit
 	phase.Steps = append(phase.Steps, StepResult{Name: "Configure refspec", Status: StepDone})
 	emit(Event{Phase: phaseName, Step: "Configure refspec", Status: StepDone})
 
-	// Populate remote-tracking refs. `git clone --bare` only writes refs/heads/*,
-	// so refs/remotes/origin/* stays empty until a fetch — without this the later
-	// `--set-upstream-to=origin/<branch>` step fails and the clone has no tracking.
-	emit(Event{Phase: phaseName, Step: "Fetch tracking refs", Status: StepRunning})
-	if _, err := runner.Run(barePath, "fetch", "origin"); err != nil {
-		step := StepResult{Name: "Fetch tracking refs", Status: StepFailed, Error: err}
-		phase.Steps = append(phase.Steps, step)
-		emit(Event{Phase: phaseName, Step: step.Name, Status: StepFailed, Error: err})
-		return phase
-	}
-	phase.Steps = append(phase.Steps, StepResult{Name: "Fetch tracking refs", Status: StepDone})
-	emit(Event{Phase: phaseName, Step: "Fetch tracking refs", Status: StepDone})
-
 	return phase
 }
 
@@ -232,15 +219,23 @@ func runCloneWorktree(runner git.CommandRunner, repoPath, barePath string, emit 
 	phase.Steps = append(phase.Steps, StepResult{Name: "Create worktree", Status: StepDone})
 	emit(Event{Phase: phaseName, Step: "Create worktree", Status: StepDone})
 
-	// Set upstream
-	emit(Event{Phase: phaseName, Step: "Set upstream tracking", Status: StepRunning})
+	// Tracking is best-effort: the checkout above is already usable. Populating
+	// refs/remotes/origin/* (fetch) and setting upstream both need the remote; a
+	// network/auth failure here must NOT fail the clone. StepSkipped keeps
+	// HasFailures() false so the clone still reports success, just without tracking.
 	wtPath := filepath.Join(repoPath, branch)
-	_, err = runner.Run(wtPath, "branch", fmt.Sprintf("--set-upstream-to=origin/%s", branch))
-	if err != nil {
-		step := StepResult{Name: "Set upstream tracking", Status: StepFailed, Error: err}
-		phase.Steps = append(phase.Steps, step)
-		emit(Event{Phase: phaseName, Step: step.Name, Status: StepFailed, Error: err})
+	emit(Event{Phase: phaseName, Step: "Set upstream tracking", Status: StepRunning})
+	skipTracking := func(err error) (Phase, string, bool) {
+		skip := StepResult{Name: "Set upstream tracking", Status: StepSkipped, Message: "no tracking: " + err.Error()}
+		phase.Steps = append(phase.Steps, skip)
+		emit(Event{Phase: phaseName, Step: skip.Name, Status: StepSkipped, Message: skip.Message})
 		return phase, branch, true
+	}
+	if _, err := runner.Run(barePath, "fetch", "origin"); err != nil {
+		return skipTracking(err)
+	}
+	if _, err := runner.Run(wtPath, "branch", fmt.Sprintf("--set-upstream-to=origin/%s", branch)); err != nil {
+		return skipTracking(err)
 	}
 	phase.Steps = append(phase.Steps, StepResult{Name: "Set upstream tracking", Status: StepDone})
 	emit(Event{Phase: phaseName, Step: "Set upstream tracking", Status: StepDone})
