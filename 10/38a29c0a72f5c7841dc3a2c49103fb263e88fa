@@ -1,0 +1,44 @@
+cmd/remove.go
+  s_157240fea52147::t_45fab4d86a5987 45-48,54,61
+internal/tui/menu.go
+  s_157240fea52147::t_eb0529c3a541ee 17-20,36-40
+internal/repo/clone.go
+  s_157240fea52147::t_026f6a61227b80 156
+cmd/remove_flags_test.go
+  s_157240fea52147::t_2289436ad057f7 216,304
+  s_157240fea52147::t_af5f870b212b54 197,231,243,323,339
+  s_157240fea52147::t_c7c323331a4612 284
+  s_157240fea52147::t_75c3f10384490c 253-277
+internal/git/protection_test.go
+  s_157240fea52147::t_4f57af3e7547d1 22-25,38-58
+main.go
+  s_157240fea52147::t_0b44bbcc761343 218,223
+internal/tui/list.go
+  s_157240fea52147::t_f5335cf2646cea 170,184,195,203,306
+internal/git/protection.go
+  s_157240fea52147::t_e13e67e8fdb39e 12-15,17,20-53
+internal/tui/model.go
+  s_157240fea52147::t_cab4e21598a8af 96
+  s_157240fea52147::t_85ff23ce915a54 443
+cmd/remove_filter.go
+  s_157240fea52147::t_8d316f017233ef 19,34
+  s_157240fea52147::t_7fee5fea133277 73-75,78-80
+internal/tui/list_test.go
+  s_157240fea52147::t_039d81a01c0987 214-235
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "1038a29c0a72f5c7841dc3a2c49103fb263e88fa",
+  "prompts": {},
+  "sessions": {
+    "s_157240fea52147": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "42f7cf1c-c025-449a-89c8-fab9aa10c61e",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Test <t@t.com>"
+    }
+  }
+}
