@@ -11,6 +11,7 @@ import (
 
 	"github.com/abiswas97/sentei/internal/git"
 	"github.com/abiswas97/sentei/internal/playground"
+	"github.com/abiswas97/sentei/internal/testtmp"
 	"github.com/abiswas97/sentei/internal/worktree"
 )
 
@@ -88,7 +89,7 @@ func TestViewConfirm_UntrackedFiles(t *testing.T) {
 }
 
 func TestConfirmDeletion_UnlocksLockedWorktrees(t *testing.T) {
-	tmp := t.TempDir()
+	tmp := testtmp.RobustTempDir(t)
 
 	run := func(dir string, args ...string) {
 		t.Helper()
