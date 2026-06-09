@@ -33,7 +33,10 @@ func (m Model) updateIntegrationProgress(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, m.finalizeIntegrationApply()
 
 	case integrationFinalizedMsg:
-		if m.integ.returnView != migrateNextView {
+		// Only apply the new set to in-memory state when it was actually persisted.
+		// On a save failure, advancing without mutating keeps the UI consistent
+		// with disk instead of showing an integration set that was never saved.
+		if msg.err == nil && m.integ.returnView != migrateNextView {
 			m.integ.current = msg.current
 			for _, integ := range m.integ.integrations {
 				m.integ.staged[integ.Name] = m.integ.current[integ.Name]
