@@ -13,6 +13,7 @@ import (
 	"github.com/abiswas97/sentei/internal/config"
 	"github.com/abiswas97/sentei/internal/git"
 	"github.com/abiswas97/sentei/internal/repo"
+	"github.com/abiswas97/sentei/internal/testtmp"
 	"github.com/abiswas97/sentei/internal/tui"
 )
 
@@ -47,7 +48,7 @@ func SetupBareRepoWithState(t *testing.T, opts RepoOpts) string {
 		t.Fatalf("MergedCount (%d) cannot exceed WorktreeCount (%d)", opts.MergedCount, opts.WorktreeCount)
 	}
 
-	tmpDir := t.TempDir()
+	tmpDir := testtmp.RobustTempDir(t)
 	bareRepo := filepath.Join(tmpDir, "test.git")
 
 	runGit(t, tmpDir, "init", "--bare", "--initial-branch=main", bareRepo)
