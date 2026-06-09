@@ -1,0 +1,26 @@
+cmd/cleanup_flags_test.go
+  s_157240fea52147::t_2a39b4deda2c75 33-43
+cmd/remove.go
+  s_157240fea52147::t_fd6d5e999c9ce9 57-60,63,66
+  s_157240fea52147::t_822036758ac24d 87,89-97
+  s_157240fea52147::t_d6783ab5bae9ab 7
+main.go
+  s_157240fea52147::t_8317c84ba9d875 198-200
+  s_157240fea52147::t_6f53a0ea407d26 146-153
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "eae2d848ffd6b05ed8b6a3f5b169e9cb9774d649",
+  "prompts": {},
+  "sessions": {
+    "s_157240fea52147": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "42f7cf1c-c025-449a-89c8-fab9aa10c61e",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Test <t@t.com>"
+    }
+  }
+}
