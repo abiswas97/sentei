@@ -9,6 +9,9 @@ import (
 type mockRunner struct {
 	responses map[string]mockResponse
 	calls     []string
+	// onRun, if set, runs before each call — lets a test simulate filesystem
+	// side effects of a git command (e.g. clone --bare creating the bare dir).
+	onRun func(dir string, args []string)
 }
 
 type mockResponse struct {
@@ -17,6 +20,9 @@ type mockResponse struct {
 }
 
 func (m *mockRunner) Run(dir string, args ...string) (string, error) {
+	if m.onRun != nil {
+		m.onRun(dir, args)
+	}
 	key := fmt.Sprintf("%s:%v", dir, args)
 	m.calls = append(m.calls, key)
 	if resp, ok := m.responses[key]; ok {
