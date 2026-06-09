@@ -188,12 +188,8 @@ func (m Model) viewCloneRepoSummary(result repo.CloneResult) string {
 		if result.DefaultBranch != "" {
 			fmt.Fprintf(&b, "    %-10s %s\n", styleDim.Render("Branch"), result.DefaultBranch)
 		}
-		// A worktree exists only if WorktreePath is set (e.g. upstream tracking
-		// failed but the checkout succeeded); offer the cd hint only then.
-		if result.WorktreePath != "" {
-			b.WriteString("\n")
-			fmt.Fprintf(&b, "    cd %s\n", styleDim.Render(result.WorktreePath))
-		}
+		// A failed clone never has a usable worktree (tracking-only failures are
+		// StepSkipped, not failures), so there is no cd hint to offer.
 		b.WriteString("\n")
 		b.WriteString(separator(m.width))
 		b.WriteString("\n\n")
