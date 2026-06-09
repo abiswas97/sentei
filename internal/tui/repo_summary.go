@@ -11,6 +11,29 @@ import (
 	"github.com/abiswas97/sentei/internal/repo"
 )
 
+// cloneFailed reports whether the clone left the repo in a failed state and, if
+// so, the error from the first failed step.
+func cloneFailed(result repo.CloneResult) (bool, error) {
+	if !result.HasFailures() {
+		return false, nil
+	}
+	_, step, _ := repo.FirstFailure(result.Phases)
+	return true, step.Error
+}
+
+// createHardFailed reports a non-GitHub phase failure, meaning the local repo
+// itself is broken (not merely unpublished). A GitHub-only failure is soft (the
+// repo exists locally) and is rendered as "ready (local only)" instead.
+func createHardFailed(result repo.CreateResult) (bool, error) {
+	for _, phase := range result.Phases {
+		if phase.Name != "GitHub" && phase.HasFailures() {
+			_, step, _ := repo.FirstFailure([]repo.Phase{phase})
+			return true, step.Error
+		}
+	}
+	return false, nil
+}
+
 func (m Model) updateRepoSummary(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
@@ -20,16 +43,21 @@ func (m Model) updateRepoSummary(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case tea.KeyMsg:
 		var repoPath string
+		canRelaunch := false
 		switch r := m.repo.result.(type) {
 		case repo.CreateResult:
 			repoPath = r.RepoPath
+			hardFailed, _ := createHardFailed(r)
+			canRelaunch = !hardFailed
 		case repo.CloneResult:
 			repoPath = r.RepoPath
+			canRelaunch = !r.HasFailures()
 		}
 
 		switch {
 		case key.Matches(msg, keys.Confirm):
-			if repoPath != "" {
+			// Never relaunch into a repo whose worktree was never created.
+			if canRelaunch && repoPath != "" {
 				return m, relaunchSentei(repoPath)
 			}
 			return m, tea.Quit
@@ -59,7 +87,31 @@ func (m Model) viewCreateRepoSummary(result repo.CreateResult) string {
 
 	repoName := filepath.Base(result.RepoPath)
 
-	// Check for GitHub phase failures
+	b.WriteString(styleTitle.Render(fmt.Sprintf("  sentei %s Repository Created", "\u2500")))
+	b.WriteString("\n\n")
+	b.WriteString(separator(m.width))
+	b.WriteString("\n\n")
+
+	// A Setup-phase failure means the local repo is broken (e.g. the initial
+	// commit could not be made). Render a failure screen, not "ready".
+	if hardFailed, hardErr := createHardFailed(result); hardFailed {
+		fmt.Fprintf(&b, "  %s create failed\n\n",
+			styleIndicatorFailed.Render(indicatorFailed))
+		if hardErr != nil {
+			errWidth := max(m.width-8, 30)
+			b.WriteString("    " + styleError.Width(errWidth).Render(hardErr.Error()))
+			b.WriteString("\n\n")
+		}
+		fmt.Fprintf(&b, "    %-10s %s\n", styleDim.Render("Path"), result.RepoPath)
+		b.WriteString("\n")
+		b.WriteString(separator(m.width))
+		b.WriteString("\n\n")
+		b.WriteString(styleDim.Render("  q quit"))
+		b.WriteString("\n")
+		return b.String()
+	}
+
+	// GitHub publish is a soft failure: the local repo is fine, just unpublished.
 	ghFailed := false
 	var ghErrMsg string
 	for _, phase := range result.Phases {
@@ -74,11 +126,6 @@ func (m Model) viewCreateRepoSummary(result repo.CreateResult) string {
 			break
 		}
 	}
-
-	b.WriteString(styleTitle.Render(fmt.Sprintf("  sentei %s Repository Created", "\u2500")))
-	b.WriteString("\n\n")
-	b.WriteString(separator(m.width))
-	b.WriteString("\n\n")
 
 	if ghFailed {
 		fmt.Fprintf(&b, "  %s %s ready (local only)\n\n",
@@ -128,6 +175,32 @@ func (m Model) viewCloneRepoSummary(result repo.CloneResult) string {
 	b.WriteString("\n\n")
 	b.WriteString(separator(m.width))
 	b.WriteString("\n\n")
+
+	if failed, failErr := cloneFailed(result); failed {
+		fmt.Fprintf(&b, "  %s clone failed\n\n",
+			styleIndicatorFailed.Render(indicatorFailed))
+		if failErr != nil {
+			errWidth := max(m.width-8, 30)
+			b.WriteString("    " + styleError.Width(errWidth).Render(failErr.Error()))
+			b.WriteString("\n\n")
+		}
+		fmt.Fprintf(&b, "    %-10s %s\n", styleDim.Render("Path"), result.RepoPath)
+		if result.DefaultBranch != "" {
+			fmt.Fprintf(&b, "    %-10s %s\n", styleDim.Render("Branch"), result.DefaultBranch)
+		}
+		// A worktree exists only if WorktreePath is set (e.g. upstream tracking
+		// failed but the checkout succeeded); offer the cd hint only then.
+		if result.WorktreePath != "" {
+			b.WriteString("\n")
+			fmt.Fprintf(&b, "    cd %s\n", styleDim.Render(result.WorktreePath))
+		}
+		b.WriteString("\n")
+		b.WriteString(separator(m.width))
+		b.WriteString("\n\n")
+		b.WriteString(styleDim.Render("  q quit"))
+		b.WriteString("\n")
+		return b.String()
+	}
 
 	fmt.Fprintf(&b, "  %s %s ready\n\n",
 		styleIndicatorDone.Render(indicatorDone), repoName)

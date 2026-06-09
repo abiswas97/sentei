@@ -109,3 +109,29 @@ func (r *Phase) HasFailures() bool {
 	}
 	return false
 }
+
+func phasesHaveFailures(phases []Phase) bool {
+	for i := range phases {
+		if phases[i].HasFailures() {
+			return true
+		}
+	}
+	return false
+}
+
+// FirstFailure returns the first failed step across all phases, with the name of
+// the phase it belongs to. ok is false when no step failed.
+func FirstFailure(phases []Phase) (phaseName string, step StepResult, ok bool) {
+	for _, p := range phases {
+		for _, s := range p.Steps {
+			if s.Status == StepFailed {
+				return p.Name, s, true
+			}
+		}
+	}
+	return "", StepResult{}, false
+}
+
+func (r CloneResult) HasFailures() bool   { return phasesHaveFailures(r.Phases) }
+func (r CreateResult) HasFailures() bool  { return phasesHaveFailures(r.Phases) }
+func (r MigrateResult) HasFailures() bool { return phasesHaveFailures(r.Phases) }
