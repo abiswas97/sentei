@@ -153,6 +153,33 @@ func TestClone_NetworkError(t *testing.T) {
 	}
 }
 
+func TestClone_FetchFailure_StillSucceedsWithoutTracking(t *testing.T) {
+	dir := t.TempDir()
+	repoPath := filepath.Join(dir, "repo")
+	barePath := filepath.Join(repoPath, ".bare")
+
+	// Everything succeeds except the tracking fetch (simulating a network blip
+	// after the bare clone already succeeded). The worktree must still be created.
+	runner := &mockRunner{responses: map[string]mockResponse{
+		fmt.Sprintf("%s:[clone --bare git@h:u/repo.git %s]", dir, barePath):                          {output: ""},
+		fmt.Sprintf("%s:[config remote.origin.fetch +refs/heads/*:refs/remotes/origin/*]", barePath): {output: ""},
+		fmt.Sprintf("%s:[symbolic-ref --short HEAD]", barePath):                                      {output: "main"},
+		fmt.Sprintf("%s:[show-ref --verify refs/heads/main]", barePath):                              {output: "abc"},
+		fmt.Sprintf("%s:[worktree add main main]", repoPath):                                         {output: ""},
+		fmt.Sprintf("%s:[fetch origin]", barePath):                                                   {output: "", err: fmt.Errorf("could not read from remote")},
+	}}
+
+	ec := &eventCollector{}
+	result := Clone(runner, CloneOptions{URL: "git@h:u/repo.git", Location: dir, Name: "repo"}, ec.emit)
+
+	if result.HasFailures() {
+		t.Error("a tracking fetch failure must not fail the clone; the worktree is usable")
+	}
+	if result.WorktreePath != filepath.Join(repoPath, "main") {
+		t.Errorf("worktree should still be created, got WorktreePath=%q", result.WorktreePath)
+	}
+}
+
 func TestClone_EmptyName_RejectedBeforeAnyGitCall(t *testing.T) {
 	dir := t.TempDir()
 	// Empty responses: any git call would return an error, proving none happens.
