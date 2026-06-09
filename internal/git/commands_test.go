@@ -1,6 +1,7 @@
 package git
 
 import (
+	"errors"
 	"fmt"
 	"testing"
 )
@@ -104,6 +105,24 @@ func TestValidateRepository_NotARepo(t *testing.T) {
 	err := ValidateRepository(runner, "/bad")
 	if err == nil {
 		t.Fatal("expected error, got nil")
+	}
+}
+
+func TestValidateRepository_PreservesUnderlyingCause(t *testing.T) {
+	cause := errors.New("exec: \"git\": executable file not found in $PATH")
+	runner := &mockRunner{
+		responses: map[string]mockResponse{
+			"/x:[rev-parse --git-dir]": {err: cause},
+		},
+	}
+
+	err := ValidateRepository(runner, "/x")
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	// The real cause (git missing) must survive instead of being asserted away.
+	if !errors.Is(err, cause) {
+		t.Errorf("underlying cause not preserved: %v", err)
 	}
 }
 

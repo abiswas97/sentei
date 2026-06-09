@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -95,6 +96,32 @@ func buildRegistry() *cli.Registry {
 	return r
 }
 
+// runCommand runs a CLI command, exiting 1 on a real error but treating a
+// -h/--help request (flag.ErrHelp) as success — the flag package has already
+// printed usage, so a "help requested" line and non-zero exit are wrong.
+func runCommand(run func([]string) error, args []string) {
+	if err := run(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			return
+		}
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		os.Exit(1)
+	}
+}
+
+// exitOnFlagError handles a flag-parse error: -h/--help (flag.ErrHelp) exits 0
+// since usage was already printed; any other error exits 1 with a message.
+func exitOnFlagError(err error) {
+	if err == nil {
+		return
+	}
+	if errors.Is(err, flag.ErrHelp) {
+		os.Exit(0)
+	}
+	fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+	os.Exit(1)
+}
+
 func main() {
 	registry := buildRegistry()
 
@@ -111,18 +138,12 @@ func main() {
 	if result.Command != nil {
 		switch result.Command.Type {
 		case cli.Output:
-			if err := result.Command.RunCLI(result.Args); err != nil {
-				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-				os.Exit(1)
-			}
+			runCommand(result.Command.RunCLI, result.Args)
 			return
 
 		case cli.Decision:
 			if result.NonInteractive {
-				if err := result.Command.RunCLI(result.Args); err != nil {
-					fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-					os.Exit(1)
-				}
+				runCommand(result.Command.RunCLI, result.Args)
 				return
 			}
 			// Interactive mode: parse flags and launch TUI at the appropriate view.
@@ -166,10 +187,7 @@ func launchInteractiveDecision(result cli.DispatchResult) {
 	switch result.Command.Name {
 	case "cleanup":
 		opts, err := cmd.ParseCleanupFlags(result.Args)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-			os.Exit(1)
-		}
+		exitOnFlagError(err)
 		if opts.Mode == "" {
 			opts.Mode = cleanup.ModeSafe
 		}
@@ -177,10 +195,7 @@ func launchInteractiveDecision(result cli.DispatchResult) {
 
 	case "create":
 		opts, err := cmd.ParseCreateFlags(result.Args)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-			os.Exit(1)
-		}
+		exitOnFlagError(err)
 		model.SetCreateOpts(&tui.CreateOpts{
 			Branch:     opts.Branch,
 			Base:       opts.Base,
@@ -192,10 +207,7 @@ func launchInteractiveDecision(result cli.DispatchResult) {
 
 	case "clone":
 		opts, err := cmd.ParseCloneFlags(result.Args)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-			os.Exit(1)
-		}
+		exitOnFlagError(err)
 		model.SetCloneOpts(&tui.CloneOpts{
 			URL:  opts.URL,
 			Name: opts.Name,
@@ -203,10 +215,7 @@ func launchInteractiveDecision(result cli.DispatchResult) {
 
 	case "remove":
 		opts, err := cmd.ParseRemoveFlags(result.Args)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-			os.Exit(1)
-		}
+		exitOnFlagError(err)
 		if opts.Merged || opts.All || opts.Stale > 0 {
 			worktrees, err := git.ListWorktrees(runner, repoPath)
 			if err != nil {
@@ -234,10 +243,7 @@ func launchInteractiveDecision(result cli.DispatchResult) {
 
 	case "migrate":
 		opts, err := cmd.ParseMigrateFlags(result.Args)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-			os.Exit(1)
-		}
+		exitOnFlagError(err)
 		model.SetMigrateOpts(&tui.MigrateOpts{
 			DeleteBackup: opts.DeleteBackup,
 			RepoPath:     opts.RepoPath,
