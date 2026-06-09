@@ -215,12 +215,12 @@ func launchInteractiveDecision(result cli.DispatchResult) {
 			}
 			worktrees = worktree.EnrichWorktrees(runner, worktrees, worktree.DefaultEnrichConcurrency)
 
+			defaultBranch := git.DetectDefaultBranch(runner, repoPath)
 			var isMerged cmd.MergedChecker
 			if opts.Merged {
-				defaultBranch := cmd.DetectDefaultBranch(runner, repoPath)
 				isMerged = cmd.CheckMerged(runner, repoPath, defaultBranch)
 			}
-			filtered := cmd.ResolveFilters(worktrees, opts, nil, isMerged)
+			filtered := cmd.ResolveFilters(worktrees, opts, nil, defaultBranch, isMerged)
 
 			var paths []string
 			for _, wt := range filtered {

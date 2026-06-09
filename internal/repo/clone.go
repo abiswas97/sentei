@@ -153,7 +153,7 @@ func runCloneWorktree(runner git.CommandRunner, repoPath, barePath string, emit 
 
 	// Detect default branch
 	emit(Event{Phase: phaseName, Step: "Detect default branch", Status: StepRunning})
-	branch := detectDefaultBranch(runner, barePath)
+	branch := git.DetectDefaultBranch(runner, barePath)
 	phase.Steps = append(phase.Steps, StepResult{
 		Name: "Detect default branch", Status: StepDone, Message: branch,
 	})
@@ -185,23 +185,4 @@ func runCloneWorktree(runner git.CommandRunner, repoPath, barePath string, emit 
 	emit(Event{Phase: phaseName, Step: "Set upstream tracking", Status: StepDone})
 
 	return phase, branch, true
-}
-
-func detectDefaultBranch(runner git.CommandRunner, barePath string) string {
-	// A bare clone records the remote's default branch in HEAD. This is the only
-	// source that survives a non-standard default (e.g. "production"); a bare clone
-	// does not create refs/remotes/origin/HEAD, so reading that always fails.
-	if branch, err := runner.Run(barePath, "symbolic-ref", "--short", "HEAD"); err == nil && branch != "" {
-		return branch
-	}
-
-	// Fallback: try main, then master
-	for _, candidate := range []string{"main", "master"} {
-		_, err := runner.Run(barePath, "show-ref", "--verify", fmt.Sprintf("refs/heads/%s", candidate))
-		if err == nil {
-			return candidate
-		}
-	}
-
-	return "main" // last resort
 }
