@@ -71,14 +71,15 @@ func TestCreate_WithGitHub(t *testing.T) {
 		fmt.Sprintf("%s:[worktree add main -b main]", repoPath):                                            {output: ""},
 		fmt.Sprintf("%s/main:[add -A]", repoPath):                                                          {output: ""},
 		fmt.Sprintf("%s/main:[commit -m Initial commit]", repoPath):                                        {output: ""},
-		// GitHub phase (git commands)
-		fmt.Sprintf("%s/.bare:[remote set-url origin git@github.com:abiswas97/my-project.git]", repoPath): {output: ""},
-		fmt.Sprintf("%s/main:[push -u origin main]", repoPath):                                            {output: ""},
-		fmt.Sprintf("%s/.bare:[remote set-head origin main]", repoPath):                                   {output: ""},
+		// GitHub phase (git commands) — gh git_protocol is https (gh default).
+		fmt.Sprintf("%s/.bare:[remote set-url origin https://github.com/abiswas97/my-project.git]", repoPath): {output: ""},
+		fmt.Sprintf("%s/main:[push -u origin main]", repoPath):                                                {output: ""},
+		fmt.Sprintf("%s/.bare:[remote set-head origin main]", repoPath):                                       {output: ""},
 	}}
 	ghRunner := &mockGhRunner{responses: map[string]mockResponse{
 		fmt.Sprintf("%s:gh[api user --jq .login]", repoPath):             {output: "abiswas97"},
 		fmt.Sprintf("%s:gh[repo create my-project --private]", repoPath): {output: ""},
+		fmt.Sprintf("%s:gh[config get git_protocol]", repoPath):          {output: "https"},
 	}}
 
 	ec := &eventCollector{}
@@ -100,6 +101,28 @@ func TestCreate_WithGitHub(t *testing.T) {
 				t.Errorf("step %q failed: %v", step.Name, step.Error)
 			}
 		}
+	}
+}
+
+func TestGhRemoteURL_RespectsConfiguredProtocol(t *testing.T) {
+	sshGh := &mockGhRunner{responses: map[string]mockResponse{
+		"/r:gh[config get git_protocol]": {output: "ssh"},
+	}}
+	if got := ghRemoteURL(sshGh, "/r", "u", "n"); got != "git@github.com:u/n.git" {
+		t.Errorf("ssh protocol: got %q", got)
+	}
+
+	httpsGh := &mockGhRunner{responses: map[string]mockResponse{
+		"/r:gh[config get git_protocol]": {output: "https"},
+	}}
+	if got := ghRemoteURL(httpsGh, "/r", "u", "n"); got != "https://github.com/u/n.git" {
+		t.Errorf("https protocol: got %q", got)
+	}
+
+	// On error, default to HTTPS — gh's own default and what token auth uses.
+	brokenGh := &mockGhRunner{responses: map[string]mockResponse{}}
+	if got := ghRemoteURL(brokenGh, "/r", "u", "n"); got != "https://github.com/u/n.git" {
+		t.Errorf("default: got %q", got)
 	}
 }
 
