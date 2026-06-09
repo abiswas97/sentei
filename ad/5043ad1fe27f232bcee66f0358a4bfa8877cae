@@ -1,0 +1,22 @@
+internal/fileutil/remove.go
+  s_157240fea52147::t_1b04a954ceb813 1-17
+internal/playground/setup.go
+  s_157240fea52147::t_b9a42107f9695b 11-12
+  s_157240fea52147::t_930c5e4603e651 111
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "ad5043ad1fe27f232bcee66f0358a4bfa8877cae",
+  "prompts": {},
+  "sessions": {
+    "s_157240fea52147": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "42f7cf1c-c025-449a-89c8-fab9aa10c61e",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Test <t@t.com>"
+    }
+  }
+}
