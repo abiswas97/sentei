@@ -1,0 +1,34 @@
+internal/git/commands_test.go
+  s_157240fea52147::t_571f25e91a622c 111-128
+  s_157240fea52147::t_05a44338b5198c 4
+internal/git/commands.go
+  s_157240fea52147::t_fe5032c12c93ae 25-31
+  s_157240fea52147::t_eec047eb1e36de 60-63
+  s_157240fea52147::t_345bb42fac2d61 51-54
+main.go
+  s_157240fea52147::t_4489ebb2f938d4 246
+  s_157240fea52147::t_399be45cec8768 218
+  s_157240fea52147::t_4c464a6ba02c2a 198
+  s_157240fea52147::t_8aa4dfe4772da5 112-124
+  s_157240fea52147::t_56a22510d358b2 210
+  s_157240fea52147::t_72fd950a0ffe9d 141,146
+  s_157240fea52147::t_bb81ed138b3a8c 4
+  s_157240fea52147::t_02c4d9b4c965d9 99-111
+  s_157240fea52147::t_700725ad45b40b 190
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "9881b9d38df9b0adfa83a8a970de67ccc700ae62",
+  "prompts": {},
+  "sessions": {
+    "s_157240fea52147": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "42f7cf1c-c025-449a-89c8-fab9aa10c61e",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Test <t@t.com>"
+    }
+  }
+}
