@@ -29,7 +29,7 @@ func TestMigrate_Successful(t *testing.T) {
 		// Migrate
 		fmt.Sprintf("%s:[clone --bare .git %s]", repoPath, barePath):                                 {output: ""},
 		fmt.Sprintf("%s:[config remote.origin.fetch +refs/heads/*:refs/remotes/origin/*]", barePath): {output: ""},
-		fmt.Sprintf("%s:[worktree add main]", repoPath):                                              {output: ""},
+		fmt.Sprintf("%s:[worktree add main main]", repoPath):                                         {output: ""},
 	}}
 
 	ec := &eventCollector{}
@@ -70,7 +70,7 @@ func TestMigrate_DirtyRepo_WarningContinues(t *testing.T) {
 		fmt.Sprintf("%s:[branch --show-current]", repoPath):                                          {output: "develop"},
 		fmt.Sprintf("%s:[clone --bare .git %s]", repoPath, barePath):                                 {output: ""},
 		fmt.Sprintf("%s:[config remote.origin.fetch +refs/heads/*:refs/remotes/origin/*]", barePath): {output: ""},
-		fmt.Sprintf("%s:[worktree add develop]", repoPath):                                           {output: ""},
+		fmt.Sprintf("%s:[worktree add develop develop]", repoPath):                                   {output: ""},
 	}}
 
 	ec := &eventCollector{}
@@ -142,6 +142,108 @@ func TestDeleteBackup(t *testing.T) {
 	}
 	if _, err := os.Stat(backupDir); !os.IsNotExist(err) {
 		t.Error("backup directory should be deleted")
+	}
+}
+
+func TestMigrate_DetachedHead_RejectedBeforeDestruction(t *testing.T) {
+	dir := t.TempDir()
+	repoPath := filepath.Join(dir, "detached")
+	os.MkdirAll(filepath.Join(repoPath, ".git"), 0755)
+
+	runner := &mockRunner{responses: map[string]mockResponse{
+		fmt.Sprintf("%s:[status --porcelain]", repoPath):    {output: ""},
+		fmt.Sprintf("%s:[branch --show-current]", repoPath): {output: ""}, // detached HEAD
+	}}
+
+	ec := &eventCollector{}
+	result := Migrate(runner, &alwaysOkShell{}, MigrateOptions{RepoPath: repoPath}, ec.emit)
+
+	validate := findPhase(result.Phases, "Validate")
+	if validate == nil || !validate.HasFailures() {
+		t.Fatal("detached HEAD must fail validation")
+	}
+	if findPhase(result.Phases, "Backup") != nil || findPhase(result.Phases, "Migrate") != nil {
+		t.Error("no destructive phase should run after a validation failure")
+	}
+	for _, c := range runner.calls {
+		if strings.Contains(c, "clone --bare") {
+			t.Error("clone --bare must not run for a detached HEAD")
+		}
+	}
+}
+
+func TestMigrate_PreservesOriginURL(t *testing.T) {
+	dir := t.TempDir()
+	repoPath := filepath.Join(dir, "with-origin")
+	os.MkdirAll(filepath.Join(repoPath, ".git"), 0755)
+	barePath := filepath.Join(repoPath, ".bare")
+	const originURL = "git@github.com:user/proj.git"
+
+	runner := &mockRunner{responses: map[string]mockResponse{
+		fmt.Sprintf("%s:[status --porcelain]", repoPath):                                             {output: ""},
+		fmt.Sprintf("%s:[branch --show-current]", repoPath):                                          {output: "main"},
+		fmt.Sprintf("%s:[remote get-url origin]", repoPath):                                          {output: originURL},
+		fmt.Sprintf("%s:[clone --bare .git %s]", repoPath, barePath):                                 {output: ""},
+		fmt.Sprintf("%s:[config remote.origin.fetch +refs/heads/*:refs/remotes/origin/*]", barePath): {output: ""},
+		fmt.Sprintf("%s:[remote set-url origin %s]", barePath, originURL):                            {output: ""},
+		fmt.Sprintf("%s:[worktree add main main]", repoPath):                                         {output: ""},
+	}}
+
+	ec := &eventCollector{}
+	result := Migrate(runner, &alwaysOkShell{}, MigrateOptions{RepoPath: repoPath}, ec.emit)
+
+	for _, phase := range result.Phases {
+		for _, step := range phase.Steps {
+			if step.Status == StepFailed {
+				t.Errorf("step %q failed: %v", step.Name, step.Error)
+			}
+		}
+	}
+	restored := false
+	for _, c := range runner.calls {
+		if strings.Contains(c, fmt.Sprintf("remote set-url origin %s", originURL)) {
+			restored = true
+		}
+	}
+	if !restored {
+		t.Error("the real origin URL must be restored on the migrated bare repo")
+	}
+}
+
+func TestMigrate_SlashBranch_ChecksOutExistingBranch(t *testing.T) {
+	dir := t.TempDir()
+	repoPath := filepath.Join(dir, "slash")
+	os.MkdirAll(filepath.Join(repoPath, ".git"), 0755)
+	barePath := filepath.Join(repoPath, ".bare")
+
+	runner := &mockRunner{responses: map[string]mockResponse{
+		fmt.Sprintf("%s:[status --porcelain]", repoPath):                                             {output: ""},
+		fmt.Sprintf("%s:[branch --show-current]", repoPath):                                          {output: "feature/foo"},
+		fmt.Sprintf("%s:[clone --bare .git %s]", repoPath, barePath):                                 {output: ""},
+		fmt.Sprintf("%s:[config remote.origin.fetch +refs/heads/*:refs/remotes/origin/*]", barePath): {output: ""},
+		fmt.Sprintf("%s:[worktree add feature/foo feature/foo]", repoPath):                           {output: ""},
+	}}
+
+	ec := &eventCollector{}
+	result := Migrate(runner, &alwaysOkShell{}, MigrateOptions{RepoPath: repoPath}, ec.emit)
+
+	for _, phase := range result.Phases {
+		for _, step := range phase.Steps {
+			if step.Status == StepFailed {
+				t.Errorf("step %q failed: %v", step.Name, step.Error)
+			}
+		}
+	}
+	// The two-arg form (path + existing branch) checks out feature/foo rather
+	// than inventing a divergent "foo" branch from the basename.
+	twoArg := false
+	for _, c := range runner.calls {
+		if strings.Contains(c, "[worktree add feature/foo feature/foo]") {
+			twoArg = true
+		}
+	}
+	if !twoArg {
+		t.Error("slash branch must use the two-arg worktree add form")
 	}
 }
 

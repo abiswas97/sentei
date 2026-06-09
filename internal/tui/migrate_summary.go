@@ -93,8 +93,7 @@ func (m Model) viewMigrateSummary() string {
 			b.WriteString("  Your original repo is backed up at:\n")
 			fmt.Fprintf(&b, "    %s\n\n", styleDim.Render(result.BackupPath))
 			b.WriteString("  To restore:\n")
-			fmt.Fprintf(&b, "    rm -rf %s && mv %s %s\n",
-				result.BareRoot, result.BackupPath, result.BareRoot)
+			fmt.Fprintf(&b, "    %s\n", result.RestoreCommand())
 		}
 		b.WriteString("\n")
 		b.WriteString(separator(m.width))
