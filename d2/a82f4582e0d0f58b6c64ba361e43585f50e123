@@ -1,0 +1,23 @@
+internal/tui/create_branch.go
+  s_157240fea52147::t_73bfd045ce3ef4 131-132,134-137
+internal/tui/integration_progress.go
+  s_157240fea52147::t_6714fdd60895bf 36-39
+internal/state/state.go
+  s_157240fea52147::t_08cb990e177fe6 64-70
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "d2a82f4582e0d0f58b6c64ba361e43585f50e123",
+  "prompts": {},
+  "sessions": {
+    "s_157240fea52147": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "42f7cf1c-c025-449a-89c8-fab9aa10c61e",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Test <t@t.com>"
+    }
+  }
+}
