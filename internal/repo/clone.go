@@ -66,10 +66,15 @@ func Clone(runner git.CommandRunner, opts CloneOptions, emit func(Event)) CloneR
 	}
 
 	// Phase 3: Worktree
-	wtPhase, branch := runCloneWorktree(runner, repoPath, barePath, emit)
+	wtPhase, branch, worktreeCreated := runCloneWorktree(runner, repoPath, barePath, emit)
 	result.Phases = append(result.Phases, wtPhase)
 	result.DefaultBranch = branch
-	result.WorktreePath = filepath.Join(repoPath, branch)
+	// Only advertise a worktree path when one was actually created. A failed
+	// worktree add must not leave WorktreePath set, or consumers report success
+	// and point the user at a directory that does not exist.
+	if worktreeCreated {
+		result.WorktreePath = filepath.Join(repoPath, branch)
+	}
 
 	return result
 }
@@ -142,7 +147,7 @@ func runCloneStructure(runner git.CommandRunner, repoPath, barePath string, emit
 	return phase
 }
 
-func runCloneWorktree(runner git.CommandRunner, repoPath, barePath string, emit func(Event)) (Phase, string) {
+func runCloneWorktree(runner git.CommandRunner, repoPath, barePath string, emit func(Event)) (Phase, string, bool) {
 	phase := Phase{Name: "Worktree"}
 	phaseName := "Worktree"
 
@@ -161,7 +166,7 @@ func runCloneWorktree(runner git.CommandRunner, repoPath, barePath string, emit 
 		step := StepResult{Name: "Create worktree", Status: StepFailed, Error: err}
 		phase.Steps = append(phase.Steps, step)
 		emit(Event{Phase: phaseName, Step: step.Name, Status: StepFailed, Error: err})
-		return phase, branch
+		return phase, branch, false
 	}
 	phase.Steps = append(phase.Steps, StepResult{Name: "Create worktree", Status: StepDone})
 	emit(Event{Phase: phaseName, Step: "Create worktree", Status: StepDone})
@@ -174,12 +179,12 @@ func runCloneWorktree(runner git.CommandRunner, repoPath, barePath string, emit 
 		step := StepResult{Name: "Set upstream tracking", Status: StepFailed, Error: err}
 		phase.Steps = append(phase.Steps, step)
 		emit(Event{Phase: phaseName, Step: step.Name, Status: StepFailed, Error: err})
-		return phase, branch
+		return phase, branch, true
 	}
 	phase.Steps = append(phase.Steps, StepResult{Name: "Set upstream tracking", Status: StepDone})
 	emit(Event{Phase: phaseName, Step: "Set upstream tracking", Status: StepDone})
 
-	return phase, branch
+	return phase, branch, true
 }
 
 func detectDefaultBranch(runner git.CommandRunner, barePath string) string {

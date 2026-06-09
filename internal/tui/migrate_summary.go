@@ -18,15 +18,14 @@ func (m Model) updateMigrateSummary(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, tea.Quit
 	}
 
-	// Check for critical migration failures
-	for _, phase := range result.Phases {
-		if phase.Name == "Migrate" && phase.HasFailures() {
-			// Critical failure — only q to quit
-			if msg, ok := msg.(tea.KeyMsg); ok && key.Matches(msg, keys.Quit) {
-				return m, tea.Quit
-			}
-			return m, nil
+	// Any failed phase is critical: Migrate() early-returns on the first failure,
+	// so a Validate or Backup failure also leaves the repo unmigrated.
+	if result.HasFailures() {
+		// Critical failure — only q to quit
+		if msg, ok := msg.(tea.KeyMsg); ok && key.Matches(msg, keys.Quit) {
+			return m, tea.Quit
 		}
+		return m, nil
 	}
 
 	switch msg := msg.(type) {
@@ -65,19 +64,13 @@ func (m Model) viewMigrateSummary() string {
 		return "  Migration result unavailable\n"
 	}
 
-	// Check for critical failures
-	hasCriticalFailure := false
+	// Any failed phase is critical: Migrate() early-returns on the first failure,
+	// so a Validate or Backup failure also leaves the repo unmigrated.
+	hasCriticalFailure := result.HasFailures()
 	var failErr error
-	for _, phase := range result.Phases {
-		if phase.Name == "Migrate" && phase.HasFailures() {
-			hasCriticalFailure = true
-			for _, step := range phase.Steps {
-				if step.Error != nil {
-					failErr = step.Error
-					break
-				}
-			}
-			break
+	if hasCriticalFailure {
+		if _, step, ok := repo.FirstFailure(result.Phases); ok {
+			failErr = step.Error
 		}
 	}
 
