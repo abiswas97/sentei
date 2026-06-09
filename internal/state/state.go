@@ -61,6 +61,13 @@ func Save(bareDir string, s *State) error {
 		_ = os.Remove(tmpName)
 		return fmt.Errorf("writing state: %w", err)
 	}
+	// Flush to disk before the rename so a crash can't leave a renamed-but-empty
+	// file (the rename is only atomic against concurrent readers, not power loss).
+	if err := tmp.Sync(); err != nil {
+		_ = tmp.Close()
+		_ = os.Remove(tmpName)
+		return fmt.Errorf("syncing state: %w", err)
+	}
 	if err := tmp.Close(); err != nil {
 		_ = os.Remove(tmpName)
 		return fmt.Errorf("closing temp file: %w", err)

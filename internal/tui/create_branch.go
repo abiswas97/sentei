@@ -128,9 +128,13 @@ func (m *Model) prepareCreateOptions() {
 		}
 	}
 
-	// Load active integration names from repo state for display
+	// Load active integration names from repo state for display. A corrupt
+	// sentei.json returns (nil, err); default to empty so we never nil-deref.
 	bareDir := filepath.Join(m.repoPath, ".bare")
-	st, _ := state.Load(bareDir)
+	st, err := state.Load(bareDir)
+	if err != nil || st == nil {
+		st = &state.State{}
+	}
 	m.create.activeIntegrationNames = nil
 	for _, name := range st.Integrations {
 		switch name {
