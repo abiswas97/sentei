@@ -12,11 +12,11 @@ import (
 
 func TestRun_FullPipeline(t *testing.T) {
 	runner := &mockRunner{responses: map[string]mockResponse{
-		"/repo:[worktree add /repo/feature-auth -b feature/auth main]":   {output: ""},
-		"/repo/feature-auth:[merge main --no-edit]":                      {output: ""},
-		"/repo/feature-auth:shell[go mod download]":                      {output: ""},
-		"/repo/feature-auth:shell[code-review-graph --version]":          {output: "1.0"},
-		"/repo:shell[code-review-graph build --repo /repo/feature-auth]": {output: ""},
+		"/repo:[worktree add /repo/feature-auth -b feature/auth main]":     {output: ""},
+		"/repo/feature-auth:[merge main --no-edit]":                        {output: ""},
+		"/repo/feature-auth:shell[go mod download]":                        {output: ""},
+		"/repo/feature-auth:shell[code-review-graph --version]":            {output: "1.0"},
+		"/repo:shell[code-review-graph build --repo '/repo/feature-auth']": {output: ""},
 	}}
 
 	opts := Options{
@@ -42,7 +42,6 @@ func TestRun_FullPipeline(t *testing.T) {
 					Command:    "code-review-graph build --repo {path}",
 					WorkingDir: "repo",
 				},
-				GitignoreEntries: []string{".code-review-graph/"},
 			},
 		},
 	}
