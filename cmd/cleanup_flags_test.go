@@ -30,6 +30,18 @@ func TestParseCleanupFlags_Aggressive(t *testing.T) {
 	}
 }
 
+func TestParseCleanupFlags_Force(t *testing.T) {
+	// The dispatcher re-injects the global --force here ("one --force does both"),
+	// so it must reach cleanup.Options.Force.
+	opts, err := ParseCleanupFlags([]string{"--mode", "aggressive", "--force"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !opts.Force {
+		t.Error("expected Force=true when --force is passed")
+	}
+}
+
 func TestParseCleanupFlags_DryRun(t *testing.T) {
 	opts, err := ParseCleanupFlags([]string{"--mode", "safe", "--dry-run"})
 	if err != nil {

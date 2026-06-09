@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/abiswas97/sentei/internal/git"
 	"github.com/abiswas97/sentei/internal/repo"
@@ -53,12 +54,16 @@ func RunRemove(args []string) error {
 
 	filtered := ResolveFilters(worktrees, opts, nil, defaultBranch, isMerged)
 
+	// Count a protected worktree as "skipped" only if the active filter would
+	// otherwise have selected it — otherwise the message implies protection saved
+	// a worktree the filter never wanted.
+	now := time.Now()
 	var protectedCount int
 	for _, wt := range worktrees {
-		if wt.IsBare {
+		if wt.IsBare || !git.IsProtectedBranchWith(wt.Branch, defaultBranch) {
 			continue
 		}
-		if git.IsProtectedBranchWith(wt.Branch, defaultBranch) {
+		if matchesFilters(wt, opts, now, isMerged, shortBranch(wt.Branch)) {
 			protectedCount++
 		}
 	}
@@ -79,8 +84,17 @@ func RunRemove(args []string) error {
 
 	if opts.DryRun {
 		fmt.Printf("%s(dry run)%s Would remove %d worktree(s):\n", dim, nc, len(filtered))
+		dirtyCount := 0
 		for _, wt := range filtered {
-			fmt.Printf("  %s\n", shortBranch(wt.Branch))
+			marker := ""
+			if wt.HasUncommittedChanges || wt.HasUntrackedFiles {
+				marker = yellow + "  (uncommitted/untracked — will be LOST)" + nc
+				dirtyCount++
+			}
+			fmt.Printf("  %s%s\n", shortBranch(wt.Branch), marker)
+		}
+		if dirtyCount > 0 {
+			fmt.Printf("\n%sWarning:%s %d worktree(s) have changes that removal will discard.\n", yellow, nc, dirtyCount)
 		}
 		return nil
 	}
