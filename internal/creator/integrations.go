@@ -65,7 +65,11 @@ func setupIntegration(shell git.ShellRunner, wtPath, repoPath, sourceWorktree st
 
 	if setupStep.Status != StepFailed && len(integ.GitignoreEntries) > 0 {
 		if err := appendGitignore(wtPath, integ.GitignoreEntries); err != nil {
-			emit(Event{Phase: "Integrations", Step: fmt.Sprintf("Gitignore %s", integ.Name), Status: StepFailed, Error: err})
+			gitignoreStep := fmt.Sprintf("Gitignore %s", integ.Name)
+			emit(Event{Phase: "Integrations", Step: gitignoreStep, Status: StepFailed, Error: err})
+			// Record the failure so HasFailures() and the summary reflect it; an
+			// emitted event alone is invisible to the result.
+			steps = append(steps, StepResult{Name: gitignoreStep, Status: StepFailed, Error: err})
 		}
 	}
 
@@ -147,6 +151,12 @@ func installIntegration(shell git.ShellRunner, wtPath string, integ integration.
 	return StepResult{Name: stepName, Status: StepDone}
 }
 
+// shellQuote single-quotes a value so shell metacharacters in it are inert when
+// the result is interpolated into a `sh -c` command.
+func shellQuote(s string) string {
+	return "'" + strings.ReplaceAll(s, "'", `'\''`) + "'"
+}
+
 func runSetupCommand(shell git.ShellRunner, wtPath, repoPath string, integ integration.Integration, emit func(Event)) StepResult {
 	stepName := fmt.Sprintf("Setup %s", integ.Name)
 
@@ -156,7 +166,9 @@ func runSetupCommand(shell git.ShellRunner, wtPath, repoPath string, integ integ
 
 	emit(Event{Phase: "Integrations", Step: stepName, Status: StepRunning})
 
-	command := strings.ReplaceAll(integ.Setup.Command, "{path}", wtPath)
+	// The worktree path embeds the branch name and is interpolated into a command
+	// run via `sh -c`; quote it so a branch like "a&&rm -rf x" cannot inject.
+	command := strings.ReplaceAll(integ.Setup.Command, "{path}", shellQuote(wtPath))
 
 	var runDir string
 	switch integ.Setup.WorkingDir {
