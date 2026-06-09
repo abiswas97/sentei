@@ -1,0 +1,27 @@
+internal/testutil/testutil.go
+  s_157240fea52147::t_06bc900fc9c953 51
+internal/tui/confirm_test.go
+  s_157240fea52147::t_90711e3bbf1f38 14
+  s_157240fea52147::t_dc1903aef33a47 92
+internal/repo/e2e_test.go
+  s_157240fea52147::t_dc1903aef33a47 15,65,76,113,122,151
+  s_157240fea52147::t_825e7037062110 11
+internal/testtmp/testtmp.go
+  s_157240fea52147::t_33eb45c5064f4f 1-29
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "63f5e6ff99b54c668700d9aa548ec5e5c7585aa3",
+  "prompts": {},
+  "sessions": {
+    "s_157240fea52147": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "42f7cf1c-c025-449a-89c8-fab9aa10c61e",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Test <t@t.com>"
+    }
+  }
+}
