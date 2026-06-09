@@ -160,10 +160,12 @@ func runMigrateBare(runner git.CommandRunner, repoPath, branch string, emit func
 	phase.Steps = append(phase.Steps, StepResult{Name: "Create bare repository", Status: StepDone})
 	emit(Event{Phase: phaseName, Step: "Create bare repository", Status: StepDone})
 
-	// Remove original .git
+	// Remove original .git. Retry: it was just read by clone --bare, so on macOS
+	// Spotlight may briefly hold its object dir (ENOTEMPTY) — a single RemoveAll
+	// would fail the migration after the backup was already taken.
 	emit(Event{Phase: phaseName, Step: "Remove original .git", Status: StepRunning})
 	gitDir := filepath.Join(repoPath, ".git")
-	if err := os.RemoveAll(gitDir); err != nil {
+	if err := fileutil.RemoveAllRetry(gitDir); err != nil {
 		step := StepResult{Name: "Remove original .git", Status: StepFailed, Error: err}
 		phase.Steps = append(phase.Steps, step)
 		emit(Event{Phase: phaseName, Step: step.Name, Status: StepFailed, Error: err})
