@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/abiswas97/sentei/internal/fileutil"
 	"github.com/abiswas97/sentei/internal/git"
 )
 
@@ -72,7 +73,7 @@ func Clone(runner git.CommandRunner, opts CloneOptions, emit func(Event)) CloneR
 	// repoPath did not exist (validated above), so on a failure that leaves no
 	// usable checkout we can remove exactly what we created and leave nothing
 	// half-built behind.
-	rollback := func() { _ = os.RemoveAll(repoPath) }
+	rollback := func() { _ = fileutil.RemoveAllRetry(repoPath) }
 
 	// Phase 1: Clone
 	clonePhase := runClonePhase(runner, opts.Location, opts.URL, barePath, emit)
