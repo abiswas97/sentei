@@ -1,0 +1,22 @@
+internal/repo/clone.go
+  s_157240fea52147::t_079a7049695b34 10
+  s_157240fea52147::t_93c4a2f2598396 76
+internal/repo/migrate.go
+  s_157240fea52147::t_40e248ce517fb4 163-165,168
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "1f8c6e6eff20e2238a066b3fedc573ad1ad727c4",
+  "prompts": {},
+  "sessions": {
+    "s_157240fea52147": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "42f7cf1c-c025-449a-89c8-fab9aa10c61e",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Test <t@t.com>"
+    }
+  }
+}
