@@ -10,8 +10,29 @@ import (
 	"github.com/abiswas97/sentei/internal/git"
 )
 
+// robustTempDir is like t.TempDir but tolerates the macOS Spotlight/fseventsd
+// race where background indexers transiently hold newly written files in git's
+// object dirs, making RemoveAll fail with ENOTEMPTY mid-sweep. Unlike t.TempDir,
+// cleanup is best-effort and never fails an otherwise-passing test. The retry
+// loop is condition-based (retry until RemoveAll succeeds), with no sleep.
+func robustTempDir(t *testing.T) string {
+	t.Helper()
+	dir, err := os.MkdirTemp("", "sentei-e2e-")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		for i := 0; i < 50; i++ {
+			if err := os.RemoveAll(dir); err == nil {
+				return
+			}
+		}
+	})
+	return dir
+}
+
 func TestE2E_CreateRepo(t *testing.T) {
-	dir := t.TempDir()
+	dir := robustTempDir(t)
 	runner := &git.GitRunner{}
 	shell := &git.DefaultShellRunner{}
 
@@ -61,7 +82,7 @@ func TestE2E_CreateRepo(t *testing.T) {
 
 func TestE2E_CloneRepo(t *testing.T) {
 	// Create a source repo to clone from
-	sourceDir := t.TempDir()
+	sourceDir := robustTempDir(t)
 	runner := &git.GitRunner{}
 
 	// Set up a minimal git repo as origin
@@ -72,7 +93,7 @@ func TestE2E_CloneRepo(t *testing.T) {
 	runner.Run(sourceDir, "-c", "user.email=test@test.com", "-c", "user.name=Test", "commit", "-m", "init")
 
 	// Clone it
-	cloneDir := t.TempDir()
+	cloneDir := robustTempDir(t)
 	ec := &eventCollector{}
 	opts := CloneOptions{
 		URL:      sourceDir, // local path works as URL for git clone
@@ -109,7 +130,7 @@ func TestE2E_CloneRepo(t *testing.T) {
 
 func TestE2E_CloneNonMainDefaultSetsUpstream(t *testing.T) {
 	// Source repo whose default branch is neither main nor master.
-	sourceDir := t.TempDir()
+	sourceDir := robustTempDir(t)
 	runner := &git.GitRunner{}
 
 	runner.Run(sourceDir, "init")
@@ -118,7 +139,7 @@ func TestE2E_CloneNonMainDefaultSetsUpstream(t *testing.T) {
 	runner.Run(sourceDir, "add", "-A")
 	runner.Run(sourceDir, "-c", "user.email=test@test.com", "-c", "user.name=Test", "commit", "-m", "init")
 
-	cloneDir := t.TempDir()
+	cloneDir := robustTempDir(t)
 	ec := &eventCollector{}
 	opts := CloneOptions{URL: sourceDir, Location: cloneDir, Name: "cloned"}
 	result := Clone(runner, opts, ec.emit)
@@ -147,7 +168,7 @@ func TestE2E_CloneNonMainDefaultSetsUpstream(t *testing.T) {
 
 func TestE2E_MigrateRepo(t *testing.T) {
 	// Create a regular git repo
-	dir := t.TempDir()
+	dir := robustTempDir(t)
 	repoPath := filepath.Join(dir, "to-migrate")
 	os.MkdirAll(repoPath, 0755)
 
