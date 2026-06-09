@@ -224,28 +224,33 @@ func runCreateGitHub(runner git.CommandRunner, gh GhRunner, repoPath string, opt
 	phase.Steps = append(phase.Steps, StepResult{Name: "Create GitHub repository", Status: StepDone})
 	emit(Event{Phase: phaseName, Step: "Create GitHub repository", Status: StepDone})
 
-	// Configure SSH remote
-	emit(Event{Phase: phaseName, Step: "Configure SSH remote", Status: StepRunning})
+	// Configure the remote using gh's configured protocol so the push uses the
+	// auth the user actually has. Forcing SSH breaks push for an HTTPS-only gh
+	// login (gh's default), orphaning the just-created empty GitHub repo.
+	emit(Event{Phase: phaseName, Step: "Configure remote", Status: StepRunning})
 	barePath := filepath.Join(repoPath, ".bare")
-	sshURL := fmt.Sprintf("git@github.com:%s/%s.git", ghUser, opts.Name)
-	_, err = runner.Run(barePath, "remote", "set-url", "origin", sshURL)
+	remoteURL := ghRemoteURL(gh, repoPath, ghUser, opts.Name)
+	_, err = runner.Run(barePath, "remote", "set-url", "origin", remoteURL)
 	if err != nil {
-		step := StepResult{Name: "Configure SSH remote", Status: StepFailed, Error: err}
+		step := StepResult{Name: "Configure remote", Status: StepFailed, Error: err}
 		phase.Steps = append(phase.Steps, step)
 		emit(Event{Phase: phaseName, Step: step.Name, Status: StepFailed, Error: err})
 		return phase
 	}
-	phase.Steps = append(phase.Steps, StepResult{Name: "Configure SSH remote", Status: StepDone})
-	emit(Event{Phase: phaseName, Step: "Configure SSH remote", Status: StepDone})
+	phase.Steps = append(phase.Steps, StepResult{Name: "Configure remote", Status: StepDone})
+	emit(Event{Phase: phaseName, Step: "Configure remote", Status: StepDone})
 
 	// Push
 	emit(Event{Phase: phaseName, Step: "Push to GitHub", Status: StepRunning})
 	mainPath := filepath.Join(repoPath, "main")
 	_, err = runner.Run(mainPath, "push", "-u", "origin", "main")
 	if err != nil {
-		step := StepResult{Name: "Push to GitHub", Status: StepFailed, Error: err}
+		// The empty remote repo from "Create GitHub repository" is left behind;
+		// tell the user so they can delete it or push manually before retrying.
+		pushErr := fmt.Errorf("%w (an empty GitHub repo %q now exists; delete it or push to it manually before retrying)", err, opts.Name)
+		step := StepResult{Name: "Push to GitHub", Status: StepFailed, Error: pushErr}
 		phase.Steps = append(phase.Steps, step)
-		emit(Event{Phase: phaseName, Step: step.Name, Status: StepFailed, Error: err})
+		emit(Event{Phase: phaseName, Step: step.Name, Status: StepFailed, Error: pushErr})
 		return phase
 	}
 	phase.Steps = append(phase.Steps, StepResult{Name: "Push to GitHub", Status: StepDone})
@@ -264,4 +269,14 @@ func runCreateGitHub(runner git.CommandRunner, gh GhRunner, repoPath string, opt
 	emit(Event{Phase: phaseName, Step: "Set remote HEAD", Status: StepDone})
 
 	return phase
+}
+
+// ghRemoteURL returns the origin URL matching gh's configured git protocol, so
+// the push uses the auth the user actually has. gh defaults to HTTPS; only an
+// explicit "ssh" protocol yields an SSH URL.
+func ghRemoteURL(gh GhRunner, repoPath, user, name string) string {
+	if proto, err := gh.RunGh(repoPath, "config", "get", "git_protocol"); err == nil && strings.TrimSpace(proto) == "ssh" {
+		return fmt.Sprintf("git@github.com:%s/%s.git", user, name)
+	}
+	return fmt.Sprintf("https://github.com/%s/%s.git", user, name)
 }
