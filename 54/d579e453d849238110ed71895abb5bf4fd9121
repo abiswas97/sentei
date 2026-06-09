@@ -1,0 +1,19 @@
+docs/handoff/flow-audit-2026-06-09.md
+  s_157240fea52147::t_f9b73832875d55 1-359
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "54d579e453d849238110ed71895abb5bf4fd9121",
+  "prompts": {},
+  "sessions": {
+    "s_157240fea52147": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "42f7cf1c-c025-449a-89c8-fab9aa10c61e",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Test <t@t.com>"
+    }
+  }
+}
