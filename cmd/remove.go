@@ -42,20 +42,23 @@ func RunRemove(args []string) error {
 
 	worktrees = worktree.EnrichWorktrees(runner, worktrees, worktree.DefaultEnrichConcurrency)
 
+	// Detect the default branch once: it is always protected (it may be
+	// non-standard, e.g. "production"), and --merged needs it as the merge target.
+	defaultBranch := git.DetectDefaultBranch(runner, repoPath)
+
 	var isMerged MergedChecker
 	if opts.Merged {
-		defaultBranch := DetectDefaultBranch(runner, repoPath)
 		isMerged = CheckMerged(runner, repoPath, defaultBranch)
 	}
 
-	filtered := ResolveFilters(worktrees, opts, nil, isMerged)
+	filtered := ResolveFilters(worktrees, opts, nil, defaultBranch, isMerged)
 
 	var protectedCount int
 	for _, wt := range worktrees {
 		if wt.IsBare {
 			continue
 		}
-		if git.IsProtectedBranch(wt.Branch) {
+		if git.IsProtectedBranchWith(wt.Branch, defaultBranch) {
 			protectedCount++
 		}
 	}

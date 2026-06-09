@@ -93,6 +93,7 @@ type CloneOpts struct {
 // removeState holds all state for the worktree removal flow.
 type removeState struct {
 	worktrees      []git.Worktree
+	defaultBranch  string // repo default branch; always protected from removal
 	selected       map[string]bool
 	visibleIndices []int
 	cursor         int
@@ -439,6 +440,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if ctx, ok := msg.(worktreeContextMsg); ok {
 		if ctx.generation == m.worktreeGeneration && ctx.err == nil {
 			m.remove.worktrees = ctx.worktrees
+			m.remove.defaultBranch = ctx.defaultBranch
 			m.reindex()
 			m.updateMenuHints()
 		}
