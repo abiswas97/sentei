@@ -143,7 +143,14 @@ func main() {
 
 		case cli.Decision:
 			if result.NonInteractive {
-				runCommand(result.Command.RunCLI, result.Args)
+				args := result.Args
+				// cleanup has its own --force (force-delete unmerged branches) that
+				// the global flag extractor consumed. Re-inject it so one --force
+				// both passes the destructive gate and force-deletes.
+				if result.Force && result.Command.Name == "cleanup" {
+					args = append(args, "--force")
+				}
+				runCommand(result.Command.RunCLI, args)
 				return
 			}
 			// Interactive mode: parse flags and launch TUI at the appropriate view.
@@ -188,6 +195,9 @@ func launchInteractiveDecision(result cli.DispatchResult) {
 	case "cleanup":
 		opts, err := cmd.ParseCleanupFlags(result.Args)
 		exitOnFlagError(err)
+		if result.Force {
+			opts.Force = true // global --force also force-deletes unmerged branches
+		}
 		if opts.Mode == "" {
 			opts.Mode = cleanup.ModeSafe
 		}
