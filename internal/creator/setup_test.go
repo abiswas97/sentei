@@ -89,16 +89,17 @@ func TestSanitizeBranchPath(t *testing.T) {
 
 func TestCreateWorktreeStep(t *testing.T) {
 	tests := []struct {
-		name       string
-		branch     string
-		baseBranch string
-		repoPath   string
-		runnerErr  error
-		wantStatus StepStatus
-		wantPath   string
+		name         string
+		branch       string
+		baseBranch   string
+		repoPath     string
+		branchExists bool
+		runnerErr    error
+		wantStatus   StepStatus
+		wantPath     string
 	}{
 		{
-			name:       "successful creation",
+			name:       "successful creation with new branch",
 			branch:     "feature/auth",
 			baseBranch: "main",
 			repoPath:   "/repo",
@@ -106,11 +107,20 @@ func TestCreateWorktreeStep(t *testing.T) {
 			wantPath:   "/repo/feature-auth",
 		},
 		{
-			name:       "branch already exists",
-			branch:     "feature/dup",
+			name:         "checks out existing branch into new worktree",
+			branch:       "feature/dup",
+			baseBranch:   "main",
+			repoPath:     "/repo",
+			branchExists: true,
+			wantStatus:   StepDone,
+			wantPath:     "/repo/feature-dup",
+		},
+		{
+			name:       "worktree add failure is surfaced",
+			branch:     "feature/broken",
 			baseBranch: "main",
 			repoPath:   "/repo",
-			runnerErr:  fmt.Errorf("fatal: branch already exists"),
+			runnerErr:  fmt.Errorf("fatal: something went wrong"),
 			wantStatus: StepFailed,
 		},
 	}
@@ -120,12 +130,22 @@ func TestCreateWorktreeStep(t *testing.T) {
 			sanitized := SanitizeBranchPath(tt.branch)
 			wtPath := filepath.Join(tt.repoPath, sanitized)
 
-			runner := &mockRunner{responses: map[string]mockResponse{
-				fmt.Sprintf("%s:[worktree add %s -b %s %s]", tt.repoPath, wtPath, tt.branch, tt.baseBranch): {
-					output: "",
-					err:    tt.runnerErr,
+			responses := map[string]mockResponse{
+				fmt.Sprintf("%s:[show-ref --verify refs/heads/%s]", tt.repoPath, tt.branch): {
+					err: func() error {
+						if tt.branchExists {
+							return nil
+						}
+						return fmt.Errorf("not found")
+					}(),
 				},
-			}}
+			}
+			if tt.branchExists {
+				responses[fmt.Sprintf("%s:[worktree add %s %s]", tt.repoPath, wtPath, tt.branch)] = mockResponse{err: tt.runnerErr}
+			} else {
+				responses[fmt.Sprintf("%s:[worktree add %s -b %s %s]", tt.repoPath, wtPath, tt.branch, tt.baseBranch)] = mockResponse{err: tt.runnerErr}
+			}
+			runner := &mockRunner{responses: responses}
 
 			ec := &eventCollector{}
 			result, path := createWorktreeStep(runner, tt.repoPath, tt.branch, tt.baseBranch, ec.emit)
