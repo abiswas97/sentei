@@ -59,5 +59,7 @@ jobs:
           version: latest
           args: release --clean
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # App token here too: the Actions GITHUB_TOKEN started 401-ing on
+          # release PATCHes with the stateless token rollout (2026-06-10).
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
           HOMEBREW_TAP_GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
