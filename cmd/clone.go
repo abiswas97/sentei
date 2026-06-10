@@ -67,5 +67,11 @@ func printCloneEvent(e repo.Event) {
 		fmt.Printf("%s✓%s [%s] %s%s\n", green, nc, e.Phase, e.Step, msg)
 	case repo.StepFailed:
 		fmt.Printf("%s✗%s [%s] %s: %v\n", yellow, nc, e.Phase, e.Step, e.Error)
+	case repo.StepSkipped:
+		msg := ""
+		if e.Message != "" {
+			msg = fmt.Sprintf(" (%s)", e.Message)
+		}
+		fmt.Printf("%s⊘%s [%s] %s%s\n", dim, nc, e.Phase, e.Step, msg)
 	}
 }
