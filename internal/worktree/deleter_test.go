@@ -9,6 +9,8 @@ import (
 	"sync/atomic"
 	"testing"
 
+	"github.com/abiswas97/sentei/internal/testutil/mock"
+
 	"github.com/abiswas97/sentei/internal/git"
 )
 
@@ -220,9 +222,9 @@ func TestDeleteWorktrees_ConcurrencyBound(t *testing.T) {
 }
 
 func TestPruneWorktrees_Success(t *testing.T) {
-	runner := &mockRunner{
-		responses: map[string]mockResponse{
-			"/repo worktree prune": {output: ""},
+	runner := &mock.Runner{
+		Responses: map[string]mock.Response{
+			"/repo:[worktree prune]": {Output: ""},
 		},
 	}
 
@@ -233,9 +235,9 @@ func TestPruneWorktrees_Success(t *testing.T) {
 }
 
 func TestPruneWorktrees_Failure(t *testing.T) {
-	runner := &mockRunner{
-		responses: map[string]mockResponse{
-			"/repo worktree prune": {err: fmt.Errorf("prune failed")},
+	runner := &mock.Runner{
+		Responses: map[string]mock.Response{
+			"/repo:[worktree prune]": {Err: fmt.Errorf("prune failed")},
 		},
 	}
 
@@ -246,9 +248,9 @@ func TestPruneWorktrees_Failure(t *testing.T) {
 }
 
 func TestUnlockWorktree_Success(t *testing.T) {
-	runner := &mockRunner{
-		responses: map[string]mockResponse{
-			"/repo worktree unlock /repo/wt": {output: ""},
+	runner := &mock.Runner{
+		Responses: map[string]mock.Response{
+			"/repo:[worktree unlock /repo/wt]": {Output: ""},
 		},
 	}
 
@@ -259,9 +261,9 @@ func TestUnlockWorktree_Success(t *testing.T) {
 }
 
 func TestUnlockWorktree_NotLocked_NoError(t *testing.T) {
-	runner := &mockRunner{
-		responses: map[string]mockResponse{
-			"/repo worktree unlock /repo/wt": {err: fmt.Errorf("git worktree unlock: fatal: '/repo/wt' is not locked")},
+	runner := &mock.Runner{
+		Responses: map[string]mock.Response{
+			"/repo:[worktree unlock /repo/wt]": {Err: fmt.Errorf("git worktree unlock: fatal: '/repo/wt' is not locked")},
 		},
 	}
 

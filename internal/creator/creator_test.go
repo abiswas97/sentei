@@ -9,16 +9,17 @@ import (
 	"github.com/abiswas97/sentei/internal/config"
 	"github.com/abiswas97/sentei/internal/integration"
 	"github.com/abiswas97/sentei/internal/pipeline"
+	"github.com/abiswas97/sentei/internal/testutil/mock"
 )
 
 func TestRun_FullPipeline(t *testing.T) {
-	runner := &mockRunner{responses: map[string]mockResponse{
-		"/repo:[show-ref --verify refs/heads/feature/auth]":                {err: fmt.Errorf("not found")},
-		"/repo:[worktree add /repo/feature-auth -b feature/auth main]":     {output: ""},
-		"/repo/feature-auth:[merge main --no-edit]":                        {output: ""},
-		"/repo/feature-auth:shell[go mod download]":                        {output: ""},
-		"/repo/feature-auth:shell[code-review-graph --version]":            {output: "1.0"},
-		"/repo:shell[code-review-graph build --repo '/repo/feature-auth']": {output: ""},
+	runner := &mock.Runner{Responses: map[string]mock.Response{
+		"/repo:[show-ref --verify refs/heads/feature/auth]":                {Err: fmt.Errorf("not found")},
+		"/repo:[worktree add /repo/feature-auth -b feature/auth main]":     {Output: ""},
+		"/repo/feature-auth:[merge main --no-edit]":                        {Output: ""},
+		"/repo/feature-auth:shell[go mod download]":                        {Output: ""},
+		"/repo/feature-auth:shell[code-review-graph --version]":            {Output: "1.0"},
+		"/repo:shell[code-review-graph build --repo '/repo/feature-auth']": {Output: ""},
 	}}
 
 	opts := Options{
@@ -48,8 +49,8 @@ func TestRun_FullPipeline(t *testing.T) {
 		},
 	}
 
-	ec := &eventCollector{}
-	result := Run(runner, runner, opts, ec.emit)
+	ec := &mock.EventCollector[pipeline.Event]{}
+	result := Run(runner, runner, opts, ec.Emit)
 
 	if result.WorktreePath != "/repo/feature-auth" {
 		t.Errorf("WorktreePath = %q, want %q", result.WorktreePath, "/repo/feature-auth")
@@ -69,16 +70,16 @@ func TestRun_FullPipeline(t *testing.T) {
 	if result.HasFailures() {
 		t.Error("expected no failures in full pipeline")
 	}
-	if len(ec.events) == 0 {
+	if len(ec.Events) == 0 {
 		t.Error("expected events to be emitted")
 	}
 }
 
 func TestRun_CreateWorktreeFails_AbortsEarly(t *testing.T) {
-	runner := &mockRunner{responses: map[string]mockResponse{
-		"/repo:[show-ref --verify refs/heads/feature/dup]": {err: fmt.Errorf("not found")},
+	runner := &mock.Runner{Responses: map[string]mock.Response{
+		"/repo:[show-ref --verify refs/heads/feature/dup]": {Err: fmt.Errorf("not found")},
 		"/repo:[worktree add /repo/feature-dup -b feature/dup main]": {
-			err: fmt.Errorf("fatal: something broke"),
+			Err: fmt.Errorf("fatal: something broke"),
 		},
 	}}
 
@@ -94,8 +95,8 @@ func TestRun_CreateWorktreeFails_AbortsEarly(t *testing.T) {
 		},
 	}
 
-	ec := &eventCollector{}
-	result := Run(runner, runner, opts, ec.emit)
+	ec := &mock.EventCollector[pipeline.Event]{}
+	result := Run(runner, runner, opts, ec.Emit)
 
 	if len(result.Phases) != 1 {
 		t.Fatalf("phase count = %d, want 1 (abort after setup)", len(result.Phases))
@@ -106,10 +107,10 @@ func TestRun_CreateWorktreeFails_AbortsEarly(t *testing.T) {
 }
 
 func TestRun_MergeFailsContinues(t *testing.T) {
-	runner := &mockRunner{responses: map[string]mockResponse{
-		"/repo:[show-ref --verify refs/heads/feature/conflict]":                {err: fmt.Errorf("not found")},
-		"/repo:[worktree add /repo/feature-conflict -b feature/conflict main]": {output: ""},
-		"/repo/feature-conflict:[merge main --no-edit]":                        {err: fmt.Errorf("conflict")},
+	runner := &mock.Runner{Responses: map[string]mock.Response{
+		"/repo:[show-ref --verify refs/heads/feature/conflict]":                {Err: fmt.Errorf("not found")},
+		"/repo:[worktree add /repo/feature-conflict -b feature/conflict main]": {Output: ""},
+		"/repo/feature-conflict:[merge main --no-edit]":                        {Err: fmt.Errorf("conflict")},
 	}}
 
 	opts := Options{
@@ -121,8 +122,8 @@ func TestRun_MergeFailsContinues(t *testing.T) {
 		CopyEnvFiles:   false,
 	}
 
-	ec := &eventCollector{}
-	result := Run(runner, runner, opts, ec.emit)
+	ec := &mock.EventCollector[pipeline.Event]{}
+	result := Run(runner, runner, opts, ec.Emit)
 
 	if len(result.Phases) != 3 {
 		t.Fatalf("phase count = %d, want 3 (continues despite merge failure)", len(result.Phases))
@@ -142,9 +143,9 @@ func TestRun_CopyEnvFiles(t *testing.T) {
 	repoDir := t.TempDir()
 	wtPath := filepath.Join(repoDir, "feature-env")
 
-	runner := &mockRunner{responses: map[string]mockResponse{
-		fmt.Sprintf("%s:[show-ref --verify refs/heads/feature/env]", repoDir):    {err: fmt.Errorf("not found")},
-		fmt.Sprintf("%s:[worktree add %s -b feature/env main]", repoDir, wtPath): {output: ""},
+	runner := &mock.Runner{Responses: map[string]mock.Response{
+		fmt.Sprintf("%s:[show-ref --verify refs/heads/feature/env]", repoDir):    {Err: fmt.Errorf("not found")},
+		fmt.Sprintf("%s:[worktree add %s -b feature/env main]", repoDir, wtPath): {Output: ""},
 	}}
 
 	// Create the worktree dir since the mock doesn't actually create it
@@ -166,8 +167,8 @@ func TestRun_CopyEnvFiles(t *testing.T) {
 		},
 	}
 
-	ec := &eventCollector{}
-	result := Run(runner, runner, opts, ec.emit)
+	ec := &mock.EventCollector[pipeline.Event]{}
+	result := Run(runner, runner, opts, ec.Emit)
 
 	// Verify env file was copied
 	envDst := filepath.Join(wtPath, ".env")

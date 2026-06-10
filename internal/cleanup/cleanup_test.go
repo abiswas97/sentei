@@ -6,38 +6,13 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/abiswas97/sentei/internal/testutil/mock"
 )
 
-type mockRunner struct {
-	responses map[string]mockResponse
-	calls     []string
-}
-
-type mockResponse struct {
-	output string
-	err    error
-}
-
-func (m *mockRunner) Run(dir string, args ...string) (string, error) {
-	key := fmt.Sprintf("%s:%v", dir, args)
-	m.calls = append(m.calls, key)
-	if resp, ok := m.responses[key]; ok {
-		return resp.output, resp.err
-	}
-	return "", fmt.Errorf("unexpected call: %s", key)
-}
-
-type eventCollector struct {
-	events []Event
-}
-
-func collectEvents(t *testing.T) *eventCollector {
+func collectEvents(t *testing.T) *mock.EventCollector[Event] {
 	t.Helper()
-	return &eventCollector{}
-}
-
-func (c *eventCollector) emit(e Event) {
-	c.events = append(c.events, e)
+	return &mock.EventCollector[Event]{}
 }
 
 func TestResolveConfigPath(t *testing.T) {
@@ -60,8 +35,8 @@ func TestResolveConfigPath(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			runner := &mockRunner{responses: map[string]mockResponse{
-				"/repo:[rev-parse --git-common-dir]": {output: tt.commonDir},
+			runner := &mock.Runner{Responses: map[string]mock.Response{
+				"/repo:[rev-parse --git-common-dir]": {Output: tt.commonDir},
 			}}
 
 			path, err := resolveConfigPath(runner, "/repo")
@@ -75,7 +50,7 @@ func TestResolveConfigPath(t *testing.T) {
 	}
 }
 
-func setupOrchestratorTest(t *testing.T) (*mockRunner, string) {
+func setupOrchestratorTest(t *testing.T) (*mock.Runner, string) {
 	t.Helper()
 	tmpDir := t.TempDir()
 	bareDir := filepath.Join(tmpDir, ".bare")
@@ -85,14 +60,14 @@ func setupOrchestratorTest(t *testing.T) (*mockRunner, string) {
 	configPath := filepath.Join(bareDir, "config")
 	os.WriteFile(configPath, configData, 0644)
 
-	runner := &mockRunner{responses: map[string]mockResponse{
-		tmpDir + ":[rev-parse --git-common-dir]":       {output: bareDir},
-		tmpDir + ":[remote]":                           {output: "origin"},
-		tmpDir + ":[remote prune origin --dry-run]":    {output: ""},
-		tmpDir + ":[fetch --prune origin]":             {output: ""},
-		tmpDir + ":[branch -vv]":                       {output: "  main abc123 [origin/main] latest"},
-		tmpDir + ":[worktree list --porcelain]":        {output: "worktree " + tmpDir + "\nbare\n\nworktree " + tmpDir + "/main\nHEAD abc\nbranch refs/heads/main"},
-		tmpDir + ":[branch --format=%(refname:short)]": {output: "main\nfeature/old"},
+	runner := &mock.Runner{Responses: map[string]mock.Response{
+		tmpDir + ":[rev-parse --git-common-dir]":       {Output: bareDir},
+		tmpDir + ":[remote]":                           {Output: "origin"},
+		tmpDir + ":[remote prune origin --dry-run]":    {Output: ""},
+		tmpDir + ":[fetch --prune origin]":             {Output: ""},
+		tmpDir + ":[branch -vv]":                       {Output: "  main abc123 [origin/main] latest"},
+		tmpDir + ":[worktree list --porcelain]":        {Output: "worktree " + tmpDir + "\nbare\n\nworktree " + tmpDir + "/main\nHEAD abc\nbranch refs/heads/main"},
+		tmpDir + ":[branch --format=%(refname:short)]": {Output: "main\nfeature/old"},
 	}}
 
 	return runner, tmpDir
@@ -102,7 +77,7 @@ func TestRun_SafeMode(t *testing.T) {
 	runner, repoPath := setupOrchestratorTest(t)
 	events := collectEvents(t)
 
-	result := Run(runner, repoPath, Options{Mode: ModeSafe}, events.emit)
+	result := Run(runner, repoPath, Options{Mode: ModeSafe}, events.Emit)
 
 	if result.NonWtBranchesDeleted != 0 {
 		t.Error("safe mode should not delete non-worktree branches")
@@ -117,10 +92,10 @@ func TestRun_SafeMode(t *testing.T) {
 
 func TestRun_AggressiveMode(t *testing.T) {
 	runner, repoPath := setupOrchestratorTest(t)
-	runner.responses[repoPath+":[branch -d feature/old]"] = mockResponse{output: "Deleted"}
+	runner.Responses[repoPath+":[branch -d feature/old]"] = mock.Response{Output: "Deleted"}
 	events := collectEvents(t)
 
-	result := Run(runner, repoPath, Options{Mode: ModeAggressive}, events.emit)
+	result := Run(runner, repoPath, Options{Mode: ModeAggressive}, events.Emit)
 
 	if result.NonWtBranchesDeleted == 0 {
 		t.Error("aggressive mode should delete non-worktree branches")
@@ -129,10 +104,10 @@ func TestRun_AggressiveMode(t *testing.T) {
 
 func TestRun_ErrorContinues(t *testing.T) {
 	runner, repoPath := setupOrchestratorTest(t)
-	runner.responses[repoPath+":[remote prune origin --dry-run]"] = mockResponse{err: fmt.Errorf("network error")}
+	runner.Responses[repoPath+":[remote prune origin --dry-run]"] = mock.Response{Err: fmt.Errorf("network error")}
 	events := collectEvents(t)
 
-	result := Run(runner, repoPath, Options{Mode: ModeSafe}, events.emit)
+	result := Run(runner, repoPath, Options{Mode: ModeSafe}, events.Emit)
 
 	if len(result.Errors) == 0 {
 		t.Error("expected errors to be recorded")

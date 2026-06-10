@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/abiswas97/sentei/internal/pipeline"
+	"github.com/abiswas97/sentei/internal/testutil/mock"
 )
 
 func TestDeriveRepoName(t *testing.T) {
@@ -41,26 +42,26 @@ func TestClone_Successful(t *testing.T) {
 	repoPath := filepath.Join(dir, repoName)
 	barePath := filepath.Join(repoPath, ".bare")
 
-	runner := &mockRunner{responses: map[string]mockResponse{
+	runner := &mock.Runner{Responses: map[string]mock.Response{
 		// Clone phase
-		fmt.Sprintf("%s:[clone --bare git@github.com:user/repo.git %s]", dir, barePath): {output: ""},
+		fmt.Sprintf("%s:[clone --bare git@github.com:user/repo.git %s]", dir, barePath): {Output: ""},
 		// Structure phase
-		fmt.Sprintf("%s:[config remote.origin.fetch +refs/heads/*:refs/remotes/origin/*]", barePath): {output: ""},
-		fmt.Sprintf("%s:[fetch origin]", barePath):                                                   {output: ""},
+		fmt.Sprintf("%s:[config remote.origin.fetch +refs/heads/*:refs/remotes/origin/*]", barePath): {Output: ""},
+		fmt.Sprintf("%s:[fetch origin]", barePath):                                                   {Output: ""},
 		// Worktree phase
-		fmt.Sprintf("%s:[symbolic-ref --short HEAD]", barePath):                 {output: "main"},
-		fmt.Sprintf("%s:[show-ref --verify refs/heads/main]", barePath):         {output: "abc123"},
-		fmt.Sprintf("%s:[worktree add %s/main main]", repoPath, repoPath):       {output: ""},
-		fmt.Sprintf("%s/main:[branch --set-upstream-to=origin/main]", repoPath): {output: ""},
+		fmt.Sprintf("%s:[symbolic-ref --short HEAD]", barePath):                 {Output: "main"},
+		fmt.Sprintf("%s:[show-ref --verify refs/heads/main]", barePath):         {Output: "abc123"},
+		fmt.Sprintf("%s:[worktree add %s/main main]", repoPath, repoPath):       {Output: ""},
+		fmt.Sprintf("%s/main:[branch --set-upstream-to=origin/main]", repoPath): {Output: ""},
 	}}
 
-	ec := &eventCollector{}
+	ec := &mock.EventCollector[pipeline.Event]{}
 	opts := CloneOptions{
 		URL:      "git@github.com:user/repo.git",
 		Location: dir,
 		Name:     repoName,
 	}
-	result := Clone(runner, opts, ec.emit)
+	result := Clone(runner, opts, ec.Emit)
 
 	if result.RepoPath != repoPath {
 		t.Errorf("RepoPath = %q, want %q", result.RepoPath, repoPath)
@@ -83,20 +84,20 @@ func TestClone_DefaultBranchFallback(t *testing.T) {
 	repoPath := filepath.Join(dir, repoName)
 	barePath := filepath.Join(repoPath, ".bare")
 
-	runner := &mockRunner{responses: map[string]mockResponse{
-		fmt.Sprintf("%s:[clone --bare git@github.com:user/repo.git %s]", dir, barePath):              {output: ""},
-		fmt.Sprintf("%s:[config remote.origin.fetch +refs/heads/*:refs/remotes/origin/*]", barePath): {output: ""},
-		fmt.Sprintf("%s:[fetch origin]", barePath):                                                   {output: ""},
+	runner := &mock.Runner{Responses: map[string]mock.Response{
+		fmt.Sprintf("%s:[clone --bare git@github.com:user/repo.git %s]", dir, barePath):              {Output: ""},
+		fmt.Sprintf("%s:[config remote.origin.fetch +refs/heads/*:refs/remotes/origin/*]", barePath): {Output: ""},
+		fmt.Sprintf("%s:[fetch origin]", barePath):                                                   {Output: ""},
 		// symbolic-ref fails — fallback to main
-		fmt.Sprintf("%s:[symbolic-ref --short HEAD]", barePath):                 {output: "", err: fmt.Errorf("not found")},
-		fmt.Sprintf("%s:[show-ref --verify refs/heads/main]", barePath):         {output: "abc123"},
-		fmt.Sprintf("%s:[worktree add %s/main main]", repoPath, repoPath):       {output: ""},
-		fmt.Sprintf("%s/main:[branch --set-upstream-to=origin/main]", repoPath): {output: ""},
+		fmt.Sprintf("%s:[symbolic-ref --short HEAD]", barePath):                 {Output: "", Err: fmt.Errorf("not found")},
+		fmt.Sprintf("%s:[show-ref --verify refs/heads/main]", barePath):         {Output: "abc123"},
+		fmt.Sprintf("%s:[worktree add %s/main main]", repoPath, repoPath):       {Output: ""},
+		fmt.Sprintf("%s/main:[branch --set-upstream-to=origin/main]", repoPath): {Output: ""},
 	}}
 
-	ec := &eventCollector{}
+	ec := &mock.EventCollector[pipeline.Event]{}
 	opts := CloneOptions{URL: "git@github.com:user/repo.git", Location: dir, Name: repoName}
-	result := Clone(runner, opts, ec.emit)
+	result := Clone(runner, opts, ec.Emit)
 
 	if result.DefaultBranch != "main" {
 		t.Errorf("DefaultBranch = %q, want %q (fallback)", result.DefaultBranch, "main")
@@ -109,20 +110,20 @@ func TestClone_NonStandardDefaultBranch(t *testing.T) {
 	repoPath := filepath.Join(dir, repoName)
 	barePath := filepath.Join(repoPath, ".bare")
 
-	runner := &mockRunner{responses: map[string]mockResponse{
-		fmt.Sprintf("%s:[clone --bare git@github.com:user/repo.git %s]", dir, barePath):              {output: ""},
-		fmt.Sprintf("%s:[config remote.origin.fetch +refs/heads/*:refs/remotes/origin/*]", barePath): {output: ""},
-		fmt.Sprintf("%s:[fetch origin]", barePath):                                                   {output: ""},
+	runner := &mock.Runner{Responses: map[string]mock.Response{
+		fmt.Sprintf("%s:[clone --bare git@github.com:user/repo.git %s]", dir, barePath):              {Output: ""},
+		fmt.Sprintf("%s:[config remote.origin.fetch +refs/heads/*:refs/remotes/origin/*]", barePath): {Output: ""},
+		fmt.Sprintf("%s:[fetch origin]", barePath):                                                   {Output: ""},
 		// Default branch is neither main nor master; a bare clone records it in HEAD.
-		fmt.Sprintf("%s:[symbolic-ref --short HEAD]", barePath):                             {output: "production"},
-		fmt.Sprintf("%s:[show-ref --verify refs/heads/production]", barePath):               {output: "abc123"},
-		fmt.Sprintf("%s:[worktree add %s/production production]", repoPath, repoPath):       {output: ""},
-		fmt.Sprintf("%s/production:[branch --set-upstream-to=origin/production]", repoPath): {output: ""},
+		fmt.Sprintf("%s:[symbolic-ref --short HEAD]", barePath):                             {Output: "production"},
+		fmt.Sprintf("%s:[show-ref --verify refs/heads/production]", barePath):               {Output: "abc123"},
+		fmt.Sprintf("%s:[worktree add %s/production production]", repoPath, repoPath):       {Output: ""},
+		fmt.Sprintf("%s/production:[branch --set-upstream-to=origin/production]", repoPath): {Output: ""},
 	}}
 
-	ec := &eventCollector{}
+	ec := &mock.EventCollector[pipeline.Event]{}
 	opts := CloneOptions{URL: "git@github.com:user/repo.git", Location: dir, Name: repoName}
-	result := Clone(runner, opts, ec.emit)
+	result := Clone(runner, opts, ec.Emit)
 
 	if result.DefaultBranch != "production" {
 		t.Errorf("DefaultBranch = %q, want %q", result.DefaultBranch, "production")
@@ -140,15 +141,15 @@ func TestClone_NetworkError(t *testing.T) {
 	dir := t.TempDir()
 	barePath := filepath.Join(dir, "repo", ".bare")
 
-	runner := &mockRunner{responses: map[string]mockResponse{
+	runner := &mock.Runner{Responses: map[string]mock.Response{
 		fmt.Sprintf("%s:[clone --bare git@github.com:user/repo.git %s]", dir, barePath): {
-			output: "", err: fmt.Errorf("fatal: Could not read from remote repository"),
+			Output: "", Err: fmt.Errorf("fatal: Could not read from remote repository"),
 		},
 	}}
 
-	ec := &eventCollector{}
+	ec := &mock.EventCollector[pipeline.Event]{}
 	opts := CloneOptions{URL: "git@github.com:user/repo.git", Location: dir, Name: "repo"}
-	result := Clone(runner, opts, ec.emit)
+	result := Clone(runner, opts, ec.Emit)
 
 	if len(result.Phases) == 0 || !result.Phases[0].HasFailures() {
 		t.Error("expected clone phase to fail on network error")
@@ -162,17 +163,17 @@ func TestClone_FetchFailure_StillSucceedsWithoutTracking(t *testing.T) {
 
 	// Everything succeeds except the tracking fetch (simulating a network blip
 	// after the bare clone already succeeded). The worktree must still be created.
-	runner := &mockRunner{responses: map[string]mockResponse{
-		fmt.Sprintf("%s:[clone --bare git@h:u/repo.git %s]", dir, barePath):                          {output: ""},
-		fmt.Sprintf("%s:[config remote.origin.fetch +refs/heads/*:refs/remotes/origin/*]", barePath): {output: ""},
-		fmt.Sprintf("%s:[symbolic-ref --short HEAD]", barePath):                                      {output: "main"},
-		fmt.Sprintf("%s:[show-ref --verify refs/heads/main]", barePath):                              {output: "abc"},
-		fmt.Sprintf("%s:[worktree add %s/main main]", repoPath, repoPath):                            {output: ""},
-		fmt.Sprintf("%s:[fetch origin]", barePath):                                                   {output: "", err: fmt.Errorf("could not read from remote")},
+	runner := &mock.Runner{Responses: map[string]mock.Response{
+		fmt.Sprintf("%s:[clone --bare git@h:u/repo.git %s]", dir, barePath):                          {Output: ""},
+		fmt.Sprintf("%s:[config remote.origin.fetch +refs/heads/*:refs/remotes/origin/*]", barePath): {Output: ""},
+		fmt.Sprintf("%s:[symbolic-ref --short HEAD]", barePath):                                      {Output: "main"},
+		fmt.Sprintf("%s:[show-ref --verify refs/heads/main]", barePath):                              {Output: "abc"},
+		fmt.Sprintf("%s:[worktree add %s/main main]", repoPath, repoPath):                            {Output: ""},
+		fmt.Sprintf("%s:[fetch origin]", barePath):                                                   {Output: "", Err: fmt.Errorf("could not read from remote")},
 	}}
 
-	ec := &eventCollector{}
-	result := Clone(runner, CloneOptions{URL: "git@h:u/repo.git", Location: dir, Name: "repo"}, ec.emit)
+	ec := &mock.EventCollector[pipeline.Event]{}
+	result := Clone(runner, CloneOptions{URL: "git@h:u/repo.git", Location: dir, Name: "repo"}, ec.Emit)
 
 	if result.HasFailures() {
 		t.Error("a tracking fetch failure must not fail the clone; the worktree is usable")
@@ -184,12 +185,12 @@ func TestClone_FetchFailure_StillSucceedsWithoutTracking(t *testing.T) {
 
 func TestClone_EmptyName_RejectedBeforeAnyGitCall(t *testing.T) {
 	dir := t.TempDir()
-	// Empty responses: any git call would return an error, proving none happens.
-	runner := &mockRunner{responses: map[string]mockResponse{}}
+	// Empty Responses: any git call would return an error, proving none happens.
+	runner := &mock.Runner{Responses: map[string]mock.Response{}}
 
-	ec := &eventCollector{}
+	ec := &mock.EventCollector[pipeline.Event]{}
 	opts := CloneOptions{URL: "https://host/user/repo/", Location: dir, Name: ""}
-	result := Clone(runner, opts, ec.emit)
+	result := Clone(runner, opts, ec.Emit)
 
 	if len(result.Phases) != 1 || result.Phases[0].Name != "Validate" {
 		t.Fatalf("expected only a Validate phase, got %+v", result.Phases)
@@ -204,11 +205,11 @@ func TestClone_EmptyName_RejectedBeforeAnyGitCall(t *testing.T) {
 
 func TestClone_PathLikeName_Rejected(t *testing.T) {
 	dir := t.TempDir()
-	runner := &mockRunner{responses: map[string]mockResponse{}}
-	ec := &eventCollector{}
+	runner := &mock.Runner{Responses: map[string]mock.Response{}}
+	ec := &mock.EventCollector[pipeline.Event]{}
 
 	for _, name := range []string{"/abs/target", "../escaped", "nested/name", ".."} {
-		result := Clone(runner, CloneOptions{URL: "u", Location: dir, Name: name}, ec.emit)
+		result := Clone(runner, CloneOptions{URL: "u", Location: dir, Name: name}, ec.Emit)
 		if len(result.Phases) != 1 || !result.Phases[0].HasFailures() {
 			t.Errorf("name %q should be rejected by validation, got %+v", name, result.Phases)
 		}
@@ -226,9 +227,9 @@ func TestClone_ExistingTarget_RejectedAndPreserved(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	runner := &mockRunner{responses: map[string]mockResponse{}}
-	ec := &eventCollector{}
-	result := Clone(runner, CloneOptions{URL: "u", Location: dir, Name: "repo"}, ec.emit)
+	runner := &mock.Runner{Responses: map[string]mock.Response{}}
+	ec := &mock.EventCollector[pipeline.Event]{}
+	result := Clone(runner, CloneOptions{URL: "u", Location: dir, Name: "repo"}, ec.Emit)
 
 	if len(result.Phases) != 1 || !result.Phases[0].HasFailures() {
 		t.Fatalf("existing target must be rejected, got %+v", result.Phases)
@@ -244,25 +245,25 @@ func TestClone_WorktreeFailure_RollsBackPartialDir(t *testing.T) {
 	barePath := filepath.Join(repoPath, ".bare")
 
 	// All phases succeed until worktree add fails (empty remote: show-ref fails).
-	runner := &mockRunner{
-		responses: map[string]mockResponse{
-			fmt.Sprintf("%s:[clone --bare u %s]", dir, barePath):                                         {output: ""},
-			fmt.Sprintf("%s:[config remote.origin.fetch +refs/heads/*:refs/remotes/origin/*]", barePath): {output: ""},
-			fmt.Sprintf("%s:[fetch origin]", barePath):                                                   {output: ""},
-			fmt.Sprintf("%s:[symbolic-ref --short HEAD]", barePath):                                      {output: "main"},
-			fmt.Sprintf("%s:[show-ref --verify refs/heads/main]", barePath):                              {output: "", err: fmt.Errorf("not found")},
+	runner := &mock.Runner{
+		Responses: map[string]mock.Response{
+			fmt.Sprintf("%s:[clone --bare u %s]", dir, barePath):                                         {Output: ""},
+			fmt.Sprintf("%s:[config remote.origin.fetch +refs/heads/*:refs/remotes/origin/*]", barePath): {Output: ""},
+			fmt.Sprintf("%s:[fetch origin]", barePath):                                                   {Output: ""},
+			fmt.Sprintf("%s:[symbolic-ref --short HEAD]", barePath):                                      {Output: "main"},
+			fmt.Sprintf("%s:[show-ref --verify refs/heads/main]", barePath):                              {Output: "", Err: fmt.Errorf("not found")},
 		},
 		// Simulate clone --bare creating the bare dir, so rollback has something
 		// to remove.
-		onRun: func(d string, args []string) {
+		OnRun: func(d string, args []string) {
 			if len(args) > 0 && args[0] == "clone" {
 				_ = os.MkdirAll(barePath, 0o755)
 			}
 		},
 	}
 
-	ec := &eventCollector{}
-	result := Clone(runner, CloneOptions{URL: "u", Location: dir, Name: "repo"}, ec.emit)
+	ec := &mock.EventCollector[pipeline.Event]{}
+	result := Clone(runner, CloneOptions{URL: "u", Location: dir, Name: "repo"}, ec.Emit)
 
 	if !result.HasFailures() {
 		t.Fatal("expected the clone to fail on an empty remote")
@@ -282,24 +283,24 @@ func TestClone_TrackingSkip_PreservesRepoDir(t *testing.T) {
 
 	// Worktree add succeeds; the best-effort fetch fails. The clone must still
 	// succeed (tracking is pipeline.StepSkipped) and must NOT roll back the repo dir.
-	runner := &mockRunner{
-		responses: map[string]mockResponse{
-			fmt.Sprintf("%s:[clone --bare u %s]", dir, barePath):                                         {output: ""},
-			fmt.Sprintf("%s:[config remote.origin.fetch +refs/heads/*:refs/remotes/origin/*]", barePath): {output: ""},
-			fmt.Sprintf("%s:[symbolic-ref --short HEAD]", barePath):                                      {output: "main"},
-			fmt.Sprintf("%s:[show-ref --verify refs/heads/main]", barePath):                              {output: "abc"},
-			fmt.Sprintf("%s:[worktree add %s/main main]", repoPath, repoPath):                            {output: ""},
-			fmt.Sprintf("%s:[fetch origin]", barePath):                                                   {output: "", err: fmt.Errorf("network down")},
+	runner := &mock.Runner{
+		Responses: map[string]mock.Response{
+			fmt.Sprintf("%s:[clone --bare u %s]", dir, barePath):                                         {Output: ""},
+			fmt.Sprintf("%s:[config remote.origin.fetch +refs/heads/*:refs/remotes/origin/*]", barePath): {Output: ""},
+			fmt.Sprintf("%s:[symbolic-ref --short HEAD]", barePath):                                      {Output: "main"},
+			fmt.Sprintf("%s:[show-ref --verify refs/heads/main]", barePath):                              {Output: "abc"},
+			fmt.Sprintf("%s:[worktree add %s/main main]", repoPath, repoPath):                            {Output: ""},
+			fmt.Sprintf("%s:[fetch origin]", barePath):                                                   {Output: "", Err: fmt.Errorf("network down")},
 		},
-		onRun: func(d string, args []string) {
+		OnRun: func(d string, args []string) {
 			if len(args) >= 2 && args[0] == "worktree" && args[1] == "add" {
 				_ = os.MkdirAll(filepath.Join(repoPath, "main"), 0o755)
 			}
 		},
 	}
 
-	ec := &eventCollector{}
-	result := Clone(runner, CloneOptions{URL: "u", Location: dir, Name: "repo"}, ec.emit)
+	ec := &mock.EventCollector[pipeline.Event]{}
+	result := Clone(runner, CloneOptions{URL: "u", Location: dir, Name: "repo"}, ec.Emit)
 
 	if result.HasFailures() {
 		t.Error("a tracking-only skip must not fail the clone")

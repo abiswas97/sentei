@@ -9,16 +9,17 @@ import (
 	"testing"
 
 	"github.com/abiswas97/sentei/internal/pipeline"
+	"github.com/abiswas97/sentei/internal/testutil/mock"
 )
 
 type mockGhRunner struct {
-	responses map[string]mockResponse
+	responses map[string]mock.Response
 }
 
 func (m *mockGhRunner) RunGh(dir string, args ...string) (string, error) {
 	key := fmt.Sprintf("%s:gh[%s]", dir, strings.Join(args, " "))
 	if resp, ok := m.responses[key]; ok {
-		return resp.output, resp.err
+		return resp.Output, resp.Err
 	}
 	return "", fmt.Errorf("unexpected gh call: %s", key)
 }
@@ -28,21 +29,21 @@ func TestCreate_LocalOnly(t *testing.T) {
 	repoName := "my-project"
 	repoPath := filepath.Join(dir, repoName)
 
-	runner := &mockRunner{responses: map[string]mockResponse{
-		fmt.Sprintf("%s/.bare:[init --bare]", repoPath):                                                    {output: ""},
-		fmt.Sprintf("%s/.bare:[config remote.origin.fetch +refs/heads/*:refs/remotes/origin/*]", repoPath): {output: ""},
-		fmt.Sprintf("%s:[worktree add %s/main -b main]", repoPath, repoPath):                               {output: ""},
-		fmt.Sprintf("%s/main:[add -A]", repoPath):                                                          {output: ""},
-		fmt.Sprintf("%s/main:[commit -m Initial commit]", repoPath):                                        {output: ""},
+	runner := &mock.Runner{Responses: map[string]mock.Response{
+		fmt.Sprintf("%s/.bare:[init --bare]", repoPath):                                                    {Output: ""},
+		fmt.Sprintf("%s/.bare:[config remote.origin.fetch +refs/heads/*:refs/remotes/origin/*]", repoPath): {Output: ""},
+		fmt.Sprintf("%s:[worktree add %s/main -b main]", repoPath, repoPath):                               {Output: ""},
+		fmt.Sprintf("%s/main:[add -A]", repoPath):                                                          {Output: ""},
+		fmt.Sprintf("%s/main:[commit -m Initial commit]", repoPath):                                        {Output: ""},
 	}}
 
-	ec := &eventCollector{}
+	ec := &mock.EventCollector[pipeline.Event]{}
 	opts := CreateOptions{
 		Name:          repoName,
 		Location:      dir,
 		PublishGitHub: false,
 	}
-	result := Create(runner, runner, opts, ec.emit)
+	result := Create(runner, runner, opts, ec.Emit)
 
 	if result.RepoPath != repoPath {
 		t.Errorf("RepoPath = %q, want %q", result.RepoPath, repoPath)
@@ -57,7 +58,7 @@ func TestCreate_LocalOnly(t *testing.T) {
 			}
 		}
 	}
-	if len(ec.events) == 0 {
+	if len(ec.Events) == 0 {
 		t.Error("expected events to be emitted")
 	}
 }
@@ -67,25 +68,25 @@ func TestCreate_WithGitHub(t *testing.T) {
 	repoName := "my-project"
 	repoPath := filepath.Join(dir, repoName)
 
-	runner := &mockRunner{responses: map[string]mockResponse{
+	runner := &mock.Runner{Responses: map[string]mock.Response{
 		// Setup phase
-		fmt.Sprintf("%s/.bare:[init --bare]", repoPath):                                                    {output: ""},
-		fmt.Sprintf("%s/.bare:[config remote.origin.fetch +refs/heads/*:refs/remotes/origin/*]", repoPath): {output: ""},
-		fmt.Sprintf("%s:[worktree add %s/main -b main]", repoPath, repoPath):                               {output: ""},
-		fmt.Sprintf("%s/main:[add -A]", repoPath):                                                          {output: ""},
-		fmt.Sprintf("%s/main:[commit -m Initial commit]", repoPath):                                        {output: ""},
+		fmt.Sprintf("%s/.bare:[init --bare]", repoPath):                                                    {Output: ""},
+		fmt.Sprintf("%s/.bare:[config remote.origin.fetch +refs/heads/*:refs/remotes/origin/*]", repoPath): {Output: ""},
+		fmt.Sprintf("%s:[worktree add %s/main -b main]", repoPath, repoPath):                               {Output: ""},
+		fmt.Sprintf("%s/main:[add -A]", repoPath):                                                          {Output: ""},
+		fmt.Sprintf("%s/main:[commit -m Initial commit]", repoPath):                                        {Output: ""},
 		// GitHub phase (git commands) — gh git_protocol is https (gh default).
-		fmt.Sprintf("%s/.bare:[remote set-url origin https://github.com/abiswas97/my-project.git]", repoPath): {output: ""},
-		fmt.Sprintf("%s/main:[push -u origin main]", repoPath):                                                {output: ""},
-		fmt.Sprintf("%s/.bare:[remote set-head origin main]", repoPath):                                       {output: ""},
+		fmt.Sprintf("%s/.bare:[remote set-url origin https://github.com/abiswas97/my-project.git]", repoPath): {Output: ""},
+		fmt.Sprintf("%s/main:[push -u origin main]", repoPath):                                                {Output: ""},
+		fmt.Sprintf("%s/.bare:[remote set-head origin main]", repoPath):                                       {Output: ""},
 	}}
-	ghRunner := &mockGhRunner{responses: map[string]mockResponse{
-		fmt.Sprintf("%s:gh[api user --jq .login]", repoPath):             {output: "abiswas97"},
-		fmt.Sprintf("%s:gh[repo create my-project --private]", repoPath): {output: ""},
-		fmt.Sprintf("%s:gh[config get git_protocol]", repoPath):          {output: "https"},
+	ghRunner := &mockGhRunner{responses: map[string]mock.Response{
+		fmt.Sprintf("%s:gh[api user --jq .login]", repoPath):             {Output: "abiswas97"},
+		fmt.Sprintf("%s:gh[repo create my-project --private]", repoPath): {Output: ""},
+		fmt.Sprintf("%s:gh[config get git_protocol]", repoPath):          {Output: "https"},
 	}}
 
-	ec := &eventCollector{}
+	ec := &mock.EventCollector[pipeline.Event]{}
 	opts := CreateOptions{
 		Name:          repoName,
 		Location:      dir,
@@ -93,7 +94,7 @@ func TestCreate_WithGitHub(t *testing.T) {
 		Visibility:    "private",
 		Description:   "",
 	}
-	result := CreateWithGh(runner, runner, ghRunner, opts, ec.emit)
+	result := CreateWithGh(runner, runner, ghRunner, opts, ec.Emit)
 
 	if len(result.Phases) != 2 {
 		t.Errorf("want 2 phases (setup + github), got %d", len(result.Phases))
@@ -108,22 +109,22 @@ func TestCreate_WithGitHub(t *testing.T) {
 }
 
 func TestGhRemoteURL_RespectsConfiguredProtocol(t *testing.T) {
-	sshGh := &mockGhRunner{responses: map[string]mockResponse{
-		"/r:gh[config get git_protocol]": {output: "ssh"},
+	sshGh := &mockGhRunner{responses: map[string]mock.Response{
+		"/r:gh[config get git_protocol]": {Output: "ssh"},
 	}}
 	if got := ghRemoteURL(sshGh, "/r", "u", "n"); got != "git@github.com:u/n.git" {
 		t.Errorf("ssh protocol: got %q", got)
 	}
 
-	httpsGh := &mockGhRunner{responses: map[string]mockResponse{
-		"/r:gh[config get git_protocol]": {output: "https"},
+	httpsGh := &mockGhRunner{responses: map[string]mock.Response{
+		"/r:gh[config get git_protocol]": {Output: "https"},
 	}}
 	if got := ghRemoteURL(httpsGh, "/r", "u", "n"); got != "https://github.com/u/n.git" {
 		t.Errorf("https protocol: got %q", got)
 	}
 
 	// On error, default to HTTPS — gh's own default and what token auth uses.
-	brokenGh := &mockGhRunner{responses: map[string]mockResponse{}}
+	brokenGh := &mockGhRunner{responses: map[string]mock.Response{}}
 	if got := ghRemoteURL(brokenGh, "/r", "u", "n"); got != "https://github.com/u/n.git" {
 		t.Errorf("default: got %q", got)
 	}
@@ -134,13 +135,13 @@ func TestCreate_DirAlreadyExists(t *testing.T) {
 	repoName := "existing"
 	os.MkdirAll(filepath.Join(dir, repoName), 0755)
 
-	runner := &mockRunner{responses: map[string]mockResponse{}}
-	ec := &eventCollector{}
+	runner := &mock.Runner{Responses: map[string]mock.Response{}}
+	ec := &mock.EventCollector[pipeline.Event]{}
 	opts := CreateOptions{
 		Name:     repoName,
 		Location: dir,
 	}
-	result := Create(runner, runner, opts, ec.emit)
+	result := Create(runner, runner, opts, ec.Emit)
 
 	if len(result.Phases) == 0 {
 		t.Fatal("expected at least one phase")
@@ -155,27 +156,27 @@ func TestCreate_GitHubPhaseFailure_LocalStillUsable(t *testing.T) {
 	repoName := "my-project"
 	repoPath := filepath.Join(dir, repoName)
 
-	runner := &mockRunner{responses: map[string]mockResponse{
+	runner := &mock.Runner{Responses: map[string]mock.Response{
 		// Setup phase succeeds
-		fmt.Sprintf("%s/.bare:[init --bare]", repoPath):                                                    {output: ""},
-		fmt.Sprintf("%s/.bare:[config remote.origin.fetch +refs/heads/*:refs/remotes/origin/*]", repoPath): {output: ""},
-		fmt.Sprintf("%s:[worktree add %s/main -b main]", repoPath, repoPath):                               {output: ""},
-		fmt.Sprintf("%s/main:[add -A]", repoPath):                                                          {output: ""},
-		fmt.Sprintf("%s/main:[commit -m Initial commit]", repoPath):                                        {output: ""},
+		fmt.Sprintf("%s/.bare:[init --bare]", repoPath):                                                    {Output: ""},
+		fmt.Sprintf("%s/.bare:[config remote.origin.fetch +refs/heads/*:refs/remotes/origin/*]", repoPath): {Output: ""},
+		fmt.Sprintf("%s:[worktree add %s/main -b main]", repoPath, repoPath):                               {Output: ""},
+		fmt.Sprintf("%s/main:[add -A]", repoPath):                                                          {Output: ""},
+		fmt.Sprintf("%s/main:[commit -m Initial commit]", repoPath):                                        {Output: ""},
 	}}
-	ghRunner := &mockGhRunner{responses: map[string]mockResponse{
+	ghRunner := &mockGhRunner{responses: map[string]mock.Response{
 		// GitHub phase fails at user lookup
-		fmt.Sprintf("%s:gh[api user --jq .login]", repoPath): {output: "", err: fmt.Errorf("gh: not authenticated")},
+		fmt.Sprintf("%s:gh[api user --jq .login]", repoPath): {Output: "", Err: fmt.Errorf("gh: not authenticated")},
 	}}
 
-	ec := &eventCollector{}
+	ec := &mock.EventCollector[pipeline.Event]{}
 	opts := CreateOptions{
 		Name:          repoName,
 		Location:      dir,
 		PublishGitHub: true,
 		Visibility:    "private",
 	}
-	result := CreateWithGh(runner, runner, ghRunner, opts, ec.emit)
+	result := CreateWithGh(runner, runner, ghRunner, opts, ec.Emit)
 
 	// Local repo still usable despite GitHub failure
 	if result.RepoPath != repoPath {
@@ -198,24 +199,24 @@ func TestCreate_PushFailure_ReportsOrphanedRepo(t *testing.T) {
 	repoPath := filepath.Join(dir, repoName)
 	pushErr := fmt.Errorf("Permission denied (publickey)")
 
-	runner := &mockRunner{responses: map[string]mockResponse{
-		fmt.Sprintf("%s/.bare:[init --bare]", repoPath):                                                       {output: ""},
-		fmt.Sprintf("%s/.bare:[config remote.origin.fetch +refs/heads/*:refs/remotes/origin/*]", repoPath):    {output: ""},
-		fmt.Sprintf("%s:[worktree add %s/main -b main]", repoPath, repoPath):                                  {output: ""},
-		fmt.Sprintf("%s/main:[add -A]", repoPath):                                                             {output: ""},
-		fmt.Sprintf("%s/main:[commit -m Initial commit]", repoPath):                                           {output: ""},
-		fmt.Sprintf("%s/.bare:[remote set-url origin https://github.com/abiswas97/my-project.git]", repoPath): {output: ""},
-		fmt.Sprintf("%s/main:[push -u origin main]", repoPath):                                                {output: "", err: pushErr},
+	runner := &mock.Runner{Responses: map[string]mock.Response{
+		fmt.Sprintf("%s/.bare:[init --bare]", repoPath):                                                       {Output: ""},
+		fmt.Sprintf("%s/.bare:[config remote.origin.fetch +refs/heads/*:refs/remotes/origin/*]", repoPath):    {Output: ""},
+		fmt.Sprintf("%s:[worktree add %s/main -b main]", repoPath, repoPath):                                  {Output: ""},
+		fmt.Sprintf("%s/main:[add -A]", repoPath):                                                             {Output: ""},
+		fmt.Sprintf("%s/main:[commit -m Initial commit]", repoPath):                                           {Output: ""},
+		fmt.Sprintf("%s/.bare:[remote set-url origin https://github.com/abiswas97/my-project.git]", repoPath): {Output: ""},
+		fmt.Sprintf("%s/main:[push -u origin main]", repoPath):                                                {Output: "", Err: pushErr},
 	}}
-	ghRunner := &mockGhRunner{responses: map[string]mockResponse{
-		fmt.Sprintf("%s:gh[api user --jq .login]", repoPath):             {output: "abiswas97"},
-		fmt.Sprintf("%s:gh[repo create my-project --private]", repoPath): {output: ""},
-		fmt.Sprintf("%s:gh[config get git_protocol]", repoPath):          {output: "https"},
+	ghRunner := &mockGhRunner{responses: map[string]mock.Response{
+		fmt.Sprintf("%s:gh[api user --jq .login]", repoPath):             {Output: "abiswas97"},
+		fmt.Sprintf("%s:gh[repo create my-project --private]", repoPath): {Output: ""},
+		fmt.Sprintf("%s:gh[config get git_protocol]", repoPath):          {Output: "https"},
 	}}
 
-	ec := &eventCollector{}
+	ec := &mock.EventCollector[pipeline.Event]{}
 	opts := CreateOptions{Name: repoName, Location: dir, PublishGitHub: true, Visibility: "private"}
-	result := CreateWithGh(runner, runner, ghRunner, opts, ec.emit)
+	result := CreateWithGh(runner, runner, ghRunner, opts, ec.Emit)
 
 	var pushStep *pipeline.StepResult
 	for i := range result.Phases {

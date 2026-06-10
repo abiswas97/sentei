@@ -4,6 +4,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/abiswas97/sentei/internal/testutil/mock"
 )
 
 func copyFixture(t *testing.T, name string) string {
@@ -55,7 +57,7 @@ func TestDedupConfig(t *testing.T) {
 			path := copyFixture(t, tt.fixture)
 			ec := collectEvents(t)
 
-			result, err := DedupConfig(path, Options{}, ec.emit)
+			result, err := DedupConfig(path, Options{}, ec.Emit)
 			if err != nil {
 				t.Fatalf("DedupConfig error: %v", err)
 			}
@@ -81,7 +83,7 @@ func TestDedupConfig_DryRun(t *testing.T) {
 	}
 
 	ec := collectEvents(t)
-	result, err := DedupConfig(path, Options{DryRun: true}, ec.emit)
+	result, err := DedupConfig(path, Options{DryRun: true}, ec.Emit)
 	if err != nil {
 		t.Fatalf("DedupConfig error: %v", err)
 	}
@@ -103,7 +105,7 @@ func TestDedupConfig_CreatesBackup(t *testing.T) {
 	path := copyFixture(t, "bloated.gitconfig")
 	ec := collectEvents(t)
 
-	_, err := DedupConfig(path, Options{}, ec.emit)
+	_, err := DedupConfig(path, Options{}, ec.Emit)
 	if err != nil {
 		t.Fatalf("DedupConfig error: %v", err)
 	}
@@ -150,13 +152,13 @@ func TestPurgeOrphanedBranchConfigs(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			path := copyFixture(t, tt.fixture)
-			runner := &mockRunner{responses: map[string]mockResponse{
-				"/repo:[branch --format=%(refname:short)]": {output: tt.existBranches},
+			runner := &mock.Runner{Responses: map[string]mock.Response{
+				"/repo:[branch --format=%(refname:short)]": {Output: tt.existBranches},
 			}}
 			opts := Options{DryRun: false}
 			events := collectEvents(t)
 
-			result, err := PurgeOrphanedBranchConfigs(runner, "/repo", path, opts, events.emit)
+			result, err := PurgeOrphanedBranchConfigs(runner, "/repo", path, opts, events.Emit)
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
