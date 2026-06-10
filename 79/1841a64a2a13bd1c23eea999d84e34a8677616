@@ -1,0 +1,85 @@
+cmd/capture_test.go
+  s_45cfee6c7ab135::t_765ab41da24beb 1-40
+internal/tui/create_options_test.go
+  s_45cfee6c7ab135::t_60ca39389ed949 1-6,9,12-138
+  s_45cfee6c7ab135::t_c998fcbd0d6710 7-8,10-11
+cmd/migrate_run_test.go
+  s_45cfee6c7ab135::t_308b9c70d0159f 51-71
+  s_45cfee6c7ab135::t_d9bd5e356dc349 1-50,72-91
+internal/cli/usage_test.go
+  s_45cfee6c7ab135::t_e92b15d90fdec9 1-50,52-80
+internal/tui/create_branch_test.go
+  s_45cfee6c7ab135::t_2321cfe4ceee9b 1-113
+internal/tui/repo_name_test.go
+  s_45cfee6c7ab135::t_6adbb5e75b03db 1-145
+internal/tui/repo_options_test.go
+  s_45cfee6c7ab135::t_b2a00f9988e7aa 231-233
+  s_45cfee6c7ab135::t_96bb89b214b16f 1-230,234-237,239-248
+cmd/remove_flags_test.go
+  s_45cfee6c7ab135::t_2384fd6155da46 179-186
+internal/tui/repo_progress_test.go
+  s_45cfee6c7ab135::t_058a1cb893270a 1-141
+internal/tui/remove_filter_test.go
+  s_45cfee6c7ab135::t_d2353f460288bb 8-9
+cmd/output_format_test.go
+  s_45cfee6c7ab135::t_e0592aa8697d00 1-107
+cmd/fixtures_test.go
+  s_45cfee6c7ab135::t_1947f065da64c2 1-89
+internal/tui/summary_test.go
+  s_45cfee6c7ab135::t_653a6d5f298aa3 1-73
+cmd/integrations_run_test.go
+  s_45cfee6c7ab135::t_55ca893e1b9069 1-48
+cmd/create_run_test.go
+  s_45cfee6c7ab135::t_96499e33b69630 1-3,6-162,186-199
+  s_45cfee6c7ab135::t_a29b5d1cdce4ba 4-5
+  s_45cfee6c7ab135::t_857731033db644 163-185
+internal/tui/clone_input_test.go
+  s_45cfee6c7ab135::t_004d202d3a8632 155,157-159
+  s_45cfee6c7ab135::t_cfc2908106e199 1-154,156,160-161
+internal/tui/integration_progress_test.go
+  s_45cfee6c7ab135::t_a187fe7e0ab640 5-6,13
+cmd/clone_run_test.go
+  s_45cfee6c7ab135::t_911e5c2de41635 1-65
+internal/tui/integration_list_test.go
+  s_45cfee6c7ab135::t_1ffc6af613d9c7 10,12
+internal/tui/confirm_test.go
+  s_45cfee6c7ab135::t_5eddc45fe75f43 13-14,17
+internal/tui/migrate_integrations_test.go
+  s_45cfee6c7ab135::t_b8c5852349a633 4-5,12-13
+internal/tui/create_summary_test.go
+  s_45cfee6c7ab135::t_36716d562a0070 1-119
+cmd/cleanup_run_test.go
+  s_45cfee6c7ab135::t_a11e2ea098f448 40-46
+  s_45cfee6c7ab135::t_0cadcc0e614e57 91
+  s_45cfee6c7ab135::t_49c66567599333 72-86
+  s_45cfee6c7ab135::t_d3cc1f40c8f499 1-39,47-71,87-90,92-103
+cmd/ecosystems_run_test.go
+  s_45cfee6c7ab135::t_39fea6cdbe36da 50-63
+  s_45cfee6c7ab135::t_b84608067576b3 1-3,5-49
+  s_45cfee6c7ab135::t_29f073347dfda2 4
+internal/tui/create_progress_test.go
+  s_45cfee6c7ab135::t_6bbde9c8cd709d 1-106
+cmd/remove_run_test.go
+  s_45cfee6c7ab135::t_9fe9dfc20d8ebf 185-230
+  s_45cfee6c7ab135::t_df58ec45925464 1-60,68-184,231-242,244-249
+  s_45cfee6c7ab135::t_ffd9b1eb5f32eb 61-67
+  s_45cfee6c7ab135::t_9f61da9355a1f3 243
+internal/tui/phase_display_test.go
+  s_45cfee6c7ab135::t_e3ee41b380dbb2 1-96
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "791841a64a2a13bd1c23eea999d84e34a8677616",
+  "prompts": {},
+  "sessions": {
+    "s_45cfee6c7ab135": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "362b0459-633f-41b0-be4d-ef5a2d23fce8",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Test <t@t.com>"
+    }
+  }
+}
