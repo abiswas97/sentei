@@ -4,10 +4,38 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/abiswas97/sentei/internal/state"
 )
+
+func TestSave_LeavesNoTempFileAndRoundTrips(t *testing.T) {
+	dir := t.TempDir()
+
+	if err := state.Save(dir, &state.State{Integrations: []string{"a", "b"}}); err != nil {
+		t.Fatalf("Save: %v", err)
+	}
+
+	// The atomic temp+fsync+rename must leave no .sentei-*.json temp file behind.
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, e := range entries {
+		if strings.HasPrefix(e.Name(), ".sentei-") {
+			t.Errorf("leftover temp file after Save: %s", e.Name())
+		}
+	}
+
+	got, err := state.Load(dir)
+	if err != nil {
+		t.Fatalf("Load after Save: %v", err)
+	}
+	if len(got.Integrations) != 2 || got.Integrations[0] != "a" || got.Integrations[1] != "b" {
+		t.Errorf("round-trip mismatch: %v", got.Integrations)
+	}
+}
 
 func TestLoad_FileNotExist_ReturnsEmpty(t *testing.T) {
 	dir := t.TempDir()

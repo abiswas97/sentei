@@ -272,3 +272,40 @@ func TestClone_WorktreeFailure_RollsBackPartialDir(t *testing.T) {
 		t.Error("the half-built repo directory must be rolled back")
 	}
 }
+
+func TestClone_TrackingSkip_PreservesRepoDir(t *testing.T) {
+	dir := t.TempDir()
+	repoPath := filepath.Join(dir, "repo")
+	barePath := filepath.Join(repoPath, ".bare")
+
+	// Worktree add succeeds; the best-effort fetch fails. The clone must still
+	// succeed (tracking is StepSkipped) and must NOT roll back the repo dir.
+	runner := &mockRunner{
+		responses: map[string]mockResponse{
+			fmt.Sprintf("%s:[clone --bare u %s]", dir, barePath):                                         {output: ""},
+			fmt.Sprintf("%s:[config remote.origin.fetch +refs/heads/*:refs/remotes/origin/*]", barePath): {output: ""},
+			fmt.Sprintf("%s:[symbolic-ref --short HEAD]", barePath):                                      {output: "main"},
+			fmt.Sprintf("%s:[show-ref --verify refs/heads/main]", barePath):                              {output: "abc"},
+			fmt.Sprintf("%s:[worktree add main main]", repoPath):                                         {output: ""},
+			fmt.Sprintf("%s:[fetch origin]", barePath):                                                   {output: "", err: fmt.Errorf("network down")},
+		},
+		onRun: func(d string, args []string) {
+			if len(args) >= 2 && args[0] == "worktree" && args[1] == "add" {
+				_ = os.MkdirAll(filepath.Join(repoPath, "main"), 0o755)
+			}
+		},
+	}
+
+	ec := &eventCollector{}
+	result := Clone(runner, CloneOptions{URL: "u", Location: dir, Name: "repo"}, ec.emit)
+
+	if result.HasFailures() {
+		t.Error("a tracking-only skip must not fail the clone")
+	}
+	if result.WorktreePath != filepath.Join(repoPath, "main") {
+		t.Errorf("worktree should be created, got WorktreePath=%q", result.WorktreePath)
+	}
+	if _, err := os.Stat(repoPath); err != nil {
+		t.Errorf("repo dir must be preserved on a tracking skip (not rolled back): %v", err)
+	}
+}

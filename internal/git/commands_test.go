@@ -3,8 +3,32 @@ package git
 import (
 	"errors"
 	"fmt"
+	"strings"
 	"testing"
 )
+
+func TestRunShell_EmptyStderr_PreservesExitError(t *testing.T) {
+	// `exit 7` fails with no stderr, exercising the empty-stderr %w fallback.
+	_, err := (&DefaultShellRunner{}).RunShell(t.TempDir(), "exit 7")
+	if err == nil {
+		t.Fatal("expected an error from a non-zero exit")
+	}
+	if errors.Unwrap(err) == nil {
+		t.Errorf("underlying exit error must be preserved when stderr is empty, got: %v", err)
+	}
+}
+
+func TestGitRunner_Run_FailureNamesCommand(t *testing.T) {
+	// A bad git invocation fails with stderr; the message must name the command
+	// (exercises the non-empty-stderr branch of the real runner).
+	_, err := (&GitRunner{}).Run(t.TempDir(), "rev-parse", "--definitely-not-a-flag")
+	if err == nil {
+		t.Fatal("expected an error from a bad git invocation")
+	}
+	if !strings.Contains(err.Error(), "git rev-parse") {
+		t.Errorf("error should name the command, got: %v", err)
+	}
+}
 
 type mockRunner struct {
 	responses map[string]mockResponse
