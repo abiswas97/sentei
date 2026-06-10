@@ -1,0 +1,31 @@
+internal/integration/manager_test.go
+  s_157240fea52147::t_902c58c88149d6 31,33,123,150
+  s_157240fea52147::t_0a671aaa0bc282 30,32,149
+internal/git/commands_test.go
+  s_157240fea52147::t_6b785b23e482b9 141-154
+internal/integration/manager.go
+  s_157240fea52147::t_69d75a1757ff00 83-85
+internal/git/commands.go
+  s_157240fea52147::t_1efabce2c2c139 37-42
+internal/creator/integrations_test.go
+  s_157240fea52147::t_381cbdc156f8ba 10
+  s_157240fea52147::t_6b785b23e482b9 239,257-258
+internal/creator/integrations.go
+  s_157240fea52147::t_3b1271305cc362 165
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "0710353b757cd4b29898d00371dea48fbef64a66",
+  "prompts": {},
+  "sessions": {
+    "s_157240fea52147": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "42f7cf1c-c025-449a-89c8-fab9aa10c61e",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Test <t@t.com>"
+    }
+  }
+}
