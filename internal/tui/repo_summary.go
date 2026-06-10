@@ -8,6 +8,7 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/abiswas97/sentei/internal/git"
 	"github.com/abiswas97/sentei/internal/repo"
 )
 
@@ -140,7 +141,7 @@ func (m Model) viewCreateRepoSummary(result repo.CreateResult) string {
 
 	worktreePath := result.WorktreePath
 	if worktreePath == "" && result.RepoPath != "" {
-		worktreePath = result.RepoPath + "/main"
+		worktreePath = git.WorktreePath(result.RepoPath, "main")
 	}
 
 	b.WriteString("\n")
@@ -196,7 +197,7 @@ func (m Model) viewCloneRepoSummary(result repo.CloneResult) string {
 
 	worktreePath := result.WorktreePath
 	if worktreePath == "" && result.RepoPath != "" && result.DefaultBranch != "" {
-		worktreePath = result.RepoPath + "/" + result.DefaultBranch
+		worktreePath = git.WorktreePath(result.RepoPath, result.DefaultBranch)
 	}
 
 	b.WriteString("\n")

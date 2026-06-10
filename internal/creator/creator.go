@@ -72,7 +72,7 @@ func Run(runner git.CommandRunner, shell git.ShellRunner, opts Options, emit fun
 	if setupPhase.Steps[0].Status == StepFailed {
 		return result
 	}
-	result.WorktreePath = worktreePath(opts.RepoPath, opts.BranchName)
+	result.WorktreePath = git.WorktreePath(opts.RepoPath, opts.BranchName)
 
 	depsPhase := runDeps(shell, result.WorktreePath, opts, emit)
 	result.Phases = append(result.Phases, depsPhase)
@@ -81,8 +81,4 @@ func Run(runner git.CommandRunner, shell git.ShellRunner, opts Options, emit fun
 	result.Phases = append(result.Phases, intPhase)
 
 	return result
-}
-
-func worktreePath(repoPath, branch string) string {
-	return repoPath + "/" + SanitizeBranchPath(branch)
 }

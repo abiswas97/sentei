@@ -99,7 +99,7 @@ func Clone(runner git.CommandRunner, opts CloneOptions, emit func(Event)) CloneR
 	// worktree add must not leave WorktreePath set, or consumers report success
 	// and point the user at a directory that does not exist.
 	if worktreeCreated {
-		result.WorktreePath = filepath.Join(repoPath, branch)
+		result.WorktreePath = git.WorktreePath(repoPath, branch)
 	}
 	// Roll back only when no usable checkout exists. If the worktree was created
 	// and merely upstream tracking failed, the repo is usable: keep it.
@@ -208,9 +208,12 @@ func runCloneWorktree(runner git.CommandRunner, repoPath, barePath string, emit 
 		return phase, branch, false
 	}
 
-	// Create worktree
+	// Create worktree. The branch is passed explicitly as the commit-ish:
+	// without it, git derives a NEW branch from the path's basename instead of
+	// checking out the existing one.
+	wtPath := git.WorktreePath(repoPath, branch)
 	emit(Event{Phase: phaseName, Step: "Create worktree", Status: StepRunning})
-	_, err := runner.Run(repoPath, "worktree", "add", branch, branch)
+	_, err := runner.Run(repoPath, "worktree", "add", wtPath, branch)
 	if err != nil {
 		step := StepResult{Name: "Create worktree", Status: StepFailed, Error: err}
 		phase.Steps = append(phase.Steps, step)
@@ -224,7 +227,6 @@ func runCloneWorktree(runner git.CommandRunner, repoPath, barePath string, emit 
 	// refs/remotes/origin/* (fetch) and setting upstream both need the remote; a
 	// network/auth failure here must NOT fail the clone. StepSkipped keeps
 	// HasFailures() false so the clone still reports success, just without tracking.
-	wtPath := filepath.Join(repoPath, branch)
 	emit(Event{Phase: phaseName, Step: "Set upstream tracking", Status: StepRunning})
 	skipTracking := func(err error) (Phase, string, bool) {
 		skip := StepResult{Name: "Set upstream tracking", Status: StepSkipped, Message: "no tracking: " + err.Error()}

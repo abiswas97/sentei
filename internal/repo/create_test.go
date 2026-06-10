@@ -29,7 +29,7 @@ func TestCreate_LocalOnly(t *testing.T) {
 	runner := &mockRunner{responses: map[string]mockResponse{
 		fmt.Sprintf("%s/.bare:[init --bare]", repoPath):                                                    {output: ""},
 		fmt.Sprintf("%s/.bare:[config remote.origin.fetch +refs/heads/*:refs/remotes/origin/*]", repoPath): {output: ""},
-		fmt.Sprintf("%s:[worktree add main -b main]", repoPath):                                            {output: ""},
+		fmt.Sprintf("%s:[worktree add %s/main -b main]", repoPath, repoPath):                               {output: ""},
 		fmt.Sprintf("%s/main:[add -A]", repoPath):                                                          {output: ""},
 		fmt.Sprintf("%s/main:[commit -m Initial commit]", repoPath):                                        {output: ""},
 	}}
@@ -69,7 +69,7 @@ func TestCreate_WithGitHub(t *testing.T) {
 		// Setup phase
 		fmt.Sprintf("%s/.bare:[init --bare]", repoPath):                                                    {output: ""},
 		fmt.Sprintf("%s/.bare:[config remote.origin.fetch +refs/heads/*:refs/remotes/origin/*]", repoPath): {output: ""},
-		fmt.Sprintf("%s:[worktree add main -b main]", repoPath):                                            {output: ""},
+		fmt.Sprintf("%s:[worktree add %s/main -b main]", repoPath, repoPath):                               {output: ""},
 		fmt.Sprintf("%s/main:[add -A]", repoPath):                                                          {output: ""},
 		fmt.Sprintf("%s/main:[commit -m Initial commit]", repoPath):                                        {output: ""},
 		// GitHub phase (git commands) — gh git_protocol is https (gh default).
@@ -157,7 +157,7 @@ func TestCreate_GitHubPhaseFailure_LocalStillUsable(t *testing.T) {
 		// Setup phase succeeds
 		fmt.Sprintf("%s/.bare:[init --bare]", repoPath):                                                    {output: ""},
 		fmt.Sprintf("%s/.bare:[config remote.origin.fetch +refs/heads/*:refs/remotes/origin/*]", repoPath): {output: ""},
-		fmt.Sprintf("%s:[worktree add main -b main]", repoPath):                                            {output: ""},
+		fmt.Sprintf("%s:[worktree add %s/main -b main]", repoPath, repoPath):                               {output: ""},
 		fmt.Sprintf("%s/main:[add -A]", repoPath):                                                          {output: ""},
 		fmt.Sprintf("%s/main:[commit -m Initial commit]", repoPath):                                        {output: ""},
 	}}
@@ -199,7 +199,7 @@ func TestCreate_PushFailure_ReportsOrphanedRepo(t *testing.T) {
 	runner := &mockRunner{responses: map[string]mockResponse{
 		fmt.Sprintf("%s/.bare:[init --bare]", repoPath):                                                       {output: ""},
 		fmt.Sprintf("%s/.bare:[config remote.origin.fetch +refs/heads/*:refs/remotes/origin/*]", repoPath):    {output: ""},
-		fmt.Sprintf("%s:[worktree add main -b main]", repoPath):                                               {output: ""},
+		fmt.Sprintf("%s:[worktree add %s/main -b main]", repoPath, repoPath):                                  {output: ""},
 		fmt.Sprintf("%s/main:[add -A]", repoPath):                                                             {output: ""},
 		fmt.Sprintf("%s/main:[commit -m Initial commit]", repoPath):                                           {output: ""},
 		fmt.Sprintf("%s/.bare:[remote set-url origin https://github.com/abiswas97/my-project.git]", repoPath): {output: ""},

@@ -77,7 +77,7 @@ func CreateWithGh(runner git.CommandRunner, _ git.ShellRunner, gh GhRunner, opts
 	if setupPhase.HasFailures() {
 		return result
 	}
-	result.WorktreePath = filepath.Join(repoPath, "main")
+	result.WorktreePath = git.WorktreePath(repoPath, "main")
 
 	if opts.PublishGitHub {
 		ghPhase := runCreateGitHub(runner, gh, repoPath, opts, emit)
@@ -165,7 +165,7 @@ func runCreateSetup(runner git.CommandRunner, repoPath string, opts CreateOption
 
 	// Create main worktree
 	emit(Event{Phase: phaseName, Step: "Create main worktree", Status: StepRunning})
-	_, err = runner.Run(repoPath, "worktree", "add", "main", "-b", "main")
+	_, err = runner.Run(repoPath, "worktree", "add", git.WorktreePath(repoPath, "main"), "-b", "main")
 	if err != nil {
 		step := StepResult{Name: "Create main worktree", Status: StepFailed, Error: err}
 		phase.Steps = append(phase.Steps, step)
@@ -177,7 +177,7 @@ func runCreateSetup(runner git.CommandRunner, repoPath string, opts CreateOption
 
 	// Create README and initial commit
 	emit(Event{Phase: phaseName, Step: "Initial commit", Status: StepRunning})
-	mainPath := filepath.Join(repoPath, "main")
+	mainPath := git.WorktreePath(repoPath, "main")
 	if err := os.MkdirAll(mainPath, 0755); err != nil {
 		step := StepResult{Name: "Initial commit", Status: StepFailed, Error: err}
 		phase.Steps = append(phase.Steps, step)
@@ -259,7 +259,7 @@ func runCreateGitHub(runner git.CommandRunner, gh GhRunner, repoPath string, opt
 
 	// Push
 	emit(Event{Phase: phaseName, Step: "Push to GitHub", Status: StepRunning})
-	mainPath := filepath.Join(repoPath, "main")
+	mainPath := git.WorktreePath(repoPath, "main")
 	_, err = runner.Run(mainPath, "push", "-u", "origin", "main")
 	if err != nil {
 		// The empty remote repo from "Create GitHub repository" is left behind;

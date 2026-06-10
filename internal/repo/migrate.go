@@ -54,7 +54,7 @@ func Migrate(runner git.CommandRunner, shell git.ShellRunner, opts MigrateOption
 	if migratePhase.HasFailures() {
 		return result
 	}
-	result.WorktreePath = filepath.Join(opts.RepoPath, branch)
+	result.WorktreePath = git.WorktreePath(opts.RepoPath, branch)
 
 	// Phase 4: Copy (best-effort)
 	copyPhase := runMigrateCopy(backupPath, result.WorktreePath, emit)
@@ -241,12 +241,11 @@ func runMigrateBare(runner git.CommandRunner, repoPath, branch string, emit func
 	phase.Steps = append(phase.Steps, StepResult{Name: "Clean root directory", Status: StepDone})
 	emit(Event{Phase: phaseName, Step: "Clean root directory", Status: StepDone})
 
-	// Create worktree for current branch. Pass the branch explicitly as the
-	// commit-ish: `git worktree add <branch>` alone treats a slash branch like
-	// "feature/foo" as a path whose basename ("foo") becomes a NEW divergent
-	// branch. The two-arg form checks out the existing branch.
+	// Create worktree for current branch. The branch is passed explicitly as
+	// the commit-ish: without it, git derives a NEW branch from the path's
+	// basename instead of checking out the existing one.
 	emit(Event{Phase: phaseName, Step: "Create worktree", Status: StepRunning})
-	_, err = runner.Run(repoPath, "worktree", "add", branch, branch)
+	_, err = runner.Run(repoPath, "worktree", "add", git.WorktreePath(repoPath, branch), branch)
 	if err != nil {
 		step := StepResult{Name: "Create worktree", Status: StepFailed, Error: err}
 		phase.Steps = append(phase.Steps, step)

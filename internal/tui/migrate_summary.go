@@ -8,6 +8,7 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/abiswas97/sentei/internal/git"
 	"github.com/abiswas97/sentei/internal/repo"
 )
 
@@ -166,7 +167,7 @@ func (m Model) viewMigrateNext() string {
 	repoName := filepath.Base(result.BareRoot)
 	worktreePath := result.WorktreePath
 	if worktreePath == "" {
-		worktreePath = filepath.Join(result.BareRoot, result.Branch)
+		worktreePath = git.WorktreePath(result.BareRoot, result.Branch)
 	}
 
 	b.WriteString(styleTitle.Render(fmt.Sprintf("  sentei %s Migration Complete", "\u2500")))
