@@ -1,0 +1,21 @@
+internal/tui/repo_progress.go
+  s_157240fea52147::t_b818a945ea605d 129-131
+cmd/clone.go
+  s_157240fea52147::t_63cba88d0bcd28 70-75
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "a970eb8e7d8a658ec83e6215d049fd8783512c42",
+  "prompts": {},
+  "sessions": {
+    "s_157240fea52147": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "42f7cf1c-c025-449a-89c8-fab9aa10c61e",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Test <t@t.com>"
+    }
+  }
+}
