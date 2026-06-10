@@ -42,8 +42,12 @@ func DeleteGoneBranches(runner git.CommandRunner, repoPath string, opts Options,
 		return result, nil
 	}
 
+	// Force-delete (-D) of unmerged branches is an aggressive-mode action (per the
+	// --force help text). In safe mode keep -d even with --force, which here is
+	// only the non-interactive destructive gate — otherwise a required gate flag
+	// would silently discard unmerged work in "safe" mode.
 	deleteFlag := "-d"
-	if opts.Force {
+	if opts.Force && opts.Mode == ModeAggressive {
 		deleteFlag = "-D"
 	}
 

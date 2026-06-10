@@ -167,3 +167,41 @@ func TestCleanNonWorktreeBranches(t *testing.T) {
 		})
 	}
 }
+
+func TestDeleteGoneBranches_ForceGatedByMode(t *testing.T) {
+	// An unmerged gone branch: -d fails (not fully merged), -D would succeed.
+	const branchVV = "  feature/unmerged abc123 [origin/feature/unmerged: gone] commit"
+
+	t.Run("safe+force keeps unmerged (uses -d, never -D)", func(t *testing.T) {
+		runner := &mockRunner{responses: map[string]mockResponse{
+			"/repo:[branch -vv]":                 {output: branchVV},
+			"/repo:[branch -d feature/unmerged]": {err: fmt.Errorf("error: branch not fully merged")},
+			// -D is mocked to SUCCEED: if the code wrongly used it in safe mode,
+			// the branch would be deleted and this test would fail.
+			"/repo:[branch -D feature/unmerged]": {output: "Deleted"},
+		}}
+		events := collectEvents(t)
+		result, err := DeleteGoneBranches(runner, "/repo", Options{Mode: ModeSafe, Force: true}, events.emit)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if result.Deleted != 0 || len(result.Skipped) != 1 {
+			t.Errorf("safe+force must keep an unmerged branch (use -d): deleted=%d skipped=%d", result.Deleted, len(result.Skipped))
+		}
+	})
+
+	t.Run("aggressive+force force-deletes unmerged (uses -D)", func(t *testing.T) {
+		runner := &mockRunner{responses: map[string]mockResponse{
+			"/repo:[branch -vv]":                 {output: branchVV},
+			"/repo:[branch -D feature/unmerged]": {output: "Deleted branch feature/unmerged"},
+		}}
+		events := collectEvents(t)
+		result, err := DeleteGoneBranches(runner, "/repo", Options{Mode: ModeAggressive, Force: true}, events.emit)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if result.Deleted != 1 {
+			t.Errorf("aggressive+force must force-delete the unmerged branch (use -D): deleted=%d", result.Deleted)
+		}
+	})
+}
