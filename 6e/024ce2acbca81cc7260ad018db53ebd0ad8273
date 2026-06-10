@@ -1,0 +1,24 @@
+internal/repo/migrate_test.go
+  s_157240fea52147::t_afb4e1edd9a246 258-339
+internal/repo/migrate.go
+  s_157240fea52147::t_bb31109dbcab47 391-393
+  s_157240fea52147::t_4bdb3f07c205a0 306-318,322-329,333-336,338-344
+  s_157240fea52147::t_2a3b9d8c6f06cc 288
+  s_157240fea52147::t_4f326914d54a0d 124-128,132
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "6e024ce2acbca81cc7260ad018db53ebd0ad8273",
+  "prompts": {},
+  "sessions": {
+    "s_157240fea52147": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "42f7cf1c-c025-449a-89c8-fab9aa10c61e",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Test <t@t.com>"
+    }
+  }
+}
