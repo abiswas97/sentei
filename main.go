@@ -142,14 +142,14 @@ func main() {
 			return
 
 		case cli.Decision:
-			if result.NonInteractive {
+			if result.NonInteractive || result.Yes {
 				args := result.Args
-				// cleanup has its own --force (force-delete unmerged branches) that
-				// the global flag extractor consumed. Re-inject it so one --force
-				// both passes the destructive gate and force-deletes. Prepend it:
-				// the flag parser stops at the first positional (the repo path), so
-				// a --force appended after it would be silently ignored.
-				if result.Force && result.Command.Name == "cleanup" {
+				// cleanup and remove have their own --force semantics that the
+				// global flag extractor consumed. Re-inject it so one --force
+				// both passes the destructive gate and reaches the command.
+				// Prepend it: the flag parser stops at the first positional
+				// (the repo path), so appending would be silently ignored.
+				if result.Force && (result.Command.Name == "cleanup" || result.Command.Name == "remove") {
 					args = append([]string{"--force"}, result.Args...)
 				}
 				runCommand(result.Command.RunCLI, args)
@@ -250,6 +250,7 @@ func launchInteractiveDecision(result cli.DispatchResult) {
 			model.SetRemoveOpts(tui.RemovePreSelection{
 				Paths:       paths,
 				FilterLabel: cmd.FormatFilterLabel(opts),
+				CLICommand:  cmd.RemoveCLICommand(opts),
 			})
 		}
 

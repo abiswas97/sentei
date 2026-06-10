@@ -209,9 +209,18 @@ func (m Model) updateList(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 
 		case key.Matches(msg, keys.Confirm):
-			if len(m.remove.selected) > 0 {
-				m.view = confirmView
+			if len(m.remove.selected) == 0 {
+				break
 			}
+			// Safety gate: only at-risk selections need a confirmation stop;
+			// clean-and-pushed worktrees delete without friction.
+			for _, wt := range m.selectedWorktrees() {
+				if worktreeAtRisk(wt) {
+					m.view = confirmView
+					return m, nil
+				}
+			}
+			return m.beginRemoval()
 		}
 	}
 	return m, nil
