@@ -2,7 +2,7 @@
 
 Change 1 (`ui-chrome-unification`) established shared chrome helpers, contextual `?` and global `F1` key bindings, and the `.impeccable.md` design system. This change builds on that foundation to add overlay capability — a scrollable detail view composited on top of the current view.
 
-The `bubbletea-overlay` library handles the compositing (foreground rendered on top of background at a specified position). The `bubbles/viewport` component handles scrollable content. Combining these gives us a `DetailPortal` that any view can open with arbitrary content.
+Compositing (foreground rendered centered over the background) is a ~40-line in-repo helper built on `charmbracelet/x/ansi` truncation primitives, which are already in the module graph via lipgloss — the originally proposed `bubbletea-overlay` dependency was dropped (its addition was declined at implementation time, and the design's own risk note already named the lipgloss/x-ansi fallback as equivalent). The `bubbles/viewport` component handles scrollable content. Combining these gives us a `DetailPortal` that any view can open with arbitrary content.
 
 ## Goals / Non-Goals
 
@@ -24,10 +24,10 @@ The `bubbletea-overlay` library handles the compositing (foreground rendered on 
 **Decision**: `DetailPortal` is a struct embedded in `Model` with its own `Update` and `View` methods, but not a standalone `tea.Model`. The main `Model.Update` delegates to it when active, and `Model.View` composites it over the current view when visible.
 
 **Alternatives considered**:
-- *Standalone tea.Model with bubbletea-overlay.New()*: Would require a separate `tea.Program` or complex model composition. Doesn't integrate cleanly with the existing single-Model Elm architecture.
+- *Standalone tea.Model overlay*: Would require a separate `tea.Program` or complex model composition. Doesn't integrate cleanly with the existing single-Model Elm architecture.
 - *Pure function like chrome helpers*: Portal has state (scroll position, visibility), so it can't be a pure function.
 
-**Why sub-model**: Keeps the single `Model` as the root of truth. Portal state (visible, content, scroll position) lives on `Model`. When visible, `Update` routes keys to the portal first. `View` uses `bubbletea-overlay` to composite the portal's rendered content over the background view.
+**Why sub-model**: Keeps the single `Model` as the root of truth. Portal state (visible, content, scroll position) lives on `Model`. When visible, `Update` routes keys to the portal first. `View` composites the portal's rendered box over the background view with the in-repo overlay helper.
 
 ### D2: Content provided as pre-rendered string
 
@@ -50,7 +50,7 @@ The `bubbletea-overlay` library handles the compositing (foreground rendered on 
 
 ## Risks / Trade-offs
 
-**[Risk] `bubbletea-overlay` is a third-party dependency** → Mitigated: the library is small (overlay compositing only), well-documented, and the overlay rendering could be replaced with lipgloss `Place` if needed. Low lock-in risk.
+**[Risk] Hand-rolled compositing must handle ANSI sequences correctly** → Mitigated: the helper delegates all escape-aware slicing to `x/ansi` (`Truncate`, `TruncateLeft`, `StringWidth`) and is covered by table-driven tests over colored backgrounds.
 
 **[Trade-off] Portal intercepts all keys when visible** → Accepted. When the portal is open, only scroll keys (j/k, up/down), page navigation (g/G), and dismiss (esc, ?) work. All other keys are swallowed. This prevents accidental actions while reading details.
 

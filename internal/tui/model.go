@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -229,6 +230,7 @@ type Model struct {
 	create createState
 	repo   repoState
 	integ  integrationState
+	portal DetailPortal
 
 	// Progress hold state — used to enforce minimum visible duration for progress views.
 	minProgressDuration time.Duration // 0 = no hold; set via WithMinProgressDuration
@@ -443,6 +445,33 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 
+	if size, ok := msg.(tea.WindowSizeMsg); ok {
+		// The portal tracks the raw terminal size; views keep receiving the
+		// message through their own routing below.
+		m.portal = m.portal.SetSize(size.Width, size.Height)
+	}
+
+	if m.portal.Visible() {
+		if keyMsg, ok := msg.(tea.KeyMsg); ok {
+			return m.updatePortalKeys(keyMsg)
+		}
+		// Non-key messages (progress events, timers) keep flowing to views.
+	} else if keyMsg, ok := msg.(tea.KeyMsg); ok {
+		if key.Matches(keyMsg, keys.GlobalHelp) {
+			title, content := m.helpContent()
+			m.portal = m.portal.Open(portalHelp, title, content)
+			return m, nil
+		}
+		if key.Matches(keyMsg, keys.Info) {
+			if title, content := m.detailContent(); content != "" {
+				m.portal = m.portal.Open(portalDetails, title, content)
+				return m, nil
+			}
+			// No details for this view: fall through so views with their own
+			// `?` handling (integration info card) still receive it.
+		}
+	}
+
 	switch m.view {
 	case menuView:
 		return m.updateMenu(msg)
@@ -499,6 +528,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) View() string {
+	content := m.viewContent()
+	if m.portal.Visible() {
+		return m.portal.View(content)
+	}
+	return content
+}
+
+func (m Model) viewContent() string {
 	switch m.view {
 	case menuView:
 		return m.viewMenu()

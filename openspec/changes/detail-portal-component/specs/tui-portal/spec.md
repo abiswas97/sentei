@@ -1,11 +1,11 @@
 ## ADDED Requirements
 
 ### Requirement: DetailPortal renders scrollable overlay
-The system SHALL provide a `DetailPortal` component that renders pre-formatted content in a scrollable viewport composited over the current background view using `bubbletea-overlay`.
+The system SHALL provide a `DetailPortal` component that renders pre-formatted content in a scrollable viewport composited centered over the current background view (in-repo ANSI-aware overlay helper).
 
 #### Scenario: Portal displayed over background
 - **WHEN** the portal is opened with content and the current view is the removal progress view
-- **THEN** the portal SHALL render as a bordered, styled box centered over the dimmed background view
+- **THEN** the portal SHALL render as a bordered, styled box centered over the background view, which stays visible around the box
 
 #### Scenario: Scrollable content
 - **WHEN** the portal content exceeds the viewport height (terminal height minus chrome)
@@ -35,7 +35,7 @@ The portal SHALL support opening with content and a title, and closing to restor
 
 #### Scenario: Open portal
 - **WHEN** a view opens the portal with title and content
-- **THEN** the portal SHALL become visible, scroll position SHALL reset to top, and the background view SHALL remain rendered but dimmed
+- **THEN** the portal SHALL become visible, scroll position SHALL reset to top, and the background view SHALL remain rendered behind it
 
 #### Scenario: Close portal with Esc
 - **WHEN** the user presses Esc while the portal is visible
