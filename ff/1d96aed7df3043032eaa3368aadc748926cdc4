@@ -1,0 +1,110 @@
+internal/pipeline/pipeline.go
+  s_8e2c58024a52e1::t_8047eeda5efb22 1-70
+internal/creator/integrations_test.go
+  s_8e2c58024a52e1::t_de7765ee56d2ff 12,115,151,248,255,275,280
+internal/repo/clone_test.go
+  s_8e2c58024a52e1::t_6991d392511e94 8-9
+internal/tui/model.go
+  s_8e2c58024a52e1::t_6d560de25da41e 116,143,145,181,183
+  s_8e2c58024a52e1::t_84afc0ec1b39bc 16
+internal/tui/progress.go
+  s_8e2c58024a52e1::t_6d560de25da41e 127
+  s_8e2c58024a52e1::t_84afc0ec1b39bc 12
+cmd/migrate.go
+  s_8e2c58024a52e1::t_84afc0ec1b39bc 9
+  s_8e2c58024a52e1::t_6d560de25da41e 49,80,82,88,94
+internal/tui/repo_summary_test.go
+  s_8e2c58024a52e1::t_6d560de25da41e 28-31,43-44,88-90,115-118
+  s_8e2c58024a52e1::t_84afc0ec1b39bc 11
+internal/creator/e2e_test.go
+  s_8e2c58024a52e1::t_de7765ee56d2ff 14,77-78,121,157-158,164-165
+internal/repo/repo.go
+  s_8e2c58024a52e1::t_42d7430c38d609 7
+  s_8e2c58024a52e1::t_d42394dd5f26ba 75-77
+internal/repo/e2e_test.go
+  s_8e2c58024a52e1::t_42d7430c38d609 11
+internal/tui/migrate_summary.go
+  s_8e2c58024a52e1::t_84afc0ec1b39bc 12
+  s_8e2c58024a52e1::t_6d560de25da41e 74
+internal/tui/create_options.go
+  s_8e2c58024a52e1::t_6d560de25da41e 164,170,190
+  s_8e2c58024a52e1::t_84afc0ec1b39bc 15
+internal/repo/create.go
+  s_8e2c58024a52e1::t_42d7430c38d609 12
+internal/tui/repo_summary.go
+  s_8e2c58024a52e1::t_84afc0ec1b39bc 12
+  s_8e2c58024a52e1::t_6d560de25da41e 22
+internal/tui/create_progress.go
+  s_8e2c58024a52e1::t_84afc0ec1b39bc 10
+  s_8e2c58024a52e1::t_da94965bccbc11 52
+  s_8e2c58024a52e1::t_6d560de25da41e 90,92,94
+internal/creator/setup_test.go
+  s_8e2c58024a52e1::t_de7765ee56d2ff 11,48,51,63,71,80,89,120,136,142,149,155,183,189,194,200
+internal/creator/teardown.go
+  s_8e2c58024a52e1::t_de7765ee56d2ff 11,47,53,62,67-68,83-84,86-87,89
+internal/tui/confirm.go
+  s_8e2c58024a52e1::t_6d560de25da41e 20,89,99,104,110
+  s_8e2c58024a52e1::t_84afc0ec1b39bc 15
+internal/tui/migrate_summary_test.go
+  s_8e2c58024a52e1::t_84afc0ec1b39bc 11
+  s_8e2c58024a52e1::t_6d560de25da41e 28-30,47-49,66-67,82-83
+internal/creator/teardown_test.go
+  s_8e2c58024a52e1::t_de7765ee56d2ff 102-103,133-134,184-185
+  s_8e2c58024a52e1::t_5e69b1b9764112 10
+internal/creator/setup.go
+  s_8e2c58024a52e1::t_de7765ee56d2ff 11,14-15,20,35,37,44,46,57-58,60,65-66,68,73,77,80,84-85,87,93-94,97,101,104,115-116,118,129-130,132
+internal/repo/migrate.go
+  s_8e2c58024a52e1::t_42d7430c38d609 14
+internal/tui/create_summary.go
+  s_8e2c58024a52e1::t_6d560de25da41e 74
+  s_8e2c58024a52e1::t_84afc0ec1b39bc 11
+internal/tui/repo_progress.go
+  s_8e2c58024a52e1::t_6d560de25da41e 14,22,33,39,45,79,157,159,161
+  s_8e2c58024a52e1::t_84afc0ec1b39bc 10
+  s_8e2c58024a52e1::t_733dec873669f7 119
+internal/repo/create_test.go
+  s_8e2c58024a52e1::t_6991d392511e94 10-11
+internal/repo/repo_test.go
+  s_8e2c58024a52e1::t_6991d392511e94 7-8
+internal/repo/migrate_test.go
+  s_8e2c58024a52e1::t_6991d392511e94 9-10
+internal/creator/creator.go
+  s_8e2c58024a52e1::t_de7765ee56d2ff 7,23,30,36
+  s_8e2c58024a52e1::t_d9266853fff04e 27
+internal/creator/deps.go
+  s_8e2c58024a52e1::t_de7765ee56d2ff 11,16-17,31,34,40,43,59-60,64,88-89,92-93,95,102-103,105,110-111
+internal/repo/clone.go
+  s_8e2c58024a52e1::t_42d7430c38d609 12
+internal/creator/deps_test.go
+  s_8e2c58024a52e1::t_5e69b1b9764112 11
+  s_8e2c58024a52e1::t_de7765ee56d2ff 41-42,75-76,122-123,130
+cmd/create.go
+  s_8e2c58024a52e1::t_6d560de25da41e 74,86,88,90,96,102
+  s_8e2c58024a52e1::t_84afc0ec1b39bc 12
+internal/tui/phase_display.go
+  s_8e2c58024a52e1::t_b6905fd6317b7e 1-63
+cmd/clone.go
+  s_8e2c58024a52e1::t_84afc0ec1b39bc 9
+  s_8e2c58024a52e1::t_6d560de25da41e 47,59,61,63,69,71
+internal/creator/integrations.go
+  s_8e2c58024a52e1::t_de7765ee56d2ff 13,16-17,31-32,36,38,40-41,52,59,67,70,73,93-94,98,102-103,108-109,111,118,121-122,124,130-131,137,139,143-144,146,151-152,155,159,162,178-179,181,186-187
+internal/creator/creator_test.go
+  s_8e2c58024a52e1::t_de7765ee56d2ff 194-195,203-204
+  s_8e2c58024a52e1::t_5e69b1b9764112 11
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "ff1d96aed7df3043032eaa3368aadc748926cdc4",
+  "prompts": {},
+  "sessions": {
+    "s_8e2c58024a52e1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ce6ce258-0f38-4b1c-9b68-41415998356e",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Test <t@t.com>"
+    }
+  }
+}
