@@ -1,0 +1,51 @@
+internal/tui/model.go
+  s_45cfee6c7ab135::t_d9fbdf3352d5ad 531-538
+  s_45cfee6c7ab135::t_c934427007e4ef 233,448-472
+  s_45cfee6c7ab135::t_e36d0216a00ec8 8
+openspec/changes/detail-portal-component/specs/tui-portal/spec.md
+  s_45cfee6c7ab135::t_2fe264eb193025 4,8,38
+internal/tui/overlay_test.go
+  s_45cfee6c7ab135::t_df89be51f78ff6 1-24,27-78
+  s_45cfee6c7ab135::t_2d210c9ba19084 25-26
+openspec/changes/detail-portal-component/tasks.md
+  s_45cfee6c7ab135::t_6a00c78c190178 1
+internal/tui/help.go
+  s_45cfee6c7ab135::t_f38f50ac9e9bdf 6-7,192,199
+  s_45cfee6c7ab135::t_85badc7c4fd647 1-5,8-49,52-53,69-181,183-186,188-191,193-198,200-221
+  s_45cfee6c7ab135::t_ea628cd958c766 50-51,54-68,182,187
+go.mod
+  s_45cfee6c7ab135::t_436be5dd07795e 9
+.impeccable.md
+  s_45cfee6c7ab135::t_e5b28cd908b261 65-71
+internal/tui/menu.go
+  s_45cfee6c7ab135::t_e5b28cd908b261 208
+internal/tui/portal.go
+  s_45cfee6c7ab135::t_c934427007e4ef 6,17-19,119-156
+  s_45cfee6c7ab135::t_ea628cd958c766 35-40,46,50-51,57-62,73,110,115-117
+  s_45cfee6c7ab135::t_1b7fd5c3bb0b7c 1-5,7-16,20-34,41-45,47-49,52-56,63-72,74-109,111-114,118,157
+internal/tui/portal_test.go
+  s_45cfee6c7ab135::t_e7e0ec1e2dc900 113-117
+  s_45cfee6c7ab135::t_f013fbbf7ed3a2 1-112,118-284
+openspec/changes/detail-portal-component/design.md
+  s_45cfee6c7ab135::t_6a00c78c190178 5,27,30,53
+internal/tui/overlay.go
+  s_45cfee6c7ab135::t_dc3818125cec02 1-49
+openspec/changes/detail-portal-component/proposal.md
+  s_45cfee6c7ab135::t_6a00c78c190178 7,22-23
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "969e82290907a9eaa0063749ccecb1ce39819ed2",
+  "prompts": {},
+  "sessions": {
+    "s_45cfee6c7ab135": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "362b0459-633f-41b0-be4d-ef5a2d23fce8",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Test <t@t.com>"
+    }
+  }
+}
