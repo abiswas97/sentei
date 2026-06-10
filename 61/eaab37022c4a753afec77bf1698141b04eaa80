@@ -1,0 +1,42 @@
+internal/creator/deps.go
+  s_8e2c58024a52e1::t_22e079d92e5cd0 89-91,93-94,96-97
+internal/creator/integrations.go
+  s_8e2c58024a52e1::t_cbb6b438b01ba0 153-156,158-160,163-167
+  s_8e2c58024a52e1::t_a7f0677a543a5a 138-140,142-143
+internal/creator/setup.go
+  s_8e2c58024a52e1::t_497b93f14d30d7 96-102,104-105,107,110-114
+  s_8e2c58024a52e1::t_813fe56a665ed9 47-60,62
+internal/pipeline/pipeline.go
+  s_8e2c58024a52e1::t_2c9f706971a8c4 59-94,108-128
+  s_8e2c58024a52e1::t_047d60ebf5d611 95-107
+internal/repo/create.go
+  s_8e2c58024a52e1::t_3eef64cd2cfe44 171-172,174-195,201-218,221-224,226
+  s_8e2c58024a52e1::t_e3f6f08dfb59b1 100-101,103-114,117-125,128-132,135-140,143-148,151-165,167
+internal/repo/migrate.go
+  s_8e2c58024a52e1::t_4eaa81f1531e61 68-83,86-102
+  s_8e2c58024a52e1::t_3d21ea1b5dde14 138,146-151,153-161,163-168,170-176,182-189,193-198,200-208,210-213,219-222,224
+  s_8e2c58024a52e1::t_5fa7af03cf4dc9 106,111-125,128-132,134
+  s_8e2c58024a52e1::t_84690f2f271b19 228,234-238,240-252,255-259,261
+internal/pipeline/pipeline_test.go
+  s_8e2c58024a52e1::t_f3cb31ea10ba8b 1-119
+internal/repo/clone.go
+  s_8e2c58024a52e1::t_1a8d68043b3b85 137-142,146-156,159-163,167-172,178-179,186-191,198-212
+internal/creator/teardown.go
+  s_8e2c58024a52e1::t_323965ac2cd2e5 62-66,69-76,78-83
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "61eaab37022c4a753afec77bf1698141b04eaa80",
+  "prompts": {},
+  "sessions": {
+    "s_8e2c58024a52e1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ce6ce258-0f38-4b1c-9b68-41415998356e",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Test <t@t.com>"
+    }
+  }
+}
