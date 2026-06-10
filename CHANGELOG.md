@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.6.0](https://github.com/abiswas97/sentei/compare/v1.5.0...v1.6.0) (2026-06-10)
+
+
+### Features
+
+* **cleanup:** preview-first cleanup flow, removal safety gate, and --yes flag ([6172e3a](https://github.com/abiswas97/sentei/commit/6172e3a03a7a1de0251d1abd2463000323c7e29b))
+* **cleanup:** preview-first cleanup flow, removal safety gate, and --yes flag ([a2ef467](https://github.com/abiswas97/sentei/commit/a2ef46767b18016e87c5ffb3b62477152fb2501f))
+
 ## [1.5.0](https://github.com/abiswas97/sentei/compare/v1.4.0...v1.5.0) (2026-06-10)
 
 
