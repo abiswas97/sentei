@@ -10,8 +10,11 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/abiswas97/sentei/internal/git"
+	"github.com/abiswas97/sentei/internal/integration"
+	"github.com/abiswas97/sentei/internal/pipeline"
 	"github.com/abiswas97/sentei/internal/playground"
 	"github.com/abiswas97/sentei/internal/testtmp"
+	"github.com/abiswas97/sentei/internal/testutil/mock"
 	"github.com/abiswas97/sentei/internal/worktree"
 )
 
@@ -218,4 +221,63 @@ func TestPlayground_DeleteAll_IncludesLockedWorktree(t *testing.T) {
 	}
 
 	_ = model // silence unused variable warning
+}
+
+func TestRunTeardownPhase_FallsBackToRemovingArtifactDirs(t *testing.T) {
+	withArtifacts := t.TempDir()
+	artifactDir := filepath.Join(withArtifacts, ".fake-artifact")
+	if err := os.Mkdir(artifactDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	clean := t.TempDir()
+
+	m := NewModel(nil, nil, "/repo")
+	integrations := []integration.Integration{{
+		Name:     "fake",
+		Teardown: integration.TeardownSpec{Dirs: []string{".fake-artifact/"}},
+	}}
+	worktrees := []git.Worktree{{Path: withArtifacts}, {Path: clean}}
+
+	msg := m.runTeardownPhase(worktrees, integrations)()
+
+	done, ok := msg.(teardownCompleteMsg)
+	if !ok {
+		t.Fatalf("expected teardownCompleteMsg, got %T", msg)
+	}
+	if len(done.results) != 1 {
+		t.Fatalf("results = %d, want 1 (only the worktree with artifacts)", len(done.results))
+	}
+	if done.results[0].Status != pipeline.StepDone {
+		t.Errorf("teardown status = %v, want StepDone", done.results[0].Status)
+	}
+	if _, err := os.Stat(artifactDir); !os.IsNotExist(err) {
+		t.Error("artifact dir should have been removed")
+	}
+}
+
+func TestRunTeardownPhase_TeardownCommandHandlesRemoval(t *testing.T) {
+	wtPath := t.TempDir()
+	artifactDir := filepath.Join(wtPath, ".fake-artifact")
+	if err := os.Mkdir(artifactDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	m := NewModel(nil, nil, "/repo")
+	m.shell = &mock.Runner{Responses: map[string]mock.Response{
+		wtPath + ":shell[fake clean]": {Output: "cleaned"},
+	}}
+	integrations := []integration.Integration{{
+		Name:     "fake",
+		Teardown: integration.TeardownSpec{Command: "fake clean", Dirs: []string{".fake-artifact/"}},
+	}}
+
+	msg := m.runTeardownPhase([]git.Worktree{{Path: wtPath}}, integrations)()
+
+	done := msg.(teardownCompleteMsg)
+	if len(done.results) != 1 || done.results[0].Status != pipeline.StepDone {
+		t.Fatalf("results = %+v, want one successful teardown", done.results)
+	}
+	if _, err := os.Stat(artifactDir); err != nil {
+		t.Error("a successful teardown command must not trigger the dir-removal fallback")
+	}
 }

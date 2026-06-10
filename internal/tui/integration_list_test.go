@@ -7,7 +7,9 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/abiswas97/sentei/internal/git"
 	"github.com/abiswas97/sentei/internal/integration"
+	"github.com/abiswas97/sentei/internal/testutil/mock"
 )
 
 func TestUpdateIntegrationList_LoadedMsg_SetsState(t *testing.T) {
@@ -336,5 +338,61 @@ func TestRenderIntegrationInfo_DepStatus(t *testing.T) {
 	out = stripAnsi(m.renderIntegrationInfo())
 	if !strings.Contains(out, "will be installed") {
 		t.Errorf("info should show 'will be installed' for missing dep, got:\n%s", out)
+	}
+}
+
+func TestStartIntegrationApply_ComputesPlanAndAppliesChanges(t *testing.T) {
+	wtPath := t.TempDir()
+	m := makeIntegrationModel()
+	m.remove.worktrees = []git.Worktree{{Path: wtPath, Branch: "refs/heads/main"}}
+	m.integ.integrations = []integration.Integration{
+		{
+			Name:         "enable-me",
+			Dependencies: []integration.Dependency{{Name: "dep1", Detect: "dep1 --version"}},
+			Detect:       integration.DetectSpec{Command: "enable-me --version"},
+			Install:      integration.InstallSpec{Command: "install enable-me"},
+			Setup:        integration.SetupSpec{Command: "enable-me init"},
+		},
+		{
+			Name:     "disable-me",
+			Teardown: integration.TeardownSpec{Command: "disable-me clean", Dirs: []string{".disable-a/", ".disable-b/"}},
+		},
+	}
+	m.integ.current = map[string]bool{"enable-me": false, "disable-me": true}
+	m.integ.staged = map[string]bool{"enable-me": true, "disable-me": false}
+	m.shell = &mock.Runner{Responses: map[string]mock.Response{
+		wtPath + ":shell[enable-me --version]": {Output: "1.0"}, // already installed
+		wtPath + ":shell[enable-me init]":      {Output: "ok"},
+		wtPath + ":shell[disable-me clean]":    {Output: "ok"},
+	}}
+
+	updated, cmd := m.startIntegrationApply()
+
+	// enable: 1 setup + 1 dep + 1 install; disable: 1 teardown + 2 dir removals.
+	if updated.integ.totalSteps != 6 {
+		t.Errorf("totalSteps = %d, want 6", updated.integ.totalSteps)
+	}
+	if len(updated.integ.targetWorktrees) != 1 || updated.integ.targetWorktrees[0] != wtPath {
+		t.Errorf("targetWorktrees = %v, want [%s]", updated.integ.targetWorktrees, wtPath)
+	}
+	if cmd == nil {
+		t.Fatal("expected a wait command")
+	}
+
+	events := drainIntegrationApply(t, updated)
+	var sawSetup, sawTeardown bool
+	for _, ev := range events {
+		if ev.Step == "Setup enable-me" && ev.Status == integration.StatusDone {
+			sawSetup = true
+		}
+		if ev.Step == "Teardown disable-me" && ev.Status == integration.StatusDone {
+			sawTeardown = true
+		}
+	}
+	if !sawSetup {
+		t.Errorf("expected enable-me setup to run, events: %v", events)
+	}
+	if !sawTeardown {
+		t.Errorf("expected disable-me teardown to run, events: %v", events)
 	}
 }

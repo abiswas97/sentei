@@ -91,3 +91,77 @@ func TestUpdateMigrateSummary_Failure_YIsInert(t *testing.T) {
 		t.Error("'y' on a failed migration must not delete backup or advance")
 	}
 }
+
+func TestUpdateMigrateNext_NoResultQuits(t *testing.T) {
+	m := NewMenuModel(nil, nil, "/repo", &config.Config{}, repo.ContextNonBareRepo)
+	m.view = migrateNextView
+
+	_, cmd := m.updateMigrateNext(keyMsg("x"))
+
+	if cmd == nil {
+		t.Fatal("expected a quit command without a migrate result")
+	}
+	if _, ok := cmd().(tea.QuitMsg); !ok {
+		t.Errorf("expected tea.QuitMsg, got %T", cmd())
+	}
+}
+
+func TestUpdateMigrateNext_QuitKey(t *testing.T) {
+	m := makeMigrateSummaryModel(repo.MigrateResult{BareRoot: "/bare", Branch: "main"})
+	m.view = migrateNextView
+
+	_, cmd := m.updateMigrateNext(keyMsg("q"))
+
+	if cmd == nil {
+		t.Fatal("expected a quit command")
+	}
+	if _, ok := cmd().(tea.QuitMsg); !ok {
+		t.Errorf("expected tea.QuitMsg, got %T", cmd())
+	}
+}
+
+func TestUpdateMigrateNext_EnterRelaunches(t *testing.T) {
+	m := makeMigrateSummaryModel(repo.MigrateResult{BareRoot: "/bare", Branch: "main"})
+	m.view = migrateNextView
+
+	_, cmd := m.updateMigrateNext(tea.KeyMsg{Type: tea.KeyEnter})
+
+	// relaunchSentei execs a process; assert only that a command was issued.
+	if cmd == nil {
+		t.Fatal("enter should relaunch sentei at the migrated repo")
+	}
+}
+
+func TestUpdateMigrateNext_WindowSize(t *testing.T) {
+	m := makeMigrateSummaryModel(repo.MigrateResult{BareRoot: "/bare", Branch: "main"})
+	m.view = migrateNextView
+
+	updated, _ := m.updateMigrateNext(tea.WindowSizeMsg{Width: 100, Height: 40})
+	model := updated.(Model)
+
+	if model.width != 100 || model.height != 34 {
+		t.Errorf("size = %dx%d, want 100x34", model.width, model.height)
+	}
+}
+
+func TestViewMigrateNext_NoResult(t *testing.T) {
+	m := NewMenuModel(nil, nil, "/repo", &config.Config{}, repo.ContextNonBareRepo)
+
+	view := m.viewMigrateNext()
+
+	if !strings.Contains(view, "Migration result unavailable") {
+		t.Errorf("view = %q, want unavailable notice", view)
+	}
+}
+
+func TestViewMigrateNext_SuccessShowsWorktreePath(t *testing.T) {
+	m := makeMigrateSummaryModel(repo.MigrateResult{BareRoot: "/bare/myrepo", Branch: "main"})
+
+	view := stripANSI(m.viewMigrateNext())
+
+	for _, want := range []string{"Migration Complete", "myrepo ready", "cd ", "enter open in sentei", "q exit"} {
+		if !strings.Contains(view, want) {
+			t.Errorf("view missing %q:\n%s", want, view)
+		}
+	}
+}
