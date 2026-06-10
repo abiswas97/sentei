@@ -27,11 +27,11 @@ func TestUpdateCleanupResult_DoneMsg(t *testing.T) {
 	updated, _ := m.updateCleanupResult(standaloneCleanupDoneMsg{result: result})
 	m = updated.(Model)
 
-	if m.remove.cleanupResult == nil {
+	if m.cleanupResult == nil {
 		t.Fatal("expected cleanupResult to be set")
 	}
-	if m.remove.cleanupResult.StaleRefsRemoved != 3 {
-		t.Errorf("expected StaleRefsRemoved=3, got %d", m.remove.cleanupResult.StaleRefsRemoved)
+	if m.cleanupResult.StaleRefsRemoved != 3 {
+		t.Errorf("expected StaleRefsRemoved=3, got %d", m.cleanupResult.StaleRefsRemoved)
 	}
 }
 
@@ -44,7 +44,7 @@ func TestUpdateCleanupResult_QuitKeys(t *testing.T) {
 		keyMsg("q"),
 	} {
 		m := makeCleanupModel()
-		m.remove.cleanupResult = &result
+		m.cleanupResult = &result
 
 		_, cmd := m.updateCleanupResult(k)
 		if cmd == nil {
@@ -81,7 +81,7 @@ func TestViewCleanupResult_Loading(t *testing.T) {
 func TestViewCleanupResult_CleanRepo(t *testing.T) {
 	m := makeCleanupModel()
 	result := cleanup.Result{} // all zeros, no errors
-	m.remove.cleanupResult = &result
+	m.cleanupResult = &result
 
 	output := stripAnsi(m.viewCleanupResult())
 
@@ -96,7 +96,7 @@ func TestViewCleanupResult_ShowsActions(t *testing.T) {
 		StaleRefsRemoved:    3,
 		GoneBranchesDeleted: 1,
 	}
-	m.remove.cleanupResult = &result
+	m.cleanupResult = &result
 
 	output := stripAnsi(m.viewCleanupResult())
 
@@ -115,7 +115,7 @@ func TestViewCleanupResult_ShowsErrors(t *testing.T) {
 			{Step: "prune-refs", Err: fmt.Errorf("permission denied")},
 		},
 	}
-	m.remove.cleanupResult = &result
+	m.cleanupResult = &result
 
 	output := stripAnsi(m.viewCleanupResult())
 
@@ -129,7 +129,7 @@ func TestViewCleanupResult_AggressiveTip(t *testing.T) {
 	result := cleanup.Result{
 		NonWtBranchesRemaining: 4,
 	}
-	m.remove.cleanupResult = &result
+	m.cleanupResult = &result
 
 	output := stripAnsi(m.viewCleanupResult())
 

@@ -57,7 +57,7 @@ func (m Model) updateCleanupConfirm(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case ConfirmProceedMsg:
 		opts := m.resolvedCleanupOpts()
 		m.view = cleanupResultView
-		m.remove.cleanupResult = nil
+		m.cleanupResult = nil
 		return m, runCleanupWithOpts(m.runner, m.repoPath, opts)
 
 	case ConfirmBackMsg:

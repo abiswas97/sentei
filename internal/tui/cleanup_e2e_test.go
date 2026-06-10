@@ -229,7 +229,7 @@ func TestE2E_FullCleanupFlow(t *testing.T) {
 	m = newModel.(Model)
 
 	// Step 4: Verify cleanup result is populated.
-	if m.remove.cleanupResult == nil {
+	if m.cleanupResult == nil {
 		t.Fatal("expected cleanupResult to be set after cleanup runs")
 	}
 

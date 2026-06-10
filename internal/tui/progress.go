@@ -75,38 +75,39 @@ func (m Model) updateProgress(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case worktreeDeleteStartedMsg:
-		m.remove.deletionStatuses[msg.Path] = statusRemoving
-		return m, waitForDeletionEvent(m.remove.progressCh)
+		m.remove.run.statuses[msg.Path] = statusRemoving
+		return m, waitForDeletionEvent(m.remove.run.progressCh)
 
 	case worktreeDeletedMsg:
-		m.remove.deletionStatuses[msg.Path] = statusRemoved
-		m.remove.deletionResult.SuccessCount++
-		m.remove.deletionResult.Outcomes = append(m.remove.deletionResult.Outcomes, worktree.WorktreeOutcome{
+		m.remove.run.statuses[msg.Path] = statusRemoved
+		m.remove.run.result.SuccessCount++
+		m.remove.run.result.Outcomes = append(m.remove.run.result.Outcomes, worktree.WorktreeOutcome{
 			Path:    msg.Path,
 			Success: true,
 		})
-		return m, waitForDeletionEvent(m.remove.progressCh)
+		return m, waitForDeletionEvent(m.remove.run.progressCh)
 
 	case worktreeDeleteFailedMsg:
-		m.remove.deletionStatuses[msg.Path] = statusFailed
-		m.remove.deletionResult.FailureCount++
-		m.remove.deletionResult.Outcomes = append(m.remove.deletionResult.Outcomes, worktree.WorktreeOutcome{
+		m.remove.run.statuses[msg.Path] = statusFailed
+		m.remove.run.result.FailureCount++
+		m.remove.run.result.Outcomes = append(m.remove.run.result.Outcomes, worktree.WorktreeOutcome{
 			Path:    msg.Path,
 			Success: false,
 			Error:   fmt.Errorf("removing %s: %w", msg.Path, msg.Err),
 		})
-		return m, waitForDeletionEvent(m.remove.progressCh)
+		return m, waitForDeletionEvent(m.remove.run.progressCh)
 
 	case allDeletionsCompleteMsg:
 		return m, runPrune(m.runner, m.repoPath)
 
 	case pruneCompleteMsg:
 		pruneErr := msg.Err
-		m.remove.pruneErr = &pruneErr
+		m.remove.run.pruneErr = &pruneErr
 		return m, runCleanup(m.runner, m.repoPath)
 
 	case cleanupCompleteMsg:
-		m.remove.cleanupResult = &msg.Result
+		m.remove.run.cleanupResult = &msg.Result
+		m.remove.selected = make(map[string]bool)
 		m.worktreeGeneration++
 		updated, holdCmd := m.holdOrAdvance(summaryView)
 		return updated, tea.Batch(holdCmd, loadWorktreeContext(m.runner, m.repoPath, m.worktreeGeneration))
@@ -121,9 +122,12 @@ func (m Model) viewProgress() string {
 	b.WriteString("\n\n")
 
 	// Teardown phase (if any)
-	if len(m.remove.teardownResults) > 0 {
+	if m.remove.run.teardownRunning {
+		fmt.Fprintf(&b, "  %-30s %s\n", stylePhaseActive.Render("Teardown"), styleIndicatorActive.Render(indicatorActive))
+		b.WriteString("\n")
+	} else if len(m.remove.run.teardownResults) > 0 {
 		hasFailed := false
-		for _, r := range m.remove.teardownResults {
+		for _, r := range m.remove.run.teardownResults {
 			if r.Status == pipeline.StepFailed {
 				hasFailed = true
 			}
@@ -140,23 +144,23 @@ func (m Model) viewProgress() string {
 	}
 
 	// Remove phase
-	done := len(m.remove.deletionResult.Outcomes)
+	done := len(m.remove.run.result.Outcomes)
+	total := m.remove.run.total()
 
 	pct := 0
-	if m.remove.deletionTotal > 0 {
-		pct = (done * 100) / m.remove.deletionTotal
+	if total > 0 {
+		pct = (done * 100) / total
 	}
 	phaseStatus := fmt.Sprintf("%d%%", pct)
-	if done == m.remove.deletionTotal && m.remove.deletionTotal > 0 {
+	if done == total && total > 0 {
 		phaseStatus += " " + styleIndicatorDone.Render(indicatorDone)
 		fmt.Fprintf(&b, "  %-30s %s\n", stylePhaseDone.Render("Removing worktrees"), styleDim.Render(phaseStatus))
 	} else {
 		fmt.Fprintf(&b, "  %-30s %s\n", stylePhaseActive.Render("Removing worktrees"), styleDim.Render(phaseStatus))
 
-		selected := m.selectedWorktrees()
-		for _, wt := range selected {
+		for _, wt := range m.remove.run.worktrees {
 			branch := stripBranchPrefix(wt.Branch)
-			status := m.remove.deletionStatuses[wt.Path]
+			status := m.remove.run.statuses[wt.Path]
 
 			var ind string
 			switch status {
@@ -177,9 +181,9 @@ func (m Model) viewProgress() string {
 	b.WriteString("\n")
 
 	// Prune & cleanup phase
-	if m.remove.pruneErr != nil {
+	if m.remove.run.pruneErr != nil {
 		fmt.Fprintf(&b, "  %-30s %s\n", stylePhaseDone.Render("Prune & cleanup"), styleDim.Render(styleIndicatorDone.Render(indicatorDone)))
-	} else if done == m.remove.deletionTotal && m.remove.deletionTotal > 0 {
+	} else if done == total && total > 0 {
 		fmt.Fprintf(&b, "  %-30s %s\n", stylePhaseActive.Render("Prune & cleanup"), styleDim.Render(styleIndicatorActive.Render(indicatorActive)))
 	} else {
 		fmt.Fprintf(&b, "  %-30s %s\n", stylePhasePending.Render("Prune & cleanup"), styleDim.Render("pending"))

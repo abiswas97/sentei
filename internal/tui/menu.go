@@ -82,6 +82,7 @@ func (m Model) updateMenu(msg tea.Msg) (tea.Model, tea.Cmd) {
 				label := m.menuItems[m.menuCursor].label
 				switch label {
 				case "Create new worktree":
+					m = m.withCreateFlowReset()
 					m.view = createBranchView
 					return m, m.create.branchInput.Cursor.BlinkCmd()
 				case "Manage integrations":
@@ -89,6 +90,7 @@ func (m Model) updateMenu(msg tea.Msg) (tea.Model, tea.Cmd) {
 					return m, m.loadIntegrationState()
 				case "Remove worktrees":
 					m.view = listView
+					m.remove.selected = make(map[string]bool)
 					if len(m.remove.worktrees) == 0 {
 						m.worktreeGeneration++
 						return m, loadWorktreeContext(m.runner, m.repoPath, m.worktreeGeneration)

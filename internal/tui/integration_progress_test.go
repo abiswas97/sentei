@@ -16,9 +16,8 @@ func TestUpdateIntegrationProgress_FinalizedMsg_SaveError_DoesNotApply(t *testin
 	m.integ.returnView = integrationListView
 	genBefore := m.worktreeGeneration
 
-	// The would-be-saved set flips cocoindex-code on, but state.Save failed.
-	newCurrent := map[string]bool{"code-review-graph": true, "cocoindex-code": true}
-	updated, _ := m.updateIntegrationProgress(integrationFinalizedMsg{current: newCurrent, err: errors.New("save failed")})
+	// The apply tried to flip cocoindex-code on, but state.Save failed.
+	updated, _ := m.updateIntegrationProgress(integrationFinalizedMsg{err: errors.New("save failed")})
 	m = updated.(Model)
 
 	// In-memory state must stay consistent with disk: the unsaved change is not applied.
@@ -69,26 +68,24 @@ func TestUpdateIntegrationProgress_EventMsg(t *testing.T) {
 	}
 }
 
-func TestUpdateIntegrationProgress_FinalizedMsg(t *testing.T) {
+func TestUpdateIntegrationProgress_FinalizedMsg_DoesNotMutateInMemory(t *testing.T) {
 	m := makeIntegrationModel()
 	m.view = integrationProgressView
 	m.integ.returnView = integrationListView
 
-	newCurrent := map[string]bool{
-		"code-review-graph": true,
-		"cocoindex-code":    true,
-	}
-	updated, _ := m.updateIntegrationProgress(integrationFinalizedMsg{current: newCurrent, err: nil})
+	updated, _ := m.updateIntegrationProgress(integrationFinalizedMsg{err: nil})
 	m = updated.(Model)
 
-	if m.view != integrationListView {
-		t.Errorf("expected integrationListView, got %d", m.view)
+	if m.view != integrationSummaryView {
+		t.Errorf("expected integrationSummaryView, got %d", m.view)
 	}
-	if !m.integ.current["code-review-graph"] {
-		t.Error("expected code-review-graph to be current")
+	// current/staged are reconciled from disk when the summary is dismissed,
+	// never mutated in-memory at finalize time.
+	if m.integ.current["cocoindex-code"] {
+		t.Error("finalize must not mutate in-memory current state")
 	}
-	if !m.integ.current["cocoindex-code"] {
-		t.Error("expected cocoindex-code to be updated in current")
+	if m.integ.staged["cocoindex-code"] {
+		t.Error("finalize must not mutate staged state")
 	}
 }
 
@@ -103,11 +100,7 @@ func TestUpdateIntegrationProgress_FinalizedMsg_Migration(t *testing.T) {
 	}
 	m.integ.current = originalCurrent
 
-	newCurrent := map[string]bool{
-		"code-review-graph": true,
-		"cocoindex-code":    true,
-	}
-	updated, _ := m.updateIntegrationProgress(integrationFinalizedMsg{current: newCurrent, err: nil})
+	updated, _ := m.updateIntegrationProgress(integrationFinalizedMsg{err: nil})
 	m = updated.(Model)
 
 	if m.view != migrateNextView {
