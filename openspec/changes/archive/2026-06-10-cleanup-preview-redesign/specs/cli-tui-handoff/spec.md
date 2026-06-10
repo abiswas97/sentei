@@ -1,4 +1,4 @@
-## MODIFIED Requirements
+## ADDED Requirements
 
 ### Requirement: --yes flag skips CLI confirmation
 CLI subcommands that show confirmation dialogs SHALL accept a `--yes` / `-y` flag to skip the confirmation and proceed immediately.
