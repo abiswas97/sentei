@@ -1,0 +1,249 @@
+package cmd
+
+import (
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+	"time"
+)
+
+func TestFormatStaleDuration(t *testing.T) {
+	tests := []struct {
+		name string
+		d    time.Duration
+		want string
+	}{
+		{"one day", 24 * time.Hour, "1d"},
+		{"two weeks", 14 * 24 * time.Hour, "14d"},
+		{"thirty days", 30 * 24 * time.Hour, "30d"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := FormatStaleDuration(tt.d); got != tt.want {
+				t.Errorf("FormatStaleDuration(%v) = %q, want %q", tt.d, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestFormatFilterLabel(t *testing.T) {
+	tests := []struct {
+		name string
+		opts RemoveOptions
+		want string
+	}{
+		{"all wins over other filters", RemoveOptions{All: true, Merged: true}, "all"},
+		{"merged only", RemoveOptions{Merged: true}, "merged"},
+		{"stale only", RemoveOptions{Stale: 48 * time.Hour}, "stale > 2d"},
+		{"merged and stale", RemoveOptions{Merged: true, Stale: 48 * time.Hour}, "merged, stale > 2d"},
+		{"no filters", RemoveOptions{}, ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := FormatFilterLabel(&tt.opts); got != tt.want {
+				t.Errorf("FormatFilterLabel(%+v) = %q, want %q", tt.opts, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestRunRemove_ParseError(t *testing.T) {
+	err := RunRemove([]string{"--stale", "abc"})
+	if err == nil {
+		t.Fatal("expected error for invalid stale duration")
+	}
+	if !strings.Contains(err.Error(), "invalid duration") {
+		t.Errorf("unexpected error: %v", err)
+	}
+}
+
+func TestRunRemove_UnknownFlag(t *testing.T) {
+	err := RunRemove([]string{"--no-such-flag"})
+	if err == nil {
+		t.Fatal("expected error for unknown flag")
+	}
+}
+
+func TestRunRemove_NoFilters(t *testing.T) {
+	err := RunRemove(nil)
+	if err == nil {
+		t.Fatal("expected error for missing filters")
+	}
+	if !strings.Contains(err.Error(), "at least one filter required") {
+		t.Errorf("unexpected error: %v", err)
+	}
+}
+
+func TestRunRemove_RequiresBareRepo(t *testing.T) {
+	dir := t.TempDir()
+	err := RunRemove([]string{"--all", dir})
+	if err == nil {
+		t.Fatal("expected error for non-bare path")
+	}
+	if !strings.Contains(err.Error(), "remove requires a bare repository") {
+		t.Errorf("unexpected error: %v", err)
+	}
+}
+
+func TestRunRemove_NoMatches(t *testing.T) {
+	bareRepo := setupBareRepo(t)
+
+	var err error
+	out := captureStdout(t, func() {
+		err = RunRemove([]string{"--all", bareRepo})
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(out, "No worktrees matched") {
+		t.Errorf("expected 'No worktrees matched', got:\n%s", out)
+	}
+}
+
+func TestRunRemove_DryRunListsMergedWorktrees(t *testing.T) {
+	bareRepo := setupBareRepoWithMergedBranch(t)
+
+	var err error
+	out := captureStdout(t, func() {
+		err = RunRemove([]string{"--merged", "--dry-run", bareRepo})
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(out, "(dry run)") {
+		t.Errorf("expected '(dry run)' marker, got:\n%s", out)
+	}
+	if !strings.Contains(out, "Would remove 1 worktree(s):") {
+		t.Errorf("expected removal preview count, got:\n%s", out)
+	}
+	if !strings.Contains(out, "feature/merged-branch") {
+		t.Errorf("expected branch name in preview, got:\n%s", out)
+	}
+	wtPath := filepath.Join(bareRepo, "feature-merged-branch")
+	if _, statErr := os.Stat(wtPath); statErr != nil {
+		t.Errorf("dry run must not remove the worktree: %v", statErr)
+	}
+}
+
+func TestRunRemove_DryRunWarnsAboutDirtyWorktrees(t *testing.T) {
+	bareRepo := setupBareRepoWithMergedBranch(t)
+	wtPath := filepath.Join(bareRepo, "feature-merged-branch")
+	mustWriteFile(t, filepath.Join(wtPath, "untracked.txt"), "dirty\n")
+
+	var err error
+	out := captureStdout(t, func() {
+		err = RunRemove([]string{"--merged", "--dry-run", bareRepo})
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(out, "will be LOST") {
+		t.Errorf("expected dirty-worktree marker, got:\n%s", out)
+	}
+	if !strings.Contains(out, "Warning:") {
+		t.Errorf("expected dirty-worktree warning summary, got:\n%s", out)
+	}
+}
+
+func TestRunRemove_RemovesMergedWorktree(t *testing.T) {
+	bareRepo := setupBareRepoWithMergedBranch(t)
+
+	var err error
+	out := captureStdout(t, func() {
+		err = RunRemove([]string{"--merged", bareRepo})
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(out, "Removed:") {
+		t.Errorf("expected 'Removed:' summary, got:\n%s", out)
+	}
+	wtPath := filepath.Join(bareRepo, "feature-merged-branch")
+	if _, statErr := os.Stat(wtPath); !os.IsNotExist(statErr) {
+		t.Errorf("expected worktree %s to be removed", wtPath)
+	}
+}
+
+func TestRunRemove_UnlocksLockedWorktree(t *testing.T) {
+	bareRepo := setupBareRepoWithMergedBranch(t)
+	wtPath := filepath.Join(bareRepo, "feature-merged-branch")
+	mustGit(t, bareRepo, "worktree", "lock", wtPath)
+
+	var err error
+	captureStdout(t, func() {
+		err = RunRemove([]string{"--merged", bareRepo})
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if _, statErr := os.Stat(wtPath); !os.IsNotExist(statErr) {
+		t.Errorf("expected locked worktree %s to be unlocked and removed", wtPath)
+	}
+}
+
+func TestRunRemove_WarnsWhenCommitDateUnavailable(t *testing.T) {
+	bareRepo := setupBareRepoWithMergedBranch(t)
+	wtPath := filepath.Join(bareRepo, "feature-merged-branch")
+	// A worktree whose directory is gone has no reachable commit date, so the
+	// stale filter must warn and skip it rather than guess.
+	if err := os.RemoveAll(wtPath); err != nil {
+		t.Fatal(err)
+	}
+
+	var err error
+	stderr := captureStderr(t, func() {
+		captureStdout(t, func() {
+			err = RunRemove([]string{"--stale", "1d", "--dry-run", bareRepo})
+		})
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(stderr, "no commit date available") {
+		t.Errorf("expected missing-commit-date warning on stderr, got:\n%s", stderr)
+	}
+}
+
+func TestRunRemove_ReportsFailedRemovals(t *testing.T) {
+	bareRepo := setupBareRepoWithMergedBranch(t)
+	wtPath := filepath.Join(bareRepo, "feature-merged-branch")
+	// A read-only worktree directory makes `git worktree remove --force` fail.
+	if err := os.Chmod(wtPath, 0o555); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(wtPath, 0o755) })
+
+	var err error
+	out := captureStdout(t, func() {
+		captureStderr(t, func() {
+			err = RunRemove([]string{"--merged", bareRepo})
+		})
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(out, "Failed:") {
+		t.Errorf("expected failure summary, got:\n%s", out)
+	}
+}
+
+func TestRunRemove_SkipsProtectedWorktrees(t *testing.T) {
+	bareRepo := setupBareRepoWithMergedBranch(t)
+	mainPath := filepath.Join(bareRepo, "main")
+	mustGit(t, bareRepo, "worktree", "add", mainPath, "main")
+
+	var err error
+	out := captureStdout(t, func() {
+		err = RunRemove([]string{"--all", bareRepo})
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(out, "Skipped (protected):") || !strings.Contains(out, " 1 worktree(s)") {
+		t.Errorf("expected protected-skip summary, got:\n%s", out)
+	}
+	if _, statErr := os.Stat(mainPath); statErr != nil {
+		t.Errorf("the main worktree must survive --all: %v", statErr)
+	}
+}

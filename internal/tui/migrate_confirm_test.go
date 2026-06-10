@@ -181,3 +181,66 @@ func TestUpdateMigrateConfirm_QuitKey(t *testing.T) {
 		t.Errorf("expected tea.QuitMsg, got %T", msg)
 	}
 }
+
+func TestLoadMigrateInfo(t *testing.T) {
+	cases := []struct {
+		name       string
+		responses  map[string]stubResponse
+		wantBranch string
+		wantDirty  bool
+		wantErr    bool
+	}{
+		{
+			"clean repo",
+			map[string]stubResponse{
+				"/some/repo branch --show-current": {output: "main"},
+				"/some/repo status --porcelain":    {output: ""},
+			},
+			"main", false, false,
+		},
+		{
+			"dirty repo",
+			map[string]stubResponse{
+				"/some/repo branch --show-current": {output: "main"},
+				"/some/repo status --porcelain":    {output: " M file.go"},
+			},
+			"main", true, false,
+		},
+		{
+			"branch lookup fails",
+			map[string]stubResponse{},
+			"", false, true,
+		},
+		{
+			"status lookup fails",
+			map[string]stubResponse{
+				"/some/repo branch --show-current": {output: "main"},
+			},
+			"", false, true,
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			runner := &stubRunner{responses: tc.responses}
+
+			msg := loadMigrateInfo(runner, "/some/repo")()
+
+			info, ok := msg.(migrateInfoMsg)
+			if !ok {
+				t.Fatalf("expected migrateInfoMsg, got %T", msg)
+			}
+			if tc.wantErr {
+				if info.err == nil {
+					t.Fatal("expected an error")
+				}
+				return
+			}
+			if info.err != nil {
+				t.Fatalf("unexpected error: %v", info.err)
+			}
+			if info.branch != tc.wantBranch || info.isDirty != tc.wantDirty {
+				t.Errorf("info = branch %q dirty %v, want %q/%v", info.branch, info.isDirty, tc.wantBranch, tc.wantDirty)
+			}
+		})
+	}
+}

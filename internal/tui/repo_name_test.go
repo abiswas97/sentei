@@ -1,0 +1,145 @@
+package tui
+
+import (
+	"path/filepath"
+	"strings"
+	"testing"
+
+	tea "github.com/charmbracelet/bubbletea"
+
+	"github.com/abiswas97/sentei/internal/config"
+	"github.com/abiswas97/sentei/internal/repo"
+)
+
+func repoNameModel(repoPath string) Model {
+	m := NewMenuModel(nil, nil, repoPath, &config.Config{}, repo.ContextNoRepo)
+	m.view = repoNameView
+	m.width, m.height = 80, 24
+	m.repo.nameInput.Focus()
+	return m
+}
+
+func TestUpdateRepoName_EscReturnsToMenu(t *testing.T) {
+	m := repoNameModel("/repo")
+
+	updated, _ := m.updateRepoName(tea.KeyMsg{Type: tea.KeyEsc})
+
+	if updated.(Model).view != menuView {
+		t.Error("esc should return to the menu")
+	}
+}
+
+func TestUpdateRepoName_TabSwitchesFields(t *testing.T) {
+	m := repoNameModel("/repo")
+
+	updated, _ := m.updateRepoName(tea.KeyMsg{Type: tea.KeyTab})
+	model := updated.(Model)
+	if model.repo.focusedField != 1 || !model.repo.locationInput.Focused() || model.repo.nameInput.Focused() {
+		t.Fatal("tab should move focus to the location field")
+	}
+
+	updated, _ = model.updateRepoName(tea.KeyMsg{Type: tea.KeyTab})
+	model = updated.(Model)
+	if model.repo.focusedField != 0 || !model.repo.nameInput.Focused() {
+		t.Fatal("second tab should move focus back to the name field")
+	}
+}
+
+func TestUpdateRepoName_EnterValidates(t *testing.T) {
+	tmp := t.TempDir()
+	cases := []struct {
+		name     string
+		repoName string
+		location string
+		wantErr  string
+	}{
+		{"empty name", "", tmp, "name is required"},
+		{"name with space", "my repo", tmp, "cannot contain spaces"},
+		{"empty location", "myrepo", "", "location is required"},
+		{"missing parent dir", "myrepo", filepath.Join(tmp, "nope", "child"), "parent directory does not exist"},
+		{"destination exists", "myrepo", tmp, "directory already exists"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			m := repoNameModel(tmp)
+			m.repo.nameInput.SetValue(tc.repoName)
+			m.repo.locationInput.SetValue(tc.location)
+
+			updated, _ := m.updateRepoName(tea.KeyMsg{Type: tea.KeyEnter})
+			model := updated.(Model)
+
+			if !strings.Contains(model.repo.validationErr, tc.wantErr) {
+				t.Errorf("validationErr = %q, want it to contain %q", model.repo.validationErr, tc.wantErr)
+			}
+			if model.view != repoNameView {
+				t.Error("validation failure must keep the name view")
+			}
+		})
+	}
+}
+
+func TestUpdateRepoName_EnterValidAdvancesToOptions(t *testing.T) {
+	tmp := t.TempDir()
+	m := repoNameModel(tmp)
+	m.repo.nameInput.SetValue("myrepo")
+	m.repo.locationInput.SetValue(filepath.Join(tmp, "myrepo"))
+
+	updated, cmd := m.updateRepoName(tea.KeyMsg{Type: tea.KeyEnter})
+	model := updated.(Model)
+
+	if model.view != repoOptionsView {
+		t.Fatalf("view = %d, want repoOptionsView", model.view)
+	}
+	if model.repo.validationErr != "" {
+		t.Errorf("unexpected validation error %q", model.repo.validationErr)
+	}
+	if !model.repo.createWorktree || model.repo.publishGitHub {
+		t.Error("options should reset to worktree on, publish off")
+	}
+	if model.repo.optionsCursor != repoOptPublish {
+		t.Errorf("cursor = %d, want repoOptPublish", model.repo.optionsCursor)
+	}
+	if cmd == nil {
+		t.Error("expected the GitHub auth check command")
+	}
+}
+
+func TestUpdateRepoName_TypingAutoFillsLocation(t *testing.T) {
+	m := repoNameModel("/repo")
+
+	updated, _ := m.updateRepoName(keyMsg("a"))
+	model := updated.(Model)
+	if got := model.repo.locationInput.Value(); got != filepath.Join("/repo", "a") {
+		t.Errorf("location = %q, want %q", got, "/repo/a")
+	}
+
+	updated, _ = model.updateRepoName(tea.KeyMsg{Type: tea.KeyBackspace})
+	model = updated.(Model)
+	if got := model.repo.locationInput.Value(); got != "/repo" {
+		t.Errorf("location after clearing name = %q, want %q", got, "/repo")
+	}
+}
+
+func TestViewRepoName_RendersFieldsAndError(t *testing.T) {
+	m := repoNameModel("/repo")
+	m.repo.validationErr = "repository name is required"
+
+	view := stripANSI(m.viewRepoName())
+
+	for _, want := range []string{"Create Repository", "Repository name", "Location", "/repo", "repository name is required", "enter continue"} {
+		if !strings.Contains(view, want) {
+			t.Errorf("view missing %q:\n%s", want, view)
+		}
+	}
+}
+
+func TestViewRepoName_BlurredEmptyNameShowsPlaceholder(t *testing.T) {
+	m := repoNameModel("/repo")
+	m.repo.focusedField = 1
+
+	view := stripANSI(m.viewRepoName())
+
+	if !strings.Contains(view, "(empty)") {
+		t.Errorf("blurred empty name field should show (empty):\n%s", view)
+	}
+}
