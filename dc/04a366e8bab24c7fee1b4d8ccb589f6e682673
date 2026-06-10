@@ -1,0 +1,45 @@
+openspec/changes/ui-chrome-unification/design.md
+  s_45cfee6c7ab135::t_28bcde40971f08 55,57,60-63,65
+  s_45cfee6c7ab135::t_03f11270db96ff 3-5
+openspec/changes/flow-state-correctness/proposal.md
+  s_45cfee6c7ab135::t_f81713285e8548 1-30
+openspec/changes/ui-chrome-unification/tasks.md
+  s_45cfee6c7ab135::t_859640b40da3a1 1-2,5-7,11-16,20-22,26-31,35-42,46-52,56-59,61,63,65,67-69,71,73-74,76,78-81,83,85-87
+openspec/changes/flow-state-correctness/design.md
+  s_45cfee6c7ab135::t_9dd037703ee728 1-69
+openspec/changes/ui-chrome-unification/proposal.md
+  s_45cfee6c7ab135::t_93ead02471a5c7 8-9,11-12,14-16,20
+openspec/changes/ui-chrome-unification/specs/tui-design-system/spec.md
+  s_45cfee6c7ab135::t_047a849092d161 33-34,39-42
+openspec/changes/flow-state-correctness/.openspec.yaml
+  s_45cfee6c7ab135::t_c48b7d1584060d 1-2
+openspec/changes/ui-chrome-unification/specs/tui-chrome/spec.md
+  s_45cfee6c7ab135::t_a0b92244a3924b 117-118,120-122,124-126,128-137
+openspec/changes/flow-state-correctness/specs/flow-state-reset/spec.md
+  s_45cfee6c7ab135::t_1311bb7367ca07 1
+  s_45cfee6c7ab135::t_340c4d0a28ed21 2-34
+openspec/changes/flow-state-correctness/specs/tui-progress/spec.md
+  s_45cfee6c7ab135::t_484fc5e5e87755 30-33
+  s_45cfee6c7ab135::t_da6741521ef89a 1-29,34-55
+openspec/changes/flow-state-correctness/specs/integration-apply-summary/spec.md
+  s_45cfee6c7ab135::t_1311bb7367ca07 1
+  s_45cfee6c7ab135::t_d1bc831a3fa9bb 2-34
+openspec/changes/flow-state-correctness/specs/playground-setup/spec.md
+  s_45cfee6c7ab135::t_98e9445e9cd2e1 1-16
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "dc04a366e8bab24c7fee1b4d8ccb589f6e682673",
+  "prompts": {},
+  "sessions": {
+    "s_45cfee6c7ab135": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "362b0459-633f-41b0-be4d-ef5a2d23fce8",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Test <t@t.com>"
+    }
+  }
+}
