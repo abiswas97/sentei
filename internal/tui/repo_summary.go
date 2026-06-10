@@ -21,19 +21,6 @@ func cloneFailed(result repo.CloneResult) (bool, error) {
 	return true, step.Error
 }
 
-// createHardFailed reports a non-GitHub phase failure, meaning the local repo
-// itself is broken (not merely unpublished). A GitHub-only failure is soft (the
-// repo exists locally) and is rendered as "ready (local only)" instead.
-func createHardFailed(result repo.CreateResult) (bool, error) {
-	for _, phase := range result.Phases {
-		if phase.Name != "GitHub" && phase.HasFailures() {
-			_, step, _ := repo.FirstFailure([]repo.Phase{phase})
-			return true, step.Error
-		}
-	}
-	return false, nil
-}
-
 func (m Model) updateRepoSummary(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
@@ -47,7 +34,7 @@ func (m Model) updateRepoSummary(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch r := m.repo.result.(type) {
 		case repo.CreateResult:
 			repoPath = r.RepoPath
-			hardFailed, _ := createHardFailed(r)
+			hardFailed, _ := r.SetupFailed()
 			canRelaunch = !hardFailed
 		case repo.CloneResult:
 			repoPath = r.RepoPath
@@ -94,7 +81,7 @@ func (m Model) viewCreateRepoSummary(result repo.CreateResult) string {
 
 	// A Setup-phase failure means the local repo is broken (e.g. the initial
 	// commit could not be made). Render a failure screen, not "ready".
-	if hardFailed, hardErr := createHardFailed(result); hardFailed {
+	if hardFailed, hardErr := result.SetupFailed(); hardFailed {
 		fmt.Fprintf(&b, "  %s create failed\n\n",
 			styleIndicatorFailed.Render(indicatorFailed))
 		if hardErr != nil {
@@ -115,7 +102,7 @@ func (m Model) viewCreateRepoSummary(result repo.CreateResult) string {
 	ghFailed := false
 	var ghErrMsg string
 	for _, phase := range result.Phases {
-		if phase.Name == "GitHub" && phase.HasFailures() {
+		if phase.Name == repo.PhaseGitHub && phase.HasFailures() {
 			ghFailed = true
 			for _, step := range phase.Steps {
 				if step.Error != nil {

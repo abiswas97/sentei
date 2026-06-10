@@ -39,11 +39,28 @@ type CreateOptions struct {
 	Description   string
 }
 
+// PhaseGitHub is the name of the create flow's publish phase. A failure here is
+// "soft" (the local repo is fine, just unpublished); a failure in any other
+// phase is "hard" (the local repo is broken). Single source for that test.
+const PhaseGitHub = "GitHub"
+
 type CreateResult struct {
 	RepoPath     string
 	WorktreePath string
 	GitHubURL    string
 	Phases       []Phase
+}
+
+// SetupFailed reports whether a non-GitHub phase failed (the local repo itself is
+// broken, not merely unpublished) and the first such error.
+func (r CreateResult) SetupFailed() (bool, error) {
+	for _, p := range r.Phases {
+		if p.Name != PhaseGitHub && p.HasFailures() {
+			_, step, _ := FirstFailure([]Phase{p})
+			return true, step.Error
+		}
+	}
+	return false, nil
 }
 
 func Create(runner git.CommandRunner, shell git.ShellRunner, opts CreateOptions, emit func(Event)) CreateResult {
@@ -193,8 +210,8 @@ func runCreateSetup(runner git.CommandRunner, repoPath string, opts CreateOption
 }
 
 func runCreateGitHub(runner git.CommandRunner, gh GhRunner, repoPath string, opts CreateOptions, emit func(Event)) Phase {
-	phase := Phase{Name: "GitHub"}
-	phaseName := "GitHub"
+	phase := Phase{Name: PhaseGitHub}
+	phaseName := PhaseGitHub
 
 	// Look up GitHub user
 	emit(Event{Phase: phaseName, Step: "Look up GitHub user", Status: StepRunning})

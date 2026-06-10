@@ -1,6 +1,7 @@
 package repo
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -186,5 +187,78 @@ func TestCreate_GitHubPhaseFailure_LocalStillUsable(t *testing.T) {
 	}
 	if !result.Phases[1].HasFailures() {
 		t.Error("github phase should have failures")
+	}
+}
+
+func TestCreate_PushFailure_ReportsOrphanedRepo(t *testing.T) {
+	dir := t.TempDir()
+	repoName := "my-project"
+	repoPath := filepath.Join(dir, repoName)
+	pushErr := fmt.Errorf("Permission denied (publickey)")
+
+	runner := &mockRunner{responses: map[string]mockResponse{
+		fmt.Sprintf("%s/.bare:[init --bare]", repoPath):                                                       {output: ""},
+		fmt.Sprintf("%s/.bare:[config remote.origin.fetch +refs/heads/*:refs/remotes/origin/*]", repoPath):    {output: ""},
+		fmt.Sprintf("%s:[worktree add main -b main]", repoPath):                                               {output: ""},
+		fmt.Sprintf("%s/main:[add -A]", repoPath):                                                             {output: ""},
+		fmt.Sprintf("%s/main:[commit -m Initial commit]", repoPath):                                           {output: ""},
+		fmt.Sprintf("%s/.bare:[remote set-url origin https://github.com/abiswas97/my-project.git]", repoPath): {output: ""},
+		fmt.Sprintf("%s/main:[push -u origin main]", repoPath):                                                {output: "", err: pushErr},
+	}}
+	ghRunner := &mockGhRunner{responses: map[string]mockResponse{
+		fmt.Sprintf("%s:gh[api user --jq .login]", repoPath):             {output: "abiswas97"},
+		fmt.Sprintf("%s:gh[repo create my-project --private]", repoPath): {output: ""},
+		fmt.Sprintf("%s:gh[config get git_protocol]", repoPath):          {output: "https"},
+	}}
+
+	ec := &eventCollector{}
+	opts := CreateOptions{Name: repoName, Location: dir, PublishGitHub: true, Visibility: "private"}
+	result := CreateWithGh(runner, runner, ghRunner, opts, ec.emit)
+
+	var pushStep *StepResult
+	for i := range result.Phases {
+		if result.Phases[i].Name != "GitHub" {
+			continue
+		}
+		for j := range result.Phases[i].Steps {
+			if result.Phases[i].Steps[j].Name == "Push to GitHub" {
+				pushStep = &result.Phases[i].Steps[j]
+			}
+		}
+	}
+	if pushStep == nil || pushStep.Status != StepFailed {
+		t.Fatal("expected a failed 'Push to GitHub' step")
+	}
+	msg := pushStep.Error.Error()
+	if !strings.Contains(msg, opts.Name) {
+		t.Errorf("push error should name the orphaned repo %q: %v", opts.Name, msg)
+	}
+	if !strings.Contains(msg, "delete it or push") {
+		t.Errorf("push error should guide the user on the orphaned remote repo: %v", msg)
+	}
+	if !errors.Is(pushStep.Error, pushErr) {
+		t.Errorf("push error must wrap the original error: %v", msg)
+	}
+}
+
+func TestCreateResult_SetupFailed(t *testing.T) {
+	setupBroken := CreateResult{Phases: []Phase{
+		{Name: "Setup", Steps: []StepResult{{Name: "Initial commit", Status: StepFailed, Error: fmt.Errorf("exit 128")}}},
+	}}
+	if failed, err := setupBroken.SetupFailed(); !failed || err == nil {
+		t.Errorf("a Setup-phase failure must be hard, got failed=%v err=%v", failed, err)
+	}
+
+	githubOnly := CreateResult{Phases: []Phase{
+		{Name: "Setup", Steps: []StepResult{{Status: StepDone}}},
+		{Name: PhaseGitHub, Steps: []StepResult{{Status: StepFailed, Error: fmt.Errorf("push")}}},
+	}}
+	if failed, _ := githubOnly.SetupFailed(); failed {
+		t.Error("a GitHub-only failure must be soft (local repo is fine)")
+	}
+
+	clean := CreateResult{Phases: []Phase{{Name: "Setup", Steps: []StepResult{{Status: StepDone}}}}}
+	if failed, _ := clean.SetupFailed(); failed {
+		t.Error("a clean result must not report a setup failure")
 	}
 }
