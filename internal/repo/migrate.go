@@ -121,10 +121,15 @@ func runMigrateBackup(shell git.ShellRunner, repoPath string, emit func(Event)) 
 	cpCmd := fmt.Sprintf("cp -a %q %q", repoPath, backupPath)
 	_, err := shell.RunShell(parentDir, cpCmd)
 	if err != nil {
+		// Report NO backup (not the constructed path). cp -a may have left a
+		// partial copy; remove it. Otherwise the failure screen would tell the
+		// user to `rm -rf <repo> && mv <missing-backup> <repo>` — deleting their
+		// still-intact repo (the Migrate phase never ran).
+		_ = fileutil.RemoveAllRetry(backupPath)
 		step := StepResult{Name: "Copy repository to backup", Status: StepFailed, Error: err}
 		phase.Steps = append(phase.Steps, step)
 		emit(Event{Phase: phaseName, Step: step.Name, Status: StepFailed, Error: err})
-		return phase, backupPath, ""
+		return phase, "", ""
 	}
 	phase.Steps = append(phase.Steps, StepResult{Name: "Copy repository to backup", Status: StepDone, Message: backupPath})
 	emit(Event{Phase: phaseName, Step: "Copy repository to backup", Status: StepDone, Message: backupPath})
@@ -280,13 +285,7 @@ func runMigrateCopy(backupPath, worktreePath string, emit func(Event)) Phase {
 		}
 		src := filepath.Join(backupPath, name)
 		dst := filepath.Join(worktreePath, name)
-		var copyErr error
-		if entry.IsDir() {
-			copyErr = copyDir(src, dst)
-		} else {
-			copyErr = fileutil.CopyFile(src, dst)
-		}
-		if copyErr != nil {
+		if copyErr := copyTree(src, dst); copyErr != nil {
 			emit(Event{Phase: phaseName, Step: "Restore working files", Status: StepRunning,
 				Message: fmt.Sprintf("warning: could not copy %s: %v", name, copyErr)})
 			continue
@@ -304,21 +303,45 @@ func runMigrateCopy(backupPath, worktreePath string, emit func(Event)) Phase {
 	return phase
 }
 
-func copyDir(src, dst string) error {
-	return filepath.WalkDir(src, func(path string, d fs.DirEntry, err error) error {
+// copyTree recursively copies src to dst. It recreates symlinks rather than
+// following them, and replaces an existing dst rather than writing through it,
+// so restoring over a checked-out symlink cannot corrupt the link's target
+// (which may live outside the worktree).
+func copyTree(src, dst string) error {
+	info, err := os.Lstat(src)
+	if err != nil {
+		return err
+	}
+
+	switch {
+	case info.Mode()&os.ModeSymlink != 0:
+		target, err := os.Readlink(src)
 		if err != nil {
 			return err
 		}
-		relPath, err := filepath.Rel(src, path)
+		_ = os.Remove(dst)
+		return os.Symlink(target, dst)
+
+	case info.IsDir():
+		if err := os.MkdirAll(dst, info.Mode().Perm()); err != nil {
+			return err
+		}
+		entries, err := os.ReadDir(src)
 		if err != nil {
 			return err
 		}
-		dstPath := filepath.Join(dst, relPath)
-		if d.IsDir() {
-			return os.MkdirAll(dstPath, 0755)
+		for _, e := range entries {
+			if err := copyTree(filepath.Join(src, e.Name()), filepath.Join(dst, e.Name())); err != nil {
+				return err
+			}
 		}
-		return fileutil.CopyFile(path, dstPath)
-	})
+		return nil
+
+	default:
+		// Replace dst instead of writing through an existing file/symlink.
+		_ = os.Remove(dst)
+		return fileutil.CopyFile(src, dst)
+	}
 }
 
 func calculateDirSize(path string) string {
@@ -365,5 +388,7 @@ func DeleteBackup(backupPath string) error {
 // the pre-migration backup over the repo root. Single source of truth for the
 // CLI and TUI failure screens.
 func (r MigrateResult) RestoreCommand() string {
-	return fmt.Sprintf("rm -rf %s && mv %s %s", r.BareRoot, r.BackupPath, r.BareRoot)
+	// Quote operands: a repo path with spaces would otherwise make `rm -rf`
+	// delete the wrong directories.
+	return fmt.Sprintf("rm -rf %q && mv %q %q", r.BareRoot, r.BackupPath, r.BareRoot)
 }
