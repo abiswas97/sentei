@@ -1,0 +1,27 @@
+openspec/specs/integration-apply-summary/spec.md
+  s_45cfee6c7ab135::t_67ec9bf933263e 1-38
+openspec/specs/playground-setup/spec.md
+  s_45cfee6c7ab135::t_67ec9bf933263e 5,8-9,11-13,17,97
+openspec/specs/flow-state-reset/spec.md
+  s_45cfee6c7ab135::t_67ec9bf933263e 1-38
+openspec/changes/archive/2026-06-10-flow-state-correctness/tasks.md
+  s_45cfee6c7ab135::t_67ec9bf933263e 39
+openspec/specs/tui-progress/spec.md
+  s_45cfee6c7ab135::t_67ec9bf933263e 5,27-34,51,69-72,94
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "087fdc87334d365ac9454fc89b30129a3b9c810a",
+  "prompts": {},
+  "sessions": {
+    "s_45cfee6c7ab135": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "362b0459-633f-41b0-be4d-ef5a2d23fce8",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Test <t@t.com>"
+    }
+  }
+}
