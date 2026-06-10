@@ -14,9 +14,10 @@ import (
 )
 
 type worktreeContextMsg struct {
-	worktrees  []git.Worktree
-	err        error
-	generation uint64
+	worktrees     []git.Worktree
+	defaultBranch string
+	err           error
+	generation    uint64
 }
 
 func loadWorktreeContext(runner git.CommandRunner, repoPath string, generation uint64) tea.Cmd {
@@ -32,7 +33,11 @@ func loadWorktreeContext(runner git.CommandRunner, repoPath string, generation u
 				filtered = append(filtered, wt)
 			}
 		}
-		return worktreeContextMsg{worktrees: filtered, generation: generation}
+		return worktreeContextMsg{
+			worktrees:     filtered,
+			defaultBranch: git.DetectDefaultBranch(runner, repoPath),
+			generation:    generation,
+		}
 	}
 }
 

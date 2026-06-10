@@ -29,7 +29,7 @@ func TestMigrate_Successful(t *testing.T) {
 		// Migrate
 		fmt.Sprintf("%s:[clone --bare .git %s]", repoPath, barePath):                                 {output: ""},
 		fmt.Sprintf("%s:[config remote.origin.fetch +refs/heads/*:refs/remotes/origin/*]", barePath): {output: ""},
-		fmt.Sprintf("%s:[worktree add main]", repoPath):                                              {output: ""},
+		fmt.Sprintf("%s:[worktree add main main]", repoPath):                                         {output: ""},
 	}}
 
 	ec := &eventCollector{}
@@ -70,7 +70,7 @@ func TestMigrate_DirtyRepo_WarningContinues(t *testing.T) {
 		fmt.Sprintf("%s:[branch --show-current]", repoPath):                                          {output: "develop"},
 		fmt.Sprintf("%s:[clone --bare .git %s]", repoPath, barePath):                                 {output: ""},
 		fmt.Sprintf("%s:[config remote.origin.fetch +refs/heads/*:refs/remotes/origin/*]", barePath): {output: ""},
-		fmt.Sprintf("%s:[worktree add develop]", repoPath):                                           {output: ""},
+		fmt.Sprintf("%s:[worktree add develop develop]", repoPath):                                   {output: ""},
 	}}
 
 	ec := &eventCollector{}
@@ -145,6 +145,108 @@ func TestDeleteBackup(t *testing.T) {
 	}
 }
 
+func TestMigrate_DetachedHead_RejectedBeforeDestruction(t *testing.T) {
+	dir := t.TempDir()
+	repoPath := filepath.Join(dir, "detached")
+	os.MkdirAll(filepath.Join(repoPath, ".git"), 0755)
+
+	runner := &mockRunner{responses: map[string]mockResponse{
+		fmt.Sprintf("%s:[status --porcelain]", repoPath):    {output: ""},
+		fmt.Sprintf("%s:[branch --show-current]", repoPath): {output: ""}, // detached HEAD
+	}}
+
+	ec := &eventCollector{}
+	result := Migrate(runner, &alwaysOkShell{}, MigrateOptions{RepoPath: repoPath}, ec.emit)
+
+	validate := findPhase(result.Phases, "Validate")
+	if validate == nil || !validate.HasFailures() {
+		t.Fatal("detached HEAD must fail validation")
+	}
+	if findPhase(result.Phases, "Backup") != nil || findPhase(result.Phases, "Migrate") != nil {
+		t.Error("no destructive phase should run after a validation failure")
+	}
+	for _, c := range runner.calls {
+		if strings.Contains(c, "clone --bare") {
+			t.Error("clone --bare must not run for a detached HEAD")
+		}
+	}
+}
+
+func TestMigrate_PreservesOriginURL(t *testing.T) {
+	dir := t.TempDir()
+	repoPath := filepath.Join(dir, "with-origin")
+	os.MkdirAll(filepath.Join(repoPath, ".git"), 0755)
+	barePath := filepath.Join(repoPath, ".bare")
+	const originURL = "git@github.com:user/proj.git"
+
+	runner := &mockRunner{responses: map[string]mockResponse{
+		fmt.Sprintf("%s:[status --porcelain]", repoPath):                                             {output: ""},
+		fmt.Sprintf("%s:[branch --show-current]", repoPath):                                          {output: "main"},
+		fmt.Sprintf("%s:[remote get-url origin]", repoPath):                                          {output: originURL},
+		fmt.Sprintf("%s:[clone --bare .git %s]", repoPath, barePath):                                 {output: ""},
+		fmt.Sprintf("%s:[config remote.origin.fetch +refs/heads/*:refs/remotes/origin/*]", barePath): {output: ""},
+		fmt.Sprintf("%s:[remote set-url origin %s]", barePath, originURL):                            {output: ""},
+		fmt.Sprintf("%s:[worktree add main main]", repoPath):                                         {output: ""},
+	}}
+
+	ec := &eventCollector{}
+	result := Migrate(runner, &alwaysOkShell{}, MigrateOptions{RepoPath: repoPath}, ec.emit)
+
+	for _, phase := range result.Phases {
+		for _, step := range phase.Steps {
+			if step.Status == StepFailed {
+				t.Errorf("step %q failed: %v", step.Name, step.Error)
+			}
+		}
+	}
+	restored := false
+	for _, c := range runner.calls {
+		if strings.Contains(c, fmt.Sprintf("remote set-url origin %s", originURL)) {
+			restored = true
+		}
+	}
+	if !restored {
+		t.Error("the real origin URL must be restored on the migrated bare repo")
+	}
+}
+
+func TestMigrate_SlashBranch_ChecksOutExistingBranch(t *testing.T) {
+	dir := t.TempDir()
+	repoPath := filepath.Join(dir, "slash")
+	os.MkdirAll(filepath.Join(repoPath, ".git"), 0755)
+	barePath := filepath.Join(repoPath, ".bare")
+
+	runner := &mockRunner{responses: map[string]mockResponse{
+		fmt.Sprintf("%s:[status --porcelain]", repoPath):                                             {output: ""},
+		fmt.Sprintf("%s:[branch --show-current]", repoPath):                                          {output: "feature/foo"},
+		fmt.Sprintf("%s:[clone --bare .git %s]", repoPath, barePath):                                 {output: ""},
+		fmt.Sprintf("%s:[config remote.origin.fetch +refs/heads/*:refs/remotes/origin/*]", barePath): {output: ""},
+		fmt.Sprintf("%s:[worktree add feature/foo feature/foo]", repoPath):                           {output: ""},
+	}}
+
+	ec := &eventCollector{}
+	result := Migrate(runner, &alwaysOkShell{}, MigrateOptions{RepoPath: repoPath}, ec.emit)
+
+	for _, phase := range result.Phases {
+		for _, step := range phase.Steps {
+			if step.Status == StepFailed {
+				t.Errorf("step %q failed: %v", step.Name, step.Error)
+			}
+		}
+	}
+	// The two-arg form (path + existing branch) checks out feature/foo rather
+	// than inventing a divergent "foo" branch from the basename.
+	twoArg := false
+	for _, c := range runner.calls {
+		if strings.Contains(c, "[worktree add feature/foo feature/foo]") {
+			twoArg = true
+		}
+	}
+	if !twoArg {
+		t.Error("slash branch must use the two-arg worktree add form")
+	}
+}
+
 func findPhase(phases []Phase, name string) *Phase {
 	for i := range phases {
 		if phases[i].Name == name {
@@ -152,4 +254,86 @@ func findPhase(phases []Phase, name string) *Phase {
 		}
 	}
 	return nil
+}
+
+// failingShell fails every shell command (used to fail the backup cp).
+type failingShell struct{}
+
+func (s *failingShell) RunShell(_ string, _ string) (string, error) {
+	return "", fmt.Errorf("cp -a: No space left on device")
+}
+
+func TestMigrate_BackupFailure_LeavesNoDestructiveRestore(t *testing.T) {
+	dir := t.TempDir()
+	repoPath := filepath.Join(dir, "proj")
+	os.MkdirAll(filepath.Join(repoPath, ".git"), 0755)
+
+	runner := &mockRunner{responses: map[string]mockResponse{
+		fmt.Sprintf("%s:[status --porcelain]", repoPath):    {output: ""},
+		fmt.Sprintf("%s:[branch --show-current]", repoPath): {output: "main"},
+	}}
+
+	ec := &eventCollector{}
+	result := Migrate(runner, &failingShell{}, MigrateOptions{RepoPath: repoPath}, ec.emit)
+
+	backup := findPhase(result.Phases, "Backup")
+	if backup == nil || !backup.HasFailures() {
+		t.Fatal("expected the Backup phase to fail")
+	}
+	// Critical: with no valid backup, BackupPath must be empty. Both the CLI and
+	// TUI gate the (destructive) restore command on BackupPath != "", so an empty
+	// path is what prevents telling the user to rm -rf their still-intact repo.
+	if result.BackupPath != "" {
+		t.Errorf("BackupPath must be empty on backup failure, got %q", result.BackupPath)
+	}
+	// The Migrate phase must never have run, so the repo root is untouched.
+	if findPhase(result.Phases, "Migrate") != nil {
+		t.Error("Migrate phase must not run after a backup failure")
+	}
+}
+
+func TestMigrateResult_RestoreCommand_QuotesPaths(t *testing.T) {
+	r := MigrateResult{BareRoot: "/my repo", BackupPath: "/my repo_backup_1"}
+	got := r.RestoreCommand()
+	want := `rm -rf "/my repo" && mv "/my repo_backup_1" "/my repo"`
+	if got != want {
+		t.Errorf("RestoreCommand() = %q, want %q", got, want)
+	}
+}
+
+func TestCopyTree_DoesNotWriteThroughSymlinks(t *testing.T) {
+	dir := t.TempDir()
+	outside := filepath.Join(dir, "precious.txt")
+	if err := os.WriteFile(outside, []byte("PRECIOUS"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	// Case 1: a regular-file source must replace a dst symlink, not write through
+	// it to the (outside-the-worktree) target.
+	src := filepath.Join(dir, "src")
+	dst := filepath.Join(dir, "dst")
+	os.MkdirAll(src, 0755)
+	os.MkdirAll(dst, 0755)
+	os.WriteFile(filepath.Join(src, "f"), []byte("new content"), 0644)
+	os.Symlink(outside, filepath.Join(dst, "f")) // checked-out committed symlink
+
+	if err := copyTree(filepath.Join(src, "f"), filepath.Join(dst, "f")); err != nil {
+		t.Fatalf("copyTree (file over symlink): %v", err)
+	}
+	if got, _ := os.ReadFile(outside); string(got) != "PRECIOUS" {
+		t.Errorf("write-through corrupted the symlink target: %q", got)
+	}
+
+	// Case 2: a symlink source is recreated as a symlink, not dereferenced.
+	os.Symlink(outside, filepath.Join(src, "link"))
+	if err := copyTree(filepath.Join(src, "link"), filepath.Join(dst, "link")); err != nil {
+		t.Fatalf("copyTree (symlink): %v", err)
+	}
+	info, err := os.Lstat(filepath.Join(dst, "link"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if info.Mode()&os.ModeSymlink == 0 {
+		t.Error("source symlink should be recreated as a symlink, not dereferenced")
+	}
 }

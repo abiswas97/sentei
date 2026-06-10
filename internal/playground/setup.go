@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/abiswas97/sentei/internal/fileutil"
 )
 
 var PlaygroundDir = filepath.Join(os.TempDir(), "sentei-playground")
@@ -106,7 +108,7 @@ func seedInitialCommit(repoPath string) error {
 		return err
 	}
 
-	return os.RemoveAll(tmpWork)
+	return fileutil.RemoveAllRetry(tmpWork)
 }
 
 func worktreePath(repoPath, name string) string {

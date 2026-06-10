@@ -1,6 +1,7 @@
 package repo
 
 import (
+	"errors"
 	"fmt"
 	"io/fs"
 	"os"
@@ -92,6 +93,16 @@ func runMigrateValidate(runner git.CommandRunner, repoPath string, emit func(Eve
 		emit(Event{Phase: phaseName, Step: step.Name, Status: StepFailed, Error: err})
 		return phase, "", isDirty
 	}
+	// A detached HEAD yields an empty branch name. Reject it now, before any
+	// destructive phase: otherwise the root is gutted and `worktree add ""` fails,
+	// leaving an empty directory with no recovery path.
+	if strings.TrimSpace(branch) == "" {
+		stepErr := errors.New("cannot migrate a detached HEAD; check out a branch first")
+		step := StepResult{Name: "Detect current branch", Status: StepFailed, Error: stepErr}
+		phase.Steps = append(phase.Steps, step)
+		emit(Event{Phase: phaseName, Step: step.Name, Status: StepFailed, Error: stepErr})
+		return phase, "", isDirty
+	}
 	phase.Steps = append(phase.Steps, StepResult{Name: "Detect current branch", Status: StepDone, Message: branch})
 	emit(Event{Phase: phaseName, Step: "Detect current branch", Status: StepDone, Message: branch})
 
@@ -110,10 +121,15 @@ func runMigrateBackup(shell git.ShellRunner, repoPath string, emit func(Event)) 
 	cpCmd := fmt.Sprintf("cp -a %q %q", repoPath, backupPath)
 	_, err := shell.RunShell(parentDir, cpCmd)
 	if err != nil {
+		// Report NO backup (not the constructed path). cp -a may have left a
+		// partial copy; remove it. Otherwise the failure screen would tell the
+		// user to `rm -rf <repo> && mv <missing-backup> <repo>` — deleting their
+		// still-intact repo (the Migrate phase never ran).
+		_ = fileutil.RemoveAllRetry(backupPath)
 		step := StepResult{Name: "Copy repository to backup", Status: StepFailed, Error: err}
 		phase.Steps = append(phase.Steps, step)
 		emit(Event{Phase: phaseName, Step: step.Name, Status: StepFailed, Error: err})
-		return phase, backupPath, ""
+		return phase, "", ""
 	}
 	phase.Steps = append(phase.Steps, StepResult{Name: "Copy repository to backup", Status: StepDone, Message: backupPath})
 	emit(Event{Phase: phaseName, Step: "Copy repository to backup", Status: StepDone, Message: backupPath})
@@ -132,6 +148,11 @@ func runMigrateBare(runner git.CommandRunner, repoPath, branch string, emit func
 	phaseName := "Migrate"
 	barePath := filepath.Join(repoPath, ".bare")
 
+	// Capture the real origin URL before cloning. `git clone --bare .git .bare`
+	// rewrites origin to the local .git path, which we then delete; without this
+	// the migrated repo's origin points at a dead path and push/pull is severed.
+	originURL, _ := runner.Run(repoPath, "remote", "get-url", "origin")
+
 	// Clone bare
 	emit(Event{Phase: phaseName, Step: "Create bare repository", Status: StepRunning})
 	_, err := runner.Run(repoPath, "clone", "--bare", ".git", barePath)
@@ -144,10 +165,12 @@ func runMigrateBare(runner git.CommandRunner, repoPath, branch string, emit func
 	phase.Steps = append(phase.Steps, StepResult{Name: "Create bare repository", Status: StepDone})
 	emit(Event{Phase: phaseName, Step: "Create bare repository", Status: StepDone})
 
-	// Remove original .git
+	// Remove original .git. Retry: it was just read by clone --bare, so on macOS
+	// Spotlight may briefly hold its object dir (ENOTEMPTY) — a single RemoveAll
+	// would fail the migration after the backup was already taken.
 	emit(Event{Phase: phaseName, Step: "Remove original .git", Status: StepRunning})
 	gitDir := filepath.Join(repoPath, ".git")
-	if err := os.RemoveAll(gitDir); err != nil {
+	if err := fileutil.RemoveAllRetry(gitDir); err != nil {
 		step := StepResult{Name: "Remove original .git", Status: StepFailed, Error: err}
 		phase.Steps = append(phase.Steps, step)
 		emit(Event{Phase: phaseName, Step: step.Name, Status: StepFailed, Error: err})
@@ -180,6 +203,20 @@ func runMigrateBare(runner git.CommandRunner, repoPath, branch string, emit func
 	phase.Steps = append(phase.Steps, StepResult{Name: "Configure refspec", Status: StepDone})
 	emit(Event{Phase: phaseName, Step: "Configure refspec", Status: StepDone})
 
+	// Restore the real origin URL (clone --bare set it to the local .git path).
+	// Best-effort: a local-only repo has no origin to restore.
+	if strings.TrimSpace(originURL) != "" {
+		emit(Event{Phase: phaseName, Step: "Restore origin remote", Status: StepRunning})
+		if _, err := runner.Run(barePath, "remote", "set-url", "origin", originURL); err != nil {
+			step := StepResult{Name: "Restore origin remote", Status: StepFailed, Error: err}
+			phase.Steps = append(phase.Steps, step)
+			emit(Event{Phase: phaseName, Step: step.Name, Status: StepFailed, Error: err})
+			return phase
+		}
+		phase.Steps = append(phase.Steps, StepResult{Name: "Restore origin remote", Status: StepDone, Message: originURL})
+		emit(Event{Phase: phaseName, Step: "Restore origin remote", Status: StepDone, Message: originURL})
+	}
+
 	// Remove old working files from root (they'll be in the worktree instead)
 	// Keep only .bare, .git (pointer), and directories that are worktrees
 	emit(Event{Phase: phaseName, Step: "Clean root directory", Status: StepRunning})
@@ -204,9 +241,12 @@ func runMigrateBare(runner git.CommandRunner, repoPath, branch string, emit func
 	phase.Steps = append(phase.Steps, StepResult{Name: "Clean root directory", Status: StepDone})
 	emit(Event{Phase: phaseName, Step: "Clean root directory", Status: StepDone})
 
-	// Create worktree for current branch
+	// Create worktree for current branch. Pass the branch explicitly as the
+	// commit-ish: `git worktree add <branch>` alone treats a slash branch like
+	// "feature/foo" as a path whose basename ("foo") becomes a NEW divergent
+	// branch. The two-arg form checks out the existing branch.
 	emit(Event{Phase: phaseName, Step: "Create worktree", Status: StepRunning})
-	_, err = runner.Run(repoPath, "worktree", "add", branch)
+	_, err = runner.Run(repoPath, "worktree", "add", branch, branch)
 	if err != nil {
 		step := StepResult{Name: "Create worktree", Status: StepFailed, Error: err}
 		phase.Steps = append(phase.Steps, step)
@@ -219,77 +259,89 @@ func runMigrateBare(runner git.CommandRunner, repoPath, branch string, emit func
 	return phase
 }
 
-// copyPatterns defines files/directories to copy from backup to new worktree.
-var copyPatterns = []string{
-	".env*",
-	"node_modules",
-	"vendor",
-	"build",
-	"dist",
-	".vscode",
-	".idea",
-}
-
 func runMigrateCopy(backupPath, worktreePath string, emit func(Event)) Phase {
 	phase := Phase{Name: "Copy"}
 	phaseName := "Copy"
 
-	emit(Event{Phase: phaseName, Step: "Copy development files", Status: StepRunning})
-	copied := 0
-	for _, pattern := range copyPatterns {
-		matches, err := filepath.Glob(filepath.Join(backupPath, pattern))
-		if err != nil {
-			continue
-		}
-		for _, match := range matches {
-			name := filepath.Base(match)
-			dst := filepath.Join(worktreePath, name)
-			info, err := os.Stat(match)
-			if err != nil {
-				continue
-			}
-			if info.IsDir() {
-				if err := copyDir(match, dst); err != nil {
-					emit(Event{Phase: phaseName, Step: "Copy development files", Status: StepRunning,
-						Message: fmt.Sprintf("warning: could not copy %s: %v", name, err)})
-					continue
-				}
-			} else {
-				if err := fileutil.CopyFile(match, dst); err != nil {
-					emit(Event{Phase: phaseName, Step: "Copy development files", Status: StepRunning,
-						Message: fmt.Sprintf("warning: could not copy %s: %v", name, err)})
-					continue
-				}
-			}
-			copied++
-		}
+	emit(Event{Phase: phaseName, Step: "Restore working files", Status: StepRunning})
+
+	// Copy EVERYTHING from the backup working tree (untracked, ignored, and
+	// uncommitted-modified files) into the new worktree, which otherwise holds
+	// only committed content. This makes the worktree a faithful copy so the
+	// backup is genuinely redundant and safe to delete. Skip git internals.
+	entries, err := os.ReadDir(backupPath)
+	if err != nil {
+		// No backup to restore from (e.g. a clean repo with nothing extra).
+		phase.Steps = append(phase.Steps, StepResult{Name: "Restore working files", Status: StepDone, Message: "nothing to restore"})
+		emit(Event{Phase: phaseName, Step: "Restore working files", Status: StepDone, Message: "nothing to restore"})
+		return phase
 	}
 
-	msg := fmt.Sprintf("%d items copied", copied)
-	if copied == 0 {
-		msg = "no development files found to copy"
+	copied := 0
+	for _, entry := range entries {
+		name := entry.Name()
+		if name == ".git" || name == ".bare" {
+			continue
+		}
+		src := filepath.Join(backupPath, name)
+		dst := filepath.Join(worktreePath, name)
+		if copyErr := copyTree(src, dst); copyErr != nil {
+			emit(Event{Phase: phaseName, Step: "Restore working files", Status: StepRunning,
+				Message: fmt.Sprintf("warning: could not copy %s: %v", name, copyErr)})
+			continue
+		}
+		copied++
 	}
-	phase.Steps = append(phase.Steps, StepResult{Name: "Copy development files", Status: StepDone, Message: msg})
-	emit(Event{Phase: phaseName, Step: "Copy development files", Status: StepDone, Message: msg})
+
+	msg := fmt.Sprintf("%d items restored", copied)
+	if copied == 0 {
+		msg = "nothing to restore"
+	}
+	phase.Steps = append(phase.Steps, StepResult{Name: "Restore working files", Status: StepDone, Message: msg})
+	emit(Event{Phase: phaseName, Step: "Restore working files", Status: StepDone, Message: msg})
 
 	return phase
 }
 
-func copyDir(src, dst string) error {
-	return filepath.WalkDir(src, func(path string, d fs.DirEntry, err error) error {
+// copyTree recursively copies src to dst. It recreates symlinks rather than
+// following them, and replaces an existing dst rather than writing through it,
+// so restoring over a checked-out symlink cannot corrupt the link's target
+// (which may live outside the worktree).
+func copyTree(src, dst string) error {
+	info, err := os.Lstat(src)
+	if err != nil {
+		return err
+	}
+
+	switch {
+	case info.Mode()&os.ModeSymlink != 0:
+		target, err := os.Readlink(src)
 		if err != nil {
 			return err
 		}
-		relPath, err := filepath.Rel(src, path)
+		_ = os.Remove(dst)
+		return os.Symlink(target, dst)
+
+	case info.IsDir():
+		if err := os.MkdirAll(dst, info.Mode().Perm()); err != nil {
+			return err
+		}
+		entries, err := os.ReadDir(src)
 		if err != nil {
 			return err
 		}
-		dstPath := filepath.Join(dst, relPath)
-		if d.IsDir() {
-			return os.MkdirAll(dstPath, 0755)
+		for _, e := range entries {
+			if err := copyTree(filepath.Join(src, e.Name()), filepath.Join(dst, e.Name())); err != nil {
+				return err
+			}
 		}
-		return fileutil.CopyFile(path, dstPath)
-	})
+		return nil
+
+	default:
+		// Replace dst instead of writing through an existing file/symlink.
+		_ = os.Remove(dst)
+		return fileutil.CopyFile(src, dst)
+	}
 }
 
 func calculateDirSize(path string) string {
@@ -330,4 +382,13 @@ func formatSize(bytes int64) string {
 // DeleteBackup removes the backup directory.
 func DeleteBackup(backupPath string) error {
 	return os.RemoveAll(backupPath)
+}
+
+// RestoreCommand returns the shell command that undoes a migration by restoring
+// the pre-migration backup over the repo root. Single source of truth for the
+// CLI and TUI failure screens.
+func (r MigrateResult) RestoreCommand() string {
+	// Quote operands: a repo path with spaces would otherwise make `rm -rf`
+	// delete the wrong directories.
+	return fmt.Sprintf("rm -rf %q && mv %q %q", r.BareRoot, r.BackupPath, r.BareRoot)
 }
