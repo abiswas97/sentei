@@ -56,3 +56,9 @@ changelog:
       - "^docs:"
       - "^test:"
       - "^chore:"
+
+release:
+  # Republish dispatches must be idempotent: without this, re-running the
+  # Release workflow against a tag whose assets (fully or partially) exist
+  # fails with 422 already_exists.
+  replace_existing_artifacts: true
