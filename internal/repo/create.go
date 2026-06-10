@@ -97,196 +97,133 @@ func CreateWithGh(runner git.CommandRunner, _ git.ShellRunner, gh GhRunner, opts
 }
 
 func runCreateSetup(runner git.CommandRunner, repoPath string, opts CreateOptions, emit func(pipeline.Event)) pipeline.Phase {
-	phase := pipeline.Phase{Name: "Setup"}
-	phaseName := "Setup"
-
-	// Create directory
-	emit(pipeline.Event{Phase: phaseName, Step: "Create directory", Status: pipeline.StepRunning})
-	if err := os.MkdirAll(repoPath, 0755); err != nil {
-		step := pipeline.StepResult{Name: "Create directory", Status: pipeline.StepFailed, Error: err}
-		phase.Steps = append(phase.Steps, step)
-		emit(pipeline.Event{Phase: phaseName, Step: step.Name, Status: pipeline.StepFailed, Error: err})
-		return phase
-	}
-
-	// Check directory is empty (abort if it already had content)
-	entries, _ := os.ReadDir(repoPath)
-	if len(entries) > 0 {
-		err := fmt.Errorf("directory already exists and is not empty: %s", repoPath)
-		step := pipeline.StepResult{Name: "Create directory", Status: pipeline.StepFailed, Error: err}
-		phase.Steps = append(phase.Steps, step)
-		emit(pipeline.Event{Phase: phaseName, Step: step.Name, Status: pipeline.StepFailed, Error: err})
-		return phase
-	}
-	phase.Steps = append(phase.Steps, pipeline.StepResult{Name: "Create directory", Status: pipeline.StepDone})
-	emit(pipeline.Event{Phase: phaseName, Step: "Create directory", Status: pipeline.StepDone})
-
-	// Init bare repo
-	emit(pipeline.Event{Phase: phaseName, Step: "Init bare repository", Status: pipeline.StepRunning})
+	rec := pipeline.NewPhaseRecorder("Setup", emit)
 	barePath := filepath.Join(repoPath, ".bare")
-	if err := os.MkdirAll(barePath, 0755); err != nil {
-		step := pipeline.StepResult{Name: "Init bare repository", Status: pipeline.StepFailed, Error: err}
-		phase.Steps = append(phase.Steps, step)
-		emit(pipeline.Event{Phase: phaseName, Step: step.Name, Status: pipeline.StepFailed, Error: err})
-		return phase
-	}
-	_, err := runner.Run(barePath, "init", "--bare")
-	if err != nil {
-		step := pipeline.StepResult{Name: "Init bare repository", Status: pipeline.StepFailed, Error: err}
-		phase.Steps = append(phase.Steps, step)
-		emit(pipeline.Event{Phase: phaseName, Step: step.Name, Status: pipeline.StepFailed, Error: err})
-		return phase
-	}
-	phase.Steps = append(phase.Steps, pipeline.StepResult{Name: "Init bare repository", Status: pipeline.StepDone})
-	emit(pipeline.Event{Phase: phaseName, Step: "Init bare repository", Status: pipeline.StepDone})
 
-	// Create .git pointer file
-	emit(pipeline.Event{Phase: phaseName, Step: "Create .git pointer", Status: pipeline.StepRunning})
-	gitPointerPath := filepath.Join(repoPath, ".git")
-	if err := os.WriteFile(gitPointerPath, []byte("gitdir: .bare\n"), 0644); err != nil {
-		step := pipeline.StepResult{Name: "Create .git pointer", Status: pipeline.StepFailed, Error: err}
-		phase.Steps = append(phase.Steps, step)
-		emit(pipeline.Event{Phase: phaseName, Step: step.Name, Status: pipeline.StepFailed, Error: err})
-		return phase
+	ok := rec.Step("Create directory", func() (string, error) {
+		if err := os.MkdirAll(repoPath, 0755); err != nil {
+			return "", err
+		}
+		// Abort if the directory already had content.
+		if entries, _ := os.ReadDir(repoPath); len(entries) > 0 {
+			return "", fmt.Errorf("directory already exists and is not empty: %s", repoPath)
+		}
+		return "", nil
+	})
+	if !ok {
+		return rec.Phase()
 	}
-	phase.Steps = append(phase.Steps, pipeline.StepResult{Name: "Create .git pointer", Status: pipeline.StepDone})
-	emit(pipeline.Event{Phase: phaseName, Step: "Create .git pointer", Status: pipeline.StepDone})
 
-	// Configure refspec
-	emit(pipeline.Event{Phase: phaseName, Step: "Configure refspec", Status: pipeline.StepRunning})
-	_, err = runner.Run(barePath, "config", "remote.origin.fetch", "+refs/heads/*:refs/remotes/origin/*")
-	if err != nil {
-		step := pipeline.StepResult{Name: "Configure refspec", Status: pipeline.StepFailed, Error: err}
-		phase.Steps = append(phase.Steps, step)
-		emit(pipeline.Event{Phase: phaseName, Step: step.Name, Status: pipeline.StepFailed, Error: err})
-		return phase
+	ok = rec.Step("Init bare repository", func() (string, error) {
+		if err := os.MkdirAll(barePath, 0755); err != nil {
+			return "", err
+		}
+		_, err := runner.Run(barePath, "init", "--bare")
+		return "", err
+	})
+	if !ok {
+		return rec.Phase()
 	}
-	phase.Steps = append(phase.Steps, pipeline.StepResult{Name: "Configure refspec", Status: pipeline.StepDone})
-	emit(pipeline.Event{Phase: phaseName, Step: "Configure refspec", Status: pipeline.StepDone})
 
-	// Create main worktree
-	emit(pipeline.Event{Phase: phaseName, Step: "Create main worktree", Status: pipeline.StepRunning})
-	_, err = runner.Run(repoPath, "worktree", "add", git.WorktreePath(repoPath, "main"), "-b", "main")
-	if err != nil {
-		step := pipeline.StepResult{Name: "Create main worktree", Status: pipeline.StepFailed, Error: err}
-		phase.Steps = append(phase.Steps, step)
-		emit(pipeline.Event{Phase: phaseName, Step: step.Name, Status: pipeline.StepFailed, Error: err})
-		return phase
+	ok = rec.Step("Create .git pointer", func() (string, error) {
+		return "", os.WriteFile(filepath.Join(repoPath, ".git"), []byte("gitdir: .bare\n"), 0644)
+	})
+	if !ok {
+		return rec.Phase()
 	}
-	phase.Steps = append(phase.Steps, pipeline.StepResult{Name: "Create main worktree", Status: pipeline.StepDone})
-	emit(pipeline.Event{Phase: phaseName, Step: "Create main worktree", Status: pipeline.StepDone})
 
-	// Create README and initial commit
-	emit(pipeline.Event{Phase: phaseName, Step: "Initial commit", Status: pipeline.StepRunning})
-	mainPath := git.WorktreePath(repoPath, "main")
-	if err := os.MkdirAll(mainPath, 0755); err != nil {
-		step := pipeline.StepResult{Name: "Initial commit", Status: pipeline.StepFailed, Error: err}
-		phase.Steps = append(phase.Steps, step)
-		emit(pipeline.Event{Phase: phaseName, Step: step.Name, Status: pipeline.StepFailed, Error: err})
-		return phase
+	ok = rec.Step("Configure refspec", func() (string, error) {
+		_, err := runner.Run(barePath, "config", "remote.origin.fetch", "+refs/heads/*:refs/remotes/origin/*")
+		return "", err
+	})
+	if !ok {
+		return rec.Phase()
 	}
-	readmePath := filepath.Join(mainPath, "README.md")
-	if err := os.WriteFile(readmePath, fmt.Appendf(nil, "# %s\n", opts.Name), 0644); err != nil {
-		step := pipeline.StepResult{Name: "Initial commit", Status: pipeline.StepFailed, Error: err}
-		phase.Steps = append(phase.Steps, step)
-		emit(pipeline.Event{Phase: phaseName, Step: step.Name, Status: pipeline.StepFailed, Error: err})
-		return phase
-	}
-	if _, err := runner.Run(mainPath, "add", "-A"); err != nil {
-		step := pipeline.StepResult{Name: "Initial commit", Status: pipeline.StepFailed, Error: err}
-		phase.Steps = append(phase.Steps, step)
-		emit(pipeline.Event{Phase: phaseName, Step: step.Name, Status: pipeline.StepFailed, Error: err})
-		return phase
-	}
-	if _, err := runner.Run(mainPath, "commit", "-m", "Initial commit"); err != nil {
-		step := pipeline.StepResult{Name: "Initial commit", Status: pipeline.StepFailed, Error: err}
-		phase.Steps = append(phase.Steps, step)
-		emit(pipeline.Event{Phase: phaseName, Step: step.Name, Status: pipeline.StepFailed, Error: err})
-		return phase
-	}
-	phase.Steps = append(phase.Steps, pipeline.StepResult{Name: "Initial commit", Status: pipeline.StepDone})
-	emit(pipeline.Event{Phase: phaseName, Step: "Initial commit", Status: pipeline.StepDone})
 
-	return phase
+	ok = rec.Step("Create main worktree", func() (string, error) {
+		_, err := runner.Run(repoPath, "worktree", "add", git.WorktreePath(repoPath, "main"), "-b", "main")
+		return "", err
+	})
+	if !ok {
+		return rec.Phase()
+	}
+
+	rec.Step("Initial commit", func() (string, error) {
+		mainPath := git.WorktreePath(repoPath, "main")
+		if err := os.MkdirAll(mainPath, 0755); err != nil {
+			return "", err
+		}
+		readmePath := filepath.Join(mainPath, "README.md")
+		if err := os.WriteFile(readmePath, fmt.Appendf(nil, "# %s\n", opts.Name), 0644); err != nil {
+			return "", err
+		}
+		if _, err := runner.Run(mainPath, "add", "-A"); err != nil {
+			return "", err
+		}
+		_, err := runner.Run(mainPath, "commit", "-m", "Initial commit")
+		return "", err
+	})
+
+	return rec.Phase()
 }
 
 func runCreateGitHub(runner git.CommandRunner, gh GhRunner, repoPath string, opts CreateOptions, emit func(pipeline.Event)) pipeline.Phase {
-	phase := pipeline.Phase{Name: PhaseGitHub}
-	phaseName := PhaseGitHub
+	rec := pipeline.NewPhaseRecorder(PhaseGitHub, emit)
+	barePath := filepath.Join(repoPath, ".bare")
 
-	// Look up GitHub user
-	emit(pipeline.Event{Phase: phaseName, Step: "Look up GitHub user", Status: pipeline.StepRunning})
-	ghUser, err := gh.RunGh(repoPath, "api", "user", "--jq", ".login")
-	if err != nil {
-		step := pipeline.StepResult{Name: "Look up GitHub user", Status: pipeline.StepFailed, Error: err}
-		phase.Steps = append(phase.Steps, step)
-		emit(pipeline.Event{Phase: phaseName, Step: step.Name, Status: pipeline.StepFailed, Error: err})
-		return phase
+	var ghUser string
+	ok := rec.Step("Look up GitHub user", func() (string, error) {
+		var err error
+		ghUser, err = gh.RunGh(repoPath, "api", "user", "--jq", ".login")
+		return ghUser, err
+	})
+	if !ok {
+		return rec.Phase()
 	}
-	phase.Steps = append(phase.Steps, pipeline.StepResult{Name: "Look up GitHub user", Status: pipeline.StepDone, Message: ghUser})
-	emit(pipeline.Event{Phase: phaseName, Step: "Look up GitHub user", Status: pipeline.StepDone, Message: ghUser})
 
-	// Create GitHub repo (without --source/--push — we push manually after configuring SSH remote)
-	emit(pipeline.Event{Phase: phaseName, Step: "Create GitHub repository", Status: pipeline.StepRunning})
-	ghArgs := []string{"repo", "create", opts.Name, "--" + opts.Visibility}
-	if opts.Description != "" {
-		ghArgs = append(ghArgs, "--description", opts.Description)
+	// Create the repo without --source/--push — we push manually after
+	// configuring the remote.
+	ok = rec.Step("Create GitHub repository", func() (string, error) {
+		ghArgs := []string{"repo", "create", opts.Name, "--" + opts.Visibility}
+		if opts.Description != "" {
+			ghArgs = append(ghArgs, "--description", opts.Description)
+		}
+		_, err := gh.RunGh(repoPath, ghArgs...)
+		return "", err
+	})
+	if !ok {
+		return rec.Phase()
 	}
-	_, err = gh.RunGh(repoPath, ghArgs...)
-	if err != nil {
-		step := pipeline.StepResult{Name: "Create GitHub repository", Status: pipeline.StepFailed, Error: err}
-		phase.Steps = append(phase.Steps, step)
-		emit(pipeline.Event{Phase: phaseName, Step: step.Name, Status: pipeline.StepFailed, Error: err})
-		return phase
-	}
-	phase.Steps = append(phase.Steps, pipeline.StepResult{Name: "Create GitHub repository", Status: pipeline.StepDone})
-	emit(pipeline.Event{Phase: phaseName, Step: "Create GitHub repository", Status: pipeline.StepDone})
 
 	// Configure the remote using gh's configured protocol so the push uses the
 	// auth the user actually has. Forcing SSH breaks push for an HTTPS-only gh
 	// login (gh's default), orphaning the just-created empty GitHub repo.
-	emit(pipeline.Event{Phase: phaseName, Step: "Configure remote", Status: pipeline.StepRunning})
-	barePath := filepath.Join(repoPath, ".bare")
-	remoteURL := ghRemoteURL(gh, repoPath, ghUser, opts.Name)
-	_, err = runner.Run(barePath, "remote", "set-url", "origin", remoteURL)
-	if err != nil {
-		step := pipeline.StepResult{Name: "Configure remote", Status: pipeline.StepFailed, Error: err}
-		phase.Steps = append(phase.Steps, step)
-		emit(pipeline.Event{Phase: phaseName, Step: step.Name, Status: pipeline.StepFailed, Error: err})
-		return phase
+	ok = rec.Step("Configure remote", func() (string, error) {
+		_, err := runner.Run(barePath, "remote", "set-url", "origin", ghRemoteURL(gh, repoPath, ghUser, opts.Name))
+		return "", err
+	})
+	if !ok {
+		return rec.Phase()
 	}
-	phase.Steps = append(phase.Steps, pipeline.StepResult{Name: "Configure remote", Status: pipeline.StepDone})
-	emit(pipeline.Event{Phase: phaseName, Step: "Configure remote", Status: pipeline.StepDone})
 
-	// Push
-	emit(pipeline.Event{Phase: phaseName, Step: "Push to GitHub", Status: pipeline.StepRunning})
-	mainPath := git.WorktreePath(repoPath, "main")
-	_, err = runner.Run(mainPath, "push", "-u", "origin", "main")
-	if err != nil {
-		// The empty remote repo from "Create GitHub repository" is left behind;
-		// tell the user so they can delete it or push manually before retrying.
-		pushErr := fmt.Errorf("%w (an empty GitHub repo %q now exists; delete it or push to it manually before retrying)", err, opts.Name)
-		step := pipeline.StepResult{Name: "Push to GitHub", Status: pipeline.StepFailed, Error: pushErr}
-		phase.Steps = append(phase.Steps, step)
-		emit(pipeline.Event{Phase: phaseName, Step: step.Name, Status: pipeline.StepFailed, Error: pushErr})
-		return phase
+	ok = rec.Step("Push to GitHub", func() (string, error) {
+		if _, err := runner.Run(git.WorktreePath(repoPath, "main"), "push", "-u", "origin", "main"); err != nil {
+			// The empty remote repo from "Create GitHub repository" is left behind;
+			// tell the user so they can delete it or push manually before retrying.
+			return "", fmt.Errorf("%w (an empty GitHub repo %q now exists; delete it or push to it manually before retrying)", err, opts.Name)
+		}
+		return "", nil
+	})
+	if !ok {
+		return rec.Phase()
 	}
-	phase.Steps = append(phase.Steps, pipeline.StepResult{Name: "Push to GitHub", Status: pipeline.StepDone})
-	emit(pipeline.Event{Phase: phaseName, Step: "Push to GitHub", Status: pipeline.StepDone})
 
-	// Set remote HEAD
-	emit(pipeline.Event{Phase: phaseName, Step: "Set remote HEAD", Status: pipeline.StepRunning})
-	_, err = runner.Run(barePath, "remote", "set-head", "origin", "main")
-	if err != nil {
-		step := pipeline.StepResult{Name: "Set remote HEAD", Status: pipeline.StepFailed, Error: err}
-		phase.Steps = append(phase.Steps, step)
-		emit(pipeline.Event{Phase: phaseName, Step: step.Name, Status: pipeline.StepFailed, Error: err})
-		return phase
-	}
-	phase.Steps = append(phase.Steps, pipeline.StepResult{Name: "Set remote HEAD", Status: pipeline.StepDone})
-	emit(pipeline.Event{Phase: phaseName, Step: "Set remote HEAD", Status: pipeline.StepDone})
+	rec.Step("Set remote HEAD", func() (string, error) {
+		_, err := runner.Run(barePath, "remote", "set-head", "origin", "main")
+		return "", err
+	})
 
-	return phase
+	return rec.Phase()
 }
 
 // ghRemoteURL returns the origin URL matching gh's configured git protocol, so

@@ -134,115 +134,80 @@ func validateCloneTarget(opts CloneOptions, repoPath string) (pipeline.Phase, bo
 }
 
 func runClonePhase(runner git.CommandRunner, location, url, barePath string, emit func(pipeline.Event)) pipeline.Phase {
-	phase := pipeline.Phase{Name: "Clone"}
-	phaseName := "Clone"
-
-	emit(pipeline.Event{Phase: phaseName, Step: "Clone bare repository", Status: pipeline.StepRunning})
-	_, err := runner.Run(location, "clone", "--bare", url, barePath)
-	if err != nil {
-		step := pipeline.StepResult{Name: "Clone bare repository", Status: pipeline.StepFailed, Error: err}
-		phase.Steps = append(phase.Steps, step)
-		emit(pipeline.Event{Phase: phaseName, Step: step.Name, Status: pipeline.StepFailed, Error: err})
-		return phase
-	}
-	phase.Steps = append(phase.Steps, pipeline.StepResult{Name: "Clone bare repository", Status: pipeline.StepDone})
-	emit(pipeline.Event{Phase: phaseName, Step: "Clone bare repository", Status: pipeline.StepDone})
-
-	return phase
+	rec := pipeline.NewPhaseRecorder("Clone", emit)
+	rec.Step("Clone bare repository", func() (string, error) {
+		_, err := runner.Run(location, "clone", "--bare", url, barePath)
+		return "", err
+	})
+	return rec.Phase()
 }
 
 func runCloneStructure(runner git.CommandRunner, repoPath, barePath string, emit func(pipeline.Event)) pipeline.Phase {
-	phase := pipeline.Phase{Name: "Structure"}
-	phaseName := "Structure"
+	rec := pipeline.NewPhaseRecorder("Structure", emit)
 
-	// Create .git pointer (ensure repoPath exists — bare clone creates .bare but not necessarily the parent)
-	emit(pipeline.Event{Phase: phaseName, Step: "Create .git pointer", Status: pipeline.StepRunning})
-	if err := os.MkdirAll(repoPath, 0755); err != nil {
-		step := pipeline.StepResult{Name: "Create .git pointer", Status: pipeline.StepFailed, Error: err}
-		phase.Steps = append(phase.Steps, step)
-		emit(pipeline.Event{Phase: phaseName, Step: step.Name, Status: pipeline.StepFailed, Error: err})
-		return phase
+	// Ensure repoPath exists — bare clone creates .bare but not necessarily the parent.
+	ok := rec.Step("Create .git pointer", func() (string, error) {
+		if err := os.MkdirAll(repoPath, 0755); err != nil {
+			return "", err
+		}
+		return "", os.WriteFile(filepath.Join(repoPath, ".git"), []byte("gitdir: .bare\n"), 0644)
+	})
+	if !ok {
+		return rec.Phase()
 	}
-	gitPointerPath := filepath.Join(repoPath, ".git")
-	if err := os.WriteFile(gitPointerPath, []byte("gitdir: .bare\n"), 0644); err != nil {
-		step := pipeline.StepResult{Name: "Create .git pointer", Status: pipeline.StepFailed, Error: err}
-		phase.Steps = append(phase.Steps, step)
-		emit(pipeline.Event{Phase: phaseName, Step: step.Name, Status: pipeline.StepFailed, Error: err})
-		return phase
-	}
-	phase.Steps = append(phase.Steps, pipeline.StepResult{Name: "Create .git pointer", Status: pipeline.StepDone})
-	emit(pipeline.Event{Phase: phaseName, Step: "Create .git pointer", Status: pipeline.StepDone})
 
-	// Configure refspec
-	emit(pipeline.Event{Phase: phaseName, Step: "Configure refspec", Status: pipeline.StepRunning})
-	_, err := runner.Run(barePath, "config", "remote.origin.fetch", "+refs/heads/*:refs/remotes/origin/*")
-	if err != nil {
-		step := pipeline.StepResult{Name: "Configure refspec", Status: pipeline.StepFailed, Error: err}
-		phase.Steps = append(phase.Steps, step)
-		emit(pipeline.Event{Phase: phaseName, Step: step.Name, Status: pipeline.StepFailed, Error: err})
-		return phase
-	}
-	phase.Steps = append(phase.Steps, pipeline.StepResult{Name: "Configure refspec", Status: pipeline.StepDone})
-	emit(pipeline.Event{Phase: phaseName, Step: "Configure refspec", Status: pipeline.StepDone})
-
-	return phase
+	rec.Step("Configure refspec", func() (string, error) {
+		_, err := runner.Run(barePath, "config", "remote.origin.fetch", "+refs/heads/*:refs/remotes/origin/*")
+		return "", err
+	})
+	return rec.Phase()
 }
 
 func runCloneWorktree(runner git.CommandRunner, repoPath, barePath string, emit func(pipeline.Event)) (pipeline.Phase, string, bool) {
-	phase := pipeline.Phase{Name: "Worktree"}
-	phaseName := "Worktree"
+	rec := pipeline.NewPhaseRecorder("Worktree", emit)
 
-	// Detect default branch
-	emit(pipeline.Event{Phase: phaseName, Step: "Detect default branch", Status: pipeline.StepRunning})
-	branch := git.DetectDefaultBranch(runner, barePath)
-	phase.Steps = append(phase.Steps, pipeline.StepResult{
-		Name: "Detect default branch", Status: pipeline.StepDone, Message: branch,
+	var branch string
+	rec.Step("Detect default branch", func() (string, error) {
+		branch = git.DetectDefaultBranch(runner, barePath)
+		return branch, nil
 	})
-	emit(pipeline.Event{Phase: phaseName, Step: "Detect default branch", Status: pipeline.StepDone, Message: branch})
 
 	// An empty remote leaves HEAD pointing at a branch with no commit; worktree
 	// add would otherwise fail with a cryptic "invalid reference". Surface it.
 	if !git.BranchExists(runner, barePath, branch) {
-		stepErr := fmt.Errorf("remote has no commits on %q yet (nothing to check out)", branch)
-		phase.Steps = append(phase.Steps, pipeline.StepResult{Name: "Create worktree", Status: pipeline.StepFailed, Error: stepErr})
-		emit(pipeline.Event{Phase: phaseName, Step: "Create worktree", Status: pipeline.StepFailed, Error: stepErr})
-		return phase, branch, false
+		rec.Fail("Create worktree", fmt.Errorf("remote has no commits on %q yet (nothing to check out)", branch))
+		return rec.Phase(), branch, false
 	}
 
 	// Create worktree. The branch is passed explicitly as the commit-ish:
 	// without it, git derives a NEW branch from the path's basename instead of
 	// checking out the existing one.
 	wtPath := git.WorktreePath(repoPath, branch)
-	emit(pipeline.Event{Phase: phaseName, Step: "Create worktree", Status: pipeline.StepRunning})
-	_, err := runner.Run(repoPath, "worktree", "add", wtPath, branch)
-	if err != nil {
-		step := pipeline.StepResult{Name: "Create worktree", Status: pipeline.StepFailed, Error: err}
-		phase.Steps = append(phase.Steps, step)
-		emit(pipeline.Event{Phase: phaseName, Step: step.Name, Status: pipeline.StepFailed, Error: err})
-		return phase, branch, false
+	ok := rec.Step("Create worktree", func() (string, error) {
+		_, err := runner.Run(repoPath, "worktree", "add", wtPath, branch)
+		return "", err
+	})
+	if !ok {
+		return rec.Phase(), branch, false
 	}
-	phase.Steps = append(phase.Steps, pipeline.StepResult{Name: "Create worktree", Status: pipeline.StepDone})
-	emit(pipeline.Event{Phase: phaseName, Step: "Create worktree", Status: pipeline.StepDone})
 
 	// Tracking is best-effort: the checkout above is already usable. Populating
 	// refs/remotes/origin/* (fetch) and setting upstream both need the remote; a
 	// network/auth failure here must NOT fail the clone. pipeline.StepSkipped keeps
 	// HasFailures() false so the clone still reports success, just without tracking.
-	emit(pipeline.Event{Phase: phaseName, Step: "Set upstream tracking", Status: pipeline.StepRunning})
-	skipTracking := func(err error) (pipeline.Phase, string, bool) {
-		skip := pipeline.StepResult{Name: "Set upstream tracking", Status: pipeline.StepSkipped, Message: "no tracking: " + err.Error()}
-		phase.Steps = append(phase.Steps, skip)
-		emit(pipeline.Event{Phase: phaseName, Step: skip.Name, Status: pipeline.StepSkipped, Message: skip.Message})
-		return phase, branch, true
+	rec.Emit("Set upstream tracking", pipeline.StepRunning, "")
+	trackErr := func() error {
+		if _, err := runner.Run(barePath, "fetch", "origin"); err != nil {
+			return err
+		}
+		_, err := runner.Run(wtPath, "branch", fmt.Sprintf("--set-upstream-to=origin/%s", branch))
+		return err
+	}()
+	if trackErr != nil {
+		rec.Skip("Set upstream tracking", "no tracking: "+trackErr.Error())
+		return rec.Phase(), branch, true
 	}
-	if _, err := runner.Run(barePath, "fetch", "origin"); err != nil {
-		return skipTracking(err)
-	}
-	if _, err := runner.Run(wtPath, "branch", fmt.Sprintf("--set-upstream-to=origin/%s", branch)); err != nil {
-		return skipTracking(err)
-	}
-	phase.Steps = append(phase.Steps, pipeline.StepResult{Name: "Set upstream tracking", Status: pipeline.StepDone})
-	emit(pipeline.Event{Phase: phaseName, Step: "Set upstream tracking", Status: pipeline.StepDone})
+	rec.Done("Set upstream tracking", "")
 
-	return phase, branch, true
+	return rec.Phase(), branch, true
 }

@@ -42,32 +42,24 @@ func runSetup(runner git.CommandRunner, opts Options, emit func(pipeline.Event))
 }
 
 func createWorktreeStep(runner git.CommandRunner, repoPath, branch, baseBranch string, emit func(pipeline.Event)) (pipeline.StepResult, string) {
-	stepName := "Create worktree"
-	emit(pipeline.Event{Phase: "Setup", Step: stepName, Status: pipeline.StepRunning})
-
 	wtPath := git.WorktreePath(repoPath, branch)
 
-	var err error
-	if git.BranchExists(runner, repoPath, branch) {
-		_, err = runner.Run(repoPath, "worktree", "add", wtPath, branch)
-	} else {
-		_, err = runner.Run(repoPath, "worktree", "add", wtPath, "-b", branch, baseBranch)
+	result := pipeline.RunStep("Setup", "Create worktree", emit, func() (string, error) {
+		var err error
+		if git.BranchExists(runner, repoPath, branch) {
+			_, err = runner.Run(repoPath, "worktree", "add", wtPath, branch)
+		} else {
+			_, err = runner.Run(repoPath, "worktree", "add", wtPath, "-b", branch, baseBranch)
+		}
+		if err != nil {
+			return "", fmt.Errorf("creating worktree: %w", err)
+		}
+		return wtPath, nil
+	})
+	if result.Status == pipeline.StepFailed {
+		return result, ""
 	}
-	if err != nil {
-		emit(pipeline.Event{Phase: "Setup", Step: stepName, Status: pipeline.StepFailed, Error: err})
-		return pipeline.StepResult{
-			Name:   stepName,
-			Status: pipeline.StepFailed,
-			Error:  fmt.Errorf("creating worktree: %w", err),
-		}, ""
-	}
-
-	emit(pipeline.Event{Phase: "Setup", Step: stepName, Status: pipeline.StepDone, Message: wtPath})
-	return pipeline.StepResult{
-		Name:    stepName,
-		Status:  pipeline.StepDone,
-		Message: wtPath,
-	}, wtPath
+	return result, wtPath
 }
 
 func mergeBaseStep(runner git.CommandRunner, wtPath, baseBranch string, enabled bool, emit func(pipeline.Event)) pipeline.StepResult {
@@ -101,35 +93,23 @@ func copyEnvFilesStep(srcDir, dstDir string, envFiles []string, emit func(pipeli
 		return pipeline.StepResult{Name: stepName, Status: pipeline.StepSkipped}
 	}
 
-	emit(pipeline.Event{Phase: "Setup", Step: stepName, Status: pipeline.StepRunning})
-
-	var copied []string
-	for _, name := range envFiles {
-		src := filepath.Join(srcDir, name)
-		if _, err := os.Stat(src); os.IsNotExist(err) {
-			continue
-		}
-
-		dst := filepath.Join(dstDir, name)
-		if err := fileutil.CopyFile(src, dst); err != nil {
-			emit(pipeline.Event{Phase: "Setup", Step: stepName, Status: pipeline.StepFailed, Error: err})
-			return pipeline.StepResult{
-				Name:   stepName,
-				Status: pipeline.StepFailed,
-				Error:  fmt.Errorf("copying %s: %w", name, err),
+	return pipeline.RunStep("Setup", stepName, emit, func() (string, error) {
+		var copied []string
+		for _, name := range envFiles {
+			src := filepath.Join(srcDir, name)
+			if _, err := os.Stat(src); os.IsNotExist(err) {
+				continue
 			}
-		}
-		copied = append(copied, name)
-	}
 
-	msg := strings.Join(copied, ", ")
-	if msg == "" {
-		msg = "no source files found"
-	}
-	emit(pipeline.Event{Phase: "Setup", Step: stepName, Status: pipeline.StepDone, Message: msg})
-	return pipeline.StepResult{
-		Name:    stepName,
-		Status:  pipeline.StepDone,
-		Message: msg,
-	}
+			if err := fileutil.CopyFile(src, filepath.Join(dstDir, name)); err != nil {
+				return "", fmt.Errorf("copying %s: %w", name, err)
+			}
+			copied = append(copied, name)
+		}
+
+		if len(copied) == 0 {
+			return "no source files found", nil
+		}
+		return strings.Join(copied, ", "), nil
+	})
 }
