@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"errors"
 	"strings"
 	"testing"
 
@@ -8,6 +9,30 @@ import (
 	"github.com/abiswas97/sentei/internal/integration"
 	"github.com/abiswas97/sentei/internal/repo"
 )
+
+func TestUpdateIntegrationProgress_FinalizedMsg_SaveError_DoesNotApply(t *testing.T) {
+	m := makeIntegrationModel()
+	m.view = integrationProgressView
+	m.integ.returnView = integrationListView
+	genBefore := m.worktreeGeneration
+
+	// The would-be-saved set flips cocoindex-code on, but state.Save failed.
+	newCurrent := map[string]bool{"code-review-graph": true, "cocoindex-code": true}
+	updated, _ := m.updateIntegrationProgress(integrationFinalizedMsg{current: newCurrent, err: errors.New("save failed")})
+	m = updated.(Model)
+
+	// In-memory state must stay consistent with disk: the unsaved change is not applied.
+	if m.integ.current["cocoindex-code"] {
+		t.Error("a failed save must not mutate in-memory current state")
+	}
+	if m.integ.staged["cocoindex-code"] {
+		t.Error("a failed save must not mutate staged state")
+	}
+	// worktreeGeneration must not advance (no reload of unsaved state).
+	if m.worktreeGeneration != genBefore {
+		t.Errorf("worktreeGeneration must not advance on a failed save: %d -> %d", genBefore, m.worktreeGeneration)
+	}
+}
 
 func makeIntegrationModel() Model {
 	m := NewMenuModel(nil, nil, "/repo", &config.Config{}, repo.ContextBareRepo)
