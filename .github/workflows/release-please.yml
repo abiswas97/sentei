@@ -64,12 +64,36 @@ jobs:
           jwt="$header.$payload.$sig"
           inst_id=$(curl -sf -H "Authorization: Bearer $jwt" -H "Accept: application/vnd.github+json" \
             "https://api.github.com/repos/$GITHUB_REPOSITORY/installation" | jq -r .id)
-          token=$(curl -sf -X POST -H "Authorization: Bearer $jwt" -H "Accept: application/vnd.github+json" \
+          test -n "$inst_id" && test "$inst_id" != "null" || { echo "::error::could not resolve installation id"; exit 1; }
+          resp=$(curl -s -X POST -H "Authorization: Bearer $jwt" -H "Accept: application/vnd.github+json" \
             -H "X-GitHub-Stateless-S2S-Token: disabled" \
             -d '{"repositories":["sentei","homebrew-tap"]}' \
-            "https://api.github.com/app/installations/$inst_id/access_tokens" | jq -r .token)
+            "https://api.github.com/app/installations/$inst_id/access_tokens")
+          token=$(printf '%s' "$resp" | jq -r '.token // empty')
+          if [ -z "$token" ]; then
+            echo "::error::token mint failed"; printf '%s\n' "$resp" | jq 'del(.token)'; exit 1
+          fi
           echo "::add-mask::$token"
+          echo "minted token: length ${#token}, prefix ${token:0:4}"
           echo "token=$token" >> "$GITHUB_OUTPUT"
+
+      - name: Probe release API with minted token
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          TOKEN: ${{ steps.app-token.outputs.token }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          rel=$(curl -s -H "Authorization: token $TOKEN" -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/releases/tags/$TAG")
+          rel_id=$(printf '%s' "$rel" | jq -r '.id // empty')
+          test -n "$rel_id" || { echo "::error::GET release by tag failed"; printf '%s\n' "$rel"; exit 1; }
+          code=$(curl -s -o /tmp/probe -w '%{http_code}' -X PATCH \
+            -H "Authorization: token $TOKEN" -H "Accept: application/vnd.github+json" \
+            -d '{"draft":false}' \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/releases/$rel_id")
+          echo "PATCH probe on release $rel_id: HTTP $code"
+          if [ "$code" != "200" ]; then cat /tmp/probe; exit 1; fi
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
