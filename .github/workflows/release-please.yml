@@ -88,12 +88,17 @@ jobs:
             "https://api.github.com/repos/$GITHUB_REPOSITORY/releases/tags/$TAG")
           rel_id=$(printf '%s' "$rel" | jq -r '.id // empty')
           test -n "$rel_id" || { echo "::error::GET release by tag failed"; printf '%s\n' "$rel"; exit 1; }
-          code=$(curl -s -o /tmp/probe -w '%{http_code}' -X PATCH \
-            -H "Authorization: token $TOKEN" -H "Accept: application/vnd.github+json" \
-            -d '{"draft":false}' \
-            "https://api.github.com/repos/$GITHUB_REPOSITORY/releases/$rel_id")
-          echo "PATCH probe on release $rel_id: HTTP $code"
-          if [ "$code" != "200" ]; then cat /tmp/probe; exit 1; fi
+          for scheme in token Bearer; do
+            u=$(curl -s -o /tmp/u -w '%{http_code}' -H "Authorization: $scheme $TOKEN" https://api.github.com/user)
+            i=$(curl -s -o /tmp/i -w '%{http_code}' -H "Authorization: $scheme $TOKEN" https://api.github.com/installation/repositories)
+            c=$(curl -s -o /tmp/probe -w '%{http_code}' -X PATCH \
+              -H "Authorization: $scheme $TOKEN" -H "Accept: application/vnd.github+json" \
+              -d '{"draft":false}' \
+              "https://api.github.com/repos/$GITHUB_REPOSITORY/releases/$rel_id")
+            echo "scheme=$scheme  GET /user: $u  GET /installation/repositories: $i  PATCH release: $c"
+            if [ "$c" != "200" ]; then echo "-- PATCH body:"; cat /tmp/probe; echo "-- /installation/repositories body:"; head -c 300 /tmp/i; echo; fi
+          done
+          jq -e '.total_count >= 1' /tmp/i >/dev/null || exit 1
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
