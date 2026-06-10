@@ -1,0 +1,39 @@
+internal/creator/setup_test.go
+  s_8e2c58024a52e1::t_9ed2135103437c 134
+  af3fe562deaadc83 92-99,102,110-120,123,133,135-140,142-148
+internal/creator/creator_test.go
+  af3fe562deaadc83 80
+  s_8e2c58024a52e1::t_9ed2135103437c 15,78,109,145
+internal/creator/setup.go
+  s_8e2c58024a52e1::t_6cf5578a14a9a5 55
+  af3fe562deaadc83 54,56-59
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "ef1ec24d1d5cc60a79bd3164d7ece6712dafd7ca",
+  "prompts": {
+    "af3fe562deaadc83": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9d0ef7eb-cc7e-4191-90fa-f56ff5deb075",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Test <t@t.com>",
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 42,
+      "overriden_lines": 0
+    }
+  },
+  "sessions": {
+    "s_8e2c58024a52e1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ce6ce258-0f38-4b1c-9b68-41415998356e",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Test <t@t.com>"
+    }
+  }
+}
