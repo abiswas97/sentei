@@ -49,6 +49,12 @@ func RunMigrate(args []string) error {
 					fmt.Fprintf(os.Stderr, "%s✗%s %s: %v\n", yellow, nc, step.Name, step.Error)
 				}
 			}
+			// The root may already be partially migrated; always point the user at
+			// the backup and how to restore it.
+			if result.BackupPath != "" {
+				fmt.Fprintf(os.Stderr, "\nYour original repo is backed up at:\n  %s\n", result.BackupPath)
+				fmt.Fprintf(os.Stderr, "To restore:\n  %s\n", result.RestoreCommand())
+			}
 			return fmt.Errorf("migration failed during %s phase", phase.Name)
 		}
 	}

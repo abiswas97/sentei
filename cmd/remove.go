@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/abiswas97/sentei/internal/git"
 	"github.com/abiswas97/sentei/internal/repo"
@@ -35,6 +36,11 @@ func RunRemove(args []string) error {
 		return fmt.Errorf("remove requires a bare repository (detected: %v)", context)
 	}
 
+	// Normalize to the bare root: when run from inside a worktree, the repo path
+	// is a worktree whose HEAD is its own checked-out branch, so default-branch
+	// detection would return that branch and leave the real default unprotected.
+	repoPath = repo.ResolveBareRoot(runner, repoPath)
+
 	worktrees, err := git.ListWorktrees(runner, repoPath)
 	if err != nil {
 		return fmt.Errorf("listing worktrees: %w", err)
@@ -42,20 +48,27 @@ func RunRemove(args []string) error {
 
 	worktrees = worktree.EnrichWorktrees(runner, worktrees, worktree.DefaultEnrichConcurrency)
 
+	// Detect the default branch once: it is always protected (it may be
+	// non-standard, e.g. "production"), and --merged needs it as the merge target.
+	defaultBranch := git.DetectDefaultBranch(runner, repoPath)
+
 	var isMerged MergedChecker
 	if opts.Merged {
-		defaultBranch := DetectDefaultBranch(runner, repoPath)
 		isMerged = CheckMerged(runner, repoPath, defaultBranch)
 	}
 
-	filtered := ResolveFilters(worktrees, opts, nil, isMerged)
+	filtered := ResolveFilters(worktrees, opts, nil, defaultBranch, isMerged)
 
+	// Count a protected worktree as "skipped" only if the active filter would
+	// otherwise have selected it — otherwise the message implies protection saved
+	// a worktree the filter never wanted.
+	now := time.Now()
 	var protectedCount int
 	for _, wt := range worktrees {
-		if wt.IsBare {
+		if wt.IsBare || !git.IsProtectedBranchWith(wt.Branch, defaultBranch) {
 			continue
 		}
-		if git.IsProtectedBranch(wt.Branch) {
+		if matchesFilters(wt, opts, now, isMerged, shortBranch(wt.Branch)) {
 			protectedCount++
 		}
 	}
@@ -76,8 +89,17 @@ func RunRemove(args []string) error {
 
 	if opts.DryRun {
 		fmt.Printf("%s(dry run)%s Would remove %d worktree(s):\n", dim, nc, len(filtered))
+		dirtyCount := 0
 		for _, wt := range filtered {
-			fmt.Printf("  %s\n", shortBranch(wt.Branch))
+			marker := ""
+			if wt.HasUncommittedChanges || wt.HasUntrackedFiles {
+				marker = yellow + "  (uncommitted/untracked — will be LOST)" + nc
+				dirtyCount++
+			}
+			fmt.Printf("  %s%s\n", shortBranch(wt.Branch), marker)
+		}
+		if dirtyCount > 0 {
+			fmt.Printf("\n%sWarning:%s %d worktree(s) have changes that removal will discard.\n", yellow, nc, dirtyCount)
 		}
 		return nil
 	}

@@ -1,11 +1,13 @@
 package repo
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
+	"github.com/abiswas97/sentei/internal/fileutil"
 	"github.com/abiswas97/sentei/internal/git"
 )
 
@@ -28,6 +30,15 @@ type CloneResult struct {
 // "https://github.com/user/repo.git" → "repo"
 // "https://github.com/user/repo" → "repo"
 func DeriveRepoName(url string) string {
+	url = strings.TrimSpace(url)
+
+	// Drop query string / fragment so "repo?ref=main" / "repo#frag" don't leak in.
+	if idx := strings.IndexAny(url, "?#"); idx != -1 {
+		url = url[:idx]
+	}
+	// Drop trailing slashes so "host/user/repo/" yields "repo", not "".
+	url = strings.TrimRight(url, "/")
+
 	// Handle SSH-style URLs: git@host:path
 	if idx := strings.LastIndex(url, ":"); idx != -1 && !strings.Contains(url, "://") {
 		url = url[idx+1:]
@@ -51,10 +62,24 @@ func Clone(runner git.CommandRunner, opts CloneOptions, emit func(Event)) CloneR
 	result.RepoPath = repoPath
 	barePath := filepath.Join(repoPath, ".bare")
 
+	// Validate the target before touching the filesystem. An empty or path-like
+	// name would otherwise turn the current directory (or an existing repo) into
+	// a bare repo with a "success" message.
+	if vphase, ok := validateCloneTarget(opts, repoPath); !ok {
+		result.Phases = append(result.Phases, vphase)
+		return result
+	}
+
+	// repoPath did not exist (validated above), so on a failure that leaves no
+	// usable checkout we can remove exactly what we created and leave nothing
+	// half-built behind.
+	rollback := func() { _ = fileutil.RemoveAllRetry(repoPath) }
+
 	// Phase 1: Clone
 	clonePhase := runClonePhase(runner, opts.Location, opts.URL, barePath, emit)
 	result.Phases = append(result.Phases, clonePhase)
 	if clonePhase.HasFailures() {
+		rollback()
 		return result
 	}
 
@@ -62,16 +87,49 @@ func Clone(runner git.CommandRunner, opts CloneOptions, emit func(Event)) CloneR
 	structPhase := runCloneStructure(runner, repoPath, barePath, emit)
 	result.Phases = append(result.Phases, structPhase)
 	if structPhase.HasFailures() {
+		rollback()
 		return result
 	}
 
 	// Phase 3: Worktree
-	wtPhase, branch := runCloneWorktree(runner, repoPath, barePath, emit)
+	wtPhase, branch, worktreeCreated := runCloneWorktree(runner, repoPath, barePath, emit)
 	result.Phases = append(result.Phases, wtPhase)
 	result.DefaultBranch = branch
-	result.WorktreePath = filepath.Join(repoPath, branch)
+	// Only advertise a worktree path when one was actually created. A failed
+	// worktree add must not leave WorktreePath set, or consumers report success
+	// and point the user at a directory that does not exist.
+	if worktreeCreated {
+		result.WorktreePath = filepath.Join(repoPath, branch)
+	}
+	// Roll back only when no usable checkout exists. If the worktree was created
+	// and merely upstream tracking failed, the repo is usable: keep it.
+	if wtPhase.HasFailures() && !worktreeCreated {
+		rollback()
+	}
 
 	return result
+}
+
+// validateCloneTarget rejects inputs that would corrupt an unintended directory.
+// The returned phase is only meaningful (and only surfaced) when ok is false.
+func validateCloneTarget(opts CloneOptions, repoPath string) (Phase, bool) {
+	phase := Phase{Name: "Validate"}
+	fail := func(err error) (Phase, bool) {
+		phase.Steps = append(phase.Steps, StepResult{Name: "Validate target", Status: StepFailed, Error: err})
+		return phase, false
+	}
+
+	switch {
+	case opts.Name == "":
+		return fail(errors.New("could not derive a repository name from the URL; pass --name"))
+	case opts.Name == "." || opts.Name == ".." || strings.ContainsAny(opts.Name, `/\`):
+		return fail(fmt.Errorf("invalid repository name %q: must be a directory name, not a path", opts.Name))
+	}
+	if _, err := os.Stat(repoPath); err == nil {
+		return fail(fmt.Errorf("target already exists: %s", repoPath))
+	}
+
+	return phase, true
 }
 
 func runClonePhase(runner git.CommandRunner, location, url, barePath string, emit func(Event)) Phase {
@@ -129,17 +187,26 @@ func runCloneStructure(runner git.CommandRunner, repoPath, barePath string, emit
 	return phase
 }
 
-func runCloneWorktree(runner git.CommandRunner, repoPath, barePath string, emit func(Event)) (Phase, string) {
+func runCloneWorktree(runner git.CommandRunner, repoPath, barePath string, emit func(Event)) (Phase, string, bool) {
 	phase := Phase{Name: "Worktree"}
 	phaseName := "Worktree"
 
 	// Detect default branch
 	emit(Event{Phase: phaseName, Step: "Detect default branch", Status: StepRunning})
-	branch := detectDefaultBranch(runner, barePath)
+	branch := git.DetectDefaultBranch(runner, barePath)
 	phase.Steps = append(phase.Steps, StepResult{
 		Name: "Detect default branch", Status: StepDone, Message: branch,
 	})
 	emit(Event{Phase: phaseName, Step: "Detect default branch", Status: StepDone, Message: branch})
+
+	// An empty remote leaves HEAD pointing at a branch with no commit; worktree
+	// add would otherwise fail with a cryptic "invalid reference". Surface it.
+	if _, err := runner.Run(barePath, "show-ref", "--verify", "refs/heads/"+branch); err != nil {
+		stepErr := fmt.Errorf("remote has no commits on %q yet (nothing to check out)", branch)
+		phase.Steps = append(phase.Steps, StepResult{Name: "Create worktree", Status: StepFailed, Error: stepErr})
+		emit(Event{Phase: phaseName, Step: "Create worktree", Status: StepFailed, Error: stepErr})
+		return phase, branch, false
+	}
 
 	// Create worktree
 	emit(Event{Phase: phaseName, Step: "Create worktree", Status: StepRunning})
@@ -148,44 +215,31 @@ func runCloneWorktree(runner git.CommandRunner, repoPath, barePath string, emit 
 		step := StepResult{Name: "Create worktree", Status: StepFailed, Error: err}
 		phase.Steps = append(phase.Steps, step)
 		emit(Event{Phase: phaseName, Step: step.Name, Status: StepFailed, Error: err})
-		return phase, branch
+		return phase, branch, false
 	}
 	phase.Steps = append(phase.Steps, StepResult{Name: "Create worktree", Status: StepDone})
 	emit(Event{Phase: phaseName, Step: "Create worktree", Status: StepDone})
 
-	// Set upstream
-	emit(Event{Phase: phaseName, Step: "Set upstream tracking", Status: StepRunning})
+	// Tracking is best-effort: the checkout above is already usable. Populating
+	// refs/remotes/origin/* (fetch) and setting upstream both need the remote; a
+	// network/auth failure here must NOT fail the clone. StepSkipped keeps
+	// HasFailures() false so the clone still reports success, just without tracking.
 	wtPath := filepath.Join(repoPath, branch)
-	_, err = runner.Run(wtPath, "branch", fmt.Sprintf("--set-upstream-to=origin/%s", branch))
-	if err != nil {
-		step := StepResult{Name: "Set upstream tracking", Status: StepFailed, Error: err}
-		phase.Steps = append(phase.Steps, step)
-		emit(Event{Phase: phaseName, Step: step.Name, Status: StepFailed, Error: err})
-		return phase, branch
+	emit(Event{Phase: phaseName, Step: "Set upstream tracking", Status: StepRunning})
+	skipTracking := func(err error) (Phase, string, bool) {
+		skip := StepResult{Name: "Set upstream tracking", Status: StepSkipped, Message: "no tracking: " + err.Error()}
+		phase.Steps = append(phase.Steps, skip)
+		emit(Event{Phase: phaseName, Step: skip.Name, Status: StepSkipped, Message: skip.Message})
+		return phase, branch, true
+	}
+	if _, err := runner.Run(barePath, "fetch", "origin"); err != nil {
+		return skipTracking(err)
+	}
+	if _, err := runner.Run(wtPath, "branch", fmt.Sprintf("--set-upstream-to=origin/%s", branch)); err != nil {
+		return skipTracking(err)
 	}
 	phase.Steps = append(phase.Steps, StepResult{Name: "Set upstream tracking", Status: StepDone})
 	emit(Event{Phase: phaseName, Step: "Set upstream tracking", Status: StepDone})
 
-	return phase, branch
-}
-
-func detectDefaultBranch(runner git.CommandRunner, barePath string) string {
-	output, err := runner.Run(barePath, "symbolic-ref", "refs/remotes/origin/HEAD")
-	if err == nil {
-		// "refs/remotes/origin/main" → "main"
-		branch := strings.TrimPrefix(output, "refs/remotes/origin/")
-		if branch != output && branch != "" {
-			return branch
-		}
-	}
-
-	// Fallback: try main, then master
-	for _, candidate := range []string{"main", "master"} {
-		_, err := runner.Run(barePath, "show-ref", "--verify", fmt.Sprintf("refs/heads/%s", candidate))
-		if err == nil {
-			return candidate
-		}
-	}
-
-	return "main" // last resort
+	return phase, branch, true
 }

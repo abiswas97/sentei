@@ -167,7 +167,7 @@ func (m Model) updateList(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(msg, keys.Toggle):
 			if len(m.remove.visibleIndices) > 0 {
 				wt := m.remove.worktrees[m.remove.visibleIndices[m.remove.cursor]]
-				if git.IsProtectedBranch(wt.Branch) {
+				if git.IsProtectedBranchWith(wt.Branch, m.remove.defaultBranch) {
 					break
 				}
 				if m.remove.selected[wt.Path] {
@@ -181,7 +181,7 @@ func (m Model) updateList(msg tea.Msg) (tea.Model, tea.Cmd) {
 			allSelected := true
 			for _, idx := range m.remove.visibleIndices {
 				wt := m.remove.worktrees[idx]
-				if git.IsProtectedBranch(wt.Branch) {
+				if git.IsProtectedBranchWith(wt.Branch, m.remove.defaultBranch) {
 					continue
 				}
 				if !m.remove.selected[wt.Path] {
@@ -192,7 +192,7 @@ func (m Model) updateList(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if allSelected {
 				for _, idx := range m.remove.visibleIndices {
 					wt := m.remove.worktrees[idx]
-					if git.IsProtectedBranch(wt.Branch) {
+					if git.IsProtectedBranchWith(wt.Branch, m.remove.defaultBranch) {
 						continue
 					}
 					delete(m.remove.selected, wt.Path)
@@ -200,7 +200,7 @@ func (m Model) updateList(msg tea.Msg) (tea.Model, tea.Cmd) {
 			} else {
 				for _, idx := range m.remove.visibleIndices {
 					wt := m.remove.worktrees[idx]
-					if git.IsProtectedBranch(wt.Branch) {
+					if git.IsProtectedBranchWith(wt.Branch, m.remove.defaultBranch) {
 						continue
 					}
 					m.remove.selected[wt.Path] = true
@@ -303,7 +303,7 @@ func (m Model) viewList() string {
 		}
 
 		var checkbox string
-		if git.IsProtectedBranch(wt.Branch) {
+		if git.IsProtectedBranchWith(wt.Branch, m.remove.defaultBranch) {
 			checkbox = styleStatusProtected.Render("[P]")
 		} else if m.remove.selected[wt.Path] {
 			checkbox = "[x]"

@@ -211,6 +211,28 @@ func TestSelectAll_SkipsProtectedWorktrees(t *testing.T) {
 	}
 }
 
+func TestSelectAll_SkipsNonStandardDefaultBranch(t *testing.T) {
+	wts := []git.Worktree{
+		{Path: "/work/production", Branch: "refs/heads/production"},
+		{Path: "/work/feature", Branch: "refs/heads/feature/x"},
+	}
+	m := NewModel(wts, nil, "/repo")
+	m.remove.defaultBranch = "production" // set by loadWorktreeContext in production
+
+	updated, _ := m.Update(keyMsg("a"))
+	m = updated.(Model)
+
+	if m.remove.selected["/work/production"] {
+		t.Error("non-standard default branch worktree must not be selected by select-all")
+	}
+	if !m.remove.selected["/work/feature"] {
+		t.Error("feature worktree should be selected by select-all")
+	}
+	if len(m.remove.selected) != 1 {
+		t.Errorf("expected 1 selected, got %d", len(m.remove.selected))
+	}
+}
+
 func TestSelectAll_WithFilter_SkipsProtected(t *testing.T) {
 	now := time.Now()
 	wts := []git.Worktree{

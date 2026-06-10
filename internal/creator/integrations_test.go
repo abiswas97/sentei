@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/abiswas97/sentei/internal/git"
 	"github.com/abiswas97/sentei/internal/integration"
 )
 
@@ -24,8 +25,8 @@ func TestRunIntegrations_NoIntegrations(t *testing.T) {
 
 func TestRunIntegrations_AlreadyInstalled(t *testing.T) {
 	runner := &mockRunner{responses: map[string]mockResponse{
-		"/wt:shell[code-review-graph --version]":          {output: "1.0.0"},
-		"/repo:shell[code-review-graph build --repo /wt]": {output: "built"},
+		"/wt:shell[code-review-graph --version]":            {output: "1.0.0"},
+		"/repo:shell[code-review-graph build --repo '/wt']": {output: "built"},
 	}}
 
 	opts := Options{
@@ -71,7 +72,7 @@ func TestRunIntegrations_InstallRequired(t *testing.T) {
 		// Install
 		"/wt:shell[pipx install code-review-graph]": {output: "installed"},
 		// Setup (working dir = repo, so runs from opts.RepoPath)
-		"/repo:shell[code-review-graph build --repo /wt]": {output: "built"},
+		"/repo:shell[code-review-graph build --repo '/wt']": {output: "built"},
 	}}
 
 	opts := Options{
@@ -100,7 +101,6 @@ func TestRunIntegrations_InstallRequired(t *testing.T) {
 					Command:    "code-review-graph build --repo {path}",
 					WorkingDir: "repo",
 				},
-				GitignoreEntries: []string{".code-review-graph/"},
 			},
 		},
 	}
@@ -228,5 +228,54 @@ func TestAppendGitignore(t *testing.T) {
 				t.Errorf("gitignore content:\ngot:  %q\nwant: %q", string(got), tt.want)
 			}
 		})
+	}
+}
+
+func TestRunSetupCommand_QuotesInjectingPath(t *testing.T) {
+	// A branch with shell metacharacters reaches the worktree path; the setup
+	// command must receive it single-quoted so it cannot inject.
+	wtPath := "/repo/a&&touch PWNED"
+	runner := &mockRunner{responses: map[string]mockResponse{
+		fmt.Sprintf("/repo:shell[crg build %s]", git.ShellQuote(wtPath)): {output: "ok"},
+	}}
+	integ := integration.Integration{
+		Name:  "crg",
+		Setup: integration.SetupSpec{Command: "crg build {path}", WorkingDir: "repo"},
+	}
+	ec := &eventCollector{}
+	step := runSetupCommand(runner, wtPath, "/repo", integ, ec.emit)
+	if step.Status == StepFailed {
+		t.Errorf("quoted setup command should have matched the mock, got failure: %v", step.Error)
+	}
+}
+
+func TestRunIntegrations_GitignoreFailure_IsRecorded(t *testing.T) {
+	// wtPath does not exist, so appendGitignore fails. The failure must be
+	// recorded as a StepResult (not just emitted), so HasFailures sees it.
+	wtPath := "/nonexistent/wt"
+	runner := &mockRunner{responses: map[string]mockResponse{
+		"/nonexistent/wt:shell[crg --version]":                           {output: "1.0"},
+		fmt.Sprintf("/repo:shell[crg build %s]", git.ShellQuote(wtPath)): {output: "ok"},
+	}}
+	opts := Options{
+		RepoPath: "/repo",
+		Integrations: []integration.Integration{{
+			Name:             "crg",
+			Detect:           integration.DetectSpec{Command: "crg --version"},
+			Setup:            integration.SetupSpec{Command: "crg build {path}", WorkingDir: "repo"},
+			GitignoreEntries: []string{".crg/"},
+		}},
+	}
+	ec := &eventCollector{}
+	phase := runIntegrations(runner, wtPath, opts, ec.emit)
+
+	gitignoreFailed := false
+	for _, s := range phase.Steps {
+		if strings.Contains(s.Name, "Gitignore") && s.Status == StepFailed {
+			gitignoreFailed = true
+		}
+	}
+	if !gitignoreFailed {
+		t.Error("a gitignore append failure must be recorded as a StepFailed result")
 	}
 }

@@ -16,7 +16,7 @@ type MergedChecker func(branch string) bool
 // Filters combine with OR logic: a worktree matching any active filter is included.
 // Protected branches (built-in + custom) and bare worktrees are always excluded.
 // Locked worktrees are included so the caller can unlock them before deletion.
-func ResolveFilters(worktrees []git.Worktree, opts *RemoveOptions, protectedBranches []string, isMerged MergedChecker) []git.Worktree {
+func ResolveFilters(worktrees []git.Worktree, opts *RemoveOptions, protectedBranches []string, defaultBranch string, isMerged MergedChecker) []git.Worktree {
 	protectedSet := make(map[string]bool, len(protectedBranches))
 	for _, b := range protectedBranches {
 		protectedSet[b] = true
@@ -31,7 +31,7 @@ func ResolveFilters(worktrees []git.Worktree, opts *RemoveOptions, protectedBran
 		}
 
 		branch := shortBranch(wt.Branch)
-		if git.IsProtectedBranch(wt.Branch) || protectedSet[branch] {
+		if git.IsProtectedBranchWith(wt.Branch, defaultBranch) || protectedSet[branch] {
 			continue
 		}
 
@@ -70,31 +70,15 @@ func shortBranch(branch string) string {
 }
 
 // CheckMerged creates a MergedChecker that uses git merge-base --is-ancestor
-// to determine if a branch is fully merged into the default branch.
+// to determine if a branch is fully merged into the default branch. The default
+// branch is never reported as merged into itself (a branch is its own ancestor),
+// so --merged can never select the default worktree.
 func CheckMerged(runner git.CommandRunner, repoPath string, defaultBranch string) MergedChecker {
 	return func(branch string) bool {
+		if strings.EqualFold(branch, defaultBranch) {
+			return false
+		}
 		_, err := runner.Run(repoPath, "merge-base", "--is-ancestor", branch, defaultBranch)
 		return err == nil
 	}
-}
-
-// DetectDefaultBranch detects the default branch name (main or master).
-func DetectDefaultBranch(runner git.CommandRunner, repoPath string) string {
-	output, err := runner.Run(repoPath, "symbolic-ref", "refs/remotes/origin/HEAD")
-	if err == nil {
-		ref := strings.TrimSpace(output)
-		if branch := strings.TrimPrefix(ref, "refs/remotes/origin/"); branch != ref {
-			return branch
-		}
-	}
-
-	// Fallback: check if main or master exists.
-	if _, err := runner.Run(repoPath, "rev-parse", "--verify", "refs/heads/main"); err == nil {
-		return "main"
-	}
-	if _, err := runner.Run(repoPath, "rev-parse", "--verify", "refs/heads/master"); err == nil {
-		return "master"
-	}
-
-	return "main"
 }

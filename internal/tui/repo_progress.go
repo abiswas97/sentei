@@ -126,7 +126,9 @@ func (m Model) buildRepoPhaseDisplays() []phaseDisplay {
 		pd.total = len(pd.steps)
 		for _, s := range pd.steps {
 			switch s.status {
-			case creator.StepDone:
+			case creator.StepDone, creator.StepSkipped:
+				// A skipped step is resolved (non-failing); count it as done so a
+				// phase with a best-effort skip still reaches 100%.
 				pd.done++
 			case creator.StepFailed:
 				pd.failed++
