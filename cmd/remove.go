@@ -36,6 +36,11 @@ func RunRemove(args []string) error {
 		return fmt.Errorf("remove requires a bare repository (detected: %v)", context)
 	}
 
+	// Normalize to the bare root: when run from inside a worktree, the repo path
+	// is a worktree whose HEAD is its own checked-out branch, so default-branch
+	// detection would return that branch and leave the real default unprotected.
+	repoPath = repo.ResolveBareRoot(runner, repoPath)
+
 	worktrees, err := git.ListWorktrees(runner, repoPath)
 	if err != nil {
 		return fmt.Errorf("listing worktrees: %w", err)
