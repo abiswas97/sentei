@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	tea "github.com/charmbracelet/bubbletea"
+
 	"github.com/abiswas97/sentei/internal/config"
 	"github.com/abiswas97/sentei/internal/git"
 	"github.com/abiswas97/sentei/internal/repo"
@@ -156,5 +158,62 @@ func TestFilterIndicator_InFullListView(t *testing.T) {
 	output := stripAnsi(m.viewList())
 	if !strings.Contains(output, "pre-filter: stale > 7d") {
 		t.Errorf("expected 'pre-filter: stale > 7d' in list view, got:\n%s", output)
+	}
+}
+
+func TestUpdateFilterInput_EscClearsFilter(t *testing.T) {
+	m := makeRemoveModel(sampleWorktrees())
+	m.remove.filterActive = true
+	m.remove.filterInput.SetValue("alpha")
+	m.remove.filterText = "alpha"
+	m.reindex()
+
+	updated, _ := m.updateFilterInput(tea.KeyMsg{Type: tea.KeyEsc})
+	model := updated.(Model)
+
+	if model.remove.filterActive {
+		t.Error("esc should deactivate the filter")
+	}
+	if model.remove.filterText != "" || model.remove.filterInput.Value() != "" {
+		t.Error("esc should clear filter text and input")
+	}
+	if len(model.remove.visibleIndices) != len(sampleWorktrees()) {
+		t.Errorf("visible = %d, want all %d after clearing", len(model.remove.visibleIndices), len(sampleWorktrees()))
+	}
+}
+
+func TestUpdateFilterInput_EnterCommitsFilter(t *testing.T) {
+	m := makeRemoveModel(sampleWorktrees())
+	m.remove.filterActive = true
+	m.remove.filterInput.SetValue("alpha")
+
+	updated, _ := m.updateFilterInput(tea.KeyMsg{Type: tea.KeyEnter})
+	model := updated.(Model)
+
+	if model.remove.filterActive {
+		t.Error("enter should deactivate filter editing")
+	}
+	if model.remove.filterText != "alpha" {
+		t.Errorf("filterText = %q, want %q", model.remove.filterText, "alpha")
+	}
+}
+
+func TestUpdateFilterInput_TypingNarrowsList(t *testing.T) {
+	m := makeRemoveModel(sampleWorktrees())
+	m.remove.filterActive = true
+	m.remove.filterInput.Focus()
+
+	updated, _ := m.updateFilterInput(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("alpha")})
+	model := updated.(Model)
+
+	if model.remove.filterText != "alpha" {
+		t.Errorf("filterText = %q, want %q", model.remove.filterText, "alpha")
+	}
+	if len(model.remove.visibleIndices) != 1 {
+		t.Fatalf("visible = %d, want only the alpha worktree", len(model.remove.visibleIndices))
+	}
+	wt := model.remove.worktrees[model.remove.visibleIndices[0]]
+	if !strings.Contains(wt.Branch, "alpha") {
+		t.Errorf("visible worktree = %q, want the alpha branch", wt.Branch)
 	}
 }

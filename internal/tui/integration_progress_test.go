@@ -2,12 +2,15 @@ package tui
 
 import (
 	"errors"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/abiswas97/sentei/internal/config"
 	"github.com/abiswas97/sentei/internal/integration"
 	"github.com/abiswas97/sentei/internal/repo"
+	"github.com/abiswas97/sentei/internal/state"
 )
 
 func TestUpdateIntegrationProgress_FinalizedMsg_SaveError_DoesNotApply(t *testing.T) {
@@ -197,5 +200,71 @@ func TestViewIntegrationProgress_Loading(t *testing.T) {
 
 	if !strings.Contains(output, "Applying Integration Changes") {
 		t.Errorf("expected title 'Applying Integration Changes', got:\n%s", output)
+	}
+}
+
+func TestFinalizeIntegrationApply_SavesStagedIntegrations(t *testing.T) {
+	tmp := t.TempDir()
+	if err := os.Mkdir(filepath.Join(tmp, ".bare"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	m := makeIntegrationModel()
+	m.repoPath = tmp
+	m.integ.returnView = integrationListView
+	m.integ.staged = map[string]bool{"code-review-graph": true, "cocoindex-code": false}
+
+	msg := m.finalizeIntegrationApply()()
+
+	finalized, ok := msg.(integrationFinalizedMsg)
+	if !ok {
+		t.Fatalf("expected integrationFinalizedMsg, got %T", msg)
+	}
+	if finalized.err != nil {
+		t.Fatalf("unexpected save error: %v", finalized.err)
+	}
+
+	st, err := state.Load(filepath.Join(tmp, ".bare"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !st.HasIntegration("code-review-graph") || st.HasIntegration("cocoindex-code") {
+		t.Errorf("persisted integrations = %v, want only code-review-graph", st.Integrations)
+	}
+}
+
+func TestFinalizeIntegrationApply_MigrateSavesUnderBareRoot(t *testing.T) {
+	bareRoot := t.TempDir()
+	if err := os.Mkdir(filepath.Join(bareRoot, ".bare"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	m := makeIntegrationModel()
+	m.repoPath = "/elsewhere"
+	m.integ.returnView = migrateNextView
+	m.repo.result = repo.MigrateResult{BareRoot: bareRoot, Branch: "main"}
+	m.integ.staged = map[string]bool{"code-review-graph": true}
+
+	msg := m.finalizeIntegrationApply()()
+
+	if err := msg.(integrationFinalizedMsg).err; err != nil {
+		t.Fatalf("unexpected save error: %v", err)
+	}
+	st, err := state.Load(filepath.Join(bareRoot, ".bare"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !st.HasIntegration("code-review-graph") {
+		t.Errorf("persisted integrations = %v, want code-review-graph under the migrated bare root", st.Integrations)
+	}
+}
+
+func TestFinalizeIntegrationApply_SaveFailureReturnsError(t *testing.T) {
+	m := makeIntegrationModel()
+	m.repoPath = filepath.Join(t.TempDir(), "missing") // .bare dir does not exist
+	m.integ.returnView = integrationListView
+
+	msg := m.finalizeIntegrationApply()()
+
+	if msg.(integrationFinalizedMsg).err == nil {
+		t.Error("expected a save error when the .bare dir is missing")
 	}
 }

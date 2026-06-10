@@ -1,12 +1,16 @@
 package tui
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/abiswas97/sentei/internal/integration"
+	"github.com/abiswas97/sentei/internal/repo"
+	"github.com/abiswas97/sentei/internal/testutil/mock"
 )
 
 func TestUpdateMigrateIntegrations_DetectedMsg(t *testing.T) {
@@ -105,5 +109,135 @@ func TestViewMigrateIntegrations_ShowsIntroText(t *testing.T) {
 
 	if !strings.Contains(output, "dev tools") {
 		t.Errorf("expected output to contain 'dev tools', got:\n%s", output)
+	}
+}
+
+// drainIntegrationApply executes wait commands until the apply goroutine
+// reports completion, returning the events seen.
+func drainIntegrationApply(t *testing.T, m Model) []integration.ManagerEvent {
+	t.Helper()
+	var events []integration.ManagerEvent
+	for range 100 {
+		msg := waitForIntegrationEvent(m.integ.eventCh, m.integ.doneCh)()
+		switch msg := msg.(type) {
+		case integrationEventMsg:
+			events = append(events, msg.Event)
+		case integrationApplyDoneMsg:
+			return events
+		default:
+			t.Fatalf("unexpected message %T", msg)
+		}
+	}
+	t.Fatal("integration apply never completed")
+	return nil
+}
+
+func TestLoadMigrateIntegrations_DetectsArtifactDirs(t *testing.T) {
+	dir := t.TempDir()
+	first := integration.All()[0]
+	artifact := strings.TrimSuffix(first.GitignoreEntries[0], "/")
+	if err := os.Mkdir(filepath.Join(dir, artifact), 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	msg := loadMigrateIntegrations(dir)()
+
+	detected, ok := msg.(migrateIntegrationDetectedMsg)
+	if !ok {
+		t.Fatalf("expected migrateIntegrationDetectedMsg, got %T", msg)
+	}
+	if len(detected.integrations) != len(integration.All()) {
+		t.Errorf("integrations = %d, want all %d", len(detected.integrations), len(integration.All()))
+	}
+	if !detected.detected[first.Name] {
+		t.Errorf("%s should be detected via its artifact dir", first.Name)
+	}
+	for _, integ := range detected.integrations[1:] {
+		if detected.detected[integ.Name] {
+			t.Errorf("%s should not be detected in an empty dir", integ.Name)
+		}
+	}
+}
+
+func TestMigrateWorktreePath(t *testing.T) {
+	m := makeIntegrationModel()
+
+	explicit := repo.MigrateResult{WorktreePath: "/bare/main", BareRoot: "/bare", Branch: "dev"}
+	if got := m.migrateWorktreePath(explicit); got != "/bare/main" {
+		t.Errorf("explicit path = %q, want /bare/main", got)
+	}
+
+	derived := repo.MigrateResult{BareRoot: "/bare", Branch: "dev"}
+	if got := m.migrateWorktreePath(derived); got != filepath.Join("/bare", "dev") {
+		t.Errorf("derived path = %q, want /bare/dev", got)
+	}
+}
+
+func TestStartMigrateIntegrationApply_NonMigrateResultIsNoop(t *testing.T) {
+	m := makeIntegrationModel()
+	m.repo.result = nil
+
+	updated, cmd := m.startMigrateIntegrationApply()
+
+	if cmd != nil {
+		t.Error("expected no command without a migrate result")
+	}
+	if updated.integ.eventCh != nil {
+		t.Error("channels must not be wired without a migrate result")
+	}
+}
+
+func TestStartMigrateIntegrationApply_NoStagedCompletesImmediately(t *testing.T) {
+	m := makeIntegrationModel()
+	bareRoot := t.TempDir()
+	m.repo.result = repo.MigrateResult{BareRoot: bareRoot, Branch: "main"}
+	m.integ.staged = map[string]bool{}
+
+	updated, cmd := m.startMigrateIntegrationApply()
+
+	if cmd == nil {
+		t.Fatal("expected a wait command")
+	}
+	wantWT := filepath.Join(bareRoot, "main")
+	if len(updated.integ.targetWorktrees) != 1 || updated.integ.targetWorktrees[0] != wantWT {
+		t.Errorf("targetWorktrees = %v, want [%s] (derived from BareRoot/Branch)", updated.integ.targetWorktrees, wantWT)
+	}
+
+	events := drainIntegrationApply(t, updated)
+	if len(events) != 0 {
+		t.Errorf("expected no events with nothing staged, got %v", events)
+	}
+}
+
+func TestStartMigrateIntegrationApply_EnablesStagedIntegrations(t *testing.T) {
+	m := makeIntegrationModel()
+	wtPath := "/bare/main"
+	m.repo.result = repo.MigrateResult{BareRoot: "/bare", Branch: "main", WorktreePath: wtPath}
+	m.integ.integrations = []integration.Integration{{
+		Name:   "fake-tool",
+		Detect: integration.DetectSpec{Command: "fake-tool --version"},
+		Setup:  integration.SetupSpec{Command: "fake-tool init"},
+	}}
+	m.integ.staged = map[string]bool{"fake-tool": true}
+	m.shell = &mock.Runner{Responses: map[string]mock.Response{
+		wtPath + ":shell[fake-tool --version]": {Output: "1.0"},
+		wtPath + ":shell[fake-tool init]":      {Output: "ok"},
+	}}
+
+	updated, cmd := m.startMigrateIntegrationApply()
+
+	if cmd == nil {
+		t.Fatal("expected a wait command")
+	}
+	events := drainIntegrationApply(t, updated)
+
+	var sawSetupDone bool
+	for _, ev := range events {
+		if ev.Step == "Setup fake-tool" && ev.Status == integration.StatusDone {
+			sawSetupDone = true
+		}
+	}
+	if !sawSetupDone {
+		t.Errorf("expected a successful setup event, got %v", events)
 	}
 }

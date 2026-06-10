@@ -155,3 +155,26 @@ func TestUpdateRepoSummary_CloneSuccess_Relaunches(t *testing.T) {
 		t.Error("Confirm on a successful clone should relaunch, not quit")
 	}
 }
+
+func TestViewRepoSummary_DispatchesByResultType(t *testing.T) {
+	cases := []struct {
+		name   string
+		result any
+		want   string
+	}{
+		{"create result", repo.CreateResult{RepoPath: "/tmp/myrepo"}, "Repository Created"},
+		{"clone result", cloneSuccessResult(), "Repository Cloned"},
+		{"unknown result", nil, "Operation complete"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			m := makeRepoSummaryModel(tc.result)
+
+			view := stripANSI(m.viewRepoSummary())
+
+			if !strings.Contains(view, tc.want) {
+				t.Errorf("view missing %q:\n%s", tc.want, view)
+			}
+		})
+	}
+}
