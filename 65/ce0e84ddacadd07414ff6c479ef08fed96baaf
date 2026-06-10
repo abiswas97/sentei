@@ -1,0 +1,151 @@
+internal/tui/keys.go
+  s_45cfee6c7ab135::t_aa32b4b9bf17a3 105-108
+  s_45cfee6c7ab135::t_8278862fc1a513 25
+internal/tui/chrome.go
+  s_45cfee6c7ab135::t_e68f9465cbdaf4 78
+  s_45cfee6c7ab135::t_c7adaa0318eab6 1-77,79-102
+internal/tui/progress.go
+  s_45cfee6c7ab135::t_bdf530a4643503 81-87
+  s_45cfee6c7ab135::t_ab131b81591424 130-137,139-162,164,167-168,170-184,186-200,202-207,210-211
+  s_45cfee6c7ab135::t_7f786c85455728 70-74
+  s_45cfee6c7ab135::t_7d27378af3cb25 169
+internal/tui/progress_layout_test.go
+  s_45cfee6c7ab135::t_ff2fd21810fcff 1-58,60-189
+  s_45cfee6c7ab135::t_27a798051c8b5c 59
+internal/tui/create_summary.go
+  s_45cfee6c7ab135::t_d5ac6d12acbcb1 92,94
+  s_45cfee6c7ab135::t_6c684b4449ec06 45
+  s_45cfee6c7ab135::t_254f3b7a1269dd 58,88
+  s_45cfee6c7ab135::t_d6ec5b041d6d17 47,86
+internal/tui/repo_summary.go
+  s_45cfee6c7ab135::t_6c684b4449ec06 79,163
+  s_45cfee6c7ab135::t_d6ec5b041d6d17 81,96,149,165,183,205
+  s_45cfee6c7ab135::t_d5ac6d12acbcb1 152,208
+internal/tui/repo_name.go
+  s_45cfee6c7ab135::t_6c684b4449ec06 110
+  s_45cfee6c7ab135::t_d5ac6d12acbcb1 147
+  s_45cfee6c7ab135::t_d6ec5b041d6d17 112,145
+internal/tui/list.go
+  s_45cfee6c7ab135::t_1ce911d54cc6c2 5,248-251
+  s_45cfee6c7ab135::t_d5ac6d12acbcb1 401
+  s_45cfee6c7ab135::t_e8906a9753a362 383-384
+  s_45cfee6c7ab135::t_6c684b4449ec06 247
+openspec/changes/ui-chrome-unification/specs/tui-chrome/spec.md
+  s_45cfee6c7ab135::t_27a798051c8b5c 49,107
+  s_45cfee6c7ab135::t_83bc0d993d9635 73
+internal/tui/repo_options.go
+  s_45cfee6c7ab135::t_d6ec5b041d6d17 168,266
+  s_45cfee6c7ab135::t_6c684b4449ec06 164
+internal/tui/helpers.go
+  s_45cfee6c7ab135::t_f549828ef050bc 24-32
+  s_45cfee6c7ab135::t_35284be0d9176a 6,9-10
+internal/tui/confirm.go
+  s_45cfee6c7ab135::t_d60b8307fe3c92 194-196,198
+  s_45cfee6c7ab135::t_bbe793ed194d22 121-123,129
+  s_45cfee6c7ab135::t_e68f9465cbdaf4 146
+internal/tui/cleanup_confirm.go
+  s_45cfee6c7ab135::t_e8906a9753a362 41
+internal/tui/migrate_summary.go
+  s_45cfee6c7ab135::t_d5ac6d12acbcb1 128,197
+  s_45cfee6c7ab135::t_6c684b4449ec06 79,174
+  s_45cfee6c7ab135::t_d6ec5b041d6d17 81,101,126,176,195
+internal/tui/create_confirm.go
+  s_45cfee6c7ab135::t_e8906a9753a362 102
+internal/tui/window.go
+  s_45cfee6c7ab135::t_a8e54e009c0f0c 1-82
+internal/tui/migrate_integrations.go
+  s_45cfee6c7ab135::t_d6ec5b041d6d17 153,191
+  s_45cfee6c7ab135::t_ee86226ba269ca 123
+  s_45cfee6c7ab135::t_6c684b4449ec06 148
+internal/tui/integration_list.go
+  s_45cfee6c7ab135::t_46f4b610ebc060 135
+  s_45cfee6c7ab135::t_6c684b4449ec06 264
+  s_45cfee6c7ab135::t_56978c05dcfc75 17-23,395
+  s_45cfee6c7ab135::t_d6ec5b041d6d17 268,316
+internal/tui/progress_layout.go
+  s_45cfee6c7ab135::t_e95ca351e26b8b 1-26,32-55,67-96,98-142
+  s_45cfee6c7ab135::t_21b54a7f7812f7 56-60,66
+  s_45cfee6c7ab135::t_e68f9465cbdaf4 61-65,97
+  s_45cfee6c7ab135::t_2a691273e1940c 27-31
+internal/tui/migrate_confirm.go
+  s_45cfee6c7ab135::t_b6aa73ba90a3f2 155
+  s_45cfee6c7ab135::t_d6ec5b041d6d17 115,153
+  s_45cfee6c7ab135::t_e8906a9753a362 94
+  s_45cfee6c7ab135::t_6c684b4449ec06 111
+internal/tui/constants.go
+  s_45cfee6c7ab135::t_4f7cc4e930b370 1-15
+internal/tui/create_branch.go
+  s_45cfee6c7ab135::t_d5ac6d12acbcb1 230
+  s_45cfee6c7ab135::t_6c684b4449ec06 190
+  s_45cfee6c7ab135::t_d6ec5b041d6d17 196,228
+internal/tui/summary.go
+  s_45cfee6c7ab135::t_0e425da5476f92 35-37,42-44,54-57,70-89,91,93,101-102,104,106
+internal/tui/phase_display.go
+  s_45cfee6c7ab135::t_62f904e231d209 64-90
+internal/tui/cleanup_result.go
+  s_45cfee6c7ab135::t_19a5b3e9a834fa 145
+  s_45cfee6c7ab135::t_1738539ce63b42 45-49,53-56
+  s_45cfee6c7ab135::t_d6ec5b041d6d17 143
+internal/tui/confirmation.go
+  s_45cfee6c7ab135::t_e8906a9753a362 29,56,77
+  s_45cfee6c7ab135::t_49b7bdf0837741 49-50,54,78-79,81
+internal/tui/chrome_migration_test.go
+  s_45cfee6c7ab135::t_10a31fd1353ab8 1-11,13-32,34-42,44-45,59-61,63-83,85-124,126-187
+  s_45cfee6c7ab135::t_92a6b53610bf14 33,43,46-58
+  s_45cfee6c7ab135::t_03c30c5097c159 12,62,84,125
+internal/tui/removal_e2e_test.go
+  s_45cfee6c7ab135::t_4f36e4cd5b63d3 1-107
+internal/tui/create_progress.go
+  s_45cfee6c7ab135::t_b4bed05c4fbf8a 37-44
+internal/tui/create_options.go
+  s_45cfee6c7ab135::t_6c684b4449ec06 203
+  s_45cfee6c7ab135::t_d6ec5b041d6d17 207,250
+openspec/changes/ui-chrome-unification/tasks.md
+  s_45cfee6c7ab135::t_60b50282e40676 5-7,11-16,20-22,26-31,35-42,46-52,56-59,63,67-69,73-74,78-81,85-104
+internal/tui/window_test.go
+  s_45cfee6c7ab135::t_4f93f152ad04ff 1-174
+internal/tui/remove_run_test.go
+  s_45cfee6c7ab135::t_1753def9a5f8f1 183-212
+internal/tui/integration_progress.go
+  s_45cfee6c7ab135::t_5ebfdafe9e4054 7,27-30
+  s_45cfee6c7ab135::t_ae828d9a6c99ca 11
+  s_45cfee6c7ab135::t_850c0b7aaf0035 88-98,100-105,108-109,112,114-118,121-122,124,126-128,130,132-133,136-142,144-149,152-153,156,163
+internal/tui/clone_input.go
+  s_45cfee6c7ab135::t_6c684b4449ec06 106
+  s_45cfee6c7ab135::t_d5ac6d12acbcb1 153
+  s_45cfee6c7ab135::t_d6ec5b041d6d17 108,151
+.impeccable.md
+  s_45cfee6c7ab135::t_16e0da2eaaa217 25-64
+internal/tui/integration_summary.go
+  s_45cfee6c7ab135::t_6c684b4449ec06 74
+  s_45cfee6c7ab135::t_d6ec5b041d6d17 76,130
+  s_45cfee6c7ab135::t_d5ac6d12acbcb1 132
+  s_45cfee6c7ab135::t_fff069bfc6fbf6 93-95
+internal/tui/clone_confirm.go
+  s_45cfee6c7ab135::t_e8906a9753a362 54
+internal/tui/menu.go
+  s_45cfee6c7ab135::t_d6ec5b041d6d17 178,206
+  s_45cfee6c7ab135::t_6c684b4449ec06 146
+  s_45cfee6c7ab135::t_e68f9465cbdaf4 151
+internal/tui/chrome_test.go
+  s_45cfee6c7ab135::t_fe228c90f11df6 1-88,90-153
+  s_45cfee6c7ab135::t_27a798051c8b5c 89
+internal/tui/model.go
+  s_45cfee6c7ab135::t_947e2a1b86660d 195-199
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "65ce0e84ddacadd07414ff6c479ef08fed96baaf",
+  "prompts": {},
+  "sessions": {
+    "s_45cfee6c7ab135": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "362b0459-633f-41b0-be4d-ef5a2d23fce8",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Test <t@t.com>"
+    }
+  }
+}
