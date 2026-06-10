@@ -1,0 +1,25 @@
+internal/repo/clone.go
+  s_8e2c58024a52e1::t_b1a5f550bda6a1 204
+internal/git/commands.go
+  s_8e2c58024a52e1::t_fba1058be5d726 74-79
+internal/git/protection.go
+  s_8e2c58024a52e1::t_3578e7b86d7b2a 48
+internal/git/commands_test.go
+  s_8e2c58024a52e1::t_d2a2d3cfdcfdc7 166-189
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "fcaa77d175ae97ca10b69c7aaf1360d5d21136b2",
+  "prompts": {},
+  "sessions": {
+    "s_8e2c58024a52e1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ce6ce258-0f38-4b1c-9b68-41415998356e",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Test <t@t.com>"
+    }
+  }
+}
