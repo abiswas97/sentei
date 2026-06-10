@@ -4,8 +4,7 @@ sentei needs a way to show detailed, scrollable content on demand — cleanup de
 
 ## What Changes
 
-- Add `bubbletea-overlay` as a dependency for overlay compositing
-- Create a `DetailPortal` shared component: overlay + viewport with consistent chrome (title, scroll indicator, dismiss key)
+- Create a `DetailPortal` shared component: overlay compositing + viewport with consistent chrome (title, scroll indicator, dismiss key). Compositing is a small in-repo helper built on `charmbracelet/x/ansi` (already in the module graph); no new dependency
 - Implement a global help overlay as the first consumer — accessible via `F1` from any view, showing contextual key bindings and descriptions for the current view
 - Wire `?` (contextual details) and `F1` (global help) key handling into the main Model update loop
 
@@ -20,7 +19,8 @@ _None — this adds new capabilities without changing existing behavior._
 
 ## Impact
 
-- `go.mod` — new dependency: `github.com/rmhubbert/bubbletea-overlay`
+- `go.mod` — `charmbracelet/x/ansi` becomes a direct dependency (already present indirectly via lipgloss); no new module
+- `internal/tui/overlay.go` — NEW: ANSI-aware centered compositing helper
 - `internal/tui/portal.go` — NEW: `DetailPortal` component
 - `internal/tui/help.go` — NEW: help overlay content builder
 - `internal/tui/model.go` — MODIFY: add portal state, wire `?` and `F1` key handling
