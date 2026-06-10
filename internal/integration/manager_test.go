@@ -27,10 +27,10 @@ func (m *managerMockShell) RunShell(dir string, command string) (string, error) 
 
 func TestEnableIntegration_RunsSetupOnEachWorktree(t *testing.T) {
 	shell := &managerMockShell{responses: map[string]mockShellResponse{
-		"/repo/main:shell[code-review-graph --version]":          {output: "1.0"},
-		"/repo:shell[code-review-graph build --repo /repo/main]": {output: "built"},
-		"/repo/feat:shell[code-review-graph --version]":          {output: "1.0"},
-		"/repo:shell[code-review-graph build --repo /repo/feat]": {output: "built"},
+		"/repo/main:shell[code-review-graph --version]":            {output: "1.0"},
+		"/repo:shell[code-review-graph build --repo '/repo/main']": {output: "built"},
+		"/repo/feat:shell[code-review-graph --version]":            {output: "1.0"},
+		"/repo:shell[code-review-graph build --repo '/repo/feat']": {output: "built"},
 	}}
 
 	integ := codeReviewGraph()
@@ -120,7 +120,7 @@ func TestEnableIntegration_InstallsWhenNotDetected(t *testing.T) {
 		// install
 		"/repo/wt:shell[pipx install code-review-graph]": {output: "installed"},
 		// setup
-		"/repo:shell[code-review-graph build --repo /repo/wt]": {output: "built"},
+		"/repo:shell[code-review-graph build --repo '/repo/wt']": {output: "built"},
 	}}
 
 	integ := codeReviewGraph()
@@ -146,8 +146,8 @@ func TestEnableIntegration_InstallsWhenNotDetected(t *testing.T) {
 
 func TestEnableIntegration_SetupFailureEmitsFailedEvent(t *testing.T) {
 	shell := &managerMockShell{responses: map[string]mockShellResponse{
-		"/repo/wt:shell[code-review-graph --version]":          {output: "1.0"},
-		"/repo:shell[code-review-graph build --repo /repo/wt]": {err: fmt.Errorf("build failed")},
+		"/repo/wt:shell[code-review-graph --version]":            {output: "1.0"},
+		"/repo:shell[code-review-graph build --repo '/repo/wt']": {err: fmt.Errorf("build failed")},
 	}}
 
 	integ := codeReviewGraph()

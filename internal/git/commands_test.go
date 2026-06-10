@@ -138,3 +138,17 @@ func TestValidateRepository_PathDoesNotExist(t *testing.T) {
 		t.Fatal("expected error, got nil")
 	}
 }
+
+func TestShellQuote(t *testing.T) {
+	cases := map[string]string{
+		"/plain/path": "'/plain/path'",
+		"/with space": "'/with space'",
+		"a&&rm -rf x": "'a&&rm -rf x'",
+		"it's":        `'it'\''s'`,
+	}
+	for in, want := range cases {
+		if got := ShellQuote(in); got != want {
+			t.Errorf("ShellQuote(%q) = %q, want %q", in, got, want)
+		}
+	}
+}
