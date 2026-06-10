@@ -10,6 +10,7 @@ import (
 	"github.com/abiswas97/sentei/internal/git"
 	"github.com/abiswas97/sentei/internal/pipeline"
 	"github.com/abiswas97/sentei/internal/testtmp"
+	"github.com/abiswas97/sentei/internal/testutil/mock"
 )
 
 func TestE2E_CreateRepo(t *testing.T) {
@@ -17,13 +18,13 @@ func TestE2E_CreateRepo(t *testing.T) {
 	runner := &git.GitRunner{}
 	shell := &git.DefaultShellRunner{}
 
-	ec := &eventCollector{}
+	ec := &mock.EventCollector[pipeline.Event]{}
 	opts := CreateOptions{
 		Name:          "test-repo",
 		Location:      dir,
 		PublishGitHub: false,
 	}
-	result := Create(runner, shell, opts, ec.emit)
+	result := Create(runner, shell, opts, ec.Emit)
 
 	repoPath := filepath.Join(dir, "test-repo")
 
@@ -75,13 +76,13 @@ func TestE2E_CloneRepo(t *testing.T) {
 
 	// Clone it
 	cloneDir := testtmp.RobustTempDir(t)
-	ec := &eventCollector{}
+	ec := &mock.EventCollector[pipeline.Event]{}
 	opts := CloneOptions{
 		URL:      sourceDir, // local path works as URL for git clone
 		Location: cloneDir,
 		Name:     "cloned",
 	}
-	result := Clone(runner, opts, ec.emit)
+	result := Clone(runner, opts, ec.Emit)
 
 	repoPath := filepath.Join(cloneDir, "cloned")
 
@@ -121,9 +122,9 @@ func TestE2E_CloneNonMainDefaultSetsUpstream(t *testing.T) {
 	runner.Run(sourceDir, "-c", "user.email=test@test.com", "-c", "user.name=Test", "commit", "-m", "init")
 
 	cloneDir := testtmp.RobustTempDir(t)
-	ec := &eventCollector{}
+	ec := &mock.EventCollector[pipeline.Event]{}
 	opts := CloneOptions{URL: sourceDir, Location: cloneDir, Name: "cloned"}
-	result := Clone(runner, opts, ec.emit)
+	result := Clone(runner, opts, ec.Emit)
 
 	for _, phase := range result.Phases {
 		for _, step := range phase.Steps {
@@ -163,9 +164,9 @@ func TestE2E_MigrateRepo(t *testing.T) {
 	runner.Run(repoPath, "add", "file.txt")
 	runner.Run(repoPath, "-c", "user.email=test@test.com", "-c", "user.name=Test", "commit", "-m", "init")
 
-	ec := &eventCollector{}
+	ec := &mock.EventCollector[pipeline.Event]{}
 	opts := MigrateOptions{RepoPath: repoPath}
-	result := Migrate(runner, shell, opts, ec.emit)
+	result := Migrate(runner, shell, opts, ec.Emit)
 
 	// Verify bare structure
 	if _, err := os.Stat(filepath.Join(repoPath, ".bare")); os.IsNotExist(err) {

@@ -4,53 +4,12 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"sync"
 	"testing"
 
 	"github.com/abiswas97/sentei/internal/git"
 	"github.com/abiswas97/sentei/internal/pipeline"
+	"github.com/abiswas97/sentei/internal/testutil/mock"
 )
-
-type mockRunner struct {
-	mu        sync.Mutex
-	responses map[string]mockResponse
-	calls     []string
-}
-
-type mockResponse struct {
-	output string
-	err    error
-}
-
-func (m *mockRunner) Run(dir string, args ...string) (string, error) {
-	key := fmt.Sprintf("%s:%v", dir, args)
-	m.mu.Lock()
-	m.calls = append(m.calls, key)
-	m.mu.Unlock()
-	if resp, ok := m.responses[key]; ok {
-		return resp.output, resp.err
-	}
-	return "", fmt.Errorf("unexpected call: %s", key)
-}
-
-func (m *mockRunner) RunShell(dir string, command string) (string, error) {
-	key := fmt.Sprintf("%s:shell[%s]", dir, command)
-	m.mu.Lock()
-	m.calls = append(m.calls, key)
-	m.mu.Unlock()
-	if resp, ok := m.responses[key]; ok {
-		return resp.output, resp.err
-	}
-	return "", fmt.Errorf("unexpected shell call: %s", key)
-}
-
-type eventCollector struct {
-	events []pipeline.Event
-}
-
-func (c *eventCollector) emit(e pipeline.Event) {
-	c.events = append(c.events, e)
-}
 
 func TestCreateWorktreeStep(t *testing.T) {
 	tests := []struct {
@@ -94,9 +53,9 @@ func TestCreateWorktreeStep(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			wtPath := git.WorktreePath(tt.repoPath, tt.branch)
 
-			responses := map[string]mockResponse{
+			responses := map[string]mock.Response{
 				fmt.Sprintf("%s:[show-ref --verify refs/heads/%s]", tt.repoPath, tt.branch): {
-					err: func() error {
+					Err: func() error {
 						if tt.branchExists {
 							return nil
 						}
@@ -105,14 +64,14 @@ func TestCreateWorktreeStep(t *testing.T) {
 				},
 			}
 			if tt.branchExists {
-				responses[fmt.Sprintf("%s:[worktree add %s %s]", tt.repoPath, wtPath, tt.branch)] = mockResponse{err: tt.runnerErr}
+				responses[fmt.Sprintf("%s:[worktree add %s %s]", tt.repoPath, wtPath, tt.branch)] = mock.Response{Err: tt.runnerErr}
 			} else {
-				responses[fmt.Sprintf("%s:[worktree add %s -b %s %s]", tt.repoPath, wtPath, tt.branch, tt.baseBranch)] = mockResponse{err: tt.runnerErr}
+				responses[fmt.Sprintf("%s:[worktree add %s -b %s %s]", tt.repoPath, wtPath, tt.branch, tt.baseBranch)] = mock.Response{Err: tt.runnerErr}
 			}
-			runner := &mockRunner{responses: responses}
+			runner := &mock.Runner{Responses: responses}
 
-			ec := &eventCollector{}
-			result, path := createWorktreeStep(runner, tt.repoPath, tt.branch, tt.baseBranch, ec.emit)
+			ec := &mock.EventCollector[pipeline.Event]{}
+			result, path := createWorktreeStep(runner, tt.repoPath, tt.branch, tt.baseBranch, ec.Emit)
 
 			if result.Status != tt.wantStatus {
 				t.Errorf("status = %v, want %v", result.Status, tt.wantStatus)
@@ -120,7 +79,7 @@ func TestCreateWorktreeStep(t *testing.T) {
 			if tt.wantStatus == pipeline.StepDone && path != tt.wantPath {
 				t.Errorf("path = %q, want %q", path, tt.wantPath)
 			}
-			if len(ec.events) == 0 {
+			if len(ec.Events) == 0 {
 				t.Error("expected at least one event emitted")
 			}
 		})
@@ -158,15 +117,15 @@ func TestMergeBaseStep(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			runner := &mockRunner{responses: map[string]mockResponse{
+			runner := &mock.Runner{Responses: map[string]mock.Response{
 				"/repo/feature-auth:[merge main --no-edit]": {
-					output: "",
-					err:    tt.runnerErr,
+					Output: "",
+					Err:    tt.runnerErr,
 				},
 			}}
 
-			ec := &eventCollector{}
-			result := mergeBaseStep(runner, "/repo/feature-auth", tt.baseBranch, tt.mergeBase, ec.emit)
+			ec := &mock.EventCollector[pipeline.Event]{}
+			result := mergeBaseStep(runner, "/repo/feature-auth", tt.baseBranch, tt.mergeBase, ec.Emit)
 
 			if result.Status != tt.wantStatus {
 				t.Errorf("status = %v, want %v", result.Status, tt.wantStatus)
@@ -210,8 +169,8 @@ func TestCopyEnvFilesStep(t *testing.T) {
 				os.WriteFile(filepath.Join(srcDir, f), []byte("SECRET=val"), 0644)
 			}
 
-			ec := &eventCollector{}
-			result := copyEnvFilesStep(srcDir, dstDir, tt.envFiles, ec.emit)
+			ec := &mock.EventCollector[pipeline.Event]{}
+			result := copyEnvFilesStep(srcDir, dstDir, tt.envFiles, ec.Emit)
 
 			if result.Status != tt.wantStatus {
 				t.Errorf("status = %v, want %v", result.Status, tt.wantStatus)

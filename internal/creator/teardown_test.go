@@ -8,6 +8,7 @@ import (
 
 	"github.com/abiswas97/sentei/internal/integration"
 	"github.com/abiswas97/sentei/internal/pipeline"
+	"github.com/abiswas97/sentei/internal/testutil/mock"
 )
 
 func TestScanArtifacts(t *testing.T) {
@@ -79,8 +80,8 @@ func TestTeardown_WithCommand(t *testing.T) {
 	wtDir := t.TempDir()
 	os.MkdirAll(filepath.Join(wtDir, ".cocoindex_code"), 0755)
 
-	runner := &mockRunner{responses: map[string]mockResponse{
-		wtDir + ":shell[ccc reset --all --force]": {output: "reset"},
+	runner := &mock.Runner{Responses: map[string]mock.Response{
+		wtDir + ":shell[ccc reset --all --force]": {Output: "reset"},
 	}}
 
 	integs := []integration.Integration{
@@ -93,8 +94,8 @@ func TestTeardown_WithCommand(t *testing.T) {
 		},
 	}
 
-	ec := &eventCollector{}
-	results := Teardown(runner, wtDir, integs, ec.emit)
+	ec := &mock.EventCollector[pipeline.Event]{}
+	results := Teardown(runner, wtDir, integs, ec.Emit)
 
 	if len(results) != 1 {
 		t.Fatalf("result count = %d, want 1", len(results))
@@ -110,8 +111,8 @@ func TestTeardown_CommandFailsFallsBackToDirDelete(t *testing.T) {
 	os.MkdirAll(artifactDir, 0755)
 	os.WriteFile(filepath.Join(artifactDir, "index.db"), []byte("data"), 0644)
 
-	runner := &mockRunner{responses: map[string]mockResponse{
-		wtDir + ":shell[ccc reset --all --force]": {err: fmt.Errorf("command not found")},
+	runner := &mock.Runner{Responses: map[string]mock.Response{
+		wtDir + ":shell[ccc reset --all --force]": {Err: fmt.Errorf("command not found")},
 	}}
 
 	integs := []integration.Integration{
@@ -124,8 +125,8 @@ func TestTeardown_CommandFailsFallsBackToDirDelete(t *testing.T) {
 		},
 	}
 
-	ec := &eventCollector{}
-	results := Teardown(runner, wtDir, integs, ec.emit)
+	ec := &mock.EventCollector[pipeline.Event]{}
+	results := Teardown(runner, wtDir, integs, ec.Emit)
 
 	if len(results) != 1 {
 		t.Fatalf("result count = %d, want 1", len(results))
@@ -141,7 +142,7 @@ func TestTeardown_CommandFailsFallsBackToDirDelete(t *testing.T) {
 
 func TestTeardown_NoArtifacts(t *testing.T) {
 	wtDir := t.TempDir()
-	runner := &mockRunner{responses: map[string]mockResponse{}}
+	runner := &mock.Runner{Responses: map[string]mock.Response{}}
 
 	integs := []integration.Integration{
 		{
@@ -150,14 +151,14 @@ func TestTeardown_NoArtifacts(t *testing.T) {
 		},
 	}
 
-	ec := &eventCollector{}
-	results := Teardown(runner, wtDir, integs, ec.emit)
+	ec := &mock.EventCollector[pipeline.Event]{}
+	results := Teardown(runner, wtDir, integs, ec.Emit)
 
 	if len(results) != 0 {
 		t.Errorf("result count = %d, want 0 (no artifacts)", len(results))
 	}
-	if len(ec.events) != 0 {
-		t.Errorf("event count = %d, want 0", len(ec.events))
+	if len(ec.Events) != 0 {
+		t.Errorf("event count = %d, want 0", len(ec.Events))
 	}
 }
 
@@ -166,7 +167,7 @@ func TestTeardown_DirOnlyNoCommand(t *testing.T) {
 	artifactDir := filepath.Join(wtDir, ".code-review-graph")
 	os.MkdirAll(artifactDir, 0755)
 
-	runner := &mockRunner{responses: map[string]mockResponse{}}
+	runner := &mock.Runner{Responses: map[string]mock.Response{}}
 
 	integs := []integration.Integration{
 		{
@@ -175,8 +176,8 @@ func TestTeardown_DirOnlyNoCommand(t *testing.T) {
 		},
 	}
 
-	ec := &eventCollector{}
-	results := Teardown(runner, wtDir, integs, ec.emit)
+	ec := &mock.EventCollector[pipeline.Event]{}
+	results := Teardown(runner, wtDir, integs, ec.Emit)
 
 	if len(results) != 1 {
 		t.Fatalf("result count = %d, want 1", len(results))

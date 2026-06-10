@@ -10,14 +10,15 @@ import (
 	"github.com/abiswas97/sentei/internal/git"
 	"github.com/abiswas97/sentei/internal/integration"
 	"github.com/abiswas97/sentei/internal/pipeline"
+	"github.com/abiswas97/sentei/internal/testutil/mock"
 )
 
 func TestRunIntegrations_NoIntegrations(t *testing.T) {
-	runner := &mockRunner{responses: map[string]mockResponse{}}
+	runner := &mock.Runner{Responses: map[string]mock.Response{}}
 	opts := Options{Integrations: nil}
-	ec := &eventCollector{}
+	ec := &mock.EventCollector[pipeline.Event]{}
 
-	phase := runIntegrations(runner, "/wt", opts, ec.emit)
+	phase := runIntegrations(runner, "/wt", opts, ec.Emit)
 
 	if len(phase.Steps) != 0 {
 		t.Errorf("step count = %d, want 0", len(phase.Steps))
@@ -25,9 +26,9 @@ func TestRunIntegrations_NoIntegrations(t *testing.T) {
 }
 
 func TestRunIntegrations_AlreadyInstalled(t *testing.T) {
-	runner := &mockRunner{responses: map[string]mockResponse{
-		"/wt:shell[code-review-graph --version]":            {output: "1.0.0"},
-		"/repo:shell[code-review-graph build --repo '/wt']": {output: "built"},
+	runner := &mock.Runner{Responses: map[string]mock.Response{
+		"/wt:shell[code-review-graph --version]":            {Output: "1.0.0"},
+		"/repo:shell[code-review-graph build --repo '/wt']": {Output: "built"},
 	}}
 
 	opts := Options{
@@ -47,9 +48,9 @@ func TestRunIntegrations_AlreadyInstalled(t *testing.T) {
 		},
 	}
 
-	ec := &eventCollector{}
+	ec := &mock.EventCollector[pipeline.Event]{}
 
-	phase := runIntegrations(runner, "/wt", opts, ec.emit)
+	phase := runIntegrations(runner, "/wt", opts, ec.Emit)
 
 	// Should have steps: detect + setup
 	hasSetup := false
@@ -64,16 +65,16 @@ func TestRunIntegrations_AlreadyInstalled(t *testing.T) {
 }
 
 func TestRunIntegrations_InstallRequired(t *testing.T) {
-	runner := &mockRunner{responses: map[string]mockResponse{
+	runner := &mock.Runner{Responses: map[string]mock.Response{
 		// Detect fails first time
-		"/wt:shell[code-review-graph --version]": {err: fmt.Errorf("not found")},
+		"/wt:shell[code-review-graph --version]": {Err: fmt.Errorf("not found")},
 		// Dependency checks
-		`/wt:shell[python3 -c "import sys; assert sys.version_info >= (3,10)"]`: {output: ""},
-		"/wt:shell[pipx --version]": {output: "1.0"},
+		`/wt:shell[python3 -c "import sys; assert sys.version_info >= (3,10)"]`: {Output: ""},
+		"/wt:shell[pipx --version]": {Output: "1.0"},
 		// Install
-		"/wt:shell[pipx install code-review-graph]": {output: "installed"},
+		"/wt:shell[pipx install code-review-graph]": {Output: "installed"},
 		// Setup (working dir = repo, so runs from opts.RepoPath)
-		"/repo:shell[code-review-graph build --repo '/wt']": {output: "built"},
+		"/repo:shell[code-review-graph build --repo '/wt']": {Output: "built"},
 	}}
 
 	opts := Options{
@@ -106,9 +107,9 @@ func TestRunIntegrations_InstallRequired(t *testing.T) {
 		},
 	}
 
-	ec := &eventCollector{}
+	ec := &mock.EventCollector[pipeline.Event]{}
 
-	phase := runIntegrations(runner, "/wt", opts, ec.emit)
+	phase := runIntegrations(runner, "/wt", opts, ec.Emit)
 
 	hasFailed := false
 	for _, s := range phase.Steps {
@@ -122,9 +123,9 @@ func TestRunIntegrations_InstallRequired(t *testing.T) {
 }
 
 func TestRunIntegrations_SetupFailure(t *testing.T) {
-	runner := &mockRunner{responses: map[string]mockResponse{
-		"/wt:shell[ccc --version]": {output: "1.0"},
-		"/wt:shell[ccc init]":      {err: fmt.Errorf("init failed")},
+	runner := &mock.Runner{Responses: map[string]mock.Response{
+		"/wt:shell[ccc --version]": {Output: "1.0"},
+		"/wt:shell[ccc init]":      {Err: fmt.Errorf("init failed")},
 	}}
 
 	opts := Options{
@@ -143,8 +144,8 @@ func TestRunIntegrations_SetupFailure(t *testing.T) {
 		},
 	}
 
-	ec := &eventCollector{}
-	phase := runIntegrations(runner, "/wt", opts, ec.emit)
+	ec := &mock.EventCollector[pipeline.Event]{}
+	phase := runIntegrations(runner, "/wt", opts, ec.Emit)
 
 	hasFailed := false
 	for _, s := range phase.Steps {
@@ -236,15 +237,15 @@ func TestRunSetupCommand_QuotesInjectingPath(t *testing.T) {
 	// A branch with shell metacharacters reaches the worktree path; the setup
 	// command must receive it single-quoted so it cannot inject.
 	wtPath := "/repo/a&&touch PWNED"
-	runner := &mockRunner{responses: map[string]mockResponse{
-		fmt.Sprintf("/repo:shell[crg build %s]", git.ShellQuote(wtPath)): {output: "ok"},
+	runner := &mock.Runner{Responses: map[string]mock.Response{
+		fmt.Sprintf("/repo:shell[crg build %s]", git.ShellQuote(wtPath)): {Output: "ok"},
 	}}
 	integ := integration.Integration{
 		Name:  "crg",
 		Setup: integration.SetupSpec{Command: "crg build {path}", WorkingDir: "repo"},
 	}
-	ec := &eventCollector{}
-	step := runSetupCommand(runner, wtPath, "/repo", integ, ec.emit)
+	ec := &mock.EventCollector[pipeline.Event]{}
+	step := runSetupCommand(runner, wtPath, "/repo", integ, ec.Emit)
 	if step.Status == pipeline.StepFailed {
 		t.Errorf("quoted setup command should have matched the mock, got failure: %v", step.Error)
 	}
@@ -254,9 +255,9 @@ func TestRunIntegrations_GitignoreFailure_IsRecorded(t *testing.T) {
 	// wtPath does not exist, so appendGitignore fails. The failure must be
 	// recorded as a pipeline.StepResult (not just emitted), so HasFailures sees it.
 	wtPath := "/nonexistent/wt"
-	runner := &mockRunner{responses: map[string]mockResponse{
-		"/nonexistent/wt:shell[crg --version]":                           {output: "1.0"},
-		fmt.Sprintf("/repo:shell[crg build %s]", git.ShellQuote(wtPath)): {output: "ok"},
+	runner := &mock.Runner{Responses: map[string]mock.Response{
+		"/nonexistent/wt:shell[crg --version]":                           {Output: "1.0"},
+		fmt.Sprintf("/repo:shell[crg build %s]", git.ShellQuote(wtPath)): {Output: "ok"},
 	}}
 	opts := Options{
 		RepoPath: "/repo",
@@ -267,8 +268,8 @@ func TestRunIntegrations_GitignoreFailure_IsRecorded(t *testing.T) {
 			GitignoreEntries: []string{".crg/"},
 		}},
 	}
-	ec := &eventCollector{}
-	phase := runIntegrations(runner, wtPath, opts, ec.emit)
+	ec := &mock.EventCollector[pipeline.Event]{}
+	phase := runIntegrations(runner, wtPath, opts, ec.Emit)
 
 	gitignoreFailed := false
 	for _, s := range phase.Steps {

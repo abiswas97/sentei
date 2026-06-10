@@ -3,13 +3,15 @@ package cleanup
 import (
 	"fmt"
 	"testing"
+
+	"github.com/abiswas97/sentei/internal/testutil/mock"
 )
 
 func TestDeleteGoneBranches(t *testing.T) {
 	tests := []struct {
 		name           string
 		branchVV       string
-		extraResponses map[string]mockResponse
+		extraResponses map[string]mock.Response
 		dryRun         bool
 		wantDeleted    int
 		wantSkipped    int
@@ -22,16 +24,16 @@ func TestDeleteGoneBranches(t *testing.T) {
 		{
 			name:     "deletes gone branches",
 			branchVV: "  feature/old abc123 [origin/feature/old: gone] old commit\n  main def456 [origin/main] latest",
-			extraResponses: map[string]mockResponse{
-				"/repo:[branch -d feature/old]": {output: "Deleted branch feature/old"},
+			extraResponses: map[string]mock.Response{
+				"/repo:[branch -d feature/old]": {Output: "Deleted branch feature/old"},
 			},
 			wantDeleted: 1,
 		},
 		{
 			name:     "skips worktree-checkout branches",
 			branchVV: "+ fix/in-wt abc123 (/path/to/wt) [origin/fix/in-wt: gone] commit\n  feature/gone def456 [origin/feature/gone: gone] commit",
-			extraResponses: map[string]mockResponse{
-				"/repo:[branch -d feature/gone]": {output: "Deleted branch feature/gone"},
+			extraResponses: map[string]mock.Response{
+				"/repo:[branch -d feature/gone]": {Output: "Deleted branch feature/gone"},
 			},
 			wantDeleted: 1,
 			wantSkipped: 1,
@@ -39,8 +41,8 @@ func TestDeleteGoneBranches(t *testing.T) {
 		{
 			name:     "skips unmerged on delete failure",
 			branchVV: "  feature/unmerged abc123 [origin/feature/unmerged: gone] commit",
-			extraResponses: map[string]mockResponse{
-				"/repo:[branch -d feature/unmerged]": {err: fmt.Errorf("error: branch not fully merged")},
+			extraResponses: map[string]mock.Response{
+				"/repo:[branch -d feature/unmerged]": {Err: fmt.Errorf("error: branch not fully merged")},
 			},
 			wantDeleted: 0,
 			wantSkipped: 1,
@@ -56,18 +58,18 @@ func TestDeleteGoneBranches(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			responses := map[string]mockResponse{
-				"/repo:[branch -vv]": {output: tt.branchVV},
+			responses := map[string]mock.Response{
+				"/repo:[branch -vv]": {Output: tt.branchVV},
 			}
 			for k, v := range tt.extraResponses {
 				responses[k] = v
 			}
 
-			runner := &mockRunner{responses: responses}
+			runner := &mock.Runner{Responses: responses}
 			opts := Options{DryRun: tt.dryRun}
 			events := collectEvents(t)
 
-			result, err := DeleteGoneBranches(runner, "/repo", opts, events.emit)
+			result, err := DeleteGoneBranches(runner, "/repo", opts, events.Emit)
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
@@ -143,18 +145,18 @@ func TestCleanNonWorktreeBranches(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			runner := &mockRunner{responses: map[string]mockResponse{
-				"/repo:[worktree list --porcelain]":        {output: worktreeList},
-				"/repo:[branch --format=%(refname:short)]": {output: branchList},
-				"/repo:[branch -d feature/old]":            {output: ""},
-				"/repo:[branch -d fix/stale]":              {output: ""},
-				"/repo:[branch -D feature/old]":            {output: ""},
-				"/repo:[branch -D fix/stale]":              {output: ""},
+			runner := &mock.Runner{Responses: map[string]mock.Response{
+				"/repo:[worktree list --porcelain]":        {Output: worktreeList},
+				"/repo:[branch --format=%(refname:short)]": {Output: branchList},
+				"/repo:[branch -d feature/old]":            {Output: ""},
+				"/repo:[branch -d fix/stale]":              {Output: ""},
+				"/repo:[branch -D feature/old]":            {Output: ""},
+				"/repo:[branch -D fix/stale]":              {Output: ""},
 			}}
 			opts := Options{Mode: tt.mode, Force: tt.force, DryRun: tt.dryRun}
 			events := collectEvents(t)
 
-			result, err := CleanNonWorktreeBranches(runner, "/repo", opts, events.emit)
+			result, err := CleanNonWorktreeBranches(runner, "/repo", opts, events.Emit)
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
@@ -173,15 +175,15 @@ func TestDeleteGoneBranches_ForceGatedByMode(t *testing.T) {
 	const branchVV = "  feature/unmerged abc123 [origin/feature/unmerged: gone] commit"
 
 	t.Run("safe+force keeps unmerged (uses -d, never -D)", func(t *testing.T) {
-		runner := &mockRunner{responses: map[string]mockResponse{
-			"/repo:[branch -vv]":                 {output: branchVV},
-			"/repo:[branch -d feature/unmerged]": {err: fmt.Errorf("error: branch not fully merged")},
+		runner := &mock.Runner{Responses: map[string]mock.Response{
+			"/repo:[branch -vv]":                 {Output: branchVV},
+			"/repo:[branch -d feature/unmerged]": {Err: fmt.Errorf("error: branch not fully merged")},
 			// -D is mocked to SUCCEED: if the code wrongly used it in safe mode,
 			// the branch would be deleted and this test would fail.
-			"/repo:[branch -D feature/unmerged]": {output: "Deleted"},
+			"/repo:[branch -D feature/unmerged]": {Output: "Deleted"},
 		}}
 		events := collectEvents(t)
-		result, err := DeleteGoneBranches(runner, "/repo", Options{Mode: ModeSafe, Force: true}, events.emit)
+		result, err := DeleteGoneBranches(runner, "/repo", Options{Mode: ModeSafe, Force: true}, events.Emit)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -191,12 +193,12 @@ func TestDeleteGoneBranches_ForceGatedByMode(t *testing.T) {
 	})
 
 	t.Run("aggressive+force force-deletes unmerged (uses -D)", func(t *testing.T) {
-		runner := &mockRunner{responses: map[string]mockResponse{
-			"/repo:[branch -vv]":                 {output: branchVV},
-			"/repo:[branch -D feature/unmerged]": {output: "Deleted branch feature/unmerged"},
+		runner := &mock.Runner{Responses: map[string]mock.Response{
+			"/repo:[branch -vv]":                 {Output: branchVV},
+			"/repo:[branch -D feature/unmerged]": {Output: "Deleted branch feature/unmerged"},
 		}}
 		events := collectEvents(t)
-		result, err := DeleteGoneBranches(runner, "/repo", Options{Mode: ModeAggressive, Force: true}, events.emit)
+		result, err := DeleteGoneBranches(runner, "/repo", Options{Mode: ModeAggressive, Force: true}, events.Emit)
 		if err != nil {
 			t.Fatal(err)
 		}

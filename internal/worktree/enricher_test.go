@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/abiswas97/sentei/internal/git"
+	"github.com/abiswas97/sentei/internal/testutil/mock"
 )
 
 func TestParseStatusPorcelain(t *testing.T) {
@@ -124,33 +125,12 @@ func TestParseCommitDate(t *testing.T) {
 	}
 }
 
-type mockRunner struct {
-	responses map[string]mockResponse
-}
-
-type mockResponse struct {
-	output string
-	err    error
-}
-
-func (m *mockRunner) Run(dir string, args ...string) (string, error) {
-	key := dir
-	for _, a := range args {
-		key += " " + a
-	}
-	resp, ok := m.responses[key]
-	if !ok {
-		return "", fmt.Errorf("unexpected command: %s", key)
-	}
-	return resp.output, resp.err
-}
-
 func TestEnrichWorktree_Success(t *testing.T) {
-	runner := &mockRunner{
-		responses: map[string]mockResponse{
-			"/work/feature log -1 --format=%ai": {output: "2024-06-01 12:00:00 +0000"},
-			"/work/feature log -1 --format=%s":  {output: "Add feature X"},
-			"/work/feature status --porcelain":  {output: " M file.go\n?? new.txt"},
+	runner := &mock.Runner{
+		Responses: map[string]mock.Response{
+			"/work/feature:[log -1 --format=%ai]": {Output: "2024-06-01 12:00:00 +0000"},
+			"/work/feature:[log -1 --format=%s]":  {Output: "Add feature X"},
+			"/work/feature:[status --porcelain]":  {Output: " M file.go\n?? new.txt"},
 		},
 	}
 
@@ -179,9 +159,9 @@ func TestEnrichWorktree_Success(t *testing.T) {
 }
 
 func TestEnrichWorktree_LogCommandFails(t *testing.T) {
-	runner := &mockRunner{
-		responses: map[string]mockResponse{
-			"/work/broken log -1 --format=%ai": {err: fmt.Errorf("git log: fatal: not a git repository")},
+	runner := &mock.Runner{
+		Responses: map[string]mock.Response{
+			"/work/broken:[log -1 --format=%ai]": {Err: fmt.Errorf("git log: fatal: not a git repository")},
 		},
 	}
 
@@ -197,11 +177,11 @@ func TestEnrichWorktree_LogCommandFails(t *testing.T) {
 }
 
 func TestEnrichWorktree_StatusCommandFails(t *testing.T) {
-	runner := &mockRunner{
-		responses: map[string]mockResponse{
-			"/work/broken log -1 --format=%ai": {output: "2024-01-01 00:00:00 +0000"},
-			"/work/broken log -1 --format=%s":  {output: "Some commit"},
-			"/work/broken status --porcelain":  {err: fmt.Errorf("git status: permission denied")},
+	runner := &mock.Runner{
+		Responses: map[string]mock.Response{
+			"/work/broken:[log -1 --format=%ai]": {Output: "2024-01-01 00:00:00 +0000"},
+			"/work/broken:[log -1 --format=%s]":  {Output: "Some commit"},
+			"/work/broken:[status --porcelain]":  {Err: fmt.Errorf("git status: permission denied")},
 		},
 	}
 
@@ -217,11 +197,11 @@ func TestEnrichWorktree_StatusCommandFails(t *testing.T) {
 }
 
 func TestEnrichWorktrees_MixedSlice(t *testing.T) {
-	runner := &mockRunner{
-		responses: map[string]mockResponse{
-			"/work/normal log -1 --format=%ai": {output: "2024-03-15 09:00:00 +0000"},
-			"/work/normal log -1 --format=%s":  {output: "Normal commit"},
-			"/work/normal status --porcelain":  {output: ""},
+	runner := &mock.Runner{
+		Responses: map[string]mock.Response{
+			"/work/normal:[log -1 --format=%ai]": {Output: "2024-03-15 09:00:00 +0000"},
+			"/work/normal:[log -1 --format=%s]":  {Output: "Normal commit"},
+			"/work/normal:[status --porcelain]":  {Output: ""},
 		},
 	}
 
@@ -248,12 +228,12 @@ func TestEnrichWorktrees_MixedSlice(t *testing.T) {
 }
 
 func TestEnrichWorktrees_PartialFailure(t *testing.T) {
-	runner := &mockRunner{
-		responses: map[string]mockResponse{
-			"/work/ok log -1 --format=%ai":     {output: "2024-03-15 09:00:00 +0000"},
-			"/work/ok log -1 --format=%s":      {output: "Good commit"},
-			"/work/ok status --porcelain":      {output: ""},
-			"/work/broken log -1 --format=%ai": {err: fmt.Errorf("directory missing")},
+	runner := &mock.Runner{
+		Responses: map[string]mock.Response{
+			"/work/ok:[log -1 --format=%ai]":     {Output: "2024-03-15 09:00:00 +0000"},
+			"/work/ok:[log -1 --format=%s]":      {Output: "Good commit"},
+			"/work/ok:[status --porcelain]":      {Output: ""},
+			"/work/broken:[log -1 --format=%ai]": {Err: fmt.Errorf("directory missing")},
 		},
 	}
 

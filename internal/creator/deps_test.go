@@ -9,6 +9,7 @@ import (
 
 	"github.com/abiswas97/sentei/internal/config"
 	"github.com/abiswas97/sentei/internal/pipeline"
+	"github.com/abiswas97/sentei/internal/testutil/mock"
 )
 
 func boolPtr(b bool) *bool {
@@ -16,8 +17,8 @@ func boolPtr(b bool) *bool {
 }
 
 func TestRunDeps_SingleEcosystem(t *testing.T) {
-	runner := &mockRunner{responses: map[string]mockResponse{
-		"/repo/feature-auth:shell[pnpm install]": {output: ""},
+	runner := &mock.Runner{Responses: map[string]mock.Response{
+		"/repo/feature-auth:shell[pnpm install]": {Output: ""},
 	}}
 
 	opts := Options{
@@ -29,8 +30,8 @@ func TestRunDeps_SingleEcosystem(t *testing.T) {
 		},
 	}
 
-	ec := &eventCollector{}
-	phase := runDeps(runner, "/repo/feature-auth", opts, ec.emit)
+	ec := &mock.EventCollector[pipeline.Event]{}
+	phase := runDeps(runner, "/repo/feature-auth", opts, ec.Emit)
 
 	if phase.Name != "Dependencies" {
 		t.Errorf("phase name = %q, want %q", phase.Name, "Dependencies")
@@ -44,11 +45,11 @@ func TestRunDeps_SingleEcosystem(t *testing.T) {
 }
 
 func TestRunDeps_NoEcosystems(t *testing.T) {
-	runner := &mockRunner{responses: map[string]mockResponse{}}
+	runner := &mock.Runner{Responses: map[string]mock.Response{}}
 
 	opts := Options{Ecosystems: nil}
-	ec := &eventCollector{}
-	phase := runDeps(runner, "/repo/feature-auth", opts, ec.emit)
+	ec := &mock.EventCollector[pipeline.Event]{}
+	phase := runDeps(runner, "/repo/feature-auth", opts, ec.Emit)
 
 	if len(phase.Steps) != 0 {
 		t.Errorf("step count = %d, want 0", len(phase.Steps))
@@ -56,8 +57,8 @@ func TestRunDeps_NoEcosystems(t *testing.T) {
 }
 
 func TestRunDeps_InstallFailure(t *testing.T) {
-	runner := &mockRunner{responses: map[string]mockResponse{
-		"/repo/feature-auth:shell[pnpm install]": {err: fmt.Errorf("ENOENT")},
+	runner := &mock.Runner{Responses: map[string]mock.Response{
+		"/repo/feature-auth:shell[pnpm install]": {Err: fmt.Errorf("ENOENT")},
 	}}
 
 	opts := Options{
@@ -69,8 +70,8 @@ func TestRunDeps_InstallFailure(t *testing.T) {
 		},
 	}
 
-	ec := &eventCollector{}
-	phase := runDeps(runner, "/repo/feature-auth", opts, ec.emit)
+	ec := &mock.EventCollector[pipeline.Event]{}
+	phase := runDeps(runner, "/repo/feature-auth", opts, ec.Emit)
 
 	if phase.Steps[0].Status != pipeline.StepFailed {
 		t.Errorf("step status = %v, want pipeline.StepFailed", phase.Steps[0].Status)
@@ -90,9 +91,9 @@ func TestRunDeps_ParallelWorkspaces(t *testing.T) {
 	wsYaml := "packages:\n  - packages/*\n"
 	os.WriteFile(filepath.Join(wtPath, "pnpm-workspace.yaml"), []byte(wsYaml), 0644)
 
-	runner := &mockRunner{responses: map[string]mockResponse{
-		fmt.Sprintf("%s:shell[pnpm install --filter packages/ui]", wtPath):   {output: ""},
-		fmt.Sprintf("%s:shell[pnpm install --filter packages/core]", wtPath): {output: ""},
+	runner := &mock.Runner{Responses: map[string]mock.Response{
+		fmt.Sprintf("%s:shell[pnpm install --filter packages/ui]", wtPath):   {Output: ""},
+		fmt.Sprintf("%s:shell[pnpm install --filter packages/core]", wtPath): {Output: ""},
 	}}
 
 	opts := Options{
@@ -109,8 +110,8 @@ func TestRunDeps_ParallelWorkspaces(t *testing.T) {
 		},
 	}
 
-	ec := &eventCollector{}
-	phase := runDeps(runner, wtPath, opts, ec.emit)
+	ec := &mock.EventCollector[pipeline.Event]{}
+	phase := runDeps(runner, wtPath, opts, ec.Emit)
 
 	// 2 workspace installs (root install skipped when workspaces detected)
 	if len(phase.Steps) != 2 {
@@ -126,7 +127,7 @@ func TestRunDeps_ParallelWorkspaces(t *testing.T) {
 
 	// Verify events contain "running" and "done" for each
 	runningCount := 0
-	for _, e := range ec.events {
+	for _, e := range ec.Events {
 		if e.Status == pipeline.StepRunning {
 			runningCount++
 		}
@@ -137,8 +138,8 @@ func TestRunDeps_ParallelWorkspaces(t *testing.T) {
 }
 
 func TestRunDeps_CommandParsing(t *testing.T) {
-	runner := &mockRunner{responses: map[string]mockResponse{
-		"/wt:shell[go mod download]": {output: ""},
+	runner := &mock.Runner{Responses: map[string]mock.Response{
+		"/wt:shell[go mod download]": {Output: ""},
 	}}
 
 	opts := Options{
@@ -150,13 +151,13 @@ func TestRunDeps_CommandParsing(t *testing.T) {
 		},
 	}
 
-	ec := &eventCollector{}
-	runDeps(runner, "/wt", opts, ec.emit)
+	ec := &mock.EventCollector[pipeline.Event]{}
+	runDeps(runner, "/wt", opts, ec.Emit)
 
-	if len(runner.calls) != 1 {
-		t.Fatalf("expected 1 call, got %d", len(runner.calls))
+	if len(runner.Calls) != 1 {
+		t.Fatalf("expected 1 call, got %d", len(runner.Calls))
 	}
-	if !strings.Contains(runner.calls[0], "shell[go mod download]") {
-		t.Errorf("call = %q, expected to contain 'shell[go mod download]'", runner.calls[0])
+	if !strings.Contains(runner.Calls[0], "shell[go mod download]") {
+		t.Errorf("call = %q, expected to contain 'shell[go mod download]'", runner.Calls[0])
 	}
 }

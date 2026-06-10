@@ -2,6 +2,8 @@ package cleanup
 
 import (
 	"testing"
+
+	"github.com/abiswas97/sentei/internal/testutil/mock"
 )
 
 func TestPruneRemoteRefs(t *testing.T) {
@@ -31,15 +33,15 @@ func TestPruneRemoteRefs(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			runner := &mockRunner{responses: map[string]mockResponse{
-				"/repo:[remote]":                        {output: "origin"},
-				"/repo:[remote prune origin --dry-run]": {output: tt.pruneOutput},
-				"/repo:[fetch --prune origin]":          {output: ""},
+			runner := &mock.Runner{Responses: map[string]mock.Response{
+				"/repo:[remote]":                        {Output: "origin"},
+				"/repo:[remote prune origin --dry-run]": {Output: tt.pruneOutput},
+				"/repo:[fetch --prune origin]":          {Output: ""},
 			}}
 			opts := Options{DryRun: tt.dryRun}
 			events := collectEvents(t)
 
-			count, err := PruneRemoteRefs(runner, "/repo", opts, events.emit)
+			count, err := PruneRemoteRefs(runner, "/repo", opts, events.Emit)
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
@@ -61,12 +63,12 @@ func TestPruneRemoteRefs_NoRemotes(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			runner := &mockRunner{responses: map[string]mockResponse{
-				"/repo:[remote]": {output: tt.remoteOutput},
+			runner := &mock.Runner{Responses: map[string]mock.Response{
+				"/repo:[remote]": {Output: tt.remoteOutput},
 			}}
 			events := collectEvents(t)
 
-			count, err := PruneRemoteRefs(runner, "/repo", Options{}, events.emit)
+			count, err := PruneRemoteRefs(runner, "/repo", Options{}, events.Emit)
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
@@ -74,7 +76,7 @@ func TestPruneRemoteRefs_NoRemotes(t *testing.T) {
 				t.Errorf("count = %d, want 0", count)
 			}
 
-			for _, call := range runner.calls {
+			for _, call := range runner.Calls {
 				if call == "/repo:[remote prune origin --dry-run]" {
 					t.Error("should not call remote prune when origin doesn't exist")
 				}
@@ -84,19 +86,19 @@ func TestPruneRemoteRefs_NoRemotes(t *testing.T) {
 }
 
 func TestPruneRemoteRefs_DryRunDoesNotFetch(t *testing.T) {
-	runner := &mockRunner{responses: map[string]mockResponse{
-		"/repo:[remote]":                        {output: "origin"},
-		"/repo:[remote prune origin --dry-run]": {output: " * [would prune] origin/old"},
+	runner := &mock.Runner{Responses: map[string]mock.Response{
+		"/repo:[remote]":                        {Output: "origin"},
+		"/repo:[remote prune origin --dry-run]": {Output: " * [would prune] origin/old"},
 	}}
 	opts := Options{DryRun: true}
 	events := collectEvents(t)
 
-	_, err := PruneRemoteRefs(runner, "/repo", opts, events.emit)
+	_, err := PruneRemoteRefs(runner, "/repo", opts, events.Emit)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	for _, call := range runner.calls {
+	for _, call := range runner.Calls {
 		if call == "/repo:[fetch --prune origin]" {
 			t.Error("dry-run should not call fetch --prune")
 		}

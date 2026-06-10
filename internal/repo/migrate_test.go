@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/abiswas97/sentei/internal/pipeline"
+	"github.com/abiswas97/sentei/internal/testutil/mock"
 )
 
 // alwaysOkShell is a ShellRunner that succeeds for all calls — used to
@@ -24,19 +25,19 @@ func TestMigrate_Successful(t *testing.T) {
 	os.MkdirAll(filepath.Join(repoPath, ".git"), 0755)
 	barePath := filepath.Join(repoPath, ".bare")
 
-	runner := &mockRunner{responses: map[string]mockResponse{
+	runner := &mock.Runner{Responses: map[string]mock.Response{
 		// Validate
-		fmt.Sprintf("%s:[status --porcelain]", repoPath):    {output: ""},
-		fmt.Sprintf("%s:[branch --show-current]", repoPath): {output: "main"},
+		fmt.Sprintf("%s:[status --porcelain]", repoPath):    {Output: ""},
+		fmt.Sprintf("%s:[branch --show-current]", repoPath): {Output: "main"},
 		// Migrate
-		fmt.Sprintf("%s:[clone --bare .git %s]", repoPath, barePath):                                 {output: ""},
-		fmt.Sprintf("%s:[config remote.origin.fetch +refs/heads/*:refs/remotes/origin/*]", barePath): {output: ""},
-		fmt.Sprintf("%s:[worktree add %s/main main]", repoPath, repoPath):                            {output: ""},
+		fmt.Sprintf("%s:[clone --bare .git %s]", repoPath, barePath):                                 {Output: ""},
+		fmt.Sprintf("%s:[config remote.origin.fetch +refs/heads/*:refs/remotes/origin/*]", barePath): {Output: ""},
+		fmt.Sprintf("%s:[worktree add %s/main main]", repoPath, repoPath):                            {Output: ""},
 	}}
 
-	ec := &eventCollector{}
+	ec := &mock.EventCollector[pipeline.Event]{}
 	opts := MigrateOptions{RepoPath: repoPath}
-	result := Migrate(runner, &alwaysOkShell{}, opts, ec.emit)
+	result := Migrate(runner, &alwaysOkShell{}, opts, ec.Emit)
 
 	if result.BareRoot != repoPath {
 		t.Errorf("BareRoot = %q, want %q", result.BareRoot, repoPath)
@@ -67,17 +68,17 @@ func TestMigrate_DirtyRepo_WarningContinues(t *testing.T) {
 	os.MkdirAll(filepath.Join(repoPath, ".git"), 0755)
 	barePath := filepath.Join(repoPath, ".bare")
 
-	runner := &mockRunner{responses: map[string]mockResponse{
-		fmt.Sprintf("%s:[status --porcelain]", repoPath):                                             {output: "M file.txt"},
-		fmt.Sprintf("%s:[branch --show-current]", repoPath):                                          {output: "develop"},
-		fmt.Sprintf("%s:[clone --bare .git %s]", repoPath, barePath):                                 {output: ""},
-		fmt.Sprintf("%s:[config remote.origin.fetch +refs/heads/*:refs/remotes/origin/*]", barePath): {output: ""},
-		fmt.Sprintf("%s:[worktree add %s/develop develop]", repoPath, repoPath):                      {output: ""},
+	runner := &mock.Runner{Responses: map[string]mock.Response{
+		fmt.Sprintf("%s:[status --porcelain]", repoPath):                                             {Output: "M file.txt"},
+		fmt.Sprintf("%s:[branch --show-current]", repoPath):                                          {Output: "develop"},
+		fmt.Sprintf("%s:[clone --bare .git %s]", repoPath, barePath):                                 {Output: ""},
+		fmt.Sprintf("%s:[config remote.origin.fetch +refs/heads/*:refs/remotes/origin/*]", barePath): {Output: ""},
+		fmt.Sprintf("%s:[worktree add %s/develop develop]", repoPath, repoPath):                      {Output: ""},
 	}}
 
-	ec := &eventCollector{}
+	ec := &mock.EventCollector[pipeline.Event]{}
 	opts := MigrateOptions{RepoPath: repoPath}
-	result := Migrate(runner, &alwaysOkShell{}, opts, ec.emit)
+	result := Migrate(runner, &alwaysOkShell{}, opts, ec.Emit)
 
 	// Should still succeed — dirty is a warning, not a failure
 	for _, phase := range result.Phases {
@@ -90,7 +91,7 @@ func TestMigrate_DirtyRepo_WarningContinues(t *testing.T) {
 
 	// Check that a warning event was emitted for dirty state
 	foundWarning := false
-	for _, e := range ec.events {
+	for _, e := range ec.Events {
 		if strings.Contains(e.Message, "uncommitted") {
 			foundWarning = true
 			break
@@ -107,17 +108,17 @@ func TestMigrate_CloneFailure_ShowsRollbackInfo(t *testing.T) {
 	os.MkdirAll(filepath.Join(repoPath, ".git"), 0755)
 	barePath := filepath.Join(repoPath, ".bare")
 
-	runner := &mockRunner{responses: map[string]mockResponse{
-		fmt.Sprintf("%s:[status --porcelain]", repoPath):    {output: ""},
-		fmt.Sprintf("%s:[branch --show-current]", repoPath): {output: "main"},
+	runner := &mock.Runner{Responses: map[string]mock.Response{
+		fmt.Sprintf("%s:[status --porcelain]", repoPath):    {Output: ""},
+		fmt.Sprintf("%s:[branch --show-current]", repoPath): {Output: "main"},
 		fmt.Sprintf("%s:[clone --bare .git %s]", repoPath, barePath): {
-			output: "", err: fmt.Errorf("fatal: failed to clone"),
+			Output: "", Err: fmt.Errorf("fatal: failed to clone"),
 		},
 	}}
 
-	ec := &eventCollector{}
+	ec := &mock.EventCollector[pipeline.Event]{}
 	opts := MigrateOptions{RepoPath: repoPath}
-	result := Migrate(runner, &alwaysOkShell{}, opts, ec.emit)
+	result := Migrate(runner, &alwaysOkShell{}, opts, ec.Emit)
 
 	migratePhase := findPhase(result.Phases, "Migrate")
 	if migratePhase == nil {
@@ -152,13 +153,13 @@ func TestMigrate_DetachedHead_RejectedBeforeDestruction(t *testing.T) {
 	repoPath := filepath.Join(dir, "detached")
 	os.MkdirAll(filepath.Join(repoPath, ".git"), 0755)
 
-	runner := &mockRunner{responses: map[string]mockResponse{
-		fmt.Sprintf("%s:[status --porcelain]", repoPath):    {output: ""},
-		fmt.Sprintf("%s:[branch --show-current]", repoPath): {output: ""}, // detached HEAD
+	runner := &mock.Runner{Responses: map[string]mock.Response{
+		fmt.Sprintf("%s:[status --porcelain]", repoPath):    {Output: ""},
+		fmt.Sprintf("%s:[branch --show-current]", repoPath): {Output: ""}, // detached HEAD
 	}}
 
-	ec := &eventCollector{}
-	result := Migrate(runner, &alwaysOkShell{}, MigrateOptions{RepoPath: repoPath}, ec.emit)
+	ec := &mock.EventCollector[pipeline.Event]{}
+	result := Migrate(runner, &alwaysOkShell{}, MigrateOptions{RepoPath: repoPath}, ec.Emit)
 
 	validate := findPhase(result.Phases, "Validate")
 	if validate == nil || !validate.HasFailures() {
@@ -167,7 +168,7 @@ func TestMigrate_DetachedHead_RejectedBeforeDestruction(t *testing.T) {
 	if findPhase(result.Phases, "Backup") != nil || findPhase(result.Phases, "Migrate") != nil {
 		t.Error("no destructive phase should run after a validation failure")
 	}
-	for _, c := range runner.calls {
+	for _, c := range runner.Calls {
 		if strings.Contains(c, "clone --bare") {
 			t.Error("clone --bare must not run for a detached HEAD")
 		}
@@ -181,18 +182,18 @@ func TestMigrate_PreservesOriginURL(t *testing.T) {
 	barePath := filepath.Join(repoPath, ".bare")
 	const originURL = "git@github.com:user/proj.git"
 
-	runner := &mockRunner{responses: map[string]mockResponse{
-		fmt.Sprintf("%s:[status --porcelain]", repoPath):                                             {output: ""},
-		fmt.Sprintf("%s:[branch --show-current]", repoPath):                                          {output: "main"},
-		fmt.Sprintf("%s:[remote get-url origin]", repoPath):                                          {output: originURL},
-		fmt.Sprintf("%s:[clone --bare .git %s]", repoPath, barePath):                                 {output: ""},
-		fmt.Sprintf("%s:[config remote.origin.fetch +refs/heads/*:refs/remotes/origin/*]", barePath): {output: ""},
-		fmt.Sprintf("%s:[remote set-url origin %s]", barePath, originURL):                            {output: ""},
-		fmt.Sprintf("%s:[worktree add %s/main main]", repoPath, repoPath):                            {output: ""},
+	runner := &mock.Runner{Responses: map[string]mock.Response{
+		fmt.Sprintf("%s:[status --porcelain]", repoPath):                                             {Output: ""},
+		fmt.Sprintf("%s:[branch --show-current]", repoPath):                                          {Output: "main"},
+		fmt.Sprintf("%s:[remote get-url origin]", repoPath):                                          {Output: originURL},
+		fmt.Sprintf("%s:[clone --bare .git %s]", repoPath, barePath):                                 {Output: ""},
+		fmt.Sprintf("%s:[config remote.origin.fetch +refs/heads/*:refs/remotes/origin/*]", barePath): {Output: ""},
+		fmt.Sprintf("%s:[remote set-url origin %s]", barePath, originURL):                            {Output: ""},
+		fmt.Sprintf("%s:[worktree add %s/main main]", repoPath, repoPath):                            {Output: ""},
 	}}
 
-	ec := &eventCollector{}
-	result := Migrate(runner, &alwaysOkShell{}, MigrateOptions{RepoPath: repoPath}, ec.emit)
+	ec := &mock.EventCollector[pipeline.Event]{}
+	result := Migrate(runner, &alwaysOkShell{}, MigrateOptions{RepoPath: repoPath}, ec.Emit)
 
 	for _, phase := range result.Phases {
 		for _, step := range phase.Steps {
@@ -202,7 +203,7 @@ func TestMigrate_PreservesOriginURL(t *testing.T) {
 		}
 	}
 	restored := false
-	for _, c := range runner.calls {
+	for _, c := range runner.Calls {
 		if strings.Contains(c, fmt.Sprintf("remote set-url origin %s", originURL)) {
 			restored = true
 		}
@@ -218,16 +219,16 @@ func TestMigrate_SlashBranch_ChecksOutExistingBranch(t *testing.T) {
 	os.MkdirAll(filepath.Join(repoPath, ".git"), 0755)
 	barePath := filepath.Join(repoPath, ".bare")
 
-	runner := &mockRunner{responses: map[string]mockResponse{
-		fmt.Sprintf("%s:[status --porcelain]", repoPath):                                             {output: ""},
-		fmt.Sprintf("%s:[branch --show-current]", repoPath):                                          {output: "feature/foo"},
-		fmt.Sprintf("%s:[clone --bare .git %s]", repoPath, barePath):                                 {output: ""},
-		fmt.Sprintf("%s:[config remote.origin.fetch +refs/heads/*:refs/remotes/origin/*]", barePath): {output: ""},
-		fmt.Sprintf("%s:[worktree add %s/feature-foo feature/foo]", repoPath, repoPath):              {output: ""},
+	runner := &mock.Runner{Responses: map[string]mock.Response{
+		fmt.Sprintf("%s:[status --porcelain]", repoPath):                                             {Output: ""},
+		fmt.Sprintf("%s:[branch --show-current]", repoPath):                                          {Output: "feature/foo"},
+		fmt.Sprintf("%s:[clone --bare .git %s]", repoPath, barePath):                                 {Output: ""},
+		fmt.Sprintf("%s:[config remote.origin.fetch +refs/heads/*:refs/remotes/origin/*]", barePath): {Output: ""},
+		fmt.Sprintf("%s:[worktree add %s/feature-foo feature/foo]", repoPath, repoPath):              {Output: ""},
 	}}
 
-	ec := &eventCollector{}
-	result := Migrate(runner, &alwaysOkShell{}, MigrateOptions{RepoPath: repoPath}, ec.emit)
+	ec := &mock.EventCollector[pipeline.Event]{}
+	result := Migrate(runner, &alwaysOkShell{}, MigrateOptions{RepoPath: repoPath}, ec.Emit)
 
 	for _, phase := range result.Phases {
 		for _, step := range phase.Steps {
@@ -240,7 +241,7 @@ func TestMigrate_SlashBranch_ChecksOutExistingBranch(t *testing.T) {
 	// than inventing a divergent "foo" branch from the basename, and the
 	// worktree directory flattens the slash.
 	twoArg := false
-	for _, c := range runner.calls {
+	for _, c := range runner.Calls {
 		if strings.Contains(c, "[worktree add "+repoPath+"/feature-foo feature/foo]") {
 			twoArg = true
 		}
@@ -274,13 +275,13 @@ func TestMigrate_BackupFailure_LeavesNoDestructiveRestore(t *testing.T) {
 	repoPath := filepath.Join(dir, "proj")
 	os.MkdirAll(filepath.Join(repoPath, ".git"), 0755)
 
-	runner := &mockRunner{responses: map[string]mockResponse{
-		fmt.Sprintf("%s:[status --porcelain]", repoPath):    {output: ""},
-		fmt.Sprintf("%s:[branch --show-current]", repoPath): {output: "main"},
+	runner := &mock.Runner{Responses: map[string]mock.Response{
+		fmt.Sprintf("%s:[status --porcelain]", repoPath):    {Output: ""},
+		fmt.Sprintf("%s:[branch --show-current]", repoPath): {Output: "main"},
 	}}
 
-	ec := &eventCollector{}
-	result := Migrate(runner, &failingShell{}, MigrateOptions{RepoPath: repoPath}, ec.emit)
+	ec := &mock.EventCollector[pipeline.Event]{}
+	result := Migrate(runner, &failingShell{}, MigrateOptions{RepoPath: repoPath}, ec.Emit)
 
 	backup := findPhase(result.Phases, "Backup")
 	if backup == nil || !backup.HasFailures() {

@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+
+	"github.com/abiswas97/sentei/internal/testutil/mock"
 )
 
 func TestRunShell_EmptyStderr_PreservesExitError(t *testing.T) {
@@ -30,29 +32,12 @@ func TestGitRunner_Run_FailureNamesCommand(t *testing.T) {
 	}
 }
 
-type mockRunner struct {
-	responses map[string]mockResponse
-}
-
-type mockResponse struct {
-	output string
-	err    error
-}
-
-func (m *mockRunner) Run(dir string, args ...string) (string, error) {
-	key := fmt.Sprintf("%s:%v", dir, args)
-	if resp, ok := m.responses[key]; ok {
-		return resp.output, resp.err
-	}
-	return "", fmt.Errorf("unexpected call: %s", key)
-}
-
 func TestListWorktrees_Success(t *testing.T) {
-	runner := &mockRunner{
-		responses: map[string]mockResponse{
-			"/repo:[rev-parse --git-dir]": {output: "."},
+	runner := &mock.Runner{
+		Responses: map[string]mock.Response{
+			"/repo:[rev-parse --git-dir]": {Output: "."},
 			"/repo:[worktree list --porcelain]": {
-				output: "worktree /repo\nbare\n\nworktree /repo/main\nHEAD abc123\nbranch refs/heads/main",
+				Output: "worktree /repo\nbare\n\nworktree /repo/main\nHEAD abc123\nbranch refs/heads/main",
 			},
 		},
 	}
@@ -73,9 +58,9 @@ func TestListWorktrees_Success(t *testing.T) {
 }
 
 func TestListWorktrees_RepoValidationFailure(t *testing.T) {
-	runner := &mockRunner{
-		responses: map[string]mockResponse{
-			"/not-a-repo:[rev-parse --git-dir]": {err: fmt.Errorf("git rev-parse --git-dir: fatal: not a git repository")},
+	runner := &mock.Runner{
+		Responses: map[string]mock.Response{
+			"/not-a-repo:[rev-parse --git-dir]": {Err: fmt.Errorf("git rev-parse --git-dir: fatal: not a git repository")},
 		},
 	}
 
@@ -89,10 +74,10 @@ func TestListWorktrees_RepoValidationFailure(t *testing.T) {
 }
 
 func TestListWorktrees_GitCommandFailure(t *testing.T) {
-	runner := &mockRunner{
-		responses: map[string]mockResponse{
-			"/repo:[rev-parse --git-dir]":       {output: "."},
-			"/repo:[worktree list --porcelain]": {err: fmt.Errorf("git worktree list --porcelain: permission denied")},
+	runner := &mock.Runner{
+		Responses: map[string]mock.Response{
+			"/repo:[rev-parse --git-dir]":       {Output: "."},
+			"/repo:[worktree list --porcelain]": {Err: fmt.Errorf("git worktree list --porcelain: permission denied")},
 		},
 	}
 
@@ -103,10 +88,10 @@ func TestListWorktrees_GitCommandFailure(t *testing.T) {
 }
 
 func TestListWorktrees_EmptyOutput(t *testing.T) {
-	runner := &mockRunner{
-		responses: map[string]mockResponse{
-			"/repo:[rev-parse --git-dir]":       {output: "."},
-			"/repo:[worktree list --porcelain]": {output: ""},
+	runner := &mock.Runner{
+		Responses: map[string]mock.Response{
+			"/repo:[rev-parse --git-dir]":       {Output: "."},
+			"/repo:[worktree list --porcelain]": {Output: ""},
 		},
 	}
 
@@ -120,9 +105,9 @@ func TestListWorktrees_EmptyOutput(t *testing.T) {
 }
 
 func TestValidateRepository_NotARepo(t *testing.T) {
-	runner := &mockRunner{
-		responses: map[string]mockResponse{
-			"/bad:[rev-parse --git-dir]": {err: fmt.Errorf("fatal: not a git repository")},
+	runner := &mock.Runner{
+		Responses: map[string]mock.Response{
+			"/bad:[rev-parse --git-dir]": {Err: fmt.Errorf("fatal: not a git repository")},
 		},
 	}
 
@@ -134,9 +119,9 @@ func TestValidateRepository_NotARepo(t *testing.T) {
 
 func TestValidateRepository_PreservesUnderlyingCause(t *testing.T) {
 	cause := errors.New("exec: \"git\": executable file not found in $PATH")
-	runner := &mockRunner{
-		responses: map[string]mockResponse{
-			"/x:[rev-parse --git-dir]": {err: cause},
+	runner := &mock.Runner{
+		Responses: map[string]mock.Response{
+			"/x:[rev-parse --git-dir]": {Err: cause},
 		},
 	}
 
@@ -151,9 +136,9 @@ func TestValidateRepository_PreservesUnderlyingCause(t *testing.T) {
 }
 
 func TestValidateRepository_PathDoesNotExist(t *testing.T) {
-	runner := &mockRunner{
-		responses: map[string]mockResponse{
-			"/nonexistent:[rev-parse --git-dir]": {err: fmt.Errorf("cannot change to '/nonexistent': No such file or directory")},
+	runner := &mock.Runner{
+		Responses: map[string]mock.Response{
+			"/nonexistent:[rev-parse --git-dir]": {Err: fmt.Errorf("cannot change to '/nonexistent': No such file or directory")},
 		},
 	}
 
@@ -177,8 +162,8 @@ func TestBranchExists(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			runner := &mockRunner{responses: map[string]mockResponse{
-				fmt.Sprintf("/repo:[show-ref --verify refs/heads/%s]", tt.branch): {output: "abc123", err: tt.err},
+			runner := &mock.Runner{Responses: map[string]mock.Response{
+				fmt.Sprintf("/repo:[show-ref --verify refs/heads/%s]", tt.branch): {Output: "abc123", Err: tt.err},
 			}}
 			if got := BranchExists(runner, "/repo", tt.branch); got != tt.want {
 				t.Errorf("BranchExists(%q) = %v, want %v", tt.branch, got, tt.want)
