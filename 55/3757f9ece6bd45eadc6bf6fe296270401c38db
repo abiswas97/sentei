@@ -1,0 +1,27 @@
+openspec/changes/archive/2026-06-10-ui-chrome-unification/specs/tui-progress/spec.md
+  s_45cfee6c7ab135::t_26870f4433da68 3-4,74,99-129
+openspec/specs/confirmation-view/spec.md
+  s_45cfee6c7ab135::t_26870f4433da68 5,8-9,13-17,20,31,38-39,48-52
+openspec/specs/tui-chrome/spec.md
+  s_45cfee6c7ab135::t_26870f4433da68 1-141
+openspec/specs/tui-design-system/spec.md
+  s_45cfee6c7ab135::t_26870f4433da68 1-46
+openspec/specs/tui-progress/spec.md
+  s_45cfee6c7ab135::t_26870f4433da68 5,9,13,17,21-37,56,59,67,71,74,78,82,86,89,91-92,95-126
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "553757f9ece6bd45eadc6bf6fe296270401c38db",
+  "prompts": {},
+  "sessions": {
+    "s_45cfee6c7ab135": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "362b0459-633f-41b0-be4d-ef5a2d23fce8",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Test <t@t.com>"
+    }
+  }
+}
