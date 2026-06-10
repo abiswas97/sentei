@@ -30,13 +30,13 @@ All key bindings SHALL be defined in `internal/tui/keys.go` as `key.Binding` var
 - **WHEN** a key binding is needed in any view
 - **THEN** it SHALL reference the binding from `keys.go` rather than creating a local binding
 
-### Requirement: Animation timing constants defined centrally
-Animation timing constants SHALL be defined in `internal/tui/constants.go` and used by all progress views.
-
-#### Scenario: MinProgressDisplay constant
-- **WHEN** any progress view needs to buffer a fast transition
-- **THEN** it SHALL use `MinProgressDisplay` from `constants.go` (default 300ms)
+### Requirement: Layout constants defined centrally
+Layout constants SHALL be defined in `internal/tui/constants.go` and used by all progress views. Progress hold timing already exists on the Model (`minProgressDuration` via `WithMinProgressDuration` and `holdOrAdvance`) and SHALL remain the single timing mechanism; no parallel timing constant is introduced.
 
 #### Scenario: Windowing constants
 - **WHEN** windowing logic needs completed trail or pending lead counts
 - **THEN** it SHALL use `WindowCompletedTrail` and `WindowPendingLead` from `constants.go`
+
+#### Scenario: Progress bar width constant
+- **WHEN** any view renders the overall progress bar
+- **THEN** it SHALL use the shared bar width constant from `constants.go`

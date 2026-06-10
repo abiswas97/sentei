@@ -1,6 +1,8 @@
 ## Context
 
-sentei has 12+ TUI views built incrementally across 6 changes. Each view hand-rolls its own title, separator, and key hint rendering, leading to visual inconsistencies. The integration progress view is the closest to the target aesthetic but lacks features other views have (phase headers, pending phase display). The removal progress view is the biggest outlier — it uses a white-on-purple background badge (`styleHeader`) that nothing else uses and has no progress bar. Summary views use different success markers. The confirmation dialog wraps in a bordered box (`styleDialogBox`) unlike any other view.
+sentei has 12+ TUI views built incrementally across 6 changes. Each view hand-rolls its own title, separator, and key hint rendering, leading to visual inconsistencies. The integration progress view is the closest to the target aesthetic but lacks features other views have (phase headers, pending phase display), and its progress bar renders uncolored. The removal progress view is the biggest outlier — it uses a white-on-purple background badge (`styleHeader`) that nothing else uses, drops the `sentei ─` title prefix, has no progress bar, and shows no key hints. Summary views use different success markers. The confirmation dialogs wrap in a bordered box (`styleDialogBox`) unlike any other view.
+
+**Revision note (2026-06-10):** A previous session marked this change's tasks as done, but the implementation was never committed (verified: `chrome.go`, `window.go`, `constants.go`, `progress_layout.go` exist in no ref's history). Tasks have been reset. Since the original design, main gained `internal/pipeline` (`Event`, `StepResult`, `Phase`, `RunStep`, `PhaseRecorder`), `buildPhaseDisplays` in `internal/tui/phase_display.go` (folds an event stream into per-phase display state), and model-level progress hold timing (`minProgressDuration`, `holdOrAdvance`). This design now builds on those instead of the structures they replaced.
 
 Two downstream changes depend on this work: a detail portal component (Change 2) and a cleanup preview redesign (Change 3). Both need standardized chrome to build on.
 
@@ -50,15 +52,17 @@ Two downstream changes depend on this work: a detail portal component (Change 2)
 
 **Why budget calculation**: Truly responsive — adapts to any terminal height. Pure function — `WindowSteps(steps, availableLines)` is trivially testable. No scroll state to manage. The stat line `● N done · ◐ N active · · N pending  showing X of Y` makes the windowing transparent to the user.
 
-### D4: Animation buffer via Cmd wrapping
+### D4: ProgressLayout consumes the pipeline vocabulary
 
-**Decision**: A `bufferTransition(started time.Time, cmd tea.Cmd) tea.Cmd` helper ensures at least `MinProgressDisplay` (300ms) elapses before delivering completion messages. If the operation takes longer than 300ms, no delay is added.
+**Decision**: `ProgressLayout` takes phase data shaped like `phaseDisplay` (name, steps with `pipeline.StepStatus`, done/total/failed counts) — the structure `buildPhaseDisplays` already produces from `pipeline.Event` streams. Views whose operations emit pipeline events (create, repo, integrations) map events → `buildPhaseDisplays` → `ProgressLayout`. The removal view, which uses its own deletion events, builds the same phase structure from its run state.
 
 **Alternatives considered**:
-- *`time.Sleep` in the operation itself*: Blocks the goroutine, not the UI. But it conflates operation timing with display timing.
-- *Tick-based approach*: Start a 300ms tick alongside the operation, only transition when both complete. More complex message handling.
+- *Bespoke input struct per view*: That is the status quo this change exists to remove.
+- *ProgressLayout reads `[]pipeline.Event` directly*: Couples rendering to event-stream ordering concerns that `buildPhaseDisplays` already solves, and leaves the removal view (no pipeline events) without a path in.
 
-**Why Cmd wrapping**: Stays within Bubble Tea's Cmd model. The wrapper Cmd runs the inner Cmd, checks elapsed time, sleeps the remainder if needed, then returns the message. Simple, composable, no new message types needed. Each phase records `time.Now()` at start; the completion handler wraps the transition Cmd with `bufferTransition`.
+**Why phaseDisplay**: One fold (`buildPhaseDisplays`) and one renderer (`ProgressLayout.View()`), both already pure. The seam between them is a plain data struct any view can construct.
+
+Progress hold timing is out of scope: `minProgressDuration` + `holdOrAdvance` landed on main and remain the single timing mechanism (the original `bufferTransition` design is superseded).
 
 ### D5: Drop `styleDialogBox` border from confirmations
 

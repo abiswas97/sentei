@@ -114,17 +114,24 @@ The system SHALL provide a `viewStatLine(stats WindowStats) string` function tha
 - **WHEN** a status category has zero items (e.g., 0 failed)
 - **THEN** that category SHALL be omitted from the stat line
 
-### Requirement: Animation buffer for fast operations
-The system SHALL provide a `bufferTransition(started time.Time, cmd tea.Cmd) tea.Cmd` function that ensures at least `MinProgressDisplay` duration elapses before delivering the inner Cmd's message.
+### Requirement: Styled overall progress bar
+The system SHALL render the overall progress bar with the filled portion in the accent color (62) and the unfilled track in dim gray (241); the percentage label SHALL use the default foreground. A bar SHALL never render uncolored.
 
-#### Scenario: Fast operation buffered
-- **WHEN** an operation completes in 50ms and MinProgressDisplay is 300ms
-- **THEN** the wrapper Cmd SHALL wait an additional 250ms before returning the message
+#### Scenario: Bar colors
+- **WHEN** a progress view renders a bar at 53%
+- **THEN** the filled `█` cells SHALL carry color 62 and the `░` track cells SHALL carry color 241
 
-#### Scenario: Slow operation not delayed
-- **WHEN** an operation completes in 500ms and MinProgressDisplay is 300ms
-- **THEN** the wrapper Cmd SHALL return the message immediately with no additional delay
+#### Scenario: Bounds clamped
+- **WHEN** the done count exceeds the total for any reason
+- **THEN** the bar SHALL clamp to 100% and never panic on a negative repeat count
 
-#### Scenario: Test override
-- **WHEN** MinProgressDisplay is set to 0 in test code
-- **THEN** the wrapper Cmd SHALL return the message immediately regardless of elapsed time
+### Requirement: Ellipsis truncation for overflowing text
+The system SHALL provide a truncation helper used wherever paths, branch names, or error messages can exceed the available width, cutting the string to fit with a trailing `…`. Raw hard clipping at the terminal edge SHALL NOT occur in chrome-rendered content.
+
+#### Scenario: Long path truncated
+- **WHEN** a worktree path longer than the available width is rendered in a summary or step line
+- **THEN** the rendered line SHALL end with `…` within the width budget instead of being cut mid-character by the terminal
+
+#### Scenario: Short text untouched
+- **WHEN** the text fits within the available width
+- **THEN** it SHALL render unchanged with no ellipsis
