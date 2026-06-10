@@ -1,0 +1,21 @@
+openspec/specs/tui-portal/spec.md
+  s_45cfee6c7ab135::t_619a93b78b2ee6 1-72
+openspec/specs/tui-help/spec.md
+  s_45cfee6c7ab135::t_619a93b78b2ee6 1-50
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "2159b39d86b259c427a86c6be7ae140db69ebff7",
+  "prompts": {},
+  "sessions": {
+    "s_45cfee6c7ab135": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "362b0459-633f-41b0-be4d-ef5a2d23fce8",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Test <t@t.com>"
+    }
+  }
+}
