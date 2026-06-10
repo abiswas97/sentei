@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.5.0](https://github.com/abiswas97/sentei/compare/v1.4.0...v1.5.0) (2026-06-10)
+
+
+### Features
+
+* **tui:** flow-state correctness + unified view chrome ([a28aadb](https://github.com/abiswas97/sentei/commit/a28aadb5d232462f739f36fa38d403e89b9e83d8))
+
 ## [1.4.0](https://github.com/abiswas97/sentei/compare/v1.3.0...v1.4.0) (2026-06-10)
 
 
