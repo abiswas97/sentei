@@ -44,15 +44,32 @@ jobs:
       contents: write
       id-token: write
     steps:
-      # Separate token for this job: installation tokens are short-lived and
-      # job-scoped, and the tap push needs cross-repo access.
-      - uses: actions/create-github-app-token@v2
+      # Minted manually instead of via create-github-app-token: goreleaser's
+      # HTTP client 401s on the new stateless ghs_ JWTs (Bearer path), so we
+      # force the classic opaque format with the documented override header.
+      # Revert to create-github-app-token once goreleaser/GitHub handle
+      # stateless tokens (the override header is slated for deprecation).
+      - name: Mint app installation token (stateful format)
         id: app-token
-        with:
-          app-id: ${{ vars.RELEASE_APP_ID }}
-          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
-          owner: abiswas97
-          repositories: sentei,homebrew-tap
+        env:
+          APP_ID: ${{ vars.RELEASE_APP_ID }}
+          PRIVATE_KEY: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          now=$(date +%s)
+          b64() { openssl base64 -A | tr '+/' '-_' | tr -d '='; }
+          header=$(printf '{"alg":"RS256","typ":"JWT"}' | b64)
+          payload=$(printf '{"iat":%d,"exp":%d,"iss":"%s"}' "$((now-60))" "$((now+540))" "$APP_ID" | b64)
+          sig=$(printf '%s.%s' "$header" "$payload" | openssl dgst -sha256 -sign <(printf '%s' "$PRIVATE_KEY") | b64)
+          jwt="$header.$payload.$sig"
+          inst_id=$(curl -sf -H "Authorization: Bearer $jwt" -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/installation" | jq -r .id)
+          token=$(curl -sf -X POST -H "Authorization: Bearer $jwt" -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Stateless-S2S-Token: disabled" \
+            -d '{"repositories":["sentei","homebrew-tap"]}' \
+            "https://api.github.com/app/installations/$inst_id/access_tokens" | jq -r .token)
+          echo "::add-mask::$token"
+          echo "token=$token" >> "$GITHUB_OUTPUT"
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
