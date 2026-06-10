@@ -187,13 +187,13 @@ func (m Model) findSourceWorktree() string {
 func (m Model) viewCreateBranch() string {
 	var b strings.Builder
 
-	b.WriteString(styleTitle.Render(fmt.Sprintf("  sentei %s Create Worktree", "\u2500")))
+	b.WriteString(viewTitle("Create Worktree"))
 	b.WriteString("\n\n")
 
 	b.WriteString(styleDim.Render(fmt.Sprintf("  %s %s %s", filepath.Base(m.repoPath), "\u00b7", m.repoPath)))
 	b.WriteString("\n\n")
 
-	b.WriteString(separator(m.width))
+	b.WriteString(viewSeparator(m.width))
 	b.WriteString("\n\n")
 
 	b.WriteString("  Branch name\n")
@@ -225,9 +225,9 @@ func (m Model) viewCreateBranch() string {
 	}
 	b.WriteString("\n\n")
 
-	b.WriteString(separator(m.width))
+	b.WriteString(viewSeparator(m.width))
 	b.WriteString("\n\n")
-	b.WriteString(styleDim.Render("  enter continue \u00b7 ctrl+enter quick create \u00b7 tab switch field \u00b7 esc back"))
+	b.WriteString(viewKeyHints(KeyHint{"enter", "continue"}, KeyHint{"ctrl+enter", "quick create"}, KeyHint{"tab", "switch field"}, KeyHint{"esc", "back"}))
 	b.WriteString("\n")
 
 	return b.String()

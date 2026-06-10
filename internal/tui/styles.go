@@ -1,27 +1,14 @@
 package tui
 
 import (
-	"strings"
-
 	"github.com/charmbracelet/lipgloss"
 )
 
 // UI chrome
 var (
-	styleHeader = lipgloss.NewStyle().
-			Bold(true).
-			Foreground(lipgloss.Color("15")).
-			Background(lipgloss.Color("62")).
-			Padding(0, 1)
-
 	styleStatusBar = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("241")).
 			Padding(1, 0, 0, 0)
-
-	styleDialogBox = lipgloss.NewStyle().
-			Border(lipgloss.RoundedBorder()).
-			BorderForeground(lipgloss.Color("62")).
-			Padding(1, 2)
 
 	styleDim = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("241"))
@@ -153,12 +140,3 @@ const (
 	indicatorFailed  = "✗"
 	indicatorWarning = "⚠"
 )
-
-// separator renders a dotted separator line at the given width.
-func separator(width int) string {
-	if width <= 4 {
-		width = 40
-	}
-	line := strings.Repeat("┄", width-4)
-	return styleSeparator.Render("  " + line)
-}

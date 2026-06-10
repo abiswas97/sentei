@@ -63,10 +63,6 @@ func (m Model) updateConfirm(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.view = listView
 		}
 
-	case teardownCompleteMsg:
-		m.remove.run.teardownRunning = false
-		m.remove.run.teardownResults = msg.results
-		return m.startDeletions()
 	}
 	return m, nil
 }
@@ -122,13 +118,15 @@ func (m Model) viewConfirm() string {
 
 	selected := m.selectedWorktrees()
 
-	b.WriteString(styleTitle.Render("  sentei \u2500 Confirm Deletion"))
+	b.WriteString(viewTitle("Confirm Deletion"))
+	b.WriteString("\n\n")
+	b.WriteString(viewSeparator(m.width))
 	b.WriteString("\n\n")
 	fmt.Fprintf(&b, "  You are about to delete %d worktree(s):\n\n", len(selected))
 
 	var dirtyCount, untrackedCount, lockedCount int
 	for _, wt := range selected {
-		branch := stripBranchPrefix(wt.Branch)
+		branch := worktreeLabel(wt)
 
 		var label string
 		switch {
@@ -145,7 +143,7 @@ func (m Model) viewConfirm() string {
 			label = styleSuccess.Render("(clean)")
 		}
 
-		fmt.Fprintf(&b, "    * %s %s\n", branch, label)
+		fmt.Fprintf(&b, "    %s %s\n", branch, label)
 	}
 
 	b.WriteString("\n")
@@ -193,7 +191,9 @@ func (m Model) viewConfirm() string {
 	}
 
 	b.WriteString("\n")
-	b.WriteString(styleDim.Render("  y delete \u00b7 n go back") + "\n")
+	b.WriteString(viewSeparator(m.width))
+	b.WriteString("\n\n")
+	b.WriteString(viewKeyHints(KeyHint{"y", "delete"}, KeyHint{"n", "go back"}) + "\n")
 
-	return styleDialogBox.Render(b.String())
+	return b.String()
 }

@@ -200,11 +200,11 @@ func (m Model) viewCreateOptions() string {
 	branch := m.create.branchInput.Value()
 	base := m.create.baseInput.Value()
 
-	b.WriteString(styleTitle.Render(fmt.Sprintf("  sentei %s Create Worktree", "\u2500")))
+	b.WriteString(viewTitle("Create Worktree"))
 	b.WriteString("\n\n")
 	b.WriteString(styleAccent.Render(fmt.Sprintf("  %s \u2192 from %s", branch, base)))
 	b.WriteString("\n\n")
-	b.WriteString(separator(m.width))
+	b.WriteString(viewSeparator(m.width))
 	b.WriteString("\n\n")
 
 	b.WriteString("  " + styleTitle.Render("Setup"))
@@ -247,7 +247,7 @@ func (m Model) viewCreateOptions() string {
 			strings.Join(m.create.activeIntegrationNames, ", "))))
 		b.WriteString("\n")
 	}
-	b.WriteString(separator(m.width))
+	b.WriteString(viewSeparator(m.width))
 	b.WriteString("\n\n")
 	b.WriteString(styleDim.Render("  space toggle \u00b7 enter create \u00b7 esc back"))
 	b.WriteString("\n")

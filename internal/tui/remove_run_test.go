@@ -180,3 +180,33 @@ func TestViewSummary_FailedOutcome_ReadsFromRun(t *testing.T) {
 		t.Errorf("expected failure detail from run result, view:\n%s", view)
 	}
 }
+
+// Regression: teardownCompleteMsg arrives while the view is progressView
+// (Yes switches views before teardown runs), so updateProgress must handle
+// it — updateConfirm never sees it. Dropping it left removal hanging at
+// "Teardown 0/1" forever.
+func TestUpdateProgress_TeardownComplete_StartsDeletions(t *testing.T) {
+	wts := []git.Worktree{{Path: "/work/a", Branch: "refs/heads/a"}}
+	m := NewModel(wts, nil, "/repo")
+	m.remove.run = newRemovalRun(wts)
+	m.remove.run.teardownRunning = true
+	m.view = progressView
+
+	updated, cmd := m.updateProgress(teardownCompleteMsg{
+		results: []pipeline.StepResult{{Name: "Teardown code-review-graph", Status: pipeline.StepDone}},
+	})
+	model := updated.(Model)
+
+	if model.remove.run.teardownRunning {
+		t.Error("teardown must be marked finished")
+	}
+	if len(model.remove.run.teardownResults) != 1 {
+		t.Errorf("expected teardown results stored, got %d", len(model.remove.run.teardownResults))
+	}
+	if model.remove.run.progressCh == nil {
+		t.Error("expected deletion channel to be created")
+	}
+	if cmd == nil {
+		t.Fatal("expected a Cmd that consumes deletion events")
+	}
+}

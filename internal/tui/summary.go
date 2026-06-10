@@ -32,15 +32,16 @@ func (m Model) updateSummary(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m Model) viewSummary() string {
 	var b strings.Builder
 
-	b.WriteString(styleTitle.Render("  sentei \u2500 Removal Complete"))
+	b.WriteString(viewTitle("Removal Complete"))
+	b.WriteString("\n\n")
+	b.WriteString(viewSeparator(m.width))
 	b.WriteString("\n\n")
 
 	r := m.remove.run.result
 	if r.FailureCount == 0 {
-		b.WriteString(styleSuccess.Render(
-			fmt.Sprintf("  %d worktree(s) removed successfully", r.SuccessCount),
-		))
-		b.WriteString("\n")
+		fmt.Fprintf(&b, "  %s %s\n",
+			styleIndicatorDone.Render(indicatorDone),
+			styleSuccess.Render(fmt.Sprintf("%d worktree(s) removed successfully", r.SuccessCount)))
 	} else {
 		fmt.Fprintf(&b, "  %s, %s\n",
 			styleSuccess.Render(fmt.Sprintf("%d removed", r.SuccessCount)),
@@ -50,7 +51,10 @@ func (m Model) viewSummary() string {
 		b.WriteString(styleError.Render("  Failures:\n"))
 		for _, o := range r.Outcomes {
 			if !o.Success {
-				fmt.Fprintf(&b, "    x %s: %s\n", o.Path, o.Error)
+				fmt.Fprintf(&b, "    %s %s: %s\n",
+					styleIndicatorFailed.Render(indicatorFailed),
+					truncateWithEllipsis(o.Path, max(m.width-10, 20)),
+					truncateWithEllipsis(fmt.Sprint(o.Error), max(m.width-10, 20)))
 			}
 		}
 	}
@@ -63,26 +67,30 @@ func (m Model) viewSummary() string {
 		b.WriteString(styleDim.Render("  Pruned orphaned worktree metadata"))
 		b.WriteString("\n")
 	}
-	if m.remove.run.cleanupResult != nil {
-		r := m.remove.run.cleanupResult
-		b.WriteString("\n")
-		b.WriteString(styleDim.Render("  Cleanup:"))
-		b.WriteString("\n")
-		if r.StaleRefsRemoved > 0 {
-			fmt.Fprintf(&b, "    %s Pruned %d remote ref(s)\n", styleSuccess.Render("v"), r.StaleRefsRemoved)
-		}
-		if r.ConfigDedupResult.Removed > 0 {
-			fmt.Fprintf(&b, "    %s Removed %d config duplicates\n", styleSuccess.Render("v"), r.ConfigDedupResult.Removed)
-		}
-		if r.GoneBranchesDeleted > 0 {
-			fmt.Fprintf(&b, "    %s Deleted %d branch(es) with gone upstream\n", styleSuccess.Render("v"), r.GoneBranchesDeleted)
-		}
-		if r.ConfigOrphanResult.Removed > 0 {
-			fmt.Fprintf(&b, "    %s Removed %d orphaned config section(s)\n", styleSuccess.Render("v"), r.ConfigOrphanResult.Removed)
-		}
-		if r.NonWtBranchesRemaining > 0 {
+
+	if cr := m.remove.run.cleanupResult; cr != nil {
+		cleanupActions := cr.StaleRefsRemoved + cr.ConfigDedupResult.Removed +
+			cr.GoneBranchesDeleted + cr.ConfigOrphanResult.Removed
+		if cleanupActions > 0 {
 			b.WriteString("\n")
-			b.WriteString(styleDim.Render(fmt.Sprintf("  Tip: %d local branch(es) not in any worktree.", r.NonWtBranchesRemaining)))
+			b.WriteString(styleDim.Render("  Cleanup:"))
+			b.WriteString("\n")
+			if cr.StaleRefsRemoved > 0 {
+				fmt.Fprintf(&b, "    %s Pruned %d remote ref(s)\n", styleIndicatorDone.Render(indicatorDone), cr.StaleRefsRemoved)
+			}
+			if cr.ConfigDedupResult.Removed > 0 {
+				fmt.Fprintf(&b, "    %s Removed %d config duplicates\n", styleIndicatorDone.Render(indicatorDone), cr.ConfigDedupResult.Removed)
+			}
+			if cr.GoneBranchesDeleted > 0 {
+				fmt.Fprintf(&b, "    %s Deleted %d branch(es) with gone upstream\n", styleIndicatorDone.Render(indicatorDone), cr.GoneBranchesDeleted)
+			}
+			if cr.ConfigOrphanResult.Removed > 0 {
+				fmt.Fprintf(&b, "    %s Removed %d orphaned config section(s)\n", styleIndicatorDone.Render(indicatorDone), cr.ConfigOrphanResult.Removed)
+			}
+		}
+		if cr.NonWtBranchesRemaining > 0 {
+			b.WriteString("\n")
+			b.WriteString(styleDim.Render(fmt.Sprintf("  Tip: %d local branch(es) not in any worktree.", cr.NonWtBranchesRemaining)))
 			b.WriteString("\n")
 			b.WriteString(styleDim.Render("       Run `sentei cleanup --mode=aggressive` to remove them."))
 			b.WriteString("\n")
@@ -90,10 +98,12 @@ func (m Model) viewSummary() string {
 	}
 
 	b.WriteString("\n")
+	b.WriteString(viewSeparator(m.width))
+	b.WriteString("\n\n")
 	if m.menuItems != nil {
-		b.WriteString(styleDim.Render("  enter menu \u00b7 q quit"))
+		b.WriteString(viewKeyHints(KeyHint{"enter", "menu"}, KeyHint{"q", "quit"}))
 	} else {
-		b.WriteString(styleDim.Render("  enter quit \u00b7 esc quit"))
+		b.WriteString(viewKeyHints(KeyHint{"enter", "quit"}, KeyHint{"esc", "quit"}))
 	}
 	b.WriteString("\n")
 

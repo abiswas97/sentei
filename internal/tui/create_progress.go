@@ -2,12 +2,9 @@ package tui
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
-
-	"github.com/abiswas97/sentei/internal/pipeline"
 )
 
 func (m Model) updateCreateProgress(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -37,89 +34,12 @@ func (m Model) updateCreateProgress(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) viewCreateProgress() string {
-	var b strings.Builder
-
-	branch := m.create.branchInput.Value()
-	base := m.create.baseInput.Value()
-
-	b.WriteString(styleTitle.Render(fmt.Sprintf("  sentei %s Creating Worktree", "\u2500")))
-	b.WriteString("\n\n")
-	b.WriteString(styleAccent.Render(fmt.Sprintf("  %s \u2192 from %s", branch, base)))
-	b.WriteString("\n\n")
-	b.WriteString(separator(m.width))
-	b.WriteString("\n\n")
-
-	displays := buildPhaseDisplays(m.create.events)
-
-	for i, pd := range displays {
-		isComplete := pd.done == pd.total && pd.total > 0
-		hasFailure := pd.failed > 0
-		isActive := !isComplete && pd.total > 0
-
-		var headerStyle func(strs ...string) string
-		var statusText string
-
-		pct := 0
-		if pd.total > 0 {
-			pct = (pd.done * 100) / pd.total
-		}
-
-		switch {
-		case isComplete && !hasFailure:
-			headerStyle = stylePhaseDone.Render
-			statusText = fmt.Sprintf("%d%% %s", pct, styleIndicatorDone.Render(indicatorDone))
-		case isComplete && hasFailure:
-			headerStyle = stylePhaseActive.Render
-			statusText = fmt.Sprintf("%d%% %s", pct, styleIndicatorWarning.Render(indicatorWarning))
-		case isActive:
-			headerStyle = stylePhaseActive.Render
-			statusText = fmt.Sprintf("%d%%", pct)
-		default:
-			headerStyle = stylePhasePending.Render
-			statusText = "pending"
-		}
-
-		headerLine := fmt.Sprintf("  %-30s %s", headerStyle(pd.name), styleDim.Render(statusText))
-		b.WriteString(headerLine)
-		b.WriteString("\n")
-
-		if !isComplete || hasFailure {
-			for _, step := range pd.steps {
-				var ind string
-				switch step.status {
-				case pipeline.StepDone:
-					ind = styleIndicatorDone.Render(indicatorDone)
-				case pipeline.StepRunning:
-					ind = styleIndicatorActive.Render(indicatorActive)
-				case pipeline.StepFailed:
-					ind = styleIndicatorFailed.Render(indicatorFailed)
-				default:
-					ind = styleIndicatorPending.Render(indicatorPending)
-				}
-				fmt.Fprintf(&b, "  %s %s\n", ind, step.name)
-			}
-		}
-
-		if i < len(displays)-1 {
-			b.WriteString("\n")
-		}
-	}
-
-	// Show pending phases that haven't started
-	knownPhases := make(map[string]bool)
-	for _, pd := range displays {
-		knownPhases[pd.name] = true
-	}
-	pendingNames := []string{"Setup", "Dependencies", "Integrations"}
-	for _, name := range pendingNames {
-		if !knownPhases[name] {
-			fmt.Fprintf(&b, "\n  %-30s %s\n", stylePhasePending.Render(name), styleDim.Render("pending"))
-		}
-	}
-
-	b.WriteString("\n")
-	b.WriteString(separator(m.width))
-	b.WriteString("\n")
-
-	return b.String()
+	return ProgressLayout{
+		Title:    "Creating Worktree",
+		Subtitle: fmt.Sprintf("%s \u2192 from %s", m.create.branchInput.Value(), m.create.baseInput.Value()),
+		Phases:   withPendingPhases(buildPhaseDisplays(m.create.events), "Setup", "Dependencies", "Integrations"),
+		Width:    m.width,
+		Height:   m.height,
+		Hints:    []KeyHint{{"q", "quit"}},
+	}.View()
 }

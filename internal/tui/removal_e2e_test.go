@@ -1,0 +1,107 @@
+package tui
+
+import (
+	"strings"
+	"testing"
+
+	tea "github.com/charmbracelet/bubbletea"
+
+	"github.com/abiswas97/sentei/internal/git"
+)
+
+// TestE2E_RemovalFlowChrome drives select -> confirm -> progress -> summary
+// through direct model updates and asserts each screen renders the unified
+// chrome (standard title, bar, hints, markers).
+func TestE2E_RemovalFlowChrome(t *testing.T) {
+	wts := []git.Worktree{
+		{Path: "/work/a", Branch: "refs/heads/feature/a"},
+		{Path: "/work/b", Branch: "refs/heads/feature/b"},
+	}
+	m := NewModel(wts, &stubRunner{responses: map[string]stubResponse{
+		"/repo worktree prune": {output: ""},
+	}}, "/repo")
+	m.width, m.height = 100, 30
+	m.remove.selected = map[string]bool{"/work/a": true, "/work/b": true}
+	m.view = confirmView
+
+	confirmScreen := stripANSI(m.viewConfirm())
+	if !strings.Contains(confirmScreen, "sentei ─ Confirm Deletion") || strings.Contains(confirmScreen, "╭") {
+		t.Fatalf("confirm screen chrome wrong:\n%s", confirmScreen)
+	}
+
+	updated, _ := m.updateConfirm(keyRune('y'))
+	m = updated.(Model)
+	if m.view != progressView {
+		t.Fatalf("expected progressView, got %d", m.view)
+	}
+
+	progressScreen := stripANSI(m.viewProgress())
+	for _, want := range []string{"sentei ─ Removing Worktrees", "Removing worktrees", "0/2", "░", "q quit"} {
+		if !strings.Contains(progressScreen, want) {
+			t.Fatalf("progress screen missing %q:\n%s", want, progressScreen)
+		}
+	}
+
+	for _, path := range []string{"/work/a", "/work/b"} {
+		updated, _ = m.updateProgress(worktreeDeletedMsg{Path: path})
+		m = updated.(Model)
+	}
+	updated, _ = m.updateProgress(cleanupCompleteMsg{})
+	m = updated.(Model)
+	if m.view != summaryView {
+		t.Fatalf("expected summaryView, got %d", m.view)
+	}
+
+	summaryScreen := stripANSI(m.viewSummary())
+	if !strings.Contains(summaryScreen, "sentei ─ Removal Complete") || !strings.Contains(summaryScreen, "● 2 worktree(s) removed successfully") {
+		t.Fatalf("summary screen chrome wrong:\n%s", summaryScreen)
+	}
+}
+
+func TestE2E_ProgressViewsQuitOnKeys(t *testing.T) {
+	m := NewModel(nil, nil, "/repo")
+	m.remove.run = newRemovalRun(nil)
+
+	for _, view := range []viewState{progressView, createProgressView, repoProgressView, integrationProgressView} {
+		m.view = view
+		for _, k := range []tea.KeyMsg{{Type: tea.KeyRunes, Runes: []rune{'q'}}, {Type: tea.KeyCtrlC}} {
+			_, cmd := m.Update(k)
+			if cmd == nil {
+				t.Errorf("view %d: expected quit Cmd for %v", view, k)
+				continue
+			}
+			if _, ok := cmd().(tea.QuitMsg); !ok {
+				t.Errorf("view %d: expected tea.Quit for %v", view, k)
+			}
+		}
+	}
+}
+
+func TestUpdateProgress_WindowSizeUpdatesWindowing(t *testing.T) {
+	worktrees := make([]git.Worktree, 30)
+	for i := range worktrees {
+		worktrees[i] = git.Worktree{Path: "/w/" + stepName(i) + string(rune('0'+i/26)), Branch: "refs/heads/b" + stepName(i)}
+	}
+	m := NewModel(worktrees, nil, "/repo")
+	m.width = 100
+	m.remove.run = newRemovalRun(worktrees)
+	m.remove.run.statuses[worktrees[0].Path] = statusRemoving
+	m.view = progressView
+
+	updated, _ := m.updateProgress(tea.WindowSizeMsg{Width: 100, Height: 16})
+	m = updated.(Model)
+	if !strings.Contains(stripANSI(m.viewProgress()), "showing") {
+		t.Error("expected windowed step list with stat line at height 16")
+	}
+
+	updated, _ = m.updateProgress(tea.WindowSizeMsg{Width: 100, Height: 80})
+	m = updated.(Model)
+	if strings.Contains(stripANSI(m.viewProgress()), "showing") {
+		t.Error("expected full step list (no stat line) at height 80")
+	}
+
+	// Sanity: the run state itself is untouched by resizes.
+	if m.remove.run.total() != 30 || m.remove.run.statuses[worktrees[0].Path] != statusRemoving {
+		t.Error("resize must not mutate run state")
+	}
+}

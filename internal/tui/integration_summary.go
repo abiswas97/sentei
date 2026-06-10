@@ -71,9 +71,9 @@ func (m Model) updateIntegrationSummary(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m Model) viewIntegrationSummary() string {
 	var b strings.Builder
 
-	b.WriteString(styleTitle.Render("  sentei ─ Apply Complete"))
+	b.WriteString(viewTitle("Apply Complete"))
 	b.WriteString("\n\n")
-	b.WriteString(separator(m.width))
+	b.WriteString(viewSeparator(m.width))
 	b.WriteString("\n\n")
 
 	groups := groupIntegrationEvents(m.integ.events)
@@ -90,7 +90,9 @@ func (m Model) viewIntegrationSummary() string {
 	}
 
 	if m.integ.saveErr != nil {
-		b.WriteString(styleError.Render(fmt.Sprintf("  %s Integration state was not saved: %s", indicatorFailed, m.integ.saveErr)))
+		b.WriteString(styleError.Render(truncateWithEllipsis(
+			fmt.Sprintf("  %s Integration state was not saved: %s", indicatorFailed, m.integ.saveErr),
+			max(m.width, 40))))
 		b.WriteString("\n")
 		b.WriteString(styleDim.Render("    The list will show what is actually on disk."))
 		b.WriteString("\n\n")
@@ -125,9 +127,9 @@ func (m Model) viewIntegrationSummary() string {
 		b.WriteString("\n")
 	}
 
-	b.WriteString(separator(m.width))
+	b.WriteString(viewSeparator(m.width))
 	b.WriteString("\n\n")
-	b.WriteString(styleDim.Render("  enter integrations · q quit"))
+	b.WriteString(viewKeyHints(KeyHint{"enter", "integrations"}, KeyHint{"q", "quit"}))
 	b.WriteString("\n")
 
 	return b.String()

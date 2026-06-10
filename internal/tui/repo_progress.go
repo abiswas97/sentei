@@ -1,9 +1,6 @@
 package tui
 
 import (
-	"fmt"
-	"strings"
-
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -91,90 +88,25 @@ func (m Model) updateRepoProgress(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) viewRepoProgress() string {
-	var b strings.Builder
-
-	var title string
-	var subjectName string
+	var title, subject string
 	switch m.repo.opType {
 	case "create":
-		title = fmt.Sprintf("  sentei %s Creating Repository", "\u2500")
-		subjectName = m.repo.nameInput.Value()
+		title = "Creating Repository"
+		subject = m.repo.nameInput.Value()
 	case "clone":
-		title = fmt.Sprintf("  sentei %s Cloning Repository", "\u2500")
-		subjectName = m.repo.urlInput.Value()
+		title = "Cloning Repository"
+		subject = m.repo.urlInput.Value()
 	case "migrate":
-		title = fmt.Sprintf("  sentei %s Migrating Repository", "\u2500")
-		subjectName = m.repoPath
+		title = "Migrating Repository"
+		subject = m.repoPath
 	}
 
-	b.WriteString(styleTitle.Render(title))
-	b.WriteString("\n\n")
-	if subjectName != "" {
-		b.WriteString(styleAccent.Render("  " + subjectName))
-		b.WriteString("\n\n")
-	}
-	b.WriteString(separator(m.width))
-	b.WriteString("\n\n")
-
-	displays := buildPhaseDisplays(m.repo.events)
-
-	for i, pd := range displays {
-		isComplete := pd.done == pd.total && pd.total > 0
-		hasFailure := pd.failed > 0
-		isActive := !isComplete && pd.total > 0
-
-		var headerStyle func(strs ...string) string
-		var statusText string
-
-		pct := 0
-		if pd.total > 0 {
-			pct = (pd.done * 100) / pd.total
-		}
-
-		switch {
-		case isComplete && !hasFailure:
-			headerStyle = stylePhaseDone.Render
-			statusText = fmt.Sprintf("%d%% %s", pct, styleIndicatorDone.Render(indicatorDone))
-		case isComplete && hasFailure:
-			headerStyle = stylePhaseActive.Render
-			statusText = fmt.Sprintf("%d%% %s", pct, styleIndicatorWarning.Render(indicatorWarning))
-		case isActive:
-			headerStyle = stylePhaseActive.Render
-			statusText = fmt.Sprintf("%d%%", pct)
-		default:
-			headerStyle = stylePhasePending.Render
-			statusText = "pending"
-		}
-
-		headerLine := fmt.Sprintf("  %-30s %s", headerStyle(pd.name), styleDim.Render(statusText))
-		b.WriteString(headerLine)
-		b.WriteString("\n")
-
-		if !isComplete || hasFailure {
-			for _, step := range pd.steps {
-				var ind string
-				switch step.status {
-				case pipeline.StepDone:
-					ind = styleIndicatorDone.Render(indicatorDone)
-				case pipeline.StepRunning:
-					ind = styleIndicatorActive.Render(indicatorActive)
-				case pipeline.StepFailed:
-					ind = styleIndicatorFailed.Render(indicatorFailed)
-				default:
-					ind = styleIndicatorPending.Render(indicatorPending)
-				}
-				fmt.Fprintf(&b, "    %s %s\n", ind, step.name)
-			}
-		}
-
-		if i < len(displays)-1 {
-			b.WriteString("\n")
-		}
-	}
-
-	b.WriteString("\n")
-	b.WriteString(separator(m.width))
-	b.WriteString("\n")
-
-	return b.String()
+	return ProgressLayout{
+		Title:    title,
+		Subtitle: subject,
+		Phases:   buildPhaseDisplays(m.repo.events),
+		Width:    m.width,
+		Height:   m.height,
+		Hints:    []KeyHint{{"q", "quit"}},
+	}.View()
 }

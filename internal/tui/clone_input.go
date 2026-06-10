@@ -103,9 +103,9 @@ func (m Model) updateCloneInput(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m Model) viewCloneInput() string {
 	var b strings.Builder
 
-	b.WriteString(styleTitle.Render(fmt.Sprintf("  sentei %s Clone Repository", "\u2500")))
+	b.WriteString(viewTitle("Clone Repository"))
 	b.WriteString("\n\n")
-	b.WriteString(separator(m.width))
+	b.WriteString(viewSeparator(m.width))
 	b.WriteString("\n\n")
 
 	b.WriteString("  Repository URL\n")
@@ -148,9 +148,9 @@ func (m Model) viewCloneInput() string {
 	}
 
 	b.WriteString("\n")
-	b.WriteString(separator(m.width))
+	b.WriteString(viewSeparator(m.width))
 	b.WriteString("\n\n")
-	b.WriteString(styleDim.Render("  enter clone \u00b7 tab switch field \u00b7 esc back"))
+	b.WriteString(viewKeyHints(KeyHint{"enter", "clone"}, KeyHint{"tab", "switch field"}, KeyHint{"esc", "back"}))
 	b.WriteString("\n")
 
 	return b.String()
