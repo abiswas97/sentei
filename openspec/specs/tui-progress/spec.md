@@ -1,10 +1,8 @@
 ## Purpose
 Covers the TUI progress view during deletion, including progress bar updates, per-worktree status tracking, post-deletion summary, and the Cmd-chained event consumption pattern.
-
 ## Requirements
-
 ### Requirement: Display deletion progress
-The TUI SHALL display a progress view during deletion showing a progress bar, percentage, and per-worktree status, updating in real-time as each deletion event is received from the deletion channel.
+The TUI SHALL display a progress view during deletion showing a progress bar, percentage, and per-worktree status, updating in real-time as each deletion event is received from the deletion channel. The percentage and per-worktree statuses SHALL be computed exclusively from the current run's outcomes and total; outcomes from any previous run in the same session SHALL NOT contribute.
 
 #### Scenario: Progress bar updates incrementally
 - **WHEN** a worktree deletion completes (success or failure) and 2 out of 5 total have now finished
@@ -26,6 +24,14 @@ The TUI SHALL display a progress view during deletion showing a progress bar, pe
 - **WHEN** the deletion goroutine sends events over the progress channel
 - **THEN** each event SHALL be delivered to the Bubble Tea Update loop as an individual message, not batched
 
+#### Scenario: Percentage never exceeds 100
+- **WHEN** a deletion run is in progress, regardless of how many runs preceded it in the session
+- **THEN** the displayed percentage SHALL be between 0 and 100 inclusive, derived from current-run outcomes over the current-run total
+
+#### Scenario: Teardown phase visible while running
+- **WHEN** the selected worktrees have integration artifacts and the pre-deletion teardown phase is executing
+- **THEN** the progress view SHALL show a Teardown phase with the active indicator instead of appearing idle on pending deletion rows
+
 ### Requirement: Cmd-chained event consumption
 The TUI SHALL consume deletion progress events using a Cmd-chaining pattern where each Cmd reads one event from the channel and returns it as a Msg, and the Update handler returns a new Cmd to read the next event.
 
@@ -42,7 +48,7 @@ The TUI SHALL consume deletion progress events using a Cmd-chaining pattern wher
 - **THEN** the wait Cmd SHALL return a completion message and the TUI SHALL transition to the summary view
 
 ### Requirement: Transition to summary after all deletions
-The TUI SHALL run `git worktree prune` via a Cmd after all deletions complete, then run cleanup, then fire an eager worktree reload alongside the transition to summary view.
+The TUI SHALL run `git worktree prune` via a Cmd after all deletions complete, then run cleanup, then fire an eager worktree reload alongside the transition to summary view. Completion detection SHALL be satisfied exactly when every worktree selected for the current run has an outcome, independent of any previous run's outcomes.
 
 #### Scenario: All deletions complete triggers prune
 - **WHEN** every selected worktree has either succeeded or failed
@@ -59,6 +65,10 @@ The TUI SHALL run `git worktree prune` via a Cmd after all deletions complete, t
 #### Scenario: Cleanup complete fires eager reload
 - **WHEN** the cleanup Cmd completes (the final step before summary transition)
 - **THEN** the handler SHALL increment `worktreeGeneration`, fire `loadWorktreeContext` via `tea.Batch` alongside the `holdOrAdvance` command, and NOT set `stateStale`
+
+#### Scenario: Second run completes with fewer worktrees than the first
+- **WHEN** a first run deleted 2 worktrees and a second run deletes 1
+- **THEN** the second run SHALL transition to summary when its single outcome arrives
 
 ### Requirement: Post-deletion summary
 The TUI SHALL display a summary showing the count of successfully removed worktrees, the count of failures, details for any failures, and the prune result.
@@ -81,3 +91,4 @@ The TUI SHALL exit when the user presses 'q', Enter, or Escape from the summary 
 #### Scenario: Quit from summary
 - **WHEN** the user presses 'q', Enter, or Escape on the summary view
 - **THEN** the application SHALL exit cleanly
+

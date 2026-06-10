@@ -1,22 +1,20 @@
 ## Purpose
 Covers the playground mode that creates a temporary bare repository with worktrees in various states for demo and testing purposes.
-
 ## Requirements
-
 ### Requirement: Setup creates a bare repository with worktrees
-The system SHALL create a bare git repository at `/tmp/sentei-playground/repo.git` and add worktrees representing all states the TUI handles.
+The system SHALL create a bare git repository inside a unique per-session playground directory (created via `os.MkdirTemp` under the system temp directory) and add worktrees representing all states the TUI handles. Two concurrent playground sessions SHALL NOT share or affect each other's directories.
 
 #### Scenario: Fresh setup
-- **WHEN** `Setup()` is called and no playground directory exists
-- **THEN** it SHALL create a bare repo and return the repo path and a cleanup function
+- **WHEN** `Setup()` is called
+- **THEN** it SHALL create a new unique playground directory containing a bare repo and return the repo path and a cleanup function
 
-#### Scenario: Idempotent setup
-- **WHEN** `Setup()` is called and a playground directory already exists
-- **THEN** it SHALL remove the existing directory, create a fresh playground, and return without error
+#### Scenario: Concurrent sessions are isolated
+- **WHEN** two playground sessions run at the same time
+- **THEN** each SHALL operate in its own directory, and worktrees created or removed in one session SHALL never appear in or disappear from the other
 
 #### Scenario: Setup returns cleanup function
 - **WHEN** `Setup()` returns successfully
-- **THEN** the cleanup function SHALL remove the entire `/tmp/sentei-playground/` directory when called
+- **THEN** the cleanup function SHALL remove that session's entire playground directory when called
 
 ### Requirement: Playground includes a clean worktree
 The system SHALL create a worktree on branch `feature/active` with a clean working tree and a recent commit.
@@ -96,3 +94,4 @@ The system SHALL provide a `DelayRunner` struct in `internal/git/` that implemen
 #### Scenario: DelayRunner preserves inner runner results
 - **WHEN** the inner runner returns output and an error
 - **THEN** `DelayRunner` SHALL return the same output and error unchanged
+

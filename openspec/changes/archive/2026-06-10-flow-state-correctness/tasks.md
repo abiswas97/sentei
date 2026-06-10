@@ -36,4 +36,4 @@
 
 - [x] 5.1 `go fmt ./...`, `go vet ./...`, full `go test ./...` green
 - [x] 5.2 Manual playground recheck of all four fixed behaviors (second removal run, re-entered create flow, failed apply summary, parallel sessions)
-- [ ] 5.3 Run commitlint + full test suite before push (pre-push discipline)
+- [x] 5.3 Run commitlint + full test suite before push (pre-push discipline)
