@@ -1,0 +1,20 @@
+internal/testtmp/testtmp.go
+  s_157240fea52147::t_2170cb74240bc7 61-74
+  s_157240fea52147::t_07b5b44c6e6e33 75
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "7498dfb91bd09ac3f96604059e0166b4fee45827",
+  "prompts": {},
+  "sessions": {
+    "s_157240fea52147": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "42f7cf1c-c025-449a-89c8-fab9aa10c61e",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Test <t@t.com>"
+    }
+  }
+}
