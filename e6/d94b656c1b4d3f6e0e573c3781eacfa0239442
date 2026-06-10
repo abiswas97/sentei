@@ -1,0 +1,92 @@
+internal/tui/cleanup_e2e_test.go
+  s_45cfee6c7ab135::t_2bf9c2d17aea19 232
+internal/tui/integration_summary.go
+  s_45cfee6c7ab135::t_4eabfeca352f4a 99-100
+  s_45cfee6c7ab135::t_6f80f821cd5e89 1-98,101-134
+internal/playground/setup_test.go
+  s_45cfee6c7ab135::t_4e606366d182a0 54-55,59,61,65-75,79,84-85,91
+internal/playground/setup.go
+  s_45cfee6c7ab135::t_6cad1cfe42ce69 227
+  s_45cfee6c7ab135::t_c0b258be320873 83-85
+  s_45cfee6c7ab135::t_01b63813cfed07 36-39,44,47,49
+  s_45cfee6c7ab135::t_049465f1a31f86 116
+internal/tui/remove_run_test.go
+  s_45cfee6c7ab135::t_3740a1181ac0cb 37
+  s_45cfee6c7ab135::t_e745af93e1f6a2 1-36,38-182
+internal/tui/menu.go
+  s_45cfee6c7ab135::t_4224e7ed28a9e1 85,93
+internal/tui/menu_test.go
+  s_45cfee6c7ab135::t_50e787e62dede7 176,193
+internal/tui/cleanup_result.go
+  s_45cfee6c7ab135::t_2a1b9e4d901156 25,29
+  s_45cfee6c7ab135::t_00429f9115a70d 48
+internal/tui/model.go
+  s_45cfee6c7ab135::t_82dd22ebeee7aa 221-225
+  s_45cfee6c7ab135::t_feecfc8e99ae74 338-341
+  s_45cfee6c7ab135::t_ed3dcd5b5b59e6 47
+  s_45cfee6c7ab135::t_01edd6577c455c 540-541
+  s_45cfee6c7ab135::t_f462788f1a4395 111
+  s_45cfee6c7ab135::t_3c6eb0731bb7de 260-264
+  s_45cfee6c7ab135::t_29d5aad6630ae4 279
+  s_45cfee6c7ab135::t_47f475c4030250 484-485
+  s_45cfee6c7ab135::t_a94fe7992e4e0d 202-204
+internal/tui/create_reset_test.go
+  s_45cfee6c7ab135::t_84a65f6155c757 10
+  s_45cfee6c7ab135::t_335323020568a8 14-15
+  s_45cfee6c7ab135::t_b2635961dc4c06 1-9,11-13,16-63
+  s_45cfee6c7ab135::t_dd7cc86d861f2d 64-83
+internal/tui/cleanup_confirm_test.go
+  s_45cfee6c7ab135::t_2bf9c2d17aea19 98
+openspec/changes/flow-state-correctness/tasks.md
+  s_45cfee6c7ab135::t_4364b8c1aee790 1-2,10-12,17-19,27-29,34-36,39
+  s_45cfee6c7ab135::t_1e7e7dda68c529 3-9,13-16,20-26,30-33,37-38
+internal/tui/remove_run.go
+  s_45cfee6c7ab135::t_4a7e3db7b6d976 1-36
+internal/tui/cleanup_result_test.go
+  s_45cfee6c7ab135::t_2bf9c2d17aea19 30,33-34,47,84,99,118,132
+internal/tui/progress.go
+  s_45cfee6c7ab135::t_759536e74127a8 78-79,82-84,88,91-93,98,105,109-110
+  s_45cfee6c7ab135::t_c5db227e95c585 147-148,151-152,155,161,163
+  s_45cfee6c7ab135::t_b559704c68bcbb 184,186
+  s_45cfee6c7ab135::t_1b92a67bcc8d76 125-128,130
+internal/tui/integration_progress.go
+  s_45cfee6c7ab135::t_ebc4a579028b70 17
+  s_45cfee6c7ab135::t_56f24b098a4ef0 35-43,45,48
+  s_45cfee6c7ab135::t_f1252d8be98cb9 77
+  s_45cfee6c7ab135::t_32ef5b61eb6ad8 89-90,92
+internal/tui/summary.go
+  s_45cfee6c7ab135::t_9ab53bc627ef50 66-67
+  s_45cfee6c7ab135::t_cc3d3911a3f805 38
+  s_45cfee6c7ab135::t_297c4d1cfe8200 59-60
+internal/tui/integration_progress_test.go
+  s_45cfee6c7ab135::t_91ec2eb17facf5 19-20
+  s_45cfee6c7ab135::t_a454df7aa9adb5 71,76,79-80,82-85,87-88
+  s_45cfee6c7ab135::t_be620ecbe2d180 103
+internal/tui/create_branch.go
+  s_45cfee6c7ab135::t_dd62d603d4fe2a 17-39
+internal/tui/integration_summary_test.go
+  s_45cfee6c7ab135::t_9d4829c44fe42b 1-126
+internal/tui/cleanup_confirm.go
+  s_45cfee6c7ab135::t_533549104492e8 60
+internal/tui/progress_test.go
+  s_45cfee6c7ab135::t_3f1deb3f5c04f1 83,86-87,101,120,123,131,140,155,163
+internal/tui/confirm.go
+  s_45cfee6c7ab135::t_e9a8e2ccf7853d 74-83
+  s_45cfee6c7ab135::t_7dbc5f47976282 42,56,60,67-69
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "e6d94b656c1b4d3f6e0e573c3781eacfa0239442",
+  "prompts": {},
+  "sessions": {
+    "s_45cfee6c7ab135": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "362b0459-633f-41b0-be4d-ef5a2d23fce8",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Test <t@t.com>"
+    }
+  }
+}
