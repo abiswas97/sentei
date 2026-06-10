@@ -151,12 +151,6 @@ func installIntegration(shell git.ShellRunner, wtPath string, integ integration.
 	return StepResult{Name: stepName, Status: StepDone}
 }
 
-// shellQuote single-quotes a value so shell metacharacters in it are inert when
-// the result is interpolated into a `sh -c` command.
-func shellQuote(s string) string {
-	return "'" + strings.ReplaceAll(s, "'", `'\''`) + "'"
-}
-
 func runSetupCommand(shell git.ShellRunner, wtPath, repoPath string, integ integration.Integration, emit func(Event)) StepResult {
 	stepName := fmt.Sprintf("Setup %s", integ.Name)
 
@@ -168,7 +162,7 @@ func runSetupCommand(shell git.ShellRunner, wtPath, repoPath string, integ integ
 
 	// The worktree path embeds the branch name and is interpolated into a command
 	// run via `sh -c`; quote it so a branch like "a&&rm -rf x" cannot inject.
-	command := strings.ReplaceAll(integ.Setup.Command, "{path}", shellQuote(wtPath))
+	command := strings.ReplaceAll(integ.Setup.Command, "{path}", git.ShellQuote(wtPath))
 
 	var runDir string
 	switch integ.Setup.WorkingDir {

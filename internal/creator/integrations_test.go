@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/abiswas97/sentei/internal/git"
 	"github.com/abiswas97/sentei/internal/integration"
 )
 
@@ -230,26 +231,12 @@ func TestAppendGitignore(t *testing.T) {
 	}
 }
 
-func TestShellQuote_NeutralizesMetacharacters(t *testing.T) {
-	cases := map[string]string{
-		"/plain/path": "'/plain/path'",
-		"/with space": "'/with space'",
-		"a&&rm -rf x": "'a&&rm -rf x'",
-		"it's":        `'it'\''s'`,
-	}
-	for in, want := range cases {
-		if got := shellQuote(in); got != want {
-			t.Errorf("shellQuote(%q) = %q, want %q", in, got, want)
-		}
-	}
-}
-
 func TestRunSetupCommand_QuotesInjectingPath(t *testing.T) {
 	// A branch with shell metacharacters reaches the worktree path; the setup
 	// command must receive it single-quoted so it cannot inject.
 	wtPath := "/repo/a&&touch PWNED"
 	runner := &mockRunner{responses: map[string]mockResponse{
-		fmt.Sprintf("/repo:shell[crg build %s]", shellQuote(wtPath)): {output: "ok"},
+		fmt.Sprintf("/repo:shell[crg build %s]", git.ShellQuote(wtPath)): {output: "ok"},
 	}}
 	integ := integration.Integration{
 		Name:  "crg",
@@ -267,8 +254,8 @@ func TestRunIntegrations_GitignoreFailure_IsRecorded(t *testing.T) {
 	// recorded as a StepResult (not just emitted), so HasFailures sees it.
 	wtPath := "/nonexistent/wt"
 	runner := &mockRunner{responses: map[string]mockResponse{
-		"/nonexistent/wt:shell[crg --version]":                       {output: "1.0"},
-		fmt.Sprintf("/repo:shell[crg build %s]", shellQuote(wtPath)): {output: "ok"},
+		"/nonexistent/wt:shell[crg --version]":                           {output: "1.0"},
+		fmt.Sprintf("/repo:shell[crg build %s]", git.ShellQuote(wtPath)): {output: "ok"},
 	}}
 	opts := Options{
 		RepoPath: "/repo",

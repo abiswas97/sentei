@@ -80,7 +80,9 @@ func EnableIntegration(
 		if integ.Setup.WorkingDir == "repo" {
 			workDir = repoPath
 		}
-		cmd := strings.ReplaceAll(integ.Setup.Command, "{path}", wtPath)
+		// Quote the worktree path (it embeds the branch name) before it enters a
+		// command run via sh -c, so a branch like "a&&rm -rf x" cannot inject.
+		cmd := strings.ReplaceAll(integ.Setup.Command, "{path}", git.ShellQuote(wtPath))
 
 		if _, err := shell.RunShell(workDir, cmd); err != nil {
 			emit(ManagerEvent{Worktree: wtPath, Step: stepName, Status: StatusFailed, Error: err})
