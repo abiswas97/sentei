@@ -163,6 +163,30 @@ func TestValidateRepository_PathDoesNotExist(t *testing.T) {
 	}
 }
 
+func TestBranchExists(t *testing.T) {
+	tests := []struct {
+		name   string
+		branch string
+		err    error
+		want   bool
+	}{
+		{name: "existing branch", branch: "main", want: true},
+		{name: "missing branch", branch: "ghost", err: fmt.Errorf("not found"), want: false},
+		{name: "slash branch", branch: "feature/auth", want: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			runner := &mockRunner{responses: map[string]mockResponse{
+				fmt.Sprintf("/repo:[show-ref --verify refs/heads/%s]", tt.branch): {output: "abc123", err: tt.err},
+			}}
+			if got := BranchExists(runner, "/repo", tt.branch); got != tt.want {
+				t.Errorf("BranchExists(%q) = %v, want %v", tt.branch, got, tt.want)
+			}
+		})
+	}
+}
+
 func TestShellQuote(t *testing.T) {
 	cases := map[string]string{
 		"/plain/path": "'/plain/path'",

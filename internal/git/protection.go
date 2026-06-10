@@ -45,7 +45,7 @@ func DetectDefaultBranch(runner CommandRunner, repoPath string) string {
 
 	// Fallback: try main, then master.
 	for _, candidate := range []string{"main", "master"} {
-		if _, err := runner.Run(repoPath, "show-ref", "--verify", "refs/heads/"+candidate); err == nil {
+		if BranchExists(runner, repoPath, candidate) {
 			return candidate
 		}
 	}

@@ -201,7 +201,7 @@ func runCloneWorktree(runner git.CommandRunner, repoPath, barePath string, emit 
 
 	// An empty remote leaves HEAD pointing at a branch with no commit; worktree
 	// add would otherwise fail with a cryptic "invalid reference". Surface it.
-	if _, err := runner.Run(barePath, "show-ref", "--verify", "refs/heads/"+branch); err != nil {
+	if !git.BranchExists(runner, barePath, branch) {
 		stepErr := fmt.Errorf("remote has no commits on %q yet (nothing to check out)", branch)
 		phase.Steps = append(phase.Steps, StepResult{Name: "Create worktree", Status: StepFailed, Error: stepErr})
 		emit(Event{Phase: phaseName, Step: "Create worktree", Status: StepFailed, Error: stepErr})
