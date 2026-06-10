@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/abiswas97/sentei/internal/pipeline"
 )
 
 // alwaysOkShell is a ShellRunner that succeeds for all calls — used to
@@ -52,7 +54,7 @@ func TestMigrate_Successful(t *testing.T) {
 	// No phase failures
 	for _, phase := range result.Phases {
 		for _, step := range phase.Steps {
-			if step.Status == StepFailed {
+			if step.Status == pipeline.StepFailed {
 				t.Errorf("step %q failed: %v", step.Name, step.Error)
 			}
 		}
@@ -80,7 +82,7 @@ func TestMigrate_DirtyRepo_WarningContinues(t *testing.T) {
 	// Should still succeed — dirty is a warning, not a failure
 	for _, phase := range result.Phases {
 		for _, step := range phase.Steps {
-			if step.Status == StepFailed {
+			if step.Status == pipeline.StepFailed {
 				t.Errorf("step %q failed: %v", step.Name, step.Error)
 			}
 		}
@@ -194,7 +196,7 @@ func TestMigrate_PreservesOriginURL(t *testing.T) {
 
 	for _, phase := range result.Phases {
 		for _, step := range phase.Steps {
-			if step.Status == StepFailed {
+			if step.Status == pipeline.StepFailed {
 				t.Errorf("step %q failed: %v", step.Name, step.Error)
 			}
 		}
@@ -229,7 +231,7 @@ func TestMigrate_SlashBranch_ChecksOutExistingBranch(t *testing.T) {
 
 	for _, phase := range result.Phases {
 		for _, step := range phase.Steps {
-			if step.Status == StepFailed {
+			if step.Status == pipeline.StepFailed {
 				t.Errorf("step %q failed: %v", step.Name, step.Error)
 			}
 		}
@@ -251,7 +253,7 @@ func TestMigrate_SlashBranch_ChecksOutExistingBranch(t *testing.T) {
 	}
 }
 
-func findPhase(phases []Phase, name string) *Phase {
+func findPhase(phases []pipeline.Phase, name string) *pipeline.Phase {
 	for i := range phases {
 		if phases[i].Name == name {
 			return &phases[i]

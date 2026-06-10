@@ -8,6 +8,7 @@ import (
 
 	"github.com/abiswas97/sentei/internal/config"
 	"github.com/abiswas97/sentei/internal/integration"
+	"github.com/abiswas97/sentei/internal/pipeline"
 )
 
 func TestRun_FullPipeline(t *testing.T) {
@@ -190,8 +191,8 @@ func TestResult_HasFailures(t *testing.T) {
 		{
 			name: "no failures",
 			result: Result{
-				Phases: []Phase{
-					{Steps: []StepResult{{Status: StepDone}, {Status: StepSkipped}}},
+				Phases: []pipeline.Phase{
+					{Steps: []pipeline.StepResult{{Status: pipeline.StepDone}, {Status: pipeline.StepSkipped}}},
 				},
 			},
 			want: false,
@@ -199,8 +200,8 @@ func TestResult_HasFailures(t *testing.T) {
 		{
 			name: "has failure",
 			result: Result{
-				Phases: []Phase{
-					{Steps: []StepResult{{Status: StepDone}, {Status: StepFailed}}},
+				Phases: []pipeline.Phase{
+					{Steps: []pipeline.StepResult{{Status: pipeline.StepDone}, {Status: pipeline.StepFailed}}},
 				},
 			},
 			want: true,

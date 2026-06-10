@@ -4,6 +4,7 @@ import (
 	"path/filepath"
 
 	"github.com/abiswas97/sentei/internal/git"
+	"github.com/abiswas97/sentei/internal/pipeline"
 )
 
 type RepoContext int
@@ -13,36 +14,6 @@ const (
 	ContextNonBareRepo                    // regular git repo — offer migrate
 	ContextNoRepo                         // not in a git repo — offer create/clone
 )
-
-type StepStatus int
-
-const (
-	StepPending StepStatus = iota
-	StepRunning
-	StepDone
-	StepFailed
-	StepSkipped
-)
-
-type StepResult struct {
-	Name    string
-	Status  StepStatus
-	Message string
-	Error   error
-}
-
-type Phase struct {
-	Name  string
-	Steps []StepResult
-}
-
-type Event struct {
-	Phase   string
-	Step    string
-	Status  StepStatus
-	Message string
-	Error   error
-}
 
 // DetectContext determines the repo context at the given path.
 //
@@ -101,37 +72,6 @@ func ResolveBareRoot(runner git.CommandRunner, path string) string {
 	return filepath.Dir(commonDir)
 }
 
-func (r *Phase) HasFailures() bool {
-	for _, s := range r.Steps {
-		if s.Status == StepFailed {
-			return true
-		}
-	}
-	return false
-}
-
-func phasesHaveFailures(phases []Phase) bool {
-	for i := range phases {
-		if phases[i].HasFailures() {
-			return true
-		}
-	}
-	return false
-}
-
-// FirstFailure returns the first failed step across all phases, with the name of
-// the phase it belongs to. ok is false when no step failed.
-func FirstFailure(phases []Phase) (phaseName string, step StepResult, ok bool) {
-	for _, p := range phases {
-		for _, s := range p.Steps {
-			if s.Status == StepFailed {
-				return p.Name, s, true
-			}
-		}
-	}
-	return "", StepResult{}, false
-}
-
-func (r CloneResult) HasFailures() bool   { return phasesHaveFailures(r.Phases) }
-func (r CreateResult) HasFailures() bool  { return phasesHaveFailures(r.Phases) }
-func (r MigrateResult) HasFailures() bool { return phasesHaveFailures(r.Phases) }
+func (r CloneResult) HasFailures() bool   { return pipeline.PhasesHaveFailures(r.Phases) }
+func (r CreateResult) HasFailures() bool  { return pipeline.PhasesHaveFailures(r.Phases) }
+func (r MigrateResult) HasFailures() bool { return pipeline.PhasesHaveFailures(r.Phases) }

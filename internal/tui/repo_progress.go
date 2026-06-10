@@ -7,11 +7,11 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/abiswas97/sentei/internal/creator"
+	"github.com/abiswas97/sentei/internal/pipeline"
 	"github.com/abiswas97/sentei/internal/repo"
 )
 
-type repoEventMsg repo.Event
+type repoEventMsg pipeline.Event
 
 type repoDoneMsg struct {
 	result interface{} // CreateResult, CloneResult, or MigrateResult
@@ -19,7 +19,7 @@ type repoDoneMsg struct {
 
 // startRepoPipeline launches the appropriate pipeline based on opts type.
 func (m *Model) startRepoPipeline(opts interface{}) tea.Cmd {
-	ch := make(chan repo.Event, 50)
+	ch := make(chan pipeline.Event, 50)
 	resultCh := make(chan interface{}, 1)
 	m.repo.eventCh = ch
 	m.repo.resultCh = resultCh
@@ -30,19 +30,19 @@ func (m *Model) startRepoPipeline(opts interface{}) tea.Cmd {
 	switch o := opts.(type) {
 	case repo.CreateOptions:
 		go func() {
-			result := repo.Create(runner, shell, o, func(e repo.Event) { ch <- e })
+			result := repo.Create(runner, shell, o, func(e pipeline.Event) { ch <- e })
 			close(ch)
 			resultCh <- result
 		}()
 	case repo.CloneOptions:
 		go func() {
-			result := repo.Clone(runner, o, func(e repo.Event) { ch <- e })
+			result := repo.Clone(runner, o, func(e pipeline.Event) { ch <- e })
 			close(ch)
 			resultCh <- result
 		}()
 	case repo.MigrateOptions:
 		go func() {
-			result := repo.Migrate(runner, shell, o, func(e repo.Event) { ch <- e })
+			result := repo.Migrate(runner, shell, o, func(e pipeline.Event) { ch <- e })
 			close(ch)
 			resultCh <- result
 		}()
@@ -76,7 +76,7 @@ func (m Model) updateRepoProgress(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case repoEventMsg:
-		m.repo.events = append(m.repo.events, repo.Event(msg))
+		m.repo.events = append(m.repo.events, pipeline.Event(msg))
 		return m, m.waitForRepoEvent()
 
 	case repoDoneMsg:
@@ -88,56 +88,6 @@ func (m Model) updateRepoProgress(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.holdOrAdvance(targetView)
 	}
 	return m, nil
-}
-
-// repoStepStatus maps repo.StepStatus to creator.StepStatus (same iota values).
-func repoStepStatus(s repo.StepStatus) creator.StepStatus {
-	return creator.StepStatus(s)
-}
-
-func (m Model) buildRepoPhaseDisplays() []phaseDisplay {
-	phases := map[string]*phaseDisplay{}
-	var order []string
-
-	for _, ev := range m.repo.events {
-		pd, exists := phases[ev.Phase]
-		if !exists {
-			pd = &phaseDisplay{name: ev.Phase}
-			phases[ev.Phase] = pd
-			order = append(order, ev.Phase)
-		}
-
-		found := false
-		for i := range pd.steps {
-			if pd.steps[i].name == ev.Step {
-				pd.steps[i].status = repoStepStatus(ev.Status)
-				found = true
-				break
-			}
-		}
-		if !found {
-			pd.steps = append(pd.steps, stepDisplay{name: ev.Step, status: repoStepStatus(ev.Status)})
-		}
-	}
-
-	var result []phaseDisplay
-	for _, name := range order {
-		pd := phases[name]
-		pd.total = len(pd.steps)
-		for _, s := range pd.steps {
-			switch s.status {
-			case creator.StepDone, creator.StepSkipped:
-				// A skipped step is resolved (non-failing); count it as done so a
-				// phase with a best-effort skip still reaches 100%.
-				pd.done++
-			case creator.StepFailed:
-				pd.failed++
-				pd.done++
-			}
-		}
-		result = append(result, *pd)
-	}
-	return result
 }
 
 func (m Model) viewRepoProgress() string {
@@ -166,7 +116,7 @@ func (m Model) viewRepoProgress() string {
 	b.WriteString(separator(m.width))
 	b.WriteString("\n\n")
 
-	displays := m.buildRepoPhaseDisplays()
+	displays := buildPhaseDisplays(m.repo.events)
 
 	for i, pd := range displays {
 		isComplete := pd.done == pd.total && pd.total > 0
@@ -204,11 +154,11 @@ func (m Model) viewRepoProgress() string {
 			for _, step := range pd.steps {
 				var ind string
 				switch step.status {
-				case creator.StepDone:
+				case pipeline.StepDone:
 					ind = styleIndicatorDone.Render(indicatorDone)
-				case creator.StepRunning:
+				case pipeline.StepRunning:
 					ind = styleIndicatorActive.Render(indicatorActive)
-				case creator.StepFailed:
+				case pipeline.StepFailed:
 					ind = styleIndicatorFailed.Render(indicatorFailed)
 				default:
 					ind = styleIndicatorPending.Render(indicatorPending)

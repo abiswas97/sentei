@@ -4,37 +4,8 @@ import (
 	"github.com/abiswas97/sentei/internal/config"
 	"github.com/abiswas97/sentei/internal/git"
 	"github.com/abiswas97/sentei/internal/integration"
+	"github.com/abiswas97/sentei/internal/pipeline"
 )
-
-type StepStatus int
-
-const (
-	StepPending StepStatus = iota
-	StepRunning
-	StepDone
-	StepFailed
-	StepSkipped
-)
-
-type StepResult struct {
-	Name    string
-	Status  StepStatus
-	Message string
-	Error   error
-}
-
-type Phase struct {
-	Name  string
-	Steps []StepResult
-}
-
-type Event struct {
-	Phase   string
-	Step    string
-	Status  StepStatus
-	Message string
-	Error   error
-}
 
 type Options struct {
 	BranchName     string
@@ -49,27 +20,20 @@ type Options struct {
 
 type Result struct {
 	WorktreePath string
-	Phases       []Phase
+	Phases       []pipeline.Phase
 }
 
 func (r *Result) HasFailures() bool {
-	for _, p := range r.Phases {
-		for _, s := range p.Steps {
-			if s.Status == StepFailed {
-				return true
-			}
-		}
-	}
-	return false
+	return pipeline.PhasesHaveFailures(r.Phases)
 }
 
-func Run(runner git.CommandRunner, shell git.ShellRunner, opts Options, emit func(Event)) Result {
+func Run(runner git.CommandRunner, shell git.ShellRunner, opts Options, emit func(pipeline.Event)) Result {
 	result := Result{}
 
 	setupPhase := runSetup(runner, opts, emit)
 	result.Phases = append(result.Phases, setupPhase)
 
-	if setupPhase.Steps[0].Status == StepFailed {
+	if setupPhase.Steps[0].Status == pipeline.StepFailed {
 		return result
 	}
 	result.WorktreePath = git.WorktreePath(opts.RepoPath, opts.BranchName)

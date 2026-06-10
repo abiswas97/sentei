@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/abiswas97/sentei/internal/config"
+	"github.com/abiswas97/sentei/internal/pipeline"
 )
 
 func boolPtr(b bool) *bool {
@@ -37,8 +38,8 @@ func TestRunDeps_SingleEcosystem(t *testing.T) {
 	if len(phase.Steps) != 1 {
 		t.Fatalf("step count = %d, want 1", len(phase.Steps))
 	}
-	if phase.Steps[0].Status != StepDone {
-		t.Errorf("step status = %v, want StepDone", phase.Steps[0].Status)
+	if phase.Steps[0].Status != pipeline.StepDone {
+		t.Errorf("step status = %v, want pipeline.StepDone", phase.Steps[0].Status)
 	}
 }
 
@@ -71,8 +72,8 @@ func TestRunDeps_InstallFailure(t *testing.T) {
 	ec := &eventCollector{}
 	phase := runDeps(runner, "/repo/feature-auth", opts, ec.emit)
 
-	if phase.Steps[0].Status != StepFailed {
-		t.Errorf("step status = %v, want StepFailed", phase.Steps[0].Status)
+	if phase.Steps[0].Status != pipeline.StepFailed {
+		t.Errorf("step status = %v, want pipeline.StepFailed", phase.Steps[0].Status)
 	}
 }
 
@@ -118,15 +119,15 @@ func TestRunDeps_ParallelWorkspaces(t *testing.T) {
 
 	// Verify all steps completed
 	for i, step := range phase.Steps {
-		if step.Status != StepDone {
-			t.Errorf("step[%d] %q status = %v, want StepDone", i, step.Name, step.Status)
+		if step.Status != pipeline.StepDone {
+			t.Errorf("step[%d] %q status = %v, want pipeline.StepDone", i, step.Name, step.Status)
 		}
 	}
 
 	// Verify events contain "running" and "done" for each
 	runningCount := 0
 	for _, e := range ec.events {
-		if e.Status == StepRunning {
+		if e.Status == pipeline.StepRunning {
 			runningCount++
 		}
 	}

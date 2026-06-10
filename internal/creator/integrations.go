@@ -10,10 +10,11 @@ import (
 	"github.com/abiswas97/sentei/internal/fileutil"
 	"github.com/abiswas97/sentei/internal/git"
 	"github.com/abiswas97/sentei/internal/integration"
+	"github.com/abiswas97/sentei/internal/pipeline"
 )
 
-func runIntegrations(shell git.ShellRunner, wtPath string, opts Options, emit func(Event)) Phase {
-	phase := Phase{Name: "Integrations"}
+func runIntegrations(shell git.ShellRunner, wtPath string, opts Options, emit func(pipeline.Event)) pipeline.Phase {
+	phase := pipeline.Phase{Name: "Integrations"}
 
 	if len(opts.Integrations) == 0 {
 		return phase
@@ -27,17 +28,17 @@ func runIntegrations(shell git.ShellRunner, wtPath string, opts Options, emit fu
 	return phase
 }
 
-func setupIntegration(shell git.ShellRunner, wtPath, repoPath, sourceWorktree string, integ integration.Integration, emit func(Event)) []StepResult {
-	var steps []StepResult
+func setupIntegration(shell git.ShellRunner, wtPath, repoPath, sourceWorktree string, integ integration.Integration, emit func(pipeline.Event)) []pipeline.StepResult {
+	var steps []pipeline.StepResult
 
 	if integ.IndexCopyDir != "" && sourceWorktree != "" {
 		stepName := "Copy index from main"
-		emit(Event{Phase: "Integrations", Step: stepName, Status: StepRunning})
+		emit(pipeline.Event{Phase: "Integrations", Step: stepName, Status: pipeline.StepRunning})
 		if err := copyIntegrationIndex(sourceWorktree, wtPath, integ.IndexCopyDir); err != nil {
-			emit(Event{Phase: "Integrations", Step: stepName, Status: StepSkipped, Message: err.Error()})
+			emit(pipeline.Event{Phase: "Integrations", Step: stepName, Status: pipeline.StepSkipped, Message: err.Error()})
 		} else {
-			emit(Event{Phase: "Integrations", Step: stepName, Status: StepDone})
-			steps = append(steps, StepResult{Name: stepName, Status: StepDone})
+			emit(pipeline.Event{Phase: "Integrations", Step: stepName, Status: pipeline.StepDone})
+			steps = append(steps, pipeline.StepResult{Name: stepName, Status: pipeline.StepDone})
 		}
 	}
 
@@ -48,14 +49,14 @@ func setupIntegration(shell git.ShellRunner, wtPath, repoPath, sourceWorktree st
 		steps = append(steps, depSteps...)
 
 		for _, s := range depSteps {
-			if s.Status == StepFailed {
+			if s.Status == pipeline.StepFailed {
 				return steps
 			}
 		}
 
 		installStep := installIntegration(shell, wtPath, integ, emit)
 		steps = append(steps, installStep)
-		if installStep.Status == StepFailed {
+		if installStep.Status == pipeline.StepFailed {
 			return steps
 		}
 	}
@@ -63,13 +64,13 @@ func setupIntegration(shell git.ShellRunner, wtPath, repoPath, sourceWorktree st
 	setupStep := runSetupCommand(shell, wtPath, repoPath, integ, emit)
 	steps = append(steps, setupStep)
 
-	if setupStep.Status != StepFailed && len(integ.GitignoreEntries) > 0 {
+	if setupStep.Status != pipeline.StepFailed && len(integ.GitignoreEntries) > 0 {
 		if err := appendGitignore(wtPath, integ.GitignoreEntries); err != nil {
 			gitignoreStep := fmt.Sprintf("Gitignore %s", integ.Name)
-			emit(Event{Phase: "Integrations", Step: gitignoreStep, Status: StepFailed, Error: err})
+			emit(pipeline.Event{Phase: "Integrations", Step: gitignoreStep, Status: pipeline.StepFailed, Error: err})
 			// Record the failure so HasFailures() and the summary reflect it; an
 			// emitted event alone is invisible to the result.
-			steps = append(steps, StepResult{Name: gitignoreStep, Status: StepFailed, Error: err})
+			steps = append(steps, pipeline.StepResult{Name: gitignoreStep, Status: pipeline.StepFailed, Error: err})
 		}
 	}
 
@@ -89,76 +90,76 @@ func detectIntegration(shell git.ShellRunner, wtPath string, integ integration.I
 	return false
 }
 
-func checkAndInstallDeps(shell git.ShellRunner, wtPath string, integ integration.Integration, emit func(Event)) []StepResult {
-	var steps []StepResult
+func checkAndInstallDeps(shell git.ShellRunner, wtPath string, integ integration.Integration, emit func(pipeline.Event)) []pipeline.StepResult {
+	var steps []pipeline.StepResult
 
 	for _, dep := range integ.Dependencies {
 		stepName := fmt.Sprintf("Check %s", dep.Name)
-		emit(Event{Phase: "Integrations", Step: stepName, Status: StepRunning})
+		emit(pipeline.Event{Phase: "Integrations", Step: stepName, Status: pipeline.StepRunning})
 
 		_, err := shell.RunShell(wtPath, dep.Detect)
 		if err == nil {
-			emit(Event{Phase: "Integrations", Step: stepName, Status: StepDone})
-			steps = append(steps, StepResult{Name: stepName, Status: StepDone})
+			emit(pipeline.Event{Phase: "Integrations", Step: stepName, Status: pipeline.StepDone})
+			steps = append(steps, pipeline.StepResult{Name: stepName, Status: pipeline.StepDone})
 			continue
 		}
 
 		if dep.Install == "" {
-			emit(Event{Phase: "Integrations", Step: stepName, Status: StepFailed, Error: fmt.Errorf("%s not found and no install command available", dep.Name)})
-			steps = append(steps, StepResult{
+			emit(pipeline.Event{Phase: "Integrations", Step: stepName, Status: pipeline.StepFailed, Error: fmt.Errorf("%s not found and no install command available", dep.Name)})
+			steps = append(steps, pipeline.StepResult{
 				Name:   stepName,
-				Status: StepFailed,
+				Status: pipeline.StepFailed,
 				Error:  fmt.Errorf("%s not found and no install command available", dep.Name),
 			})
 			return steps
 		}
 
 		installName := fmt.Sprintf("Install %s", dep.Name)
-		emit(Event{Phase: "Integrations", Step: installName, Status: StepRunning})
+		emit(pipeline.Event{Phase: "Integrations", Step: installName, Status: pipeline.StepRunning})
 		_, installErr := shell.RunShell(wtPath, dep.Install)
 		if installErr != nil {
-			emit(Event{Phase: "Integrations", Step: installName, Status: StepFailed, Error: installErr})
-			steps = append(steps, StepResult{
+			emit(pipeline.Event{Phase: "Integrations", Step: installName, Status: pipeline.StepFailed, Error: installErr})
+			steps = append(steps, pipeline.StepResult{
 				Name:   installName,
-				Status: StepFailed,
+				Status: pipeline.StepFailed,
 				Error:  fmt.Errorf("installing dependency %s: %w", dep.Name, installErr),
 			})
 			return steps
 		}
 
-		emit(Event{Phase: "Integrations", Step: installName, Status: StepDone})
-		steps = append(steps, StepResult{Name: installName, Status: StepDone})
+		emit(pipeline.Event{Phase: "Integrations", Step: installName, Status: pipeline.StepDone})
+		steps = append(steps, pipeline.StepResult{Name: installName, Status: pipeline.StepDone})
 	}
 
 	return steps
 }
 
-func installIntegration(shell git.ShellRunner, wtPath string, integ integration.Integration, emit func(Event)) StepResult {
+func installIntegration(shell git.ShellRunner, wtPath string, integ integration.Integration, emit func(pipeline.Event)) pipeline.StepResult {
 	stepName := fmt.Sprintf("Install %s", integ.Name)
-	emit(Event{Phase: "Integrations", Step: stepName, Status: StepRunning})
+	emit(pipeline.Event{Phase: "Integrations", Step: stepName, Status: pipeline.StepRunning})
 
 	_, err := shell.RunShell(wtPath, integ.Install.Command)
 	if err != nil {
-		emit(Event{Phase: "Integrations", Step: stepName, Status: StepFailed, Error: err})
-		return StepResult{
+		emit(pipeline.Event{Phase: "Integrations", Step: stepName, Status: pipeline.StepFailed, Error: err})
+		return pipeline.StepResult{
 			Name:   stepName,
-			Status: StepFailed,
+			Status: pipeline.StepFailed,
 			Error:  fmt.Errorf("installing %s: %w", integ.Name, err),
 		}
 	}
 
-	emit(Event{Phase: "Integrations", Step: stepName, Status: StepDone})
-	return StepResult{Name: stepName, Status: StepDone}
+	emit(pipeline.Event{Phase: "Integrations", Step: stepName, Status: pipeline.StepDone})
+	return pipeline.StepResult{Name: stepName, Status: pipeline.StepDone}
 }
 
-func runSetupCommand(shell git.ShellRunner, wtPath, repoPath string, integ integration.Integration, emit func(Event)) StepResult {
+func runSetupCommand(shell git.ShellRunner, wtPath, repoPath string, integ integration.Integration, emit func(pipeline.Event)) pipeline.StepResult {
 	stepName := fmt.Sprintf("Setup %s", integ.Name)
 
 	if integ.Setup.Command == "" {
-		return StepResult{Name: stepName, Status: StepSkipped}
+		return pipeline.StepResult{Name: stepName, Status: pipeline.StepSkipped}
 	}
 
-	emit(Event{Phase: "Integrations", Step: stepName, Status: StepRunning})
+	emit(pipeline.Event{Phase: "Integrations", Step: stepName, Status: pipeline.StepRunning})
 
 	// The worktree path embeds the branch name and is interpolated into a command
 	// run via `sh -c`; quote it so a branch like "a&&rm -rf x" cannot inject.
@@ -174,16 +175,16 @@ func runSetupCommand(shell git.ShellRunner, wtPath, repoPath string, integ integ
 
 	_, err := shell.RunShell(runDir, command)
 	if err != nil {
-		emit(Event{Phase: "Integrations", Step: stepName, Status: StepFailed, Error: err})
-		return StepResult{
+		emit(pipeline.Event{Phase: "Integrations", Step: stepName, Status: pipeline.StepFailed, Error: err})
+		return pipeline.StepResult{
 			Name:   stepName,
-			Status: StepFailed,
+			Status: pipeline.StepFailed,
 			Error:  fmt.Errorf("setting up %s: %w", integ.Name, err),
 		}
 	}
 
-	emit(Event{Phase: "Integrations", Step: stepName, Status: StepDone})
-	return StepResult{Name: stepName, Status: StepDone}
+	emit(pipeline.Event{Phase: "Integrations", Step: stepName, Status: pipeline.StepDone})
+	return pipeline.StepResult{Name: stepName, Status: pipeline.StepDone}
 }
 
 // copyIntegrationIndex copies the IndexCopyDir from source to target worktree.

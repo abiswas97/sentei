@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 
 	"github.com/abiswas97/sentei/internal/git"
+	"github.com/abiswas97/sentei/internal/pipeline"
 	"github.com/abiswas97/sentei/internal/repo"
 )
 
@@ -43,7 +44,7 @@ func RunClone(args []string) error {
 	for _, phase := range result.Phases {
 		if phase.HasFailures() {
 			for _, step := range phase.Steps {
-				if step.Status == repo.StepFailed {
+				if step.Status == pipeline.StepFailed {
 					fmt.Fprintf(os.Stderr, "%s✗%s %s: %v\n", yellow, nc, step.Name, step.Error)
 				}
 			}
@@ -55,19 +56,19 @@ func RunClone(args []string) error {
 	return nil
 }
 
-func printCloneEvent(e repo.Event) {
+func printCloneEvent(e pipeline.Event) {
 	switch e.Status {
-	case repo.StepRunning:
+	case pipeline.StepRunning:
 		fmt.Printf("%s→%s [%s] %s\n", blue, nc, e.Phase, e.Step)
-	case repo.StepDone:
+	case pipeline.StepDone:
 		msg := ""
 		if e.Message != "" {
 			msg = fmt.Sprintf(" (%s)", e.Message)
 		}
 		fmt.Printf("%s✓%s [%s] %s%s\n", green, nc, e.Phase, e.Step, msg)
-	case repo.StepFailed:
+	case pipeline.StepFailed:
 		fmt.Printf("%s✗%s [%s] %s: %v\n", yellow, nc, e.Phase, e.Step, e.Error)
-	case repo.StepSkipped:
+	case pipeline.StepSkipped:
 		msg := ""
 		if e.Message != "" {
 			msg = fmt.Sprintf(" (%s)", e.Message)

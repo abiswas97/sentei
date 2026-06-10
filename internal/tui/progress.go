@@ -8,8 +8,8 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/abiswas97/sentei/internal/cleanup"
-	"github.com/abiswas97/sentei/internal/creator"
 	"github.com/abiswas97/sentei/internal/git"
+	"github.com/abiswas97/sentei/internal/pipeline"
 	"github.com/abiswas97/sentei/internal/worktree"
 )
 
@@ -124,7 +124,7 @@ func (m Model) viewProgress() string {
 	if len(m.remove.teardownResults) > 0 {
 		hasFailed := false
 		for _, r := range m.remove.teardownResults {
-			if r.Status == creator.StepFailed {
+			if r.Status == pipeline.StepFailed {
 				hasFailed = true
 			}
 		}

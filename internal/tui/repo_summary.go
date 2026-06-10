@@ -9,6 +9,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/abiswas97/sentei/internal/git"
+	"github.com/abiswas97/sentei/internal/pipeline"
 	"github.com/abiswas97/sentei/internal/repo"
 )
 
@@ -18,7 +19,7 @@ func cloneFailed(result repo.CloneResult) (bool, error) {
 	if !result.HasFailures() {
 		return false, nil
 	}
-	_, step, _ := repo.FirstFailure(result.Phases)
+	_, step, _ := pipeline.FirstFailure(result.Phases)
 	return true, step.Error
 }
 

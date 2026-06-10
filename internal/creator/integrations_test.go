@@ -9,6 +9,7 @@ import (
 
 	"github.com/abiswas97/sentei/internal/git"
 	"github.com/abiswas97/sentei/internal/integration"
+	"github.com/abiswas97/sentei/internal/pipeline"
 )
 
 func TestRunIntegrations_NoIntegrations(t *testing.T) {
@@ -111,7 +112,7 @@ func TestRunIntegrations_InstallRequired(t *testing.T) {
 
 	hasFailed := false
 	for _, s := range phase.Steps {
-		if s.Status == StepFailed {
+		if s.Status == pipeline.StepFailed {
 			hasFailed = true
 		}
 	}
@@ -147,7 +148,7 @@ func TestRunIntegrations_SetupFailure(t *testing.T) {
 
 	hasFailed := false
 	for _, s := range phase.Steps {
-		if s.Status == StepFailed {
+		if s.Status == pipeline.StepFailed {
 			hasFailed = true
 		}
 	}
@@ -244,14 +245,14 @@ func TestRunSetupCommand_QuotesInjectingPath(t *testing.T) {
 	}
 	ec := &eventCollector{}
 	step := runSetupCommand(runner, wtPath, "/repo", integ, ec.emit)
-	if step.Status == StepFailed {
+	if step.Status == pipeline.StepFailed {
 		t.Errorf("quoted setup command should have matched the mock, got failure: %v", step.Error)
 	}
 }
 
 func TestRunIntegrations_GitignoreFailure_IsRecorded(t *testing.T) {
 	// wtPath does not exist, so appendGitignore fails. The failure must be
-	// recorded as a StepResult (not just emitted), so HasFailures sees it.
+	// recorded as a pipeline.StepResult (not just emitted), so HasFailures sees it.
 	wtPath := "/nonexistent/wt"
 	runner := &mockRunner{responses: map[string]mockResponse{
 		"/nonexistent/wt:shell[crg --version]":                           {output: "1.0"},
@@ -271,11 +272,11 @@ func TestRunIntegrations_GitignoreFailure_IsRecorded(t *testing.T) {
 
 	gitignoreFailed := false
 	for _, s := range phase.Steps {
-		if strings.Contains(s.Name, "Gitignore") && s.Status == StepFailed {
+		if strings.Contains(s.Name, "Gitignore") && s.Status == pipeline.StepFailed {
 			gitignoreFailed = true
 		}
 	}
 	if !gitignoreFailed {
-		t.Error("a gitignore append failure must be recorded as a StepFailed result")
+		t.Error("a gitignore append failure must be recorded as a pipeline.StepFailed result")
 	}
 }
