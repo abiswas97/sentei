@@ -3,6 +3,11 @@ name: Release
 on:
   push:
     branches: [main]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag to (re)publish artifacts for"
+        required: true
 
 permissions:
   contents: write
@@ -11,37 +16,106 @@ permissions:
 
 jobs:
   release-please:
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     outputs:
       release_created: ${{ steps.release.outputs.release_created }}
       tag_name: ${{ steps.release.outputs.tag_name }}
     steps:
-      - uses: googleapis/release-please-action@v4
+      # Per-run installation token from the sentei-release-bot GitHub App:
+      # nothing expires on a calendar, and PRs/tags it creates trigger CI.
+      - uses: actions/create-github-app-token@v2
+        id: app-token
+        with:
+          app-id: ${{ vars.RELEASE_APP_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+      - uses: googleapis/release-please-action@v5
         id: release
         with:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
-          token: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
+          token: ${{ steps.app-token.outputs.token }}
 
   goreleaser:
     needs: release-please
-    if: ${{ needs.release-please.outputs.release_created == 'true' }}
+    if: ${{ !cancelled() && (needs.release-please.outputs.release_created == 'true' || github.event_name == 'workflow_dispatch') }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
       id-token: write
     steps:
+      # Minted manually instead of via create-github-app-token: goreleaser's
+      # HTTP client 401s on the new stateless ghs_ JWTs (Bearer path), so we
+      # force the classic opaque format with the documented override header.
+      # Revert to create-github-app-token once goreleaser/GitHub handle
+      # stateless tokens (the override header is slated for deprecation).
+      - name: Mint app installation token (stateful format)
+        id: app-token
+        env:
+          APP_ID: ${{ vars.RELEASE_APP_ID }}
+          PRIVATE_KEY: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          now=$(date +%s)
+          b64() { openssl base64 -A | tr '+/' '-_' | tr -d '='; }
+          header=$(printf '{"alg":"RS256","typ":"JWT"}' | b64)
+          payload=$(printf '{"iat":%d,"exp":%d,"iss":"%s"}' "$((now-60))" "$((now+540))" "$APP_ID" | b64)
+          sig=$(printf '%s.%s' "$header" "$payload" | openssl dgst -sha256 -sign <(printf '%s' "$PRIVATE_KEY") | b64)
+          jwt="$header.$payload.$sig"
+          inst_id=$(curl -sf -H "Authorization: Bearer $jwt" -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/installation" | jq -r .id)
+          test -n "$inst_id" && test "$inst_id" != "null" || { echo "::error::could not resolve installation id"; exit 1; }
+          resp=$(curl -s -X POST -H "Authorization: Bearer $jwt" -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Stateless-S2S-Token: disabled" \
+            -d '{"repositories":["sentei","homebrew-tap"]}' \
+            "https://api.github.com/app/installations/$inst_id/access_tokens")
+          token=$(printf '%s' "$resp" | jq -r '.token // empty')
+          if [ -z "$token" ]; then
+            echo "::error::token mint failed"; printf '%s\n' "$resp" | jq 'del(.token)'; exit 1
+          fi
+          echo "::add-mask::$token"
+          echo "minted token: length ${#token}, prefix ${token:0:4}"
+          echo "token=$token" >> "$GITHUB_OUTPUT"
+
+      - name: Probe release API with minted token
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          TOKEN: ${{ steps.app-token.outputs.token }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          rel=$(curl -s -H "Authorization: token $TOKEN" -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/releases/tags/$TAG")
+          rel_id=$(printf '%s' "$rel" | jq -r '.id // empty')
+          test -n "$rel_id" || { echo "::error::GET release by tag failed"; printf '%s\n' "$rel"; exit 1; }
+          for scheme in token Bearer; do
+            u=$(curl -s -o /tmp/u -w '%{http_code}' -H "Authorization: $scheme $TOKEN" https://api.github.com/user)
+            i=$(curl -s -o /tmp/i -w '%{http_code}' -H "Authorization: $scheme $TOKEN" https://api.github.com/installation/repositories)
+            c=$(curl -s -o /tmp/probe -w '%{http_code}' -X PATCH \
+              -H "Authorization: $scheme $TOKEN" -H "Accept: application/vnd.github+json" \
+              -d '{"draft":false}' \
+              "https://api.github.com/repos/$GITHUB_REPOSITORY/releases/$rel_id")
+            echo "scheme=$scheme  GET /user: $u  GET /installation/repositories: $i  PATCH release: $c"
+            if [ "$c" != "200" ]; then echo "-- PATCH body:"; cat /tmp/probe; echo "-- /installation/repositories body:"; head -c 300 /tmp/i; echo; fi
+          done
+          jq -e '.total_count >= 1' /tmp/i >/dev/null || exit 1
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.sha }}
       - uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
       - uses: sigstore/cosign-installer@v3
       - uses: goreleaser/goreleaser-action@v7
         with:
-          version: latest
+          # Pinned: v2.16 sends the release PATCH unauthenticated (401) while
+          # a curl PATCH with the same token in the same job returns 200.
+          # v2.13 is the vintage that shipped v1.3.0. Unpin once fixed upstream.
+          version: "~> v2.13"
           args: release --clean
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
+          # App token here too: the Actions GITHUB_TOKEN started 401-ing on
+          # release PATCHes with the stateless token rollout (2026-06-10).
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
+          HOMEBREW_TAP_GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
