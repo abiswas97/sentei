@@ -1,0 +1,19 @@
+docs/handoff/fix-review-2026-06-10.md
+  s_157240fea52147::t_72ab7fb26ff7c4 1-288
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "0cd49361c765f093c469d5ecb92d74f271965e62",
+  "prompts": {},
+  "sessions": {
+    "s_157240fea52147": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "42f7cf1c-c025-449a-89c8-fab9aa10c61e",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Test <t@t.com>"
+    }
+  }
+}
