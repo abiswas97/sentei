@@ -59,6 +59,10 @@ type DispatchResult struct {
 
 	// Force is true when --force was provided.
 	Force bool
+	// Yes is true when --yes/-y was provided: skip the interactive
+	// confirmation and run the CLI path. Unlike --non-interactive it does
+	// not require --force; each command's own safeties stay in effect.
+	Yes bool
 }
 
 var (
@@ -91,13 +95,14 @@ func (r *Registry) Dispatch(args []string) (*DispatchResult, error) {
 	}
 
 	remaining := args[1:]
-	nonInteractive, force, remaining := extractGlobalFlags(remaining)
+	nonInteractive, force, yes, remaining := extractGlobalFlags(remaining)
 
 	result := &DispatchResult{
 		Command:        cmd,
 		Args:           remaining,
 		NonInteractive: nonInteractive,
 		Force:          force,
+		Yes:            yes,
 	}
 
 	// Validate flag combinations.
@@ -139,6 +144,10 @@ func (r *Registry) UsageString() string {
 		fmt.Fprintf(&b, "  %-14s (%s)\n", cmd.Name, label)
 	}
 
+	b.WriteString("\nGlobal flags:\n")
+	b.WriteString("  --non-interactive  run without the TUI (destructive commands also need --force)\n")
+	b.WriteString("  --yes, -y          skip the confirmation prompt; command safeties stay active\n")
+	b.WriteString("  --force            pass destructive gates / force-delete where the command supports it\n")
 	b.WriteString("\nRun 'sentei <command> --help' for command-specific options.\n")
 	return b.String()
 }
@@ -168,13 +177,15 @@ func BuildFlagString(base string, flags map[string]string) string {
 // extractGlobalFlags pulls --non-interactive and --force from the args slice,
 // returning the flag values and the remaining args. This uses a simple scan
 // rather than flag.FlagSet to avoid conflicting with command-specific flags.
-func extractGlobalFlags(args []string) (nonInteractive bool, force bool, remaining []string) {
+func extractGlobalFlags(args []string) (nonInteractive bool, force bool, yes bool, remaining []string) {
 	for _, arg := range args {
 		switch arg {
 		case "--non-interactive":
 			nonInteractive = true
 		case "--force":
 			force = true
+		case "--yes", "-y":
+			yes = true
 		default:
 			remaining = append(remaining, arg)
 		}

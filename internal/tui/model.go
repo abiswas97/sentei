@@ -48,6 +48,7 @@ const (
 	integrationSummaryView
 	migrateIntegrationsView
 	cleanupConfirmView
+	cleanupPreviewView
 	cleanupResultView
 	createConfirmView
 	cloneConfirmView
@@ -65,6 +66,7 @@ const (
 type RemovePreSelection struct {
 	Paths       []string
 	FilterLabel string
+	CLICommand  string // exact equivalent command, echoed on the summary
 }
 
 // MigrateOpts holds migrate options passed to the TUI from the CLI layer.
@@ -108,6 +110,7 @@ type removeState struct {
 	filterActive bool
 	filterInput  textinput.Model
 	filterLabel  string // describes filter that produced pre-selection (e.g. "merged", "stale > 30d")
+	cliCommand   string // CLI equivalent of the pre-selection, echoed on the summary
 
 	run removalRun
 }
@@ -222,9 +225,17 @@ type Model struct {
 
 	cleanupOpts   *cleanup.Options
 	cleanupResult *cleanup.Result // standalone cleanup flow ("Cleanup & exit" / sentei cleanup)
-	createOpts    *CreateOpts
-	cloneOpts     *CloneOpts
-	migrateOpts   *MigrateOpts
+
+	// Cleanup preview (TUI menu path): dry-run scan results. Pending holds a
+	// finished scan until the minimum scanning display has elapsed.
+	cleanupScan              *cleanup.DryRunResult
+	cleanupScanPending       *cleanup.DryRunResult
+	cleanupScanErr           error
+	cleanupAggressiveConfirm bool
+	cleanupRanMode           cleanup.Mode // echoed as the CLI equivalent on the result view
+	createOpts               *CreateOpts
+	cloneOpts                *CloneOpts
+	migrateOpts              *MigrateOpts
 
 	remove removeState
 	create createState
@@ -408,6 +419,7 @@ func (m *Model) SetRemoveOpts(preSelection RemovePreSelection) {
 		}
 	}
 	m.remove.filterLabel = preSelection.FilterLabel
+	m.remove.cliCommand = preSelection.CLICommand
 	m.view = listView
 }
 
@@ -517,6 +529,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.updateMigrateIntegrations(msg)
 	case cleanupConfirmView:
 		return m.updateCleanupConfirm(msg)
+	case cleanupPreviewView:
+		return m.updateCleanupPreview(msg)
 	case cleanupResultView:
 		return m.updateCleanupResult(msg)
 	case createConfirmView:
@@ -581,6 +595,8 @@ func (m Model) viewContent() string {
 		return m.viewMigrateIntegrations()
 	case cleanupConfirmView:
 		return m.viewCleanupConfirm()
+	case cleanupPreviewView:
+		return m.viewCleanupPreview()
 	case cleanupResultView:
 		return m.viewCleanupResult()
 	case createConfirmView:

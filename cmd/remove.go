@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/abiswas97/sentei/internal/git"
@@ -70,6 +71,21 @@ func RunRemove(args []string) error {
 		}
 		if matchesFilters(wt, opts, now, isMerged, shortBranch(wt.Branch)) {
 			protectedCount++
+		}
+	}
+
+	// At-risk gate: without --force, refuse deletions that would lose work
+	// existing nowhere else. Dry-run is exempt (it deletes nothing).
+	if !opts.Force && !opts.DryRun {
+		var atRisk []string
+		for _, wt := range filtered {
+			if wt.HasUncommittedChanges || wt.HasUntrackedFiles || wt.HasUnpushedCommits {
+				atRisk = append(atRisk, shortBranch(wt.Branch))
+			}
+		}
+		if len(atRisk) > 0 {
+			return fmt.Errorf("%d worktree(s) have uncommitted, untracked, or unpushed work (%s); re-run with --force to delete them, or confirm interactively",
+				len(atRisk), strings.Join(atRisk, ", "))
 		}
 	}
 

@@ -35,29 +35,7 @@ func (m Model) updateConfirm(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		switch {
 		case key.Matches(msg, keys.Yes):
-			m.progressStartedAt = time.Now()
-			m.progressToken++
-			m.view = progressView
-			selected := m.selectedWorktrees()
-			m.remove.run = newRemovalRun(selected)
-
-			integrations := integration.All()
-			hasTeardown := false
-			for _, wt := range selected {
-				if len(creator.ScanArtifacts(wt.Path, integrations)) > 0 {
-					hasTeardown = true
-					break
-				}
-			}
-
-			unlockLockedWorktrees(m.runner, m.repoPath, selected)
-
-			if hasTeardown {
-				m.remove.run.teardownRunning = true
-				return m, m.runTeardownPhase(selected, integrations)
-			}
-
-			return m.startDeletions()
+			return m.beginRemoval()
 
 		case key.Matches(msg, keys.No), key.Matches(msg, keys.Back):
 			m.view = listView
@@ -65,6 +43,43 @@ func (m Model) updateConfirm(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	}
 	return m, nil
+}
+
+// beginRemoval starts the deletion of the current selection: fresh run
+// state, teardown of integration artifacts when present, then the deletion
+// pipeline. Entered from the at-risk confirmation gate, or directly from
+// the list when every selected worktree is clean and pushed.
+func (m Model) beginRemoval() (tea.Model, tea.Cmd) {
+	m.progressStartedAt = time.Now()
+	m.progressToken++
+	m.view = progressView
+	selected := m.selectedWorktrees()
+	m.remove.run = newRemovalRun(selected)
+
+	integrations := integration.All()
+	hasTeardown := false
+	for _, wt := range selected {
+		if len(creator.ScanArtifacts(wt.Path, integrations)) > 0 {
+			hasTeardown = true
+			break
+		}
+	}
+
+	unlockLockedWorktrees(m.runner, m.repoPath, selected)
+
+	if hasTeardown {
+		m.remove.run.teardownRunning = true
+		return m, m.runTeardownPhase(selected, integrations)
+	}
+
+	return m.startDeletions()
+}
+
+// worktreeAtRisk reports whether removing wt could lose work that exists
+// nowhere else: uncommitted or untracked changes, commits not on a remote,
+// or a lock someone placed deliberately.
+func worktreeAtRisk(wt git.Worktree) bool {
+	return wt.HasUncommittedChanges || wt.HasUntrackedFiles || wt.HasUnpushedCommits || wt.IsLocked
 }
 
 // startDeletions kicks off the deletion goroutine for the current run's
@@ -124,21 +139,24 @@ func (m Model) viewConfirm() string {
 	b.WriteString("\n\n")
 	fmt.Fprintf(&b, "  You are about to delete %d worktree(s):\n\n", len(selected))
 
-	var dirtyCount, untrackedCount, lockedCount int
+	var dirtyCount, untrackedCount, lockedCount, unpushedCount int
 	for _, wt := range selected {
 		branch := worktreeLabel(wt)
 
 		var label string
 		switch {
 		case wt.IsLocked:
-			label = styleWarning.Render("[L] LOCKED - will force-remove")
+			label = styleWarning.Render("[L] locked — will force-remove")
 			lockedCount++
 		case wt.HasUncommittedChanges:
-			label = styleWarning.Render("[~] HAS UNCOMMITTED CHANGES")
+			label = styleWarning.Render("[~] uncommitted changes — will be lost")
 			dirtyCount++
 		case wt.HasUntrackedFiles:
-			label = styleWarning.Render("[!] has untracked files")
+			label = styleWarning.Render("[!] untracked files — will be lost")
 			untrackedCount++
+		case wt.HasUnpushedCommits:
+			label = styleWarning.Render("[^] commits not on any remote")
+			unpushedCount++
 		default:
 			label = styleSuccess.Render("(clean)")
 		}
@@ -173,19 +191,25 @@ func (m Model) viewConfirm() string {
 
 	if dirtyCount > 0 {
 		b.WriteString(styleWarning.Render(
-			fmt.Sprintf("  WARNING: %d worktree(s) have uncommitted changes that will be LOST", dirtyCount),
+			fmt.Sprintf("  ⚠ %d worktree(s) have uncommitted changes that will be lost", dirtyCount),
 		))
 		b.WriteString("\n")
 	}
 	if untrackedCount > 0 {
 		b.WriteString(styleWarning.Render(
-			fmt.Sprintf("  WARNING: %d worktree(s) have untracked files that will be LOST", untrackedCount),
+			fmt.Sprintf("  ⚠ %d worktree(s) have untracked files that will be lost", untrackedCount),
 		))
 		b.WriteString("\n")
 	}
 	if lockedCount > 0 {
 		b.WriteString(styleWarning.Render(
-			fmt.Sprintf("  WARNING: %d worktree(s) are locked and will be force-removed", lockedCount),
+			fmt.Sprintf("  ⚠ %d worktree(s) are locked and will be force-removed", lockedCount),
+		))
+		b.WriteString("\n")
+	}
+	if unpushedCount > 0 {
+		b.WriteString(styleWarning.Render(
+			fmt.Sprintf("  ⚠ %d worktree(s) have commits not pushed to any remote", unpushedCount),
 		))
 		b.WriteString("\n")
 	}

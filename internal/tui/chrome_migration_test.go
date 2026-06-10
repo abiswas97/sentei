@@ -113,7 +113,7 @@ func TestViewSummary_DoneMarkerAndNoEmptyCleanupHeader(t *testing.T) {
 	if strings.Contains(view, "Cleanup:") {
 		t.Errorf("Cleanup header must be omitted when nothing was cleaned, view:\n%s", view)
 	}
-	if !strings.Contains(view, "Tip: 1 local branch(es)") {
+	if !strings.Contains(view, "Tip: 1 local branch ") {
 		t.Errorf("tip should render independently of the Cleanup header, view:\n%s", view)
 	}
 	if strings.Contains(view, " v ") {
