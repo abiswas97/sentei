@@ -12,6 +12,7 @@ import (
 
 func TestRun_FullPipeline(t *testing.T) {
 	runner := &mockRunner{responses: map[string]mockResponse{
+		"/repo:[show-ref --verify refs/heads/feature/auth]":                {err: fmt.Errorf("not found")},
 		"/repo:[worktree add /repo/feature-auth -b feature/auth main]":     {output: ""},
 		"/repo/feature-auth:[merge main --no-edit]":                        {output: ""},
 		"/repo/feature-auth:shell[go mod download]":                        {output: ""},
@@ -74,8 +75,9 @@ func TestRun_FullPipeline(t *testing.T) {
 
 func TestRun_CreateWorktreeFails_AbortsEarly(t *testing.T) {
 	runner := &mockRunner{responses: map[string]mockResponse{
+		"/repo:[show-ref --verify refs/heads/feature/dup]": {err: fmt.Errorf("not found")},
 		"/repo:[worktree add /repo/feature-dup -b feature/dup main]": {
-			err: fmt.Errorf("fatal: branch already exists"),
+			err: fmt.Errorf("fatal: something broke"),
 		},
 	}}
 
@@ -104,6 +106,7 @@ func TestRun_CreateWorktreeFails_AbortsEarly(t *testing.T) {
 
 func TestRun_MergeFailsContinues(t *testing.T) {
 	runner := &mockRunner{responses: map[string]mockResponse{
+		"/repo:[show-ref --verify refs/heads/feature/conflict]":                {err: fmt.Errorf("not found")},
 		"/repo:[worktree add /repo/feature-conflict -b feature/conflict main]": {output: ""},
 		"/repo/feature-conflict:[merge main --no-edit]":                        {err: fmt.Errorf("conflict")},
 	}}
@@ -139,6 +142,7 @@ func TestRun_CopyEnvFiles(t *testing.T) {
 	wtPath := filepath.Join(repoDir, "feature-env")
 
 	runner := &mockRunner{responses: map[string]mockResponse{
+		fmt.Sprintf("%s:[show-ref --verify refs/heads/feature/env]", repoDir):    {err: fmt.Errorf("not found")},
 		fmt.Sprintf("%s:[worktree add %s -b feature/env main]", repoDir, wtPath): {output: ""},
 	}}
 

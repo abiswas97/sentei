@@ -51,7 +51,12 @@ func createWorktreeStep(runner git.CommandRunner, repoPath, branch, baseBranch s
 	sanitized := SanitizeBranchPath(branch)
 	wtPath := filepath.Join(repoPath, sanitized)
 
-	_, err := runner.Run(repoPath, "worktree", "add", wtPath, "-b", branch, baseBranch)
+	var err error
+	if git.BranchExists(runner, repoPath, branch) {
+		_, err = runner.Run(repoPath, "worktree", "add", wtPath, branch)
+	} else {
+		_, err = runner.Run(repoPath, "worktree", "add", wtPath, "-b", branch, baseBranch)
+	}
 	if err != nil {
 		emit(Event{Phase: "Setup", Step: stepName, Status: StepFailed, Error: err})
 		return StepResult{
