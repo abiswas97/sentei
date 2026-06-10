@@ -1,0 +1,27 @@
+internal/tui/cleanup_preview.go
+  s_45cfee6c7ab135::t_58236d523023c4 1-169,175-187,194-233,235-243,250-251,256-258
+internal/cleanup/dryrun_test.go
+  s_45cfee6c7ab135::t_ed11a232974998 32
+  s_45cfee6c7ab135::t_f082a69ee9016d 1-7,10-11,17,35-37,39,41-47,50,53-54,57-64,66,68-70,77-92,95-107,112-113
+  s_45cfee6c7ab135::t_20c5da5156d68e 8-9,12-16,18-24,26-31,33-34,38,40,48-49,52,55,65,67,71-72,74-76,108-111
+internal/cleanup/dryrun.go
+  s_45cfee6c7ab135::t_06c76d448f359a 1-22,24-108,133-156
+internal/tui/cleanup_preview_test.go
+  s_45cfee6c7ab135::t_16d1cba1dc3e24 1-259,261-375
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "a2ef46767b18016e87c5ffb3b62477152fb2501f",
+  "prompts": {},
+  "sessions": {
+    "s_45cfee6c7ab135": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "362b0459-633f-41b0-be4d-ef5a2d23fce8",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Test <t@t.com>"
+    }
+  }
+}
