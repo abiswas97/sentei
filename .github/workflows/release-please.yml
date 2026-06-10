@@ -109,7 +109,10 @@ jobs:
       - uses: sigstore/cosign-installer@v3
       - uses: goreleaser/goreleaser-action@v7
         with:
-          version: latest
+          # Pinned: v2.16 sends the release PATCH unauthenticated (401) while
+          # a curl PATCH with the same token in the same job returns 200.
+          # v2.13 is the vintage that shipped v1.3.0. Unpin once fixed upstream.
+          version: "~> v2.13"
           args: release --clean
         env:
           # App token here too: the Actions GITHUB_TOKEN started 401-ing on
