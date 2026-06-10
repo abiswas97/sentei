@@ -146,9 +146,11 @@ func main() {
 				args := result.Args
 				// cleanup has its own --force (force-delete unmerged branches) that
 				// the global flag extractor consumed. Re-inject it so one --force
-				// both passes the destructive gate and force-deletes.
+				// both passes the destructive gate and force-deletes. Prepend it:
+				// the flag parser stops at the first positional (the repo path), so
+				// a --force appended after it would be silently ignored.
 				if result.Force && result.Command.Name == "cleanup" {
-					args = append(args, "--force")
+					args = append([]string{"--force"}, result.Args...)
 				}
 				runCommand(result.Command.RunCLI, args)
 				return
