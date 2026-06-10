@@ -24,7 +24,7 @@ jobs:
     steps:
       # Per-run installation token from the sentei-release-bot GitHub App:
       # nothing expires on a calendar, and PRs/tags it creates trigger CI.
-      - uses: actions/create-github-app-token@v2
+      - uses: actions/create-github-app-token@v3
         id: app-token
         with:
           app-id: ${{ vars.RELEASE_APP_ID }}
@@ -44,40 +44,15 @@ jobs:
       contents: write
       id-token: write
     steps:
-      # Minted manually instead of via create-github-app-token: goreleaser's
-      # HTTP client 401s on the new stateless ghs_ JWTs (Bearer path), so we
-      # force the classic opaque format with the documented override header.
-      # Revert to create-github-app-token once goreleaser/GitHub handle
-      # stateless tokens (the override header is slated for deprecation).
-      - name: Mint app installation token (stateful format)
+      - uses: actions/create-github-app-token@v3
         id: app-token
-        env:
-          APP_ID: ${{ vars.RELEASE_APP_ID }}
-          PRIVATE_KEY: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
-        run: |
-          set -euo pipefail
-          now=$(date +%s)
-          b64() { openssl base64 -A | tr '+/' '-_' | tr -d '='; }
-          header=$(printf '{"alg":"RS256","typ":"JWT"}' | b64)
-          payload=$(printf '{"iat":%d,"exp":%d,"iss":"%s"}' "$((now-60))" "$((now+540))" "$APP_ID" | b64)
-          sig=$(printf '%s.%s' "$header" "$payload" | openssl dgst -sha256 -sign <(printf '%s' "$PRIVATE_KEY") | b64)
-          jwt="$header.$payload.$sig"
-          inst_id=$(curl -sf -H "Authorization: Bearer $jwt" -H "Accept: application/vnd.github+json" \
-            "https://api.github.com/repos/$GITHUB_REPOSITORY/installation" | jq -r .id)
-          test -n "$inst_id" && test "$inst_id" != "null" || { echo "::error::could not resolve installation id"; exit 1; }
-          resp=$(curl -s -X POST -H "Authorization: Bearer $jwt" -H "Accept: application/vnd.github+json" \
-            -H "X-GitHub-Stateless-S2S-Token: disabled" \
-            -d '{"repositories":["sentei","homebrew-tap"]}' \
-            "https://api.github.com/app/installations/$inst_id/access_tokens")
-          token=$(printf '%s' "$resp" | jq -r '.token // empty')
-          if [ -z "$token" ]; then
-            echo "::error::token mint failed"; printf '%s\n' "$resp" | jq 'del(.token)'; exit 1
-          fi
-          echo "::add-mask::$token"
-          echo "minted token: length ${#token}, prefix ${token:0:4}"
-          echo "token=$token" >> "$GITHUB_OUTPUT"
+        with:
+          app-id: ${{ vars.RELEASE_APP_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+          owner: abiswas97
+          repositories: sentei,homebrew-tap
 
-      - name: Probe release API with minted token
+      - name: Probe release API with the app token
         if: github.event_name == 'workflow_dispatch'
         env:
           TOKEN: ${{ steps.app-token.outputs.token }}
@@ -109,10 +84,7 @@ jobs:
       - uses: sigstore/cosign-installer@v3
       - uses: goreleaser/goreleaser-action@v7
         with:
-          # Pinned: v2.16 sends the release PATCH unauthenticated (401) while
-          # a curl PATCH with the same token in the same job returns 200.
-          # v2.13 is the vintage that shipped v1.3.0. Unpin once fixed upstream.
-          version: "~> v2.13"
+          version: latest
           args: release --clean
         env:
           # App token here too: the Actions GITHUB_TOKEN started 401-ing on
