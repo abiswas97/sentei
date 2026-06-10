@@ -58,6 +58,21 @@ func RunWithIsolatedTemp(m *testing.M) int {
 	old, hadOld := os.LookupEnv("TMPDIR")
 	_ = os.Setenv("TMPDIR", base)
 
+	// Make test git hermetic with a controlled global config: it drops the
+	// developer's real one (esp. a custom core.hooksPath whose hooks write into
+	// .git and race t.TempDir cleanup) while keeping what tests rely on — the
+	// default branch name and a commit identity. core.hooksPath points at an
+	// empty dir so no hooks run.
+	noHooks := filepath.Join(base, "no-hooks")
+	_ = os.MkdirAll(noHooks, 0o755)
+	gitconfig := filepath.Join(base, "gitconfig")
+	_ = os.WriteFile(gitconfig, []byte(
+		"[init]\n\tdefaultBranch = main\n"+
+			"[user]\n\tname = sentei-test\n\temail = test@example.com\n"+
+			"[core]\n\thooksPath = "+noHooks+"\n"), 0o644)
+	_ = os.Setenv("GIT_CONFIG_GLOBAL", gitconfig)
+	_ = os.Setenv("GIT_CONFIG_SYSTEM", os.DevNull)
+
 	code := m.Run()
 
 	if hadOld {
