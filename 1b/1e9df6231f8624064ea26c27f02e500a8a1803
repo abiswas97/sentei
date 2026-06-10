@@ -1,0 +1,28 @@
+internal/repo/create.go
+  s_157240fea52147::t_d7b943cb4802d6 42-46,54-63
+  s_157240fea52147::t_b87aea6fe5f881 213-214
+internal/repo/create_test.go
+  s_157240fea52147::t_7312adca653d1c 192-242
+  s_157240fea52147::t_725c5c89a36bc8 4
+  s_157240fea52147::t_74342116281f0c 243-264
+internal/tui/repo_summary.go
+  s_157240fea52147::t_e7431b37dcfceb 37
+  s_157240fea52147::t_0f6c19a6fc5c6f 84
+  s_157240fea52147::t_ab3c6b8b00255c 105
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "1b1e9df6231f8624064ea26c27f02e500a8a1803",
+  "prompts": {},
+  "sessions": {
+    "s_157240fea52147": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "42f7cf1c-c025-449a-89c8-fab9aa10c61e",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Test <t@t.com>"
+    }
+  }
+}
