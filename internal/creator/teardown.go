@@ -59,37 +59,28 @@ func Teardown(shell git.ShellRunner, wtPath string, integrations []integration.I
 		}
 
 		stepName := fmt.Sprintf("Teardown %s", integ.Name)
-		emit(pipeline.Event{Phase: "Teardown", Step: stepName, Status: pipeline.StepRunning})
-
-		if integ.Teardown.Command != "" {
-			_, err := shell.RunShell(wtPath, integ.Teardown.Command)
-			if err == nil {
-				emit(pipeline.Event{Phase: "Teardown", Step: stepName, Status: pipeline.StepDone})
-				results = append(results, pipeline.StepResult{Name: stepName, Status: pipeline.StepDone})
-				continue
+		result := pipeline.RunStep("Teardown", stepName, emit, func() (string, error) {
+			if integ.Teardown.Command != "" {
+				if _, err := shell.RunShell(wtPath, integ.Teardown.Command); err == nil {
+					return "", nil
+				}
 			}
-		}
 
-		allRemoved := true
-		for _, dir := range artifact.Dirs {
-			cleanDir := strings.TrimSuffix(dir, "/")
-			fullPath := filepath.Join(wtPath, cleanDir)
-			if err := os.RemoveAll(fullPath); err != nil {
-				allRemoved = false
+			// The command failed or is absent: fall back to deleting the
+			// artifact directories directly.
+			allRemoved := true
+			for _, dir := range artifact.Dirs {
+				cleanDir := strings.TrimSuffix(dir, "/")
+				if err := os.RemoveAll(filepath.Join(wtPath, cleanDir)); err != nil {
+					allRemoved = false
+				}
 			}
-		}
-
-		if allRemoved {
-			emit(pipeline.Event{Phase: "Teardown", Step: stepName, Status: pipeline.StepDone, Message: "removed artifact dirs"})
-			results = append(results, pipeline.StepResult{Name: stepName, Status: pipeline.StepDone, Message: "removed artifact dirs"})
-		} else {
-			emit(pipeline.Event{Phase: "Teardown", Step: stepName, Status: pipeline.StepFailed, Error: fmt.Errorf("failed to remove some artifact dirs")})
-			results = append(results, pipeline.StepResult{
-				Name:   stepName,
-				Status: pipeline.StepFailed,
-				Error:  fmt.Errorf("failed to remove some artifact dirs for %s", integ.Name),
-			})
-		}
+			if !allRemoved {
+				return "", fmt.Errorf("failed to remove some artifact dirs for %s", integ.Name)
+			}
+			return "removed artifact dirs", nil
+		})
+		results = append(results, result)
 	}
 
 	return results

@@ -135,21 +135,12 @@ func checkAndInstallDeps(shell git.ShellRunner, wtPath string, integ integration
 }
 
 func installIntegration(shell git.ShellRunner, wtPath string, integ integration.Integration, emit func(pipeline.Event)) pipeline.StepResult {
-	stepName := fmt.Sprintf("Install %s", integ.Name)
-	emit(pipeline.Event{Phase: "Integrations", Step: stepName, Status: pipeline.StepRunning})
-
-	_, err := shell.RunShell(wtPath, integ.Install.Command)
-	if err != nil {
-		emit(pipeline.Event{Phase: "Integrations", Step: stepName, Status: pipeline.StepFailed, Error: err})
-		return pipeline.StepResult{
-			Name:   stepName,
-			Status: pipeline.StepFailed,
-			Error:  fmt.Errorf("installing %s: %w", integ.Name, err),
+	return pipeline.RunStep("Integrations", fmt.Sprintf("Install %s", integ.Name), emit, func() (string, error) {
+		if _, err := shell.RunShell(wtPath, integ.Install.Command); err != nil {
+			return "", fmt.Errorf("installing %s: %w", integ.Name, err)
 		}
-	}
-
-	emit(pipeline.Event{Phase: "Integrations", Step: stepName, Status: pipeline.StepDone})
-	return pipeline.StepResult{Name: stepName, Status: pipeline.StepDone}
+		return "", nil
+	})
 }
 
 func runSetupCommand(shell git.ShellRunner, wtPath, repoPath string, integ integration.Integration, emit func(pipeline.Event)) pipeline.StepResult {
@@ -159,32 +150,21 @@ func runSetupCommand(shell git.ShellRunner, wtPath, repoPath string, integ integ
 		return pipeline.StepResult{Name: stepName, Status: pipeline.StepSkipped}
 	}
 
-	emit(pipeline.Event{Phase: "Integrations", Step: stepName, Status: pipeline.StepRunning})
+	return pipeline.RunStep("Integrations", stepName, emit, func() (string, error) {
+		// The worktree path embeds the branch name and is interpolated into a command
+		// run via `sh -c`; quote it so a branch like "a&&rm -rf x" cannot inject.
+		command := strings.ReplaceAll(integ.Setup.Command, "{path}", git.ShellQuote(wtPath))
 
-	// The worktree path embeds the branch name and is interpolated into a command
-	// run via `sh -c`; quote it so a branch like "a&&rm -rf x" cannot inject.
-	command := strings.ReplaceAll(integ.Setup.Command, "{path}", git.ShellQuote(wtPath))
-
-	var runDir string
-	switch integ.Setup.WorkingDir {
-	case "repo":
-		runDir = repoPath
-	default:
-		runDir = wtPath
-	}
-
-	_, err := shell.RunShell(runDir, command)
-	if err != nil {
-		emit(pipeline.Event{Phase: "Integrations", Step: stepName, Status: pipeline.StepFailed, Error: err})
-		return pipeline.StepResult{
-			Name:   stepName,
-			Status: pipeline.StepFailed,
-			Error:  fmt.Errorf("setting up %s: %w", integ.Name, err),
+		runDir := wtPath
+		if integ.Setup.WorkingDir == "repo" {
+			runDir = repoPath
 		}
-	}
 
-	emit(pipeline.Event{Phase: "Integrations", Step: stepName, Status: pipeline.StepDone})
-	return pipeline.StepResult{Name: stepName, Status: pipeline.StepDone}
+		if _, err := shell.RunShell(runDir, command); err != nil {
+			return "", fmt.Errorf("setting up %s: %w", integ.Name, err)
+		}
+		return "", nil
+	})
 }
 
 // copyIntegrationIndex copies the IndexCopyDir from source to target worktree.

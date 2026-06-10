@@ -86,27 +86,13 @@ func installWorkspacesParallel(shell git.ShellRunner, wtPath string, eco config.
 }
 
 func runInstallCommand(shell git.ShellRunner, wtPath, stepName, command string, emit func(pipeline.Event)) pipeline.StepResult {
-	emit(pipeline.Event{Phase: "Dependencies", Step: stepName, Status: pipeline.StepRunning})
-
-	if command == "" {
-		emit(pipeline.Event{Phase: "Dependencies", Step: stepName, Status: pipeline.StepFailed, Error: fmt.Errorf("empty install command")})
-		return pipeline.StepResult{
-			Name:   stepName,
-			Status: pipeline.StepFailed,
-			Error:  fmt.Errorf("empty install command for %s", stepName),
+	return pipeline.RunStep("Dependencies", stepName, emit, func() (string, error) {
+		if command == "" {
+			return "", fmt.Errorf("empty install command for %s", stepName)
 		}
-	}
-
-	_, err := shell.RunShell(wtPath, command)
-	if err != nil {
-		emit(pipeline.Event{Phase: "Dependencies", Step: stepName, Status: pipeline.StepFailed, Error: err})
-		return pipeline.StepResult{
-			Name:   stepName,
-			Status: pipeline.StepFailed,
-			Error:  fmt.Errorf("installing %s: %w", stepName, err),
+		if _, err := shell.RunShell(wtPath, command); err != nil {
+			return "", fmt.Errorf("installing %s: %w", stepName, err)
 		}
-	}
-
-	emit(pipeline.Event{Phase: "Dependencies", Step: stepName, Status: pipeline.StepDone})
-	return pipeline.StepResult{Name: stepName, Status: pipeline.StepDone}
+		return "", nil
+	})
 }
