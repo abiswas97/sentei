@@ -80,11 +80,11 @@ func TestUpdateProgress_PruneComplete_ChainsCleanup(t *testing.T) {
 	if cmd == nil {
 		t.Fatal("expected a Cmd from pruneCompleteMsg, got nil")
 	}
-	if model.remove.pruneErr == nil {
+	if model.remove.run.pruneErr == nil {
 		t.Fatal("expected pruneErr to be set (non-nil pointer)")
 	}
-	if *model.remove.pruneErr != nil {
-		t.Errorf("expected nil prune error, got %v", *model.remove.pruneErr)
+	if *model.remove.run.pruneErr != nil {
+		t.Errorf("expected nil prune error, got %v", *model.remove.run.pruneErr)
 	}
 }
 
@@ -98,7 +98,7 @@ func TestUpdateProgress_CleanupComplete_TransitionsToSummary(t *testing.T) {
 	if model.view != summaryView {
 		t.Errorf("expected summaryView, got %d", model.view)
 	}
-	if model.remove.cleanupResult == nil {
+	if model.remove.run.cleanupResult == nil {
 		t.Fatal("expected cleanupResult to be set")
 	}
 }
@@ -117,10 +117,10 @@ func TestUpdateProgress_PruneFailed_ChainsCleanup(t *testing.T) {
 	if cmd == nil {
 		t.Fatal("expected a Cmd from pruneCompleteMsg, got nil")
 	}
-	if model.remove.pruneErr == nil {
+	if model.remove.run.pruneErr == nil {
 		t.Fatal("expected pruneErr to be set")
 	}
-	if *model.remove.pruneErr == nil {
+	if *model.remove.run.pruneErr == nil {
 		t.Error("expected non-nil prune error")
 	}
 }
@@ -128,7 +128,7 @@ func TestUpdateProgress_PruneFailed_ChainsCleanup(t *testing.T) {
 func TestViewSummary_PruneSuccess(t *testing.T) {
 	m := NewModel([]git.Worktree{}, nil, "/repo")
 	m.view = summaryView
-	m.remove.deletionResult = worktree.DeletionResult{
+	m.remove.run.result = worktree.DeletionResult{
 		SuccessCount: 2,
 		FailureCount: 0,
 		Outcomes: []worktree.WorktreeOutcome{
@@ -137,7 +137,7 @@ func TestViewSummary_PruneSuccess(t *testing.T) {
 		},
 	}
 	noErr := error(nil)
-	m.remove.pruneErr = &noErr
+	m.remove.run.pruneErr = &noErr
 
 	output := stripAnsi(m.viewSummary())
 
@@ -152,7 +152,7 @@ func TestViewSummary_PruneSuccess(t *testing.T) {
 func TestViewSummary_PruneFailure(t *testing.T) {
 	m := NewModel([]git.Worktree{}, nil, "/repo")
 	m.view = summaryView
-	m.remove.deletionResult = worktree.DeletionResult{
+	m.remove.run.result = worktree.DeletionResult{
 		SuccessCount: 1,
 		FailureCount: 0,
 		Outcomes: []worktree.WorktreeOutcome{
@@ -160,7 +160,7 @@ func TestViewSummary_PruneFailure(t *testing.T) {
 		},
 	}
 	pruneError := fmt.Errorf("permission denied")
-	m.remove.pruneErr = &pruneError
+	m.remove.run.pruneErr = &pruneError
 
 	output := stripAnsi(m.viewSummary())
 

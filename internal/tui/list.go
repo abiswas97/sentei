@@ -2,6 +2,7 @@ package tui
 
 import (
 	"fmt"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -243,7 +244,11 @@ func (m Model) updateFilterInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 func (m Model) viewList() string {
 	var b strings.Builder
 
-	b.WriteString(styleTitle.Render("  sentei \u2500 Remove Worktrees"))
+	b.WriteString(viewTitle("Remove Worktrees"))
+	b.WriteString("\n\n")
+	b.WriteString(styleDim.Render(fmt.Sprintf("  %s (bare)", filepath.Base(m.repoPath))))
+	b.WriteString("\n\n")
+	b.WriteString(viewSeparator(m.width))
 	b.WriteString("\n\n")
 
 	if len(m.remove.worktrees) == 0 {
@@ -375,6 +380,8 @@ func (m Model) viewList() string {
 
 	b.WriteString(t.Render())
 	b.WriteString("\n")
+	b.WriteString(viewSeparator(m.width))
+	b.WriteString("\n")
 
 	b.WriteString(m.viewStatusOrFilter())
 	b.WriteString("\n")
@@ -391,7 +398,7 @@ func (m Model) viewStatusOrFilter() string {
 
 func (m Model) viewBottomLine() string {
 	if m.remove.filterActive {
-		return styleDim.Render("  enter apply \u00b7 esc cancel")
+		return viewKeyHints(KeyHint{"enter", "apply"}, KeyHint{"esc", "cancel"})
 	}
 	return m.viewLegend()
 }

@@ -120,6 +120,7 @@ func (m Model) startMigrateIntegrationApply() (Model, tea.Cmd) {
 	if wtPath == "" {
 		wtPath = filepath.Join(result.BareRoot, result.Branch)
 	}
+	m.integ.targetWorktrees = []string{wtPath}
 
 	ch := make(chan integration.ManagerEvent, 50)
 	doneCh := make(chan struct{}, 1)
@@ -144,12 +145,12 @@ func (m Model) startMigrateIntegrationApply() (Model, tea.Cmd) {
 func (m Model) viewMigrateIntegrations() string {
 	var b strings.Builder
 
-	b.WriteString(styleTitle.Render("  sentei \u2500 Set Up Integrations"))
+	b.WriteString(viewTitle("Set Up Integrations"))
 	b.WriteString("\n\n")
 	b.WriteString("  We detected your repo may benefit from\n")
 	b.WriteString("  these dev tools. Select any to enable.\n")
 	b.WriteString("\n")
-	b.WriteString(separator(m.width))
+	b.WriteString(viewSeparator(m.width))
 	b.WriteString("\n\n")
 
 	for i, integ := range m.integ.integrations {
@@ -187,7 +188,7 @@ func (m Model) viewMigrateIntegrations() string {
 	}
 
 	b.WriteString("\n")
-	b.WriteString(separator(m.width))
+	b.WriteString(viewSeparator(m.width))
 	b.WriteString("\n\n")
 
 	legend := fmt.Sprintf("  %s active  %s inactive",

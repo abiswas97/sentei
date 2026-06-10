@@ -2,7 +2,6 @@ package tui
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
@@ -68,45 +67,58 @@ func runCleanup(runner git.CommandRunner, repoPath string) tea.Cmd {
 
 func (m Model) updateProgress(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		m.width = msg.Width
+		m.height = max(msg.Height-6, 5)
+		return m, nil
+
 	case tea.KeyMsg:
 		if key.Matches(msg, keys.Quit) {
 			return m, tea.Quit
 		}
 		return m, nil
 
+	case teardownCompleteMsg:
+		// Yes switches to progressView before teardown runs, so completion
+		// lands here, not in updateConfirm.
+		m.remove.run.teardownRunning = false
+		m.remove.run.teardownResults = msg.results
+		return m.startDeletions()
+
 	case worktreeDeleteStartedMsg:
-		m.remove.deletionStatuses[msg.Path] = statusRemoving
-		return m, waitForDeletionEvent(m.remove.progressCh)
+		m.remove.run.statuses[msg.Path] = statusRemoving
+		return m, waitForDeletionEvent(m.remove.run.progressCh)
 
 	case worktreeDeletedMsg:
-		m.remove.deletionStatuses[msg.Path] = statusRemoved
-		m.remove.deletionResult.SuccessCount++
-		m.remove.deletionResult.Outcomes = append(m.remove.deletionResult.Outcomes, worktree.WorktreeOutcome{
+		m.remove.run.statuses[msg.Path] = statusRemoved
+		m.remove.run.result.SuccessCount++
+		m.remove.run.result.Outcomes = append(m.remove.run.result.Outcomes, worktree.WorktreeOutcome{
 			Path:    msg.Path,
 			Success: true,
 		})
-		return m, waitForDeletionEvent(m.remove.progressCh)
+		return m, waitForDeletionEvent(m.remove.run.progressCh)
 
 	case worktreeDeleteFailedMsg:
-		m.remove.deletionStatuses[msg.Path] = statusFailed
-		m.remove.deletionResult.FailureCount++
-		m.remove.deletionResult.Outcomes = append(m.remove.deletionResult.Outcomes, worktree.WorktreeOutcome{
+		m.remove.run.statuses[msg.Path] = statusFailed
+		m.remove.run.result.FailureCount++
+		m.remove.run.result.Outcomes = append(m.remove.run.result.Outcomes, worktree.WorktreeOutcome{
 			Path:    msg.Path,
 			Success: false,
 			Error:   fmt.Errorf("removing %s: %w", msg.Path, msg.Err),
 		})
-		return m, waitForDeletionEvent(m.remove.progressCh)
+		return m, waitForDeletionEvent(m.remove.run.progressCh)
 
 	case allDeletionsCompleteMsg:
 		return m, runPrune(m.runner, m.repoPath)
 
 	case pruneCompleteMsg:
 		pruneErr := msg.Err
-		m.remove.pruneErr = &pruneErr
+		m.remove.run.pruneErr = &pruneErr
 		return m, runCleanup(m.runner, m.repoPath)
 
 	case cleanupCompleteMsg:
-		m.remove.cleanupResult = &msg.Result
+		m.remove.run.cleanupResult = &msg.Result
+		m.remove.selected = make(map[string]bool)
 		m.worktreeGeneration++
 		updated, holdCmd := m.holdOrAdvance(summaryView)
 		return updated, tea.Batch(holdCmd, loadWorktreeContext(m.runner, m.repoPath, m.worktreeGeneration))
@@ -115,75 +127,86 @@ func (m Model) updateProgress(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) viewProgress() string {
-	var b strings.Builder
+	return ProgressLayout{
+		Title:  "Removing Worktrees",
+		Phases: m.buildRemovalPhases(),
+		Width:  m.width,
+		Height: m.height,
+		Hints:  []KeyHint{{"q", "quit"}},
+	}.View()
+}
 
-	b.WriteString(styleHeader.Render("  Removing Worktrees  "))
-	b.WriteString("\n\n")
+// buildRemovalPhases maps the current removal run onto the shared phase
+// shape consumed by ProgressLayout.
+func (m Model) buildRemovalPhases() []phaseDisplay {
+	run := m.remove.run
+	var phases []phaseDisplay
 
-	// Teardown phase (if any)
-	if len(m.remove.teardownResults) > 0 {
-		hasFailed := false
-		for _, r := range m.remove.teardownResults {
-			if r.Status == pipeline.StepFailed {
-				hasFailed = true
+	switch {
+	case run.teardownRunning:
+		phases = append(phases, phaseDisplay{
+			name:  "Teardown",
+			total: 1,
+			steps: []stepDisplay{{name: "Removing integration artifacts", status: pipeline.StepRunning}},
+		})
+	case len(run.teardownResults) > 0:
+		td := phaseDisplay{name: "Teardown", total: len(run.teardownResults)}
+		for _, r := range run.teardownResults {
+			td.steps = append(td.steps, stepDisplay{name: r.Name, status: r.Status})
+			switch r.Status {
+			case pipeline.StepDone, pipeline.StepSkipped:
+				td.done++
+			case pipeline.StepFailed:
+				td.failed++
+				td.done++
 			}
 		}
+		phases = append(phases, td)
+	}
 
-		statusText := "100%"
-		if hasFailed {
-			statusText += " " + styleIndicatorWarning.Render(indicatorWarning)
-		} else {
-			statusText += " " + styleIndicatorDone.Render(indicatorDone)
+	removing := phaseDisplay{name: "Removing worktrees", total: run.total()}
+	for _, wt := range run.worktrees {
+		label := worktreeLabel(wt)
+		var status pipeline.StepStatus
+		switch run.statuses[wt.Path] {
+		case statusRemoving:
+			status = pipeline.StepRunning
+		case statusRemoved:
+			status = pipeline.StepDone
+			removing.done++
+		case statusFailed:
+			status = pipeline.StepFailed
+			removing.failed++
+			removing.done++
+		default:
+			status = pipeline.StepPending
 		}
-		fmt.Fprintf(&b, "  %-30s %s\n", stylePhaseDone.Render("Teardown"), styleDim.Render(statusText))
-		b.WriteString("\n")
+		removing.steps = append(removing.steps, stepDisplay{name: label, status: status})
 	}
+	phases = append(phases, removing)
 
-	// Remove phase
-	done := len(m.remove.deletionResult.Outcomes)
-
-	pct := 0
-	if m.remove.deletionTotal > 0 {
-		pct = (done * 100) / m.remove.deletionTotal
-	}
-	phaseStatus := fmt.Sprintf("%d%%", pct)
-	if done == m.remove.deletionTotal && m.remove.deletionTotal > 0 {
-		phaseStatus += " " + styleIndicatorDone.Render(indicatorDone)
-		fmt.Fprintf(&b, "  %-30s %s\n", stylePhaseDone.Render("Removing worktrees"), styleDim.Render(phaseStatus))
-	} else {
-		fmt.Fprintf(&b, "  %-30s %s\n", stylePhaseActive.Render("Removing worktrees"), styleDim.Render(phaseStatus))
-
-		selected := m.selectedWorktrees()
-		for _, wt := range selected {
-			branch := stripBranchPrefix(wt.Branch)
-			status := m.remove.deletionStatuses[wt.Path]
-
-			var ind string
-			switch status {
-			case statusRemoved:
-				ind = styleIndicatorDone.Render(indicatorDone)
-			case statusFailed:
-				ind = styleIndicatorFailed.Render(indicatorFailed)
-			case statusRemoving:
-				ind = styleIndicatorActive.Render(indicatorActive)
-			default:
-				ind = styleIndicatorPending.Render(indicatorPending)
+	cleanupPhase := phaseDisplay{name: "Prune & cleanup"}
+	if removing.total > 0 && removing.done == removing.total {
+		cleanupPhase.total = 2
+		cleanupPhase.steps = []stepDisplay{
+			{name: "Prune worktree metadata", status: pipeline.StepRunning},
+			{name: "Repository cleanup", status: pipeline.StepPending},
+		}
+		if run.pruneErr != nil {
+			if *run.pruneErr != nil {
+				cleanupPhase.steps[0].status = pipeline.StepFailed
+				cleanupPhase.failed++
+			} else {
+				cleanupPhase.steps[0].status = pipeline.StepDone
 			}
-
-			fmt.Fprintf(&b, "  %s %s\n", ind, branch)
+			cleanupPhase.done++
+			cleanupPhase.steps[1].status = pipeline.StepRunning
+		}
+		if run.cleanupResult != nil {
+			cleanupPhase.steps[1].status = pipeline.StepDone
+			cleanupPhase.done++
 		}
 	}
-
-	b.WriteString("\n")
-
-	// Prune & cleanup phase
-	if m.remove.pruneErr != nil {
-		fmt.Fprintf(&b, "  %-30s %s\n", stylePhaseDone.Render("Prune & cleanup"), styleDim.Render(styleIndicatorDone.Render(indicatorDone)))
-	} else if done == m.remove.deletionTotal && m.remove.deletionTotal > 0 {
-		fmt.Fprintf(&b, "  %-30s %s\n", stylePhaseActive.Render("Prune & cleanup"), styleDim.Render(styleIndicatorActive.Render(indicatorActive)))
-	} else {
-		fmt.Fprintf(&b, "  %-30s %s\n", stylePhasePending.Render("Prune & cleanup"), styleDim.Render("pending"))
-	}
-
-	return b.String()
+	phases = append(phases, cleanupPhase)
+	return phases
 }

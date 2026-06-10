@@ -22,11 +22,11 @@ func (m Model) updateCleanupResult(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case standaloneCleanupDoneMsg:
-		m.remove.cleanupResult = &msg.result
+		m.cleanupResult = &msg.result
 		return m, nil
 
 	case tea.KeyMsg:
-		if m.remove.cleanupResult == nil {
+		if m.cleanupResult == nil {
 			return m, nil
 		}
 		switch {
@@ -40,17 +40,20 @@ func (m Model) updateCleanupResult(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m Model) viewCleanupResult() string {
 	var b strings.Builder
 
-	b.WriteString(styleTitle.Render("  sentei \u2500 Cleanup Complete"))
-	b.WriteString("\n\n")
-	b.WriteString(separator(m.width))
-	b.WriteString("\n\n")
-
-	r := m.remove.cleanupResult
+	r := m.cleanupResult
 	if r == nil {
-		b.WriteString(styleDim.Render("  Running cleanup\u2026"))
-		b.WriteString("\n")
+		b.WriteString(viewTitle("Running Cleanup"))
+		b.WriteString("\n\n")
+		b.WriteString(viewSeparator(m.width))
+		b.WriteString("\n\n")
+		fmt.Fprintf(&b, "  %s Running cleanup\u2026\n", styleIndicatorActive.Render(indicatorActive))
 		return b.String()
 	}
+
+	b.WriteString(viewTitle("Cleanup Complete"))
+	b.WriteString("\n\n")
+	b.WriteString(viewSeparator(m.width))
+	b.WriteString("\n\n")
 
 	// Check if anything was actually done
 	totalActions := r.StaleRefsRemoved + r.ConfigDedupResult.Removed +
@@ -137,9 +140,9 @@ func (m Model) viewCleanupResult() string {
 	}
 
 	b.WriteString("\n")
-	b.WriteString(separator(m.width))
+	b.WriteString(viewSeparator(m.width))
 	b.WriteString("\n\n")
-	b.WriteString(styleDim.Render("  enter quit \u00b7 esc quit"))
+	b.WriteString(viewKeyHints(KeyHint{"enter", "quit"}))
 	b.WriteString("\n")
 
 	return b.String()

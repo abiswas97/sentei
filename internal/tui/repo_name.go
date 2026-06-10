@@ -107,9 +107,9 @@ func (m Model) updateRepoName(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m Model) viewRepoName() string {
 	var b strings.Builder
 
-	b.WriteString(styleTitle.Render(fmt.Sprintf("  sentei %s Create Repository", "\u2500")))
+	b.WriteString(viewTitle("Create Repository"))
 	b.WriteString("\n\n")
-	b.WriteString(separator(m.width))
+	b.WriteString(viewSeparator(m.width))
 	b.WriteString("\n\n")
 
 	b.WriteString("  Repository name\n")
@@ -142,9 +142,9 @@ func (m Model) viewRepoName() string {
 	}
 
 	b.WriteString("\n")
-	b.WriteString(separator(m.width))
+	b.WriteString(viewSeparator(m.width))
 	b.WriteString("\n\n")
-	b.WriteString(styleDim.Render("  enter continue \u00b7 tab switch field \u00b7 esc back"))
+	b.WriteString(viewKeyHints(KeyHint{"enter", "continue"}, KeyHint{"tab", "switch field"}, KeyHint{"esc", "back"}))
 	b.WriteString("\n")
 
 	return b.String()

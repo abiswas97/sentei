@@ -173,9 +173,7 @@ func TestUpdateIntegrationProgress_Finalized_IncrementsGeneration(t *testing.T) 
 	m.integ.returnView = integrationListView
 	m.worktreeGeneration = 1
 
-	updated, cmd := m.updateIntegrationProgress(integrationFinalizedMsg{
-		current: map[string]bool{"code-review-graph": true},
-	})
+	updated, cmd := m.updateIntegrationProgress(integrationFinalizedMsg{})
 	model := updated.(Model)
 
 	if model.worktreeGeneration != 2 {
@@ -192,9 +190,7 @@ func TestUpdateIntegrationProgress_Finalized_MigrateView_NoReload(t *testing.T) 
 	m.integ.returnView = migrateNextView
 	m.worktreeGeneration = 1
 
-	updated, _ := m.updateIntegrationProgress(integrationFinalizedMsg{
-		current: map[string]bool{"code-review-graph": true},
-	})
+	updated, _ := m.updateIntegrationProgress(integrationFinalizedMsg{})
 	model := updated.(Model)
 
 	if model.worktreeGeneration != 1 {

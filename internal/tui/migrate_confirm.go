@@ -91,6 +91,7 @@ func (m Model) migrateConfirmationVM() ConfirmationViewModel {
 	}
 
 	return ConfirmationViewModel{
+		Width: m.width,
 		Title: "Confirm Migration",
 		Items: []ConfirmationItem{
 			{Label: "Repo path:", Value: m.repoPath},
@@ -107,11 +108,11 @@ func (m Model) viewMigrateConfirm() string {
 
 	var b strings.Builder
 
-	b.WriteString(styleTitle.Render(fmt.Sprintf("  sentei %s Migrate to Bare Repository", "\u2500")))
+	b.WriteString(viewTitle("Migrate to Bare Repository"))
 	b.WriteString("\n\n")
 	b.WriteString(styleDim.Render(fmt.Sprintf("  %s", m.repoPath)))
 	b.WriteString("\n\n")
-	b.WriteString(separator(m.width))
+	b.WriteString(viewSeparator(m.width))
 	b.WriteString("\n\n")
 
 	if m.repo.validationErr != "" {
@@ -149,9 +150,9 @@ func (m Model) viewMigrateConfirm() string {
 	}
 
 	b.WriteString("\n")
-	b.WriteString(separator(m.width))
+	b.WriteString(viewSeparator(m.width))
 	b.WriteString("\n\n")
-	b.WriteString(styleDim.Render("  enter confirm  •  esc back  •  q quit"))
+	b.WriteString(viewKeyHints(KeyHint{"enter", "confirm"}, KeyHint{"esc", "back"}, KeyHint{"q", "quit"}))
 	b.WriteString("\n")
 
 	return b.String()

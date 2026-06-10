@@ -12,8 +12,6 @@ import (
 	"github.com/abiswas97/sentei/internal/fileutil"
 )
 
-var PlaygroundDir = filepath.Join(os.TempDir(), "sentei-playground")
-
 func gitRun(dir string, args ...string) error {
 	return gitRunEnv(dir, nil, args...)
 }
@@ -35,19 +33,20 @@ func gitRunEnv(dir string, env []string, args ...string) error {
 }
 
 func Setup() (repoPath string, cleanup func(), err error) {
-	_ = os.RemoveAll(PlaygroundDir)
-
-	if err := os.MkdirAll(PlaygroundDir, 0o755); err != nil {
+	// Unique per session: concurrent playground sessions (parallel e2e
+	// agents, two terminals) must never share or destroy each other's repos.
+	dir, err := os.MkdirTemp("", "sentei-playground-*")
+	if err != nil {
 		return "", nil, fmt.Errorf("creating playground dir: %w", err)
 	}
 
 	cleanupFn := func() {
-		_ = os.RemoveAll(PlaygroundDir)
+		_ = os.RemoveAll(dir)
 	}
 
-	repoPath = filepath.Join(PlaygroundDir, "repo.git")
+	repoPath = filepath.Join(dir, "repo.git")
 
-	if err := gitRun(PlaygroundDir, "init", "--bare", "--initial-branch=main", repoPath); err != nil {
+	if err := gitRun(dir, "init", "--bare", "--initial-branch=main", repoPath); err != nil {
 		cleanupFn()
 		return "", nil, fmt.Errorf("init bare repo: %w", err)
 	}
@@ -81,8 +80,9 @@ func Setup() (repoPath string, cleanup func(), err error) {
 }
 
 func seedInitialCommit(repoPath string) error {
-	tmpWork := filepath.Join(PlaygroundDir, "_seed")
-	if err := gitRun(PlaygroundDir, "clone", repoPath, tmpWork); err != nil {
+	dir := filepath.Dir(repoPath)
+	tmpWork := filepath.Join(dir, "_seed")
+	if err := gitRun(dir, "clone", repoPath, tmpWork); err != nil {
 		return err
 	}
 
@@ -113,7 +113,7 @@ func seedInitialCommit(repoPath string) error {
 
 func worktreePath(repoPath, name string) string {
 	safe := strings.ReplaceAll(name, "/", "-")
-	return filepath.Join(PlaygroundDir, safe)
+	return filepath.Join(filepath.Dir(repoPath), safe)
 }
 
 func addMainWorktree(repoPath string) error {
@@ -224,7 +224,7 @@ func addOldWorktree(repoPath string) error {
 }
 
 func addDetachedWorktree(repoPath string) error {
-	wtPath := filepath.Join(PlaygroundDir, "detached-head")
+	wtPath := filepath.Join(filepath.Dir(repoPath), "detached-head")
 	return gitRun(repoPath, "worktree", "add", "--detach", wtPath)
 }
 

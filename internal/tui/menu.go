@@ -82,6 +82,7 @@ func (m Model) updateMenu(msg tea.Msg) (tea.Model, tea.Cmd) {
 				label := m.menuItems[m.menuCursor].label
 				switch label {
 				case "Create new worktree":
+					m = m.withCreateFlowReset()
 					m.view = createBranchView
 					return m, m.create.branchInput.Cursor.BlinkCmd()
 				case "Manage integrations":
@@ -89,6 +90,7 @@ func (m Model) updateMenu(msg tea.Msg) (tea.Model, tea.Cmd) {
 					return m, m.loadIntegrationState()
 				case "Remove worktrees":
 					m.view = listView
+					m.remove.selected = make(map[string]bool)
 					if len(m.remove.worktrees) == 0 {
 						m.worktreeGeneration++
 						return m, loadWorktreeContext(m.runner, m.repoPath, m.worktreeGeneration)
@@ -141,12 +143,12 @@ func (m Model) viewMenu() string {
 	var b strings.Builder
 
 	repoName := filepath.Base(m.repoPath)
-	b.WriteString(styleTitle.Render(fmt.Sprintf("  sentei %s Git Worktree Manager", "\u2500")))
+	b.WriteString(viewTitle("Git Worktree Manager"))
 	b.WriteString("\n\n")
 
 	switch m.context {
 	case repo.ContextBareRepo:
-		b.WriteString(styleDim.Render(fmt.Sprintf("  %s (bare) %s %s", repoName, "\u00b7", m.repoPath)))
+		b.WriteString(styleDim.Render(truncateWithEllipsis(fmt.Sprintf("  %s (bare) · %s", repoName, m.repoPath), max(m.width, 40))))
 		b.WriteString("\n")
 		if len(m.remove.worktrees) > 0 {
 			clean, dirty, locked := 0, 0, 0
@@ -173,7 +175,7 @@ func (m Model) viewMenu() string {
 	}
 
 	b.WriteString("\n")
-	b.WriteString(separator(m.width))
+	b.WriteString(viewSeparator(m.width))
 	b.WriteString("\n\n")
 
 	for i, item := range m.menuItems {
@@ -201,9 +203,9 @@ func (m Model) viewMenu() string {
 	}
 
 	b.WriteString("\n")
-	b.WriteString(separator(m.width))
+	b.WriteString(viewSeparator(m.width))
 	b.WriteString("\n\n")
-	b.WriteString(styleDim.Render("  j/k navigate \u00b7 enter select \u00b7 q quit"))
+	b.WriteString(viewKeyHints(KeyHint{"j/k", "navigate"}, KeyHint{"enter", "select"}, KeyHint{"F1", "help"}, KeyHint{"q", "quit"}))
 	b.WriteString("\n")
 
 	return b.String()

@@ -22,6 +22,7 @@ type keyMap struct {
 	Left        key.Binding
 	Right       key.Binding
 	Info        key.Binding
+	GlobalHelp  key.Binding
 }
 
 var keys = keyMap{
@@ -100,5 +101,9 @@ var keys = keyMap{
 	Info: key.NewBinding(
 		key.WithKeys("?"),
 		key.WithHelp("?", "info"),
+	),
+	GlobalHelp: key.NewBinding(
+		key.WithKeys("f1"),
+		key.WithHelp("F1", "help"),
 	),
 }
