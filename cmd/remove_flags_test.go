@@ -176,6 +176,14 @@ func TestRemoveCLICommand_All(t *testing.T) {
 	}
 }
 
+func TestRemoveCLICommand_DryRun(t *testing.T) {
+	opts := &RemoveOptions{All: true, DryRun: true}
+	cmd := RemoveCLICommand(opts)
+	if !strings.Contains(cmd, "--dry-run") {
+		t.Errorf("expected '--dry-run', got %s", cmd)
+	}
+}
+
 func TestRemoveCLICommand_WithRepoPath(t *testing.T) {
 	opts := &RemoveOptions{All: true, RepoPath: "/some/repo"}
 	cmd := RemoveCLICommand(opts)

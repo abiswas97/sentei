@@ -34,9 +34,6 @@ func RunEcosystems(args []string) {
 			status = "disabled"
 		}
 		source := eco.Config.Source
-		if source == "" {
-			source = "embedded"
-		}
 		fmt.Printf("  %-14s %-24s %-30s %-10s %s\n",
 			eco.Name,
 			truncate(files, 22),
