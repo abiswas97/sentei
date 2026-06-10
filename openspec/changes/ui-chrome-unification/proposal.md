@@ -5,14 +5,19 @@ sentei's TUI views were built incrementally across multiple changes, leading to 
 ## What Changes
 
 - Extract shared chrome helpers (`viewTitle`, `viewSeparator`, `viewKeyHints`) as pure functions used by every view
-- Extract `ProgressLayout` — a shared rendering struct for all progress views with phase-based layout, step indicators, and an overall progress bar
+- Extract `ProgressLayout` — a shared rendering struct for all progress views, built on the existing `pipeline.Event`/`phaseDisplay` vocabulary, with phase-based layout, step indicators, and an overall progress bar
+- Style the overall progress bar (accent fill, dim track) — today the integration view's bar renders with no color at all
 - Add adaptive windowing for large item lists (30+ worktrees) that responds to terminal height, with a stat line showing indicator legend and counts
-- Add animation buffer constants (`MinProgressDisplay = 300ms`) to prevent flicker on fast operations
+- Add an ellipsis-truncation helper used wherever paths and error text can overflow (today they hard-clip at the terminal edge)
+- Enforce one indicator vocabulary: `●` done, `◐` active, `·` pending, `✗` failed — `●` is never reused for pending steps
 - Consolidate key mappings into a single const file with contextual `?` (details) and `F1` (global help)
-- Standardize confirmation views to use shared chrome (drop `styleDialogBox` border)
-- Fix removal summary `"v"` success marker → `●`
+- Standardize confirmation views to use shared chrome (drop `styleDialogBox` border), with `·` hint separators everywhere (cleanup confirm currently uses `•`)
+- Give the remove list the standard framing (repo subtitle + rules) the menu and integrations views already have
+- Fix removal summary markers (`●`), the empty `Cleanup:` section header, and the cleanup view titling itself "Cleanup Complete" while still running
 - Delete dead styles: `styleHeader`, `styleDialogBox`
 - Expand `.impeccable.md` with Component Patterns section documenting the design system
+
+Progress hold timing (`minProgressDuration`, `holdOrAdvance`) already landed on main and is out of scope here.
 
 ## Capabilities
 
