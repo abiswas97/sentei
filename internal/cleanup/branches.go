@@ -72,27 +72,9 @@ func DeleteGoneBranches(runner git.CommandRunner, repoPath string, opts Options,
 func CleanNonWorktreeBranches(runner git.CommandRunner, repoPath string, opts Options, emit func(Event)) (BranchCleanResult, error) {
 	emit(Event{Step: "non-wt-branches", Message: "Checking non-worktree branches...", Level: LevelStep})
 
-	wtOutput, err := runner.Run(repoPath, "worktree", "list", "--porcelain")
+	candidates, err := listNonWorktreeCandidates(runner, repoPath)
 	if err != nil {
-		return BranchCleanResult{}, fmt.Errorf("listing worktrees: %w", err)
-	}
-	wtBranches := parseWorktreeBranches(wtOutput)
-
-	branchOutput, err := runner.Run(repoPath, "branch", "--format=%(refname:short)")
-	if err != nil {
-		return BranchCleanResult{}, fmt.Errorf("listing branches: %w", err)
-	}
-
-	var candidates []string
-	for _, line := range strings.Split(branchOutput, "\n") {
-		b := strings.TrimSpace(line)
-		if b == "" {
-			continue
-		}
-		if wtBranches[b] || git.IsProtectedBranch(b) {
-			continue
-		}
-		candidates = append(candidates, b)
+		return BranchCleanResult{}, err
 	}
 
 	var result BranchCleanResult
@@ -101,6 +83,8 @@ func CleanNonWorktreeBranches(runner git.CommandRunner, repoPath string, opts Op
 		result.Remaining = len(candidates)
 		if len(candidates) > 0 {
 			emit(Event{Step: "non-wt-branches", Message: fmt.Sprintf("%d branch(es) not in any worktree", len(candidates)), Level: LevelDetail})
+		} else {
+			emit(Event{Step: "non-wt-branches", Message: "No non-worktree branches", Level: LevelInfo})
 		}
 		return result, nil
 	}
@@ -133,6 +117,34 @@ func CleanNonWorktreeBranches(runner git.CommandRunner, repoPath string, opts Op
 	}
 
 	return result, nil
+}
+
+// listNonWorktreeCandidates returns local branches that are neither checked
+// out in any worktree nor protected — the set aggressive cleanup deletes.
+func listNonWorktreeCandidates(runner git.CommandRunner, repoPath string) ([]string, error) {
+	wtOutput, err := runner.Run(repoPath, "worktree", "list", "--porcelain")
+	if err != nil {
+		return nil, fmt.Errorf("listing worktrees: %w", err)
+	}
+	wtBranches := parseWorktreeBranches(wtOutput)
+
+	branchOutput, err := runner.Run(repoPath, "branch", "--format=%(refname:short)")
+	if err != nil {
+		return nil, fmt.Errorf("listing branches: %w", err)
+	}
+
+	var candidates []string
+	for _, line := range strings.Split(branchOutput, "\n") {
+		b := strings.TrimSpace(line)
+		if b == "" {
+			continue
+		}
+		if wtBranches[b] || git.IsProtectedBranch(b) {
+			continue
+		}
+		candidates = append(candidates, b)
+	}
+	return candidates, nil
 }
 
 func parseGoneBranches(output string) (gone []string, worktreeGone []string) {

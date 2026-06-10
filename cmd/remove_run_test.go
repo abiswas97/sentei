@@ -247,3 +247,62 @@ func TestRunRemove_SkipsProtectedWorktrees(t *testing.T) {
 		t.Errorf("the main worktree must survive --all: %v", statErr)
 	}
 }
+
+func TestRunRemove_AtRiskGateRefusesWithoutForce(t *testing.T) {
+	bareRepo := setupBareRepoWithMergedBranch(t)
+	wtPath := filepath.Join(bareRepo, "feature-merged-branch")
+	if err := os.WriteFile(filepath.Join(wtPath, "untracked.txt"), []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	err := RunRemove([]string{"--merged", bareRepo})
+	if err == nil {
+		t.Fatal("expected the at-risk gate to refuse without --force")
+	}
+	for _, want := range []string{"--force", "feature/merged-branch"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Errorf("gate error %q missing %q", err.Error(), want)
+		}
+	}
+
+	if _, statErr := os.Stat(wtPath); statErr != nil {
+		t.Error("the gate must leave the worktree untouched")
+	}
+}
+
+func TestRunRemove_AtRiskGateForceProceeds(t *testing.T) {
+	bareRepo := setupBareRepoWithMergedBranch(t)
+	wtPath := filepath.Join(bareRepo, "feature-merged-branch")
+	if err := os.WriteFile(filepath.Join(wtPath, "untracked.txt"), []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	out := captureStdout(t, func() {
+		if err := RunRemove([]string{"--merged", "--force", bareRepo}); err != nil {
+			t.Errorf("--force must proceed past the gate: %v", err)
+		}
+	})
+	if !strings.Contains(out, "Removed") {
+		t.Errorf("expected removal output, got:\n%s", out)
+	}
+	if _, statErr := os.Stat(wtPath); !os.IsNotExist(statErr) {
+		t.Error("worktree should be removed with --force")
+	}
+}
+
+func TestRunRemove_DryRunExemptFromGate(t *testing.T) {
+	bareRepo := setupBareRepoWithMergedBranch(t)
+	wtPath := filepath.Join(bareRepo, "feature-merged-branch")
+	if err := os.WriteFile(filepath.Join(wtPath, "untracked.txt"), []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	out := captureStdout(t, func() {
+		if err := RunRemove([]string{"--merged", "--dry-run", bareRepo}); err != nil {
+			t.Errorf("dry-run must not be gated: %v", err)
+		}
+	})
+	if !strings.Contains(out, "dry run") {
+		t.Errorf("expected dry-run output, got:\n%s", out)
+	}
+}

@@ -17,6 +17,7 @@ type Worktree struct {
 	LastCommitSubject     string
 	HasUncommittedChanges bool
 	HasUntrackedFiles     bool
+	HasUnpushedCommits    bool
 	IsEnriched            bool
 	EnrichmentError       string
 }
