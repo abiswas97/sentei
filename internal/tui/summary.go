@@ -90,11 +90,17 @@ func (m Model) viewSummary() string {
 		}
 		if cr.NonWtBranchesRemaining > 0 {
 			b.WriteString("\n")
-			b.WriteString(styleDim.Render(fmt.Sprintf("  Tip: %d local branch(es) not in any worktree.", cr.NonWtBranchesRemaining)))
+			b.WriteString(styleDim.Render(fmt.Sprintf("  Tip: %d local %s not in any worktree.", cr.NonWtBranchesRemaining, pluralize(cr.NonWtBranchesRemaining, "branch", "branches"))))
 			b.WriteString("\n")
-			b.WriteString(styleDim.Render("       Run `sentei cleanup --mode=aggressive` to remove them."))
+			b.WriteString(styleDim.Render("       Run `sentei cleanup --mode aggressive` to remove them."))
 			b.WriteString("\n")
 		}
+	}
+
+	if m.remove.cliCommand != "" {
+		b.WriteString("\n")
+		b.WriteString(styleDim.Render("  " + m.remove.cliCommand))
+		b.WriteString("\n")
 	}
 
 	b.WriteString("\n")

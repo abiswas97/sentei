@@ -140,6 +140,14 @@ func (m Model) helpForView() (string, []helpSection) {
 			{"esc", "back"},
 		}}}
 
+	case cleanupPreviewView:
+		return "Cleanup Preview", []helpSection{{name: "Actions", entries: []helpEntry{
+			{"enter", "run safe cleanup"},
+			{"a", "aggressive cleanup (when available)"},
+			{"?", "full branch details"},
+			{"esc", "back"},
+		}}}
+
 	case cleanupConfirmView, createConfirmView, cloneConfirmView, migrateConfirmView:
 		return "Confirmation", []helpSection{{name: "Actions", entries: []helpEntry{
 			{"enter", "confirm"},
@@ -161,6 +169,9 @@ func progressHelp() []helpSection {
 // when the view has no contextual details (the key then falls through to the
 // view's own handling, e.g. the integration info card).
 func (m Model) detailContent() (string, string) {
+	if m.view == cleanupPreviewView {
+		return m.cleanupDetailContent()
+	}
 	if m.view != listView || m.remove.filterActive {
 		return "", ""
 	}

@@ -96,8 +96,7 @@ func (m Model) updateMenu(msg tea.Msg) (tea.Model, tea.Cmd) {
 						return m, loadWorktreeContext(m.runner, m.repoPath, m.worktreeGeneration)
 					}
 				case "Cleanup & exit":
-					m.view = cleanupConfirmView
-					return m, nil
+					return m.startCleanupScan()
 				case "Create new repository":
 					m.repo.nameInput.SetValue("")
 					m.repo.locationInput.SetValue(m.repoPath)

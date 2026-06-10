@@ -38,7 +38,7 @@ func TestViewConfirm_CleanWorktrees(t *testing.T) {
 	if !strings.Contains(output, "(clean)") {
 		t.Error("should show (clean) label for clean worktrees")
 	}
-	if strings.Contains(output, "WARNING") {
+	if strings.Contains(output, "⚠") {
 		t.Error("should not show warnings for clean worktrees")
 	}
 }
@@ -52,11 +52,11 @@ func TestViewConfirm_DirtyWorktree(t *testing.T) {
 
 	output := stripAnsi(m.viewConfirm())
 
-	if !strings.Contains(output, "HAS UNCOMMITTED CHANGES") {
+	if !strings.Contains(output, "uncommitted changes — will be lost") {
 		t.Error("should warn about uncommitted changes")
 	}
-	if !strings.Contains(output, "WARNING") {
-		t.Error("should show WARNING for dirty worktrees")
+	if !strings.Contains(output, "⚠") {
+		t.Error("should show a warning line for dirty worktrees")
 	}
 }
 
@@ -69,7 +69,7 @@ func TestViewConfirm_LockedWorktree(t *testing.T) {
 
 	output := stripAnsi(m.viewConfirm())
 
-	if !strings.Contains(output, "LOCKED") {
+	if !strings.Contains(output, "locked — will force-remove") {
 		t.Error("should warn about locked worktree")
 	}
 	if !strings.Contains(output, "force-remove") {
@@ -279,5 +279,81 @@ func TestRunTeardownPhase_TeardownCommandHandlesRemoval(t *testing.T) {
 	}
 	if _, err := os.Stat(artifactDir); err != nil {
 		t.Error("a successful teardown command must not trigger the dir-removal fallback")
+	}
+}
+
+func gateModel(wts []git.Worktree) Model {
+	m := NewModel(wts, nil, "/repo")
+	m.width, m.height = 90, 28
+	m.view = listView
+	m.remove.selected = map[string]bool{}
+	for _, wt := range wts {
+		m.remove.selected[wt.Path] = true
+	}
+	m.reindex()
+	return m
+}
+
+func TestRemovalGate_CleanPushedSkipsConfirmation(t *testing.T) {
+	m := gateModel([]git.Worktree{
+		{Path: "/w/a", Branch: "refs/heads/a"},
+		{Path: "/w/b", Branch: "refs/heads/b"},
+	})
+
+	updated, cmd := m.updateList(tea.KeyMsg{Type: tea.KeyEnter})
+	model := updated.(Model)
+
+	if model.view != progressView {
+		t.Errorf("clean+pushed selection must skip the gate, got view %d", model.view)
+	}
+	if cmd == nil {
+		t.Error("expected the deletion pipeline to start")
+	}
+	if model.remove.run.total() != 2 {
+		t.Errorf("run total = %d, want 2", model.remove.run.total())
+	}
+}
+
+func TestRemovalGate_AtRiskTriggersConfirmation(t *testing.T) {
+	cases := []struct {
+		name string
+		wt   git.Worktree
+	}{
+		{"dirty", git.Worktree{Path: "/w/x", Branch: "refs/heads/x", HasUncommittedChanges: true}},
+		{"untracked", git.Worktree{Path: "/w/x", Branch: "refs/heads/x", HasUntrackedFiles: true}},
+		{"unpushed", git.Worktree{Path: "/w/x", Branch: "refs/heads/x", HasUnpushedCommits: true}},
+		{"locked", git.Worktree{Path: "/w/x", Branch: "refs/heads/x", IsLocked: true}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			m := gateModel([]git.Worktree{
+				{Path: "/w/clean", Branch: "refs/heads/clean"},
+				tc.wt,
+			})
+
+			updated, _ := m.updateList(tea.KeyMsg{Type: tea.KeyEnter})
+			model := updated.(Model)
+
+			if model.view != confirmView {
+				t.Errorf("%s selection must stop at the gate, got view %d", tc.name, model.view)
+			}
+		})
+	}
+}
+
+func TestViewConfirm_UnpushedWarning(t *testing.T) {
+	m := gateModel([]git.Worktree{
+		{Path: "/w/x", Branch: "refs/heads/feature/x", HasUnpushedCommits: true},
+	})
+	m.view = confirmView
+
+	view := stripANSI(m.viewConfirm())
+	for _, want := range []string{
+		"[^] commits not on any remote",
+		"⚠ 1 worktree(s) have commits not pushed to any remote",
+	} {
+		if !strings.Contains(view, want) {
+			t.Errorf("missing %q:\n%s", want, view)
+		}
 	}
 }

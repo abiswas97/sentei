@@ -135,7 +135,7 @@ func TestEnrichWorktree_Success(t *testing.T) {
 	}
 
 	wt := &git.Worktree{Path: "/work/feature"}
-	enrichWorktree(runner, wt)
+	enrichWorktree(runner, wt, false)
 
 	if wt.EnrichmentError != "" {
 		t.Fatalf("unexpected error: %s", wt.EnrichmentError)
@@ -166,7 +166,7 @@ func TestEnrichWorktree_LogCommandFails(t *testing.T) {
 	}
 
 	wt := &git.Worktree{Path: "/work/broken"}
-	enrichWorktree(runner, wt)
+	enrichWorktree(runner, wt, false)
 
 	if wt.EnrichmentError == "" {
 		t.Error("expected EnrichmentError to be set")
@@ -186,7 +186,7 @@ func TestEnrichWorktree_StatusCommandFails(t *testing.T) {
 	}
 
 	wt := &git.Worktree{Path: "/work/broken"}
-	enrichWorktree(runner, wt)
+	enrichWorktree(runner, wt, false)
 
 	if wt.EnrichmentError == "" {
 		t.Error("expected EnrichmentError to be set")
@@ -255,5 +255,79 @@ func TestEnrichWorktrees_PartialFailure(t *testing.T) {
 	}
 	if result[1].EnrichmentError == "" {
 		t.Error("second worktree should have enrichment error")
+	}
+}
+
+func TestParseAheadCount(t *testing.T) {
+	cases := []struct {
+		output string
+		want   int
+	}{
+		{"0\n", 0},
+		{"3", 3},
+		{"  12  ", 12},
+		{"garbage", 1}, // unparsable errs toward "ahead" so the gate engages
+		{"", 1},
+	}
+	for _, tc := range cases {
+		if got := ParseAheadCount(tc.output); got != tc.want {
+			t.Errorf("ParseAheadCount(%q) = %d, want %d", tc.output, got, tc.want)
+		}
+	}
+}
+
+func TestEnrichWorktree_UnpushedDetection(t *testing.T) {
+	base := map[string]mock.Response{
+		"/work/feature:[log -1 --format=%ai]": {Output: "2024-06-01 12:00:00 +0000"},
+		"/work/feature:[log -1 --format=%s]":  {Output: "Add feature X"},
+		"/work/feature:[status --porcelain]":  {Output: ""},
+	}
+	cases := []struct {
+		name         string
+		revList      *mock.Response
+		wantUnpushed bool
+	}{
+		{"up to date with upstream", &mock.Response{Output: "0"}, false},
+		{"ahead of upstream", &mock.Response{Output: "2"}, true},
+		{"no tracking branch", nil, true}, // rev-list errors when @{upstream} is unset
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			responses := make(map[string]mock.Response, len(base)+1)
+			for k, v := range base {
+				responses[k] = v
+			}
+			if tc.revList != nil {
+				responses["/work/feature:[rev-list --count @{upstream}..HEAD]"] = *tc.revList
+			}
+			runner := &mock.Runner{Responses: responses}
+
+			wt := &git.Worktree{Path: "/work/feature"}
+			enrichWorktree(runner, wt, true)
+
+			if !wt.IsEnriched {
+				t.Fatalf("enrichment failed: %s", wt.EnrichmentError)
+			}
+			if wt.HasUnpushedCommits != tc.wantUnpushed {
+				t.Errorf("HasUnpushedCommits = %v, want %v", wt.HasUnpushedCommits, tc.wantUnpushed)
+			}
+		})
+	}
+}
+
+func TestEnrichWorktree_NoRemotesNeverUnpushed(t *testing.T) {
+	runner := &mock.Runner{
+		Responses: map[string]mock.Response{
+			"/work/feature:[log -1 --format=%ai]": {Output: "2024-06-01 12:00:00 +0000"},
+			"/work/feature:[log -1 --format=%s]":  {Output: "Add feature X"},
+			"/work/feature:[status --porcelain]":  {Output: ""},
+		},
+	}
+
+	wt := &git.Worktree{Path: "/work/feature"}
+	enrichWorktree(runner, wt, false)
+
+	if wt.HasUnpushedCommits {
+		t.Error("a repo without remotes must not flag branches as unpushed")
 	}
 }

@@ -1,10 +1,12 @@
 package cmd
 
 import (
+	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/abiswas97/sentei/internal/cleanup"
+	"github.com/abiswas97/sentei/internal/git"
 )
 
 func TestParseCleanupRepoPath(t *testing.T) {
@@ -99,5 +101,37 @@ func TestRunCleanupWithOpts_TipForNonWorktreeBranches(t *testing.T) {
 	}
 	if !strings.Contains(out, "sentei cleanup --mode=aggressive") {
 		t.Errorf("expected aggressive-mode tip, got:\n%s", out)
+	}
+}
+
+// Task 1.4: DryRun against a real bare repo (covers the e2e path the
+// mock-based cleanup package tests cannot).
+func TestCleanupDryRun_RealRepo(t *testing.T) {
+	bareRepo := setupBareRepoWithMergedBranch(t)
+	// Drop the worktree but keep the branch: a real aggressive candidate.
+	mustGit(t, bareRepo, "worktree", "remove", "--force", filepath.Join(bareRepo, "feature-merged-branch"))
+
+	result, err := cleanup.DryRun(&git.GitRunner{}, bareRepo)
+	if err != nil {
+		t.Fatalf("DryRun() error: %v", err)
+	}
+
+	found := false
+	for _, b := range result.AggressiveBranches {
+		if b.Name == "feature/merged-branch" {
+			found = true
+			if b.LastCommitSubject == "" || b.LastCommitDate.IsZero() {
+				t.Errorf("expected metadata on the candidate, got %+v", b)
+			}
+		}
+		if b.Name == "main" {
+			t.Error("the default branch must never be an aggressive candidate")
+		}
+	}
+	if !found {
+		t.Errorf("expected feature/merged-branch as an aggressive candidate, got %+v", result.AggressiveBranches)
+	}
+	if !result.AggressiveHasWork() {
+		t.Error("AggressiveHasWork must be true")
 	}
 }

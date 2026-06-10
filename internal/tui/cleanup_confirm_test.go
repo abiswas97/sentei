@@ -151,7 +151,7 @@ func TestUpdateCleanupConfirm_QuitKey(t *testing.T) {
 	}
 }
 
-func TestMenuCleanupTransitionsToConfirm(t *testing.T) {
+func TestMenuCleanupTransitionsToPreview(t *testing.T) {
 	m := NewMenuModel(nil, nil, "/repo", &config.Config{}, repo.ContextBareRepo)
 	m.width = 80
 	m.height = 24
@@ -159,11 +159,28 @@ func TestMenuCleanupTransitionsToConfirm(t *testing.T) {
 	// Move cursor to "Cleanup & exit" (index 3 in bare repo menu).
 	m.menuCursor = 3
 
-	updated, _ := m.updateMenu(tea.KeyMsg{Type: tea.KeyEnter})
+	updated, cmd := m.updateMenu(tea.KeyMsg{Type: tea.KeyEnter})
 	result := updated.(Model)
 
-	if result.view != cleanupConfirmView {
-		t.Errorf("expected view=cleanupConfirmView, got %d", result.view)
+	if result.view != cleanupPreviewView {
+		t.Errorf("expected view=cleanupPreviewView, got %d", result.view)
+	}
+	if cmd == nil {
+		t.Error("expected the dry-run scan Cmd to fire on entry")
+	}
+	if result.cleanupScan != nil || result.cleanupAggressiveConfirm {
+		t.Error("preview state must start pristine")
+	}
+}
+
+// The CLI path (sentei cleanup --mode=X) keeps the confirmation view.
+func TestSetCleanupOptsKeepsConfirmView(t *testing.T) {
+	m := NewMenuModel(nil, nil, "/repo", &config.Config{}, repo.ContextBareRepo)
+	opts := cleanup.Options{Mode: cleanup.ModeSafe}
+	m.SetCleanupOpts(&opts)
+
+	if m.view != cleanupConfirmView {
+		t.Errorf("expected view=cleanupConfirmView for CLI path, got %d", m.view)
 	}
 }
 

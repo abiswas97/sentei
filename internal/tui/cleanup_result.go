@@ -120,6 +120,18 @@ func (m Model) viewCleanupResult() string {
 			styleIndicatorPending.Render(indicatorPending))
 	}
 
+	// Skipped branches: a confirmed aggressive run must never look like a
+	// silent success when the engine skipped unmerged branches.
+	if len(r.BranchesSkipped) > 0 {
+		fmt.Fprintf(&b, "  %s %d %s skipped (not fully merged)\n",
+			styleIndicatorWarning.Render(indicatorWarning),
+			len(r.BranchesSkipped),
+			pluralize(len(r.BranchesSkipped), "branch", "branches"))
+		for _, s := range r.BranchesSkipped {
+			fmt.Fprintf(&b, "    %s %s\n", styleDim.Render(indicatorPending), truncateWithEllipsis(s.Name, max(m.width-8, 20)))
+		}
+	}
+
 	// Errors
 	for _, e := range r.Errors {
 		fmt.Fprintf(&b, "  %s %s: %s\n",
@@ -128,14 +140,28 @@ func (m Model) viewCleanupResult() string {
 			styleError.Render(e.Err.Error()))
 	}
 
-	// Tip about aggressive mode
-	if r.NonWtBranchesRemaining > 0 {
+	// Tip: after a safe run, point at aggressive mode; after an aggressive
+	// run that skipped unmerged branches, point at --force instead of
+	// re-recommending the mode that just ran.
+	if m.cleanupRanMode == cleanup.ModeAggressive {
+		if len(r.BranchesSkipped) > 0 {
+			b.WriteString("\n")
+			b.WriteString(styleDim.Render("  Tip: run `sentei cleanup --mode aggressive --force` to delete unmerged branches."))
+			b.WriteString("\n")
+		}
+	} else if r.NonWtBranchesRemaining > 0 {
 		b.WriteString("\n")
 		b.WriteString(styleDim.Render(fmt.Sprintf("  Tip: %d local %s not in any worktree.",
 			r.NonWtBranchesRemaining,
 			pluralize(r.NonWtBranchesRemaining, "branch", "branches"))))
 		b.WriteString("\n")
-		b.WriteString(styleDim.Render("       Run `sentei cleanup --mode=aggressive` to remove them."))
+		b.WriteString(styleDim.Render("       Run `sentei cleanup --mode aggressive` to remove them."))
+		b.WriteString("\n")
+	}
+
+	if m.cleanupRanMode != "" {
+		b.WriteString("\n")
+		b.WriteString(styleDim.Render("  " + BuildCLICommand("cleanup", map[string]string{"mode": string(m.cleanupRanMode)})))
 		b.WriteString("\n")
 	}
 
