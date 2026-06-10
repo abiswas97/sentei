@@ -1,0 +1,21 @@
+internal/cleanup/branches.go
+  s_157240fea52147::t_be1d9cab9f6fa1 45-48,50
+internal/cleanup/branches_test.go
+  s_157240fea52147::t_700faeb981f34e 170-207
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "911cba9ad3604b018c6a64699a023a844dabe3aa",
+  "prompts": {},
+  "sessions": {
+    "s_157240fea52147": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "42f7cf1c-c025-449a-89c8-fab9aa10c61e",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Test <t@t.com>"
+    }
+  }
+}
