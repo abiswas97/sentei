@@ -1,0 +1,153 @@
+package tui
+
+import (
+	"strings"
+	"testing"
+)
+
+func TestViewTitle_Standard(t *testing.T) {
+	got := viewTitle("Removing Worktrees")
+	if !strings.Contains(got, "sentei ─ Removing Worktrees") {
+		t.Errorf("viewTitle = %q, want it to contain the prefixed title", got)
+	}
+	if !strings.HasPrefix(stripANSI(got), "  ") {
+		t.Errorf("expected 2-space left padding, got %q", got)
+	}
+}
+
+func TestViewTitle_Empty(t *testing.T) {
+	got := stripANSI(viewTitle(""))
+	if got != "  sentei ─" {
+		t.Errorf("viewTitle(\"\") = %q, want %q", got, "  sentei ─")
+	}
+}
+
+func TestViewSeparator_StandardWidth(t *testing.T) {
+	got := stripANSI(viewSeparator(80))
+	want := "  " + strings.Repeat("┄", 76)
+	if got != want {
+		t.Errorf("viewSeparator(80) = %d chars, want 2-space pad + 76 dashes", len([]rune(got)))
+	}
+}
+
+func TestViewSeparator_NarrowWidthFallsBack(t *testing.T) {
+	for _, w := range []int{4, 0} {
+		got := stripANSI(viewSeparator(w))
+		want := "  " + strings.Repeat("┄", 36)
+		if got != want {
+			t.Errorf("viewSeparator(%d) = %q, want 40-width fallback", w, got)
+		}
+	}
+}
+
+func TestViewKeyHints_Multiple(t *testing.T) {
+	got := stripANSI(viewKeyHints(KeyHint{"enter", "confirm"}, KeyHint{"esc", "back"}, KeyHint{"q", "quit"}))
+	want := "  enter confirm · esc back · q quit"
+	if got != want {
+		t.Errorf("viewKeyHints = %q, want %q", got, want)
+	}
+}
+
+func TestViewKeyHints_Single(t *testing.T) {
+	got := stripANSI(viewKeyHints(KeyHint{"q", "quit"}))
+	if got != "  q quit" {
+		t.Errorf("viewKeyHints = %q, want %q", got, "  q quit")
+	}
+}
+
+func TestViewKeyHints_None(t *testing.T) {
+	if got := viewKeyHints(); got != "" {
+		t.Errorf("viewKeyHints() = %q, want empty", got)
+	}
+}
+
+func TestTruncateWithEllipsis(t *testing.T) {
+	cases := []struct {
+		name  string
+		in    string
+		width int
+		want  string
+	}{
+		{"fits unchanged", "short", 10, "short"},
+		{"exact fit unchanged", "exact", 5, "exact"},
+		{"long truncated", "/very/long/worktree/path", 10, "/very/lon…"},
+		{"width one", "abc", 1, "…"},
+		{"width zero", "abc", 0, ""},
+		{"multibyte runes", "wörk/trée-päth", 6, "wörk/…"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := truncateWithEllipsis(tc.in, tc.width); got != tc.want {
+				t.Errorf("truncateWithEllipsis(%q, %d) = %q, want %q", tc.in, tc.width, got, tc.want)
+			}
+		})
+	}
+}
+
+func TestViewStatLine_Standard(t *testing.T) {
+	got := stripANSI(viewStatLine(WindowStats{Done: 10, Active: 3, Pending: 17, Showing: 6, Total: 30}))
+	want := "    ● 10 done  ◐ 3 active  · 17 pending  showing 6 of 30"
+	if got != want {
+		t.Errorf("viewStatLine = %q, want %q", got, want)
+	}
+}
+
+func TestViewStatLine_WithFailures(t *testing.T) {
+	got := stripANSI(viewStatLine(WindowStats{Done: 1, Failed: 2, Showing: 3, Total: 3}))
+	if !strings.Contains(got, "✗ 2 failed") {
+		t.Errorf("expected failed legend, got %q", got)
+	}
+}
+
+func TestViewStatLine_ZeroCountsOmitted(t *testing.T) {
+	got := stripANSI(viewStatLine(WindowStats{Done: 5, Showing: 5, Total: 5}))
+	for _, absent := range []string{"active", "pending", "failed"} {
+		if strings.Contains(got, absent) {
+			t.Errorf("zero-count category %q should be omitted, got %q", absent, got)
+		}
+	}
+}
+
+func TestRenderProgressBar_Halfway(t *testing.T) {
+	got := stripANSI(renderProgressBar(10, 20))
+	want := "  " + strings.Repeat("█", 10) + strings.Repeat("░", 10) + " 50%"
+	if got != want {
+		t.Errorf("renderProgressBar(10,20) = %q, want %q", got, want)
+	}
+}
+
+func TestRenderProgressBar_DoneExceedsTotal_ClampsNoPanic(t *testing.T) {
+	got := stripANSI(renderProgressBar(3, 1))
+	want := "  " + strings.Repeat("█", 20) + " 100%"
+	if got != want {
+		t.Errorf("renderProgressBar(3,1) = %q, want clamped 100%%", got)
+	}
+}
+
+func TestRenderProgressBar_ZeroTotal(t *testing.T) {
+	got := stripANSI(renderProgressBar(0, 0))
+	want := "  " + strings.Repeat("░", 20) + " 0%"
+	if got != want {
+		t.Errorf("renderProgressBar(0,0) = %q, want empty bar at 0%%", got)
+	}
+}
+
+// stripANSI removes escape sequences so assertions hold regardless of the
+// test terminal's color profile.
+func stripANSI(s string) string {
+	var b strings.Builder
+	inEscape := false
+	for _, r := range s {
+		switch {
+		case inEscape:
+			if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') {
+				inEscape = false
+			}
+		case r == '\x1b':
+			inEscape = true
+		default:
+			b.WriteRune(r)
+		}
+	}
+	return b.String()
+}

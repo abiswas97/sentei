@@ -42,9 +42,9 @@ func (m Model) viewCreateSummary() string {
 
 	hasFailures := result != nil && result.HasFailures()
 
-	b.WriteString(styleTitle.Render(fmt.Sprintf("  sentei %s Worktree Created", "\u2500")))
+	b.WriteString(viewTitle("Worktree Created"))
 	b.WriteString("\n\n")
-	b.WriteString(separator(m.width))
+	b.WriteString(viewSeparator(m.width))
 	b.WriteString("\n\n")
 
 	if hasFailures {
@@ -55,7 +55,7 @@ func (m Model) viewCreateSummary() string {
 			styleIndicatorDone.Render(indicatorDone), branch)
 	}
 
-	fmt.Fprintf(&b, "    %-10s %s\n", styleDim.Render("Path"), wtPath)
+	fmt.Fprintf(&b, "    %-10s %s\n", styleDim.Render("Path"), truncateWithEllipsis(wtPath, max(m.width-16, 20)))
 	fmt.Fprintf(&b, "    %-10s %s (from %s)\n", styleDim.Render("Branch"), branch, base)
 
 	if result != nil {
@@ -83,15 +83,15 @@ func (m Model) viewCreateSummary() string {
 	}
 
 	b.WriteString("\n")
-	b.WriteString(separator(m.width))
+	b.WriteString(viewSeparator(m.width))
 	b.WriteString("\n\n")
-	fmt.Fprintf(&b, "    cd %s\n", wtPath)
+	fmt.Fprintf(&b, "    cd %s\n", truncateWithEllipsis(wtPath, max(m.width-8, 20)))
 	b.WriteString("\n")
 
 	if m.menuItems != nil {
-		b.WriteString(styleDim.Render("  enter menu \u00b7 q quit"))
+		b.WriteString(viewKeyHints(KeyHint{"enter", "menu"}, KeyHint{"q", "quit"}))
 	} else {
-		b.WriteString(styleDim.Render("  enter quit \u00b7 q quit"))
+		b.WriteString(viewKeyHints(KeyHint{"enter", "quit"}, KeyHint{"q", "quit"}))
 	}
 	b.WriteString("\n")
 

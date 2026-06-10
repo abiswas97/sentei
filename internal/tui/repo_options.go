@@ -161,11 +161,11 @@ func (m Model) viewRepoOptions() string {
 	name := m.repo.nameInput.Value()
 	location := m.repo.locationInput.Value()
 
-	b.WriteString(styleTitle.Render(fmt.Sprintf("  sentei %s Create Repository", "\u2500")))
+	b.WriteString(viewTitle("Create Repository"))
 	b.WriteString("\n\n")
 	b.WriteString(styleDim.Render(fmt.Sprintf("  %s \u00b7 %s", name, location)))
 	b.WriteString("\n\n")
-	b.WriteString(separator(m.width))
+	b.WriteString(viewSeparator(m.width))
 	b.WriteString("\n\n")
 
 	// Setup section
@@ -263,7 +263,7 @@ func (m Model) viewRepoOptions() string {
 	}
 
 	b.WriteString("\n")
-	b.WriteString(separator(m.width))
+	b.WriteString(viewSeparator(m.width))
 	b.WriteString("\n\n")
 	b.WriteString(styleDim.Render("  space toggle \u00b7 enter create \u00b7 esc back"))
 	b.WriteString("\n")

@@ -61,3 +61,30 @@ func buildPhaseDisplays(events []pipeline.Event) []phaseDisplay {
 	}
 	return result
 }
+
+// withPendingPhases returns displays reordered onto the canonical phase
+// sequence, inserting an empty (pending) phaseDisplay for any canonical
+// phase that has not emitted events yet. Phases outside the canonical list
+// keep their discovery order at the end.
+func withPendingPhases(displays []phaseDisplay, names ...string) []phaseDisplay {
+	byName := make(map[string]phaseDisplay, len(displays))
+	for _, pd := range displays {
+		byName[pd.name] = pd
+	}
+	result := make([]phaseDisplay, 0, len(names)+len(displays))
+	canonical := make(map[string]bool, len(names))
+	for _, name := range names {
+		canonical[name] = true
+		if pd, ok := byName[name]; ok {
+			result = append(result, pd)
+		} else {
+			result = append(result, phaseDisplay{name: name})
+		}
+	}
+	for _, pd := range displays {
+		if !canonical[pd.name] {
+			result = append(result, pd)
+		}
+	}
+	return result
+}

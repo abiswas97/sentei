@@ -14,6 +14,13 @@ import (
 	"github.com/abiswas97/sentei/internal/state"
 )
 
+// styleInfoCard frames the integration info carousel — the one true
+// overlay until the DetailPortal component lands and absorbs it.
+var styleInfoCard = lipgloss.NewStyle().
+	Border(lipgloss.RoundedBorder()).
+	BorderForeground(lipgloss.Color("62")).
+	Padding(1, 2)
+
 type integrationStateLoadedMsg struct {
 	integrations []integration.Integration
 	current      map[string]bool
@@ -125,6 +132,7 @@ func (m Model) startIntegrationApply() (Model, tea.Cmd) {
 		totalSteps += stepsPerWT * len(wtPaths)
 	}
 	m.integ.totalSteps = totalSteps
+	m.integ.targetWorktrees = wtPaths
 
 	ch := make(chan integration.ManagerEvent, 50)
 	doneCh := make(chan struct{}, 1)
@@ -253,11 +261,11 @@ func (m Model) viewIntegrationList() string {
 	var b strings.Builder
 
 	repoName := filepath.Base(m.repoPath)
-	b.WriteString(styleTitle.Render("  sentei \u2500 Integrations"))
+	b.WriteString(viewTitle("Integrations"))
 	b.WriteString("\n\n")
 	b.WriteString(styleDim.Render(fmt.Sprintf("  %s (bare)", repoName)))
 	b.WriteString("\n\n")
-	b.WriteString(separator(m.width))
+	b.WriteString(viewSeparator(m.width))
 	b.WriteString("\n\n")
 
 	for i, integ := range m.integ.integrations {
@@ -305,7 +313,7 @@ func (m Model) viewIntegrationList() string {
 	}
 
 	b.WriteString("\n")
-	b.WriteString(separator(m.width))
+	b.WriteString(viewSeparator(m.width))
 	b.WriteString("\n\n")
 
 	legend := fmt.Sprintf("  %s active  %s inactive  %s adding  %s removing",
@@ -384,7 +392,7 @@ func (m Model) renderIntegrationInfo() string {
 	content.WriteString("\n")
 	content.WriteString(styleDim.Render("h/\u25c0 prev \u00b7 l/\u25b6 next \u00b7 esc close"))
 
-	dialog := styleDialogBox.Width(innerWidth + 6).Render(content.String())
+	dialog := styleInfoCard.Width(innerWidth + 6).Render(content.String())
 	return dialog
 }
 

@@ -1,21 +1,20 @@
 package tui
 
 import (
-	"fmt"
 	"maps"
 	"path/filepath"
-	"strings"
 
+	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/abiswas97/sentei/internal/integration"
+	"github.com/abiswas97/sentei/internal/pipeline"
 	"github.com/abiswas97/sentei/internal/repo"
 	"github.com/abiswas97/sentei/internal/state"
 )
 
 type integrationFinalizedMsg struct {
-	current map[string]bool
-	err     error
+	err error
 }
 
 func (m Model) updateIntegrationProgress(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -23,6 +22,12 @@ func (m Model) updateIntegrationProgress(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = max(msg.Height-6, 5)
+		return m, nil
+
+	case tea.KeyMsg:
+		if key.Matches(msg, keys.Quit) {
+			return m, tea.Quit
+		}
 		return m, nil
 
 	case integrationEventMsg:
@@ -33,19 +38,20 @@ func (m Model) updateIntegrationProgress(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, m.finalizeIntegrationApply()
 
 	case integrationFinalizedMsg:
-		// Only apply the new set to in-memory state when it was actually persisted.
-		// On a save failure, advancing without mutating keeps the UI consistent
-		// with disk instead of showing an integration set that was never saved.
-		if msg.err == nil && m.integ.returnView != migrateNextView {
-			m.integ.current = msg.current
-			for _, integ := range m.integ.integrations {
-				m.integ.staged[integ.Name] = m.integ.current[integ.Name]
-			}
+		// The migrate flow has its own summary; hand off unchanged.
+		if m.integ.returnView == migrateNextView {
+			return m.holdOrAdvance(migrateNextView)
+		}
+		// In-memory current/staged are never mutated here: dismissing the
+		// summary reloads them from persisted state, so the list always
+		// matches disk whether the save succeeded or failed.
+		m.integ.saveErr = msg.err
+		if msg.err == nil {
 			m.worktreeGeneration++
-			updated, holdCmd := m.holdOrAdvance(m.integ.returnView)
+			updated, holdCmd := m.holdOrAdvance(integrationSummaryView)
 			return updated, tea.Batch(holdCmd, loadWorktreeContext(m.runner, m.repoPath, m.worktreeGeneration))
 		}
-		return m.holdOrAdvance(m.integ.returnView)
+		return m.holdOrAdvance(integrationSummaryView)
 	}
 	return m, nil
 }
@@ -74,116 +80,85 @@ func (m Model) finalizeIntegrationApply() tea.Cmd {
 		}
 		err := state.Save(bareDir, &state.State{Integrations: enabled})
 
-		current := make(map[string]bool)
-		for _, integ := range integrations {
-			current[integ.Name] = staged[integ.Name]
-		}
-
-		return integrationFinalizedMsg{current: current, err: err}
+		return integrationFinalizedMsg{err: err}
 	}
 }
 
 func (m Model) viewIntegrationProgress() string {
-	var b strings.Builder
+	done, total := m.integrationOverallProgress()
+	return ProgressLayout{
+		Title:        "Applying Integration Changes",
+		Phases:       m.buildIntegrationPhases(),
+		Width:        m.width,
+		Height:       m.height,
+		Hints:        []KeyHint{{"q", "quit"}},
+		OverallDone:  done,
+		OverallTotal: total,
+	}.View()
+}
 
-	b.WriteString(styleTitle.Render("  sentei \u2500 Applying Integration Changes"))
-	b.WriteString("\n\n")
-	b.WriteString(separator(m.width))
-	b.WriteString("\n\n")
+// buildIntegrationPhases maps apply events onto the shared phase shape, one
+// phase per worktree, with every target worktree visible as pending before
+// its events arrive. Failed step errors are baked into the step label.
+func (m Model) buildIntegrationPhases() []phaseDisplay {
+	var phases []phaseDisplay
+	seen := make(map[string]bool)
 
-	// Group events by worktree, preserving insertion order.
-	type worktreeGroup struct {
-		name   string
-		events []integration.ManagerEvent
-	}
-	var groups []worktreeGroup
-	indexByWorktree := make(map[string]int)
-
-	for _, ev := range m.integ.events {
-		if _, exists := indexByWorktree[ev.Worktree]; !exists {
-			indexByWorktree[ev.Worktree] = len(groups)
-			groups = append(groups, worktreeGroup{name: ev.Worktree})
-		}
-		idx := indexByWorktree[ev.Worktree]
-		groups[idx].events = append(groups[idx].events, ev)
-	}
-
-	for _, g := range groups {
-		fmt.Fprintf(&b, "  %s\n", filepath.Base(g.name))
-
-		// Deduplicate steps: keep only the last event per step name.
-		type stepEntry struct {
-			step string
-			ev   integration.ManagerEvent
-		}
-		var steps []stepEntry
-		stepIndex := make(map[string]int)
-		for _, ev := range g.events {
-			if i, exists := stepIndex[ev.Step]; exists {
-				steps[i].ev = ev
-			} else {
-				stepIndex[ev.Step] = len(steps)
-				steps = append(steps, stepEntry{step: ev.Step, ev: ev})
-			}
-		}
-
-		for _, s := range steps {
+	for _, g := range groupIntegrationEvents(m.integ.events) {
+		pd := phaseDisplay{name: filepath.Base(g.worktree)}
+		seen[g.worktree] = true
+		for _, s := range g.steps {
 			if s.ev.Status == integration.StatusSkipped {
-				continue // Don't display skipped steps.
+				continue // skipped steps stay hidden, as before
 			}
-			var ind string
+			label := s.step
+			if s.ev.Error != nil {
+				label += " " + s.ev.Error.Error()
+			}
+			var status pipeline.StepStatus
 			switch s.ev.Status {
 			case integration.StatusDone:
-				ind = styleIndicatorDone.Render(indicatorDone)
+				status = pipeline.StepDone
+				pd.done++
 			case integration.StatusRunning:
-				ind = styleIndicatorActive.Render(indicatorActive)
+				status = pipeline.StepRunning
 			case integration.StatusFailed:
-				ind = styleIndicatorFailed.Render(indicatorFailed)
+				status = pipeline.StepFailed
+				pd.failed++
+				pd.done++
 			}
-
-			line := fmt.Sprintf("    %s %s", ind, s.ev.Step)
-			if s.ev.Error != nil {
-				line += " " + styleError.Render(s.ev.Error.Error())
-			}
-			b.WriteString(line)
-			b.WriteString("\n")
+			pd.steps = append(pd.steps, stepDisplay{name: label, status: status})
 		}
-		b.WriteString("\n")
+		pd.total = len(pd.steps)
+		phases = append(phases, pd)
 	}
 
-	b.WriteString(separator(m.width))
-	b.WriteString("\n\n")
+	for _, path := range m.integ.targetWorktrees {
+		if !seen[path] {
+			phases = append(phases, phaseDisplay{name: filepath.Base(path)})
+		}
+	}
+	return phases
+}
 
-	// Progress bar — use upfront total, count unique completed steps.
-	total := m.integ.totalSteps
-	stepStatus := make(map[string]bool)
-	done := 0
+// integrationOverallProgress counts resolved unique steps against the
+// upfront step total so the bar reflects the whole apply, not just the
+// worktrees that have emitted events.
+func (m Model) integrationOverallProgress() (done, total int) {
+	total = m.integ.totalSteps
+	resolved := make(map[string]bool)
 	for _, ev := range m.integ.events {
 		key := ev.Worktree + ":" + ev.Step
-		if stepStatus[key] {
-			continue // Already counted this step.
+		if resolved[key] {
+			continue
 		}
 		if ev.Status == integration.StatusDone || ev.Status == integration.StatusFailed || ev.Status == integration.StatusSkipped {
-			stepStatus[key] = true
+			resolved[key] = true
 			done++
 		}
 	}
-	// If no upfront total was set, fall back to discovered steps.
 	if total == 0 {
 		total = done
 	}
-
-	const barWidth = 20
-	filled := 0
-	if total > 0 {
-		filled = (done * barWidth) / total
-	}
-	bar := strings.Repeat("\u2588", filled) + strings.Repeat("\u2591", barWidth-filled)
-	pct := 0
-	if total > 0 {
-		pct = (done * 100) / total
-	}
-	fmt.Fprintf(&b, "  %s %d%%\n", bar, pct)
-
-	return b.String()
+	return done, total
 }

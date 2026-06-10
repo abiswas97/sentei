@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -15,7 +16,6 @@ import (
 	"github.com/abiswas97/sentei/internal/integration"
 	"github.com/abiswas97/sentei/internal/pipeline"
 	"github.com/abiswas97/sentei/internal/repo"
-	"github.com/abiswas97/sentei/internal/worktree"
 )
 
 // progressHoldExpiredMsg fires when the minimum progress view duration has elapsed.
@@ -45,6 +45,7 @@ const (
 	migrateNextView
 	integrationListView
 	integrationProgressView
+	integrationSummaryView
 	migrateIntegrationsView
 	cleanupConfirmView
 	cleanupResultView
@@ -108,15 +109,7 @@ type removeState struct {
 	filterInput  textinput.Model
 	filterLabel  string // describes filter that produced pre-selection (e.g. "merged", "stale > 30d")
 
-	deletionStatuses map[string]string
-	deletionResult   worktree.DeletionResult
-	deletionTotal    int
-	progressCh       <-chan worktree.DeletionEvent
-
-	teardownResults []pipeline.StepResult
-
-	pruneErr      *error
-	cleanupResult *cleanup.Result
+	run removalRun
 }
 
 // menuItem represents a selectable menu entry.
@@ -200,13 +193,17 @@ type integrationState struct {
 	infoCursor int  // which integration is shown in the carousel //nolint:unused
 
 	// Progress
-	events     []integration.ManagerEvent    //nolint:unused
-	totalSteps int                           // known upfront for progress bar
-	eventCh    chan integration.ManagerEvent //nolint:unused
-	doneCh     chan struct{}                 //nolint:unused
+	events          []integration.ManagerEvent    //nolint:unused
+	totalSteps      int                           // known upfront for progress bar
+	targetWorktrees []string                      // all apply targets, pre-populated as pending phases
+	eventCh         chan integration.ManagerEvent //nolint:unused
+	doneCh          chan struct{}                 //nolint:unused
 
 	// Context: where to return after progress completes
 	returnView viewState //nolint:unused
+
+	// Apply outcome: persistence error from the last apply, shown in the summary
+	saveErr error
 }
 
 type Model struct {
@@ -223,15 +220,17 @@ type Model struct {
 	menuCursor         int
 	worktreeGeneration uint64 // Monotonic token passed to loadWorktreeContext; global handler discards mismatched responses.
 
-	cleanupOpts *cleanup.Options
-	createOpts  *CreateOpts
-	cloneOpts   *CloneOpts
-	migrateOpts *MigrateOpts
+	cleanupOpts   *cleanup.Options
+	cleanupResult *cleanup.Result // standalone cleanup flow ("Cleanup & exit" / sentei cleanup)
+	createOpts    *CreateOpts
+	cloneOpts     *CloneOpts
+	migrateOpts   *MigrateOpts
 
 	remove removeState
 	create createState
 	repo   repoState
 	integ  integrationState
+	portal DetailPortal
 
 	// Progress hold state — used to enforce minimum visible duration for progress views.
 	minProgressDuration time.Duration // 0 = no hold; set via WithMinProgressDuration
@@ -261,12 +260,11 @@ func NewModel(worktrees []git.Worktree, runner git.CommandRunner, repoPath strin
 		runner:   runner,
 		repoPath: repoPath,
 		remove: removeState{
-			worktrees:        worktrees,
-			selected:         make(map[string]bool),
-			sortField:        SortByAge,
-			sortAscending:    true,
-			filterInput:      ti,
-			deletionStatuses: make(map[string]string),
+			worktrees:     worktrees,
+			selected:      make(map[string]bool),
+			sortField:     SortByAge,
+			sortAscending: true,
+			filterInput:   ti,
 		},
 		height: 20,
 	}
@@ -281,7 +279,7 @@ func NewMenuModel(runner git.CommandRunner, shell git.ShellRunner, repoPath stri
 
 	baseInput := textinput.New()
 	baseInput.Placeholder = "main"
-	baseInput.SetValue("main")
+	baseInput.SetValue(defaultBaseBranch)
 
 	filterInput := textinput.New()
 	filterInput.Prompt = "filter: "
@@ -340,11 +338,10 @@ func NewMenuModel(runner git.CommandRunner, shell git.ShellRunner, repoPath stri
 		menuItems:          items,
 		worktreeGeneration: initGeneration,
 		remove: removeState{
-			selected:         make(map[string]bool),
-			sortField:        SortByAge,
-			sortAscending:    true,
-			filterInput:      filterInput,
-			deletionStatuses: make(map[string]string),
+			selected:      make(map[string]bool),
+			sortField:     SortByAge,
+			sortAscending: true,
+			filterInput:   filterInput,
 		},
 		create: createState{
 			branchInput:  branchInput,
@@ -448,6 +445,33 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 
+	if size, ok := msg.(tea.WindowSizeMsg); ok {
+		// The portal tracks the raw terminal size; views keep receiving the
+		// message through their own routing below.
+		m.portal = m.portal.SetSize(size.Width, size.Height)
+	}
+
+	if m.portal.Visible() {
+		if keyMsg, ok := msg.(tea.KeyMsg); ok {
+			return m.updatePortalKeys(keyMsg)
+		}
+		// Non-key messages (progress events, timers) keep flowing to views.
+	} else if keyMsg, ok := msg.(tea.KeyMsg); ok {
+		if key.Matches(keyMsg, keys.GlobalHelp) {
+			title, content := m.helpContent()
+			m.portal = m.portal.Open(portalHelp, title, content)
+			return m, nil
+		}
+		if key.Matches(keyMsg, keys.Info) {
+			if title, content := m.detailContent(); content != "" {
+				m.portal = m.portal.Open(portalDetails, title, content)
+				return m, nil
+			}
+			// No details for this view: fall through so views with their own
+			// `?` handling (integration info card) still receive it.
+		}
+	}
+
 	switch m.view {
 	case menuView:
 		return m.updateMenu(msg)
@@ -487,6 +511,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.updateIntegrationList(msg)
 	case integrationProgressView:
 		return m.updateIntegrationProgress(msg)
+	case integrationSummaryView:
+		return m.updateIntegrationSummary(msg)
 	case migrateIntegrationsView:
 		return m.updateMigrateIntegrations(msg)
 	case cleanupConfirmView:
@@ -502,6 +528,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) View() string {
+	content := m.viewContent()
+	if m.portal.Visible() {
+		return m.portal.View(content)
+	}
+	return content
+}
+
+func (m Model) viewContent() string {
 	switch m.view {
 	case menuView:
 		return m.viewMenu()
@@ -541,6 +575,8 @@ func (m Model) View() string {
 		return m.viewIntegrationList()
 	case integrationProgressView:
 		return m.viewIntegrationProgress()
+	case integrationSummaryView:
+		return m.viewIntegrationSummary()
 	case migrateIntegrationsView:
 		return m.viewMigrateIntegrations()
 	case cleanupConfirmView:

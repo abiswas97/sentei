@@ -26,6 +26,7 @@ type ConfirmationViewModel struct {
 	Title      string
 	Items      []ConfirmationItem
 	CLICommand string
+	Width      int // separator width; 0 falls back to viewSeparator's default
 }
 
 // UpdateConfirmation handles key messages for the confirmation view and returns
@@ -45,11 +46,14 @@ func UpdateConfirmation(msg tea.Msg) tea.Cmd {
 	return nil
 }
 
-// View renders the confirmation view.
+// View renders the confirmation view using the standard chrome: a
+// confirmation is a full-screen step in a flow, not a floating modal.
 func (c ConfirmationViewModel) View() string {
 	var b strings.Builder
 
-	b.WriteString(styleTitle.Render("  sentei ─ " + c.Title))
+	b.WriteString(viewTitle(c.Title))
+	b.WriteString("\n\n")
+	b.WriteString(viewSeparator(c.Width))
 	b.WriteString("\n\n")
 
 	if len(c.Items) > 0 {
@@ -63,19 +67,18 @@ func (c ConfirmationViewModel) View() string {
 		for _, item := range c.Items {
 			fmt.Fprintf(&b, "  %-*s  %s\n", labelWidth, item.Label, item.Value)
 		}
-
 		b.WriteString("\n")
-		b.WriteString(separator(50))
-		b.WriteString("\n\n")
 	}
 
 	if c.CLICommand != "" {
 		b.WriteString(styleDim.Render("  "+c.CLICommand) + "\n\n")
 	}
 
-	b.WriteString(styleDim.Render("  enter confirm  •  esc back  •  q quit") + "\n")
+	b.WriteString(viewSeparator(c.Width))
+	b.WriteString("\n\n")
+	b.WriteString(viewKeyHints(KeyHint{"enter", "confirm"}, KeyHint{"esc", "back"}, KeyHint{"q", "quit"}) + "\n")
 
-	return styleDialogBox.Render(b.String())
+	return b.String()
 }
 
 // BuildCLICommand constructs a CLI command string from a command name and flags.

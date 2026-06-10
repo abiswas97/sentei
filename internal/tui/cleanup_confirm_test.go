@@ -95,7 +95,7 @@ func TestUpdateCleanupConfirm_ProceedTransitionsToResult(t *testing.T) {
 	if result.view != cleanupResultView {
 		t.Errorf("expected view=cleanupResultView, got %d", result.view)
 	}
-	if result.remove.cleanupResult != nil {
+	if result.cleanupResult != nil {
 		t.Error("expected cleanupResult to be nil initially")
 	}
 }

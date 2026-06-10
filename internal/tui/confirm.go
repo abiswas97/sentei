@@ -39,10 +39,7 @@ func (m Model) updateConfirm(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.progressToken++
 			m.view = progressView
 			selected := m.selectedWorktrees()
-			m.remove.deletionTotal = len(selected)
-			for _, wt := range selected {
-				m.remove.deletionStatuses[wt.Path] = statusPending
-			}
+			m.remove.run = newRemovalRun(selected)
 
 			integrations := integration.All()
 			hasTeardown := false
@@ -56,27 +53,28 @@ func (m Model) updateConfirm(msg tea.Msg) (tea.Model, tea.Cmd) {
 			unlockLockedWorktrees(m.runner, m.repoPath, selected)
 
 			if hasTeardown {
+				m.remove.run.teardownRunning = true
 				return m, m.runTeardownPhase(selected, integrations)
 			}
 
-			ch := make(chan worktree.DeletionEvent, len(selected)*2)
-			m.remove.progressCh = ch
-			go worktree.DeleteWorktrees(os.RemoveAll, selected, 5, ch)
-			return m, waitForDeletionEvent(m.remove.progressCh)
+			return m.startDeletions()
 
 		case key.Matches(msg, keys.No), key.Matches(msg, keys.Back):
 			m.view = listView
 		}
 
-	case teardownCompleteMsg:
-		m.remove.teardownResults = msg.results
-		selected := m.selectedWorktrees()
-		ch := make(chan worktree.DeletionEvent, len(selected)*2)
-		m.remove.progressCh = ch
-		go worktree.DeleteWorktrees(os.RemoveAll, selected, 5, ch)
-		return m, waitForDeletionEvent(m.remove.progressCh)
 	}
 	return m, nil
+}
+
+// startDeletions kicks off the deletion goroutine for the current run's
+// worktree snapshot and begins consuming its events.
+func (m Model) startDeletions() (tea.Model, tea.Cmd) {
+	selected := m.remove.run.worktrees
+	ch := make(chan worktree.DeletionEvent, len(selected)*2)
+	m.remove.run.progressCh = ch
+	go worktree.DeleteWorktrees(os.RemoveAll, selected, 5, ch)
+	return m, waitForDeletionEvent(ch)
 }
 
 const maxTeardownConcurrency = 5
@@ -120,13 +118,15 @@ func (m Model) viewConfirm() string {
 
 	selected := m.selectedWorktrees()
 
-	b.WriteString(styleTitle.Render("  sentei \u2500 Confirm Deletion"))
+	b.WriteString(viewTitle("Confirm Deletion"))
+	b.WriteString("\n\n")
+	b.WriteString(viewSeparator(m.width))
 	b.WriteString("\n\n")
 	fmt.Fprintf(&b, "  You are about to delete %d worktree(s):\n\n", len(selected))
 
 	var dirtyCount, untrackedCount, lockedCount int
 	for _, wt := range selected {
-		branch := stripBranchPrefix(wt.Branch)
+		branch := worktreeLabel(wt)
 
 		var label string
 		switch {
@@ -143,7 +143,7 @@ func (m Model) viewConfirm() string {
 			label = styleSuccess.Render("(clean)")
 		}
 
-		fmt.Fprintf(&b, "    * %s %s\n", branch, label)
+		fmt.Fprintf(&b, "    %s %s\n", branch, label)
 	}
 
 	b.WriteString("\n")
@@ -191,7 +191,9 @@ func (m Model) viewConfirm() string {
 	}
 
 	b.WriteString("\n")
-	b.WriteString(styleDim.Render("  y delete \u00b7 n go back") + "\n")
+	b.WriteString(viewSeparator(m.width))
+	b.WriteString("\n\n")
+	b.WriteString(viewKeyHints(KeyHint{"y", "delete"}, KeyHint{"n", "go back"}) + "\n")
 
-	return styleDialogBox.Render(b.String())
+	return b.String()
 }

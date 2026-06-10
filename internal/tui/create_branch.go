@@ -14,6 +14,29 @@ import (
 	"github.com/abiswas97/sentei/internal/state"
 )
 
+// defaultBaseBranch is the base-branch input's construction default; the
+// reset on menu entry restores it.
+const defaultBaseBranch = "main"
+
+// withCreateFlowReset restores the create flow to its construction defaults
+// so a menu entry never inherits inputs, toggles, events, or results from a
+// previous run (completed or abandoned).
+func (m Model) withCreateFlowReset() Model {
+	m.create.branchInput.SetValue("")
+	m.create.branchInput.Focus()
+	m.create.baseInput.SetValue(defaultBaseBranch)
+	m.create.baseInput.Blur()
+	m.create.focusedField = 0
+	m.create.validationErr = ""
+	m.create.ecoEnabled = make(map[string]bool)
+	m.create.mergeBase = true
+	m.create.copyEnvFiles = true
+	m.create.optionsCursor = 0
+	m.create.events = nil
+	m.create.result = nil
+	return m
+}
+
 type branchValidationError struct {
 	message string
 }
@@ -164,13 +187,13 @@ func (m Model) findSourceWorktree() string {
 func (m Model) viewCreateBranch() string {
 	var b strings.Builder
 
-	b.WriteString(styleTitle.Render(fmt.Sprintf("  sentei %s Create Worktree", "\u2500")))
+	b.WriteString(viewTitle("Create Worktree"))
 	b.WriteString("\n\n")
 
 	b.WriteString(styleDim.Render(fmt.Sprintf("  %s %s %s", filepath.Base(m.repoPath), "\u00b7", m.repoPath)))
 	b.WriteString("\n\n")
 
-	b.WriteString(separator(m.width))
+	b.WriteString(viewSeparator(m.width))
 	b.WriteString("\n\n")
 
 	b.WriteString("  Branch name\n")
@@ -202,9 +225,9 @@ func (m Model) viewCreateBranch() string {
 	}
 	b.WriteString("\n\n")
 
-	b.WriteString(separator(m.width))
+	b.WriteString(viewSeparator(m.width))
 	b.WriteString("\n\n")
-	b.WriteString(styleDim.Render("  enter continue \u00b7 ctrl+enter quick create \u00b7 tab switch field \u00b7 esc back"))
+	b.WriteString(viewKeyHints(KeyHint{"enter", "continue"}, KeyHint{"ctrl+enter", "quick create"}, KeyHint{"tab", "switch field"}, KeyHint{"esc", "back"}))
 	b.WriteString("\n")
 
 	return b.String()
