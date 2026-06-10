@@ -143,9 +143,6 @@ var (
 
 	styleStagedRemove = lipgloss.NewStyle().
 				Foreground(lipgloss.Color("214")) // orange — same as dirty/warning
-
-	styleHint = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("241"))
 )
 
 // Indicator characters

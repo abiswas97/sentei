@@ -185,7 +185,7 @@ func runCreateSetup(runner git.CommandRunner, repoPath string, opts CreateOption
 		return phase
 	}
 	readmePath := filepath.Join(mainPath, "README.md")
-	if err := os.WriteFile(readmePath, []byte(fmt.Sprintf("# %s\n", opts.Name)), 0644); err != nil {
+	if err := os.WriteFile(readmePath, fmt.Appendf(nil, "# %s\n", opts.Name), 0644); err != nil {
 		step := StepResult{Name: "Initial commit", Status: StepFailed, Error: err}
 		phase.Steps = append(phase.Steps, step)
 		emit(Event{Phase: phaseName, Step: step.Name, Status: StepFailed, Error: err})
