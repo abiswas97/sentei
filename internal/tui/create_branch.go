@@ -9,8 +9,8 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/abiswas97/sentei/internal/creator"
 	"github.com/abiswas97/sentei/internal/ecosystem"
+	"github.com/abiswas97/sentei/internal/git"
 	"github.com/abiswas97/sentei/internal/state"
 )
 
@@ -28,7 +28,7 @@ func validateBranchName(name string, existingWorktrees []string) *branchValidati
 	if strings.Contains(name, "..") {
 		return &branchValidationError{message: "branch name cannot contain '..'"}
 	}
-	sanitized := creator.SanitizeBranchPath(name)
+	sanitized := git.WorktreeDirName(name)
 	for _, wt := range existingWorktrees {
 		if strings.HasSuffix(wt, "/"+sanitized) || wt == sanitized {
 			return &branchValidationError{message: fmt.Sprintf("worktree %q already exists", sanitized)}

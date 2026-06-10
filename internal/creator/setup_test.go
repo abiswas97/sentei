@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"sync"
 	"testing"
+
+	"github.com/abiswas97/sentei/internal/git"
 )
 
 type mockRunner struct {
@@ -49,44 +51,6 @@ func (c *eventCollector) emit(e Event) {
 	c.events = append(c.events, e)
 }
 
-func TestSanitizeBranchPath(t *testing.T) {
-	tests := []struct {
-		name   string
-		branch string
-		want   string
-	}{
-		{
-			name:   "slash replaced with dash",
-			branch: "feature/auth",
-			want:   "feature-auth",
-		},
-		{
-			name:   "multiple slashes",
-			branch: "bugfix/login/redirect",
-			want:   "bugfix-login-redirect",
-		},
-		{
-			name:   "no slash unchanged",
-			branch: "hotfix",
-			want:   "hotfix",
-		},
-		{
-			name:   "trailing slash stripped",
-			branch: "feature/",
-			want:   "feature-",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := SanitizeBranchPath(tt.branch)
-			if got != tt.want {
-				t.Errorf("SanitizeBranchPath(%q) = %q, want %q", tt.branch, got, tt.want)
-			}
-		})
-	}
-}
-
 func TestCreateWorktreeStep(t *testing.T) {
 	tests := []struct {
 		name         string
@@ -127,8 +91,7 @@ func TestCreateWorktreeStep(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			sanitized := SanitizeBranchPath(tt.branch)
-			wtPath := filepath.Join(tt.repoPath, sanitized)
+			wtPath := git.WorktreePath(tt.repoPath, tt.branch)
 
 			responses := map[string]mockResponse{
 				fmt.Sprintf("%s:[show-ref --verify refs/heads/%s]", tt.repoPath, tt.branch): {

@@ -29,7 +29,7 @@ func TestMigrate_Successful(t *testing.T) {
 		// Migrate
 		fmt.Sprintf("%s:[clone --bare .git %s]", repoPath, barePath):                                 {output: ""},
 		fmt.Sprintf("%s:[config remote.origin.fetch +refs/heads/*:refs/remotes/origin/*]", barePath): {output: ""},
-		fmt.Sprintf("%s:[worktree add main main]", repoPath):                                         {output: ""},
+		fmt.Sprintf("%s:[worktree add %s/main main]", repoPath, repoPath):                            {output: ""},
 	}}
 
 	ec := &eventCollector{}
@@ -70,7 +70,7 @@ func TestMigrate_DirtyRepo_WarningContinues(t *testing.T) {
 		fmt.Sprintf("%s:[branch --show-current]", repoPath):                                          {output: "develop"},
 		fmt.Sprintf("%s:[clone --bare .git %s]", repoPath, barePath):                                 {output: ""},
 		fmt.Sprintf("%s:[config remote.origin.fetch +refs/heads/*:refs/remotes/origin/*]", barePath): {output: ""},
-		fmt.Sprintf("%s:[worktree add develop develop]", repoPath):                                   {output: ""},
+		fmt.Sprintf("%s:[worktree add %s/develop develop]", repoPath, repoPath):                      {output: ""},
 	}}
 
 	ec := &eventCollector{}
@@ -186,7 +186,7 @@ func TestMigrate_PreservesOriginURL(t *testing.T) {
 		fmt.Sprintf("%s:[clone --bare .git %s]", repoPath, barePath):                                 {output: ""},
 		fmt.Sprintf("%s:[config remote.origin.fetch +refs/heads/*:refs/remotes/origin/*]", barePath): {output: ""},
 		fmt.Sprintf("%s:[remote set-url origin %s]", barePath, originURL):                            {output: ""},
-		fmt.Sprintf("%s:[worktree add main main]", repoPath):                                         {output: ""},
+		fmt.Sprintf("%s:[worktree add %s/main main]", repoPath, repoPath):                            {output: ""},
 	}}
 
 	ec := &eventCollector{}
@@ -221,7 +221,7 @@ func TestMigrate_SlashBranch_ChecksOutExistingBranch(t *testing.T) {
 		fmt.Sprintf("%s:[branch --show-current]", repoPath):                                          {output: "feature/foo"},
 		fmt.Sprintf("%s:[clone --bare .git %s]", repoPath, barePath):                                 {output: ""},
 		fmt.Sprintf("%s:[config remote.origin.fetch +refs/heads/*:refs/remotes/origin/*]", barePath): {output: ""},
-		fmt.Sprintf("%s:[worktree add feature/foo feature/foo]", repoPath):                           {output: ""},
+		fmt.Sprintf("%s:[worktree add %s/feature-foo feature/foo]", repoPath, repoPath):              {output: ""},
 	}}
 
 	ec := &eventCollector{}
@@ -235,15 +235,19 @@ func TestMigrate_SlashBranch_ChecksOutExistingBranch(t *testing.T) {
 		}
 	}
 	// The two-arg form (path + existing branch) checks out feature/foo rather
-	// than inventing a divergent "foo" branch from the basename.
+	// than inventing a divergent "foo" branch from the basename, and the
+	// worktree directory flattens the slash.
 	twoArg := false
 	for _, c := range runner.calls {
-		if strings.Contains(c, "[worktree add feature/foo feature/foo]") {
+		if strings.Contains(c, "[worktree add "+repoPath+"/feature-foo feature/foo]") {
 			twoArg = true
 		}
 	}
 	if !twoArg {
-		t.Error("slash branch must use the two-arg worktree add form")
+		t.Error("slash branch must use the two-arg worktree add form with a flattened path")
+	}
+	if want := filepath.Join(repoPath, "feature-foo"); result.WorktreePath != want {
+		t.Errorf("WorktreePath = %q, want %q", result.WorktreePath, want)
 	}
 }
 

@@ -10,10 +10,6 @@ import (
 	"github.com/abiswas97/sentei/internal/git"
 )
 
-func SanitizeBranchPath(branch string) string {
-	return strings.ReplaceAll(branch, "/", "-")
-}
-
 func runSetup(runner git.CommandRunner, opts Options, emit func(Event)) Phase {
 	phase := Phase{Name: "Setup"}
 
@@ -48,8 +44,7 @@ func createWorktreeStep(runner git.CommandRunner, repoPath, branch, baseBranch s
 	stepName := "Create worktree"
 	emit(Event{Phase: "Setup", Step: stepName, Status: StepRunning})
 
-	sanitized := SanitizeBranchPath(branch)
-	wtPath := filepath.Join(repoPath, sanitized)
+	wtPath := git.WorktreePath(repoPath, branch)
 
 	var err error
 	if git.BranchExists(runner, repoPath, branch) {

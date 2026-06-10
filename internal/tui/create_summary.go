@@ -8,6 +8,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/abiswas97/sentei/internal/creator"
+	"github.com/abiswas97/sentei/internal/git"
 )
 
 func (m Model) updateCreateSummary(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -34,7 +35,7 @@ func (m Model) viewCreateSummary() string {
 	base := m.create.baseInput.Value()
 
 	result := m.create.result
-	wtPath := m.repoPath + "/" + creator.SanitizeBranchPath(branch)
+	wtPath := git.WorktreePath(m.repoPath, branch)
 	if result != nil && result.WorktreePath != "" {
 		wtPath = result.WorktreePath
 	}

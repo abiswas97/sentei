@@ -48,7 +48,7 @@ func TestClone_Successful(t *testing.T) {
 		// Worktree phase
 		fmt.Sprintf("%s:[symbolic-ref --short HEAD]", barePath):                 {output: "main"},
 		fmt.Sprintf("%s:[show-ref --verify refs/heads/main]", barePath):         {output: "abc123"},
-		fmt.Sprintf("%s:[worktree add main main]", repoPath):                    {output: ""},
+		fmt.Sprintf("%s:[worktree add %s/main main]", repoPath, repoPath):       {output: ""},
 		fmt.Sprintf("%s/main:[branch --set-upstream-to=origin/main]", repoPath): {output: ""},
 	}}
 
@@ -88,7 +88,7 @@ func TestClone_DefaultBranchFallback(t *testing.T) {
 		// symbolic-ref fails — fallback to main
 		fmt.Sprintf("%s:[symbolic-ref --short HEAD]", barePath):                 {output: "", err: fmt.Errorf("not found")},
 		fmt.Sprintf("%s:[show-ref --verify refs/heads/main]", barePath):         {output: "abc123"},
-		fmt.Sprintf("%s:[worktree add main main]", repoPath):                    {output: ""},
+		fmt.Sprintf("%s:[worktree add %s/main main]", repoPath, repoPath):       {output: ""},
 		fmt.Sprintf("%s/main:[branch --set-upstream-to=origin/main]", repoPath): {output: ""},
 	}}
 
@@ -114,7 +114,7 @@ func TestClone_NonStandardDefaultBranch(t *testing.T) {
 		// Default branch is neither main nor master; a bare clone records it in HEAD.
 		fmt.Sprintf("%s:[symbolic-ref --short HEAD]", barePath):                             {output: "production"},
 		fmt.Sprintf("%s:[show-ref --verify refs/heads/production]", barePath):               {output: "abc123"},
-		fmt.Sprintf("%s:[worktree add production production]", repoPath):                    {output: ""},
+		fmt.Sprintf("%s:[worktree add %s/production production]", repoPath, repoPath):       {output: ""},
 		fmt.Sprintf("%s/production:[branch --set-upstream-to=origin/production]", repoPath): {output: ""},
 	}}
 
@@ -165,7 +165,7 @@ func TestClone_FetchFailure_StillSucceedsWithoutTracking(t *testing.T) {
 		fmt.Sprintf("%s:[config remote.origin.fetch +refs/heads/*:refs/remotes/origin/*]", barePath): {output: ""},
 		fmt.Sprintf("%s:[symbolic-ref --short HEAD]", barePath):                                      {output: "main"},
 		fmt.Sprintf("%s:[show-ref --verify refs/heads/main]", barePath):                              {output: "abc"},
-		fmt.Sprintf("%s:[worktree add main main]", repoPath):                                         {output: ""},
+		fmt.Sprintf("%s:[worktree add %s/main main]", repoPath, repoPath):                            {output: ""},
 		fmt.Sprintf("%s:[fetch origin]", barePath):                                                   {output: "", err: fmt.Errorf("could not read from remote")},
 	}}
 
@@ -286,7 +286,7 @@ func TestClone_TrackingSkip_PreservesRepoDir(t *testing.T) {
 			fmt.Sprintf("%s:[config remote.origin.fetch +refs/heads/*:refs/remotes/origin/*]", barePath): {output: ""},
 			fmt.Sprintf("%s:[symbolic-ref --short HEAD]", barePath):                                      {output: "main"},
 			fmt.Sprintf("%s:[show-ref --verify refs/heads/main]", barePath):                              {output: "abc"},
-			fmt.Sprintf("%s:[worktree add main main]", repoPath):                                         {output: ""},
+			fmt.Sprintf("%s:[worktree add %s/main main]", repoPath, repoPath):                            {output: ""},
 			fmt.Sprintf("%s:[fetch origin]", barePath):                                                   {output: "", err: fmt.Errorf("network down")},
 		},
 		onRun: func(d string, args []string) {
