@@ -35,7 +35,7 @@ func (m Model) viewSummary() string {
 	b.WriteString(styleTitle.Render("  sentei \u2500 Removal Complete"))
 	b.WriteString("\n\n")
 
-	r := m.remove.deletionResult
+	r := m.remove.run.result
 	if r.FailureCount == 0 {
 		b.WriteString(styleSuccess.Render(
 			fmt.Sprintf("  %d worktree(s) removed successfully", r.SuccessCount),
@@ -56,15 +56,15 @@ func (m Model) viewSummary() string {
 	}
 
 	b.WriteString("\n")
-	if m.remove.pruneErr != nil && *m.remove.pruneErr != nil {
-		b.WriteString(styleWarning.Render(fmt.Sprintf("  Warning: failed to prune worktree metadata: %s", *m.remove.pruneErr)))
+	if m.remove.run.pruneErr != nil && *m.remove.run.pruneErr != nil {
+		b.WriteString(styleWarning.Render(fmt.Sprintf("  Warning: failed to prune worktree metadata: %s", *m.remove.run.pruneErr)))
 		b.WriteString("\n")
 	} else {
 		b.WriteString(styleDim.Render("  Pruned orphaned worktree metadata"))
 		b.WriteString("\n")
 	}
-	if m.remove.cleanupResult != nil {
-		r := m.remove.cleanupResult
+	if m.remove.run.cleanupResult != nil {
+		r := m.remove.run.cleanupResult
 		b.WriteString("\n")
 		b.WriteString(styleDim.Render("  Cleanup:"))
 		b.WriteString("\n")

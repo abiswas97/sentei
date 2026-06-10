@@ -22,11 +22,11 @@ func (m Model) updateCleanupResult(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case standaloneCleanupDoneMsg:
-		m.remove.cleanupResult = &msg.result
+		m.cleanupResult = &msg.result
 		return m, nil
 
 	case tea.KeyMsg:
-		if m.remove.cleanupResult == nil {
+		if m.cleanupResult == nil {
 			return m, nil
 		}
 		switch {
@@ -45,7 +45,7 @@ func (m Model) viewCleanupResult() string {
 	b.WriteString(separator(m.width))
 	b.WriteString("\n\n")
 
-	r := m.remove.cleanupResult
+	r := m.cleanupResult
 	if r == nil {
 		b.WriteString(styleDim.Render("  Running cleanup\u2026"))
 		b.WriteString("\n")

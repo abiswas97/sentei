@@ -8,17 +8,7 @@ import (
 	"testing"
 )
 
-// overridePlaygroundDir sets PlaygroundDir to a test-specific temp dir,
-// preventing parallel test interference. Restores on cleanup.
-func overridePlaygroundDir(t *testing.T) {
-	t.Helper()
-	original := PlaygroundDir
-	PlaygroundDir = filepath.Join(t.TempDir(), "sentei-playground")
-	t.Cleanup(func() { PlaygroundDir = original })
-}
-
 func TestSetup_CreatesExpectedWorktrees(t *testing.T) {
-	overridePlaygroundDir(t)
 	repoPath, cleanup, err := Setup()
 	if err != nil {
 		t.Fatalf("Setup() error: %v", err)
@@ -61,35 +51,44 @@ func TestSetup_CreatesExpectedWorktrees(t *testing.T) {
 	}
 }
 
-func TestSetup_Idempotent(t *testing.T) {
-	overridePlaygroundDir(t)
-	_, cleanup1, err := Setup()
+func TestSetup_ConcurrentSessionsAreIsolated(t *testing.T) {
+	repoA, cleanupA, err := Setup()
 	if err != nil {
 		t.Fatalf("first Setup() error: %v", err)
 	}
-	cleanup1()
+	defer cleanupA()
 
-	_, cleanup2, err := Setup()
+	repoB, cleanupB, err := Setup()
 	if err != nil {
 		t.Fatalf("second Setup() error: %v", err)
 	}
-	defer cleanup2()
+	defer cleanupB()
+
+	if repoA == repoB {
+		t.Fatalf("concurrent sessions share a directory: %s", repoA)
+	}
+
+	// Destroying session B must leave session A fully functional.
+	cleanupB()
+	if _, err := exec.Command("git", "-C", repoA, "worktree", "list", "--porcelain").Output(); err != nil {
+		t.Fatalf("session A broken after session B cleanup: %v", err)
+	}
 }
 
 func TestSetup_CleanupRemovesDir(t *testing.T) {
-	overridePlaygroundDir(t)
-	_, cleanup, err := Setup()
+	repoPath, cleanup, err := Setup()
 	if err != nil {
 		t.Fatalf("Setup() error: %v", err)
 	}
 
-	if _, err := os.Stat(PlaygroundDir); os.IsNotExist(err) {
+	dir := filepath.Dir(repoPath)
+	if _, err := os.Stat(dir); os.IsNotExist(err) {
 		t.Fatal("playground dir should exist before cleanup")
 	}
 
 	cleanup()
 
-	if _, err := os.Stat(PlaygroundDir); !os.IsNotExist(err) {
+	if _, err := os.Stat(dir); !os.IsNotExist(err) {
 		t.Fatal("playground dir should not exist after cleanup")
 	}
 }

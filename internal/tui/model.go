@@ -15,7 +15,6 @@ import (
 	"github.com/abiswas97/sentei/internal/integration"
 	"github.com/abiswas97/sentei/internal/pipeline"
 	"github.com/abiswas97/sentei/internal/repo"
-	"github.com/abiswas97/sentei/internal/worktree"
 )
 
 // progressHoldExpiredMsg fires when the minimum progress view duration has elapsed.
@@ -45,6 +44,7 @@ const (
 	migrateNextView
 	integrationListView
 	integrationProgressView
+	integrationSummaryView
 	migrateIntegrationsView
 	cleanupConfirmView
 	cleanupResultView
@@ -108,15 +108,7 @@ type removeState struct {
 	filterInput  textinput.Model
 	filterLabel  string // describes filter that produced pre-selection (e.g. "merged", "stale > 30d")
 
-	deletionStatuses map[string]string
-	deletionResult   worktree.DeletionResult
-	deletionTotal    int
-	progressCh       <-chan worktree.DeletionEvent
-
-	teardownResults []pipeline.StepResult
-
-	pruneErr      *error
-	cleanupResult *cleanup.Result
+	run removalRun
 }
 
 // menuItem represents a selectable menu entry.
@@ -207,6 +199,9 @@ type integrationState struct {
 
 	// Context: where to return after progress completes
 	returnView viewState //nolint:unused
+
+	// Apply outcome: persistence error from the last apply, shown in the summary
+	saveErr error
 }
 
 type Model struct {
@@ -223,10 +218,11 @@ type Model struct {
 	menuCursor         int
 	worktreeGeneration uint64 // Monotonic token passed to loadWorktreeContext; global handler discards mismatched responses.
 
-	cleanupOpts *cleanup.Options
-	createOpts  *CreateOpts
-	cloneOpts   *CloneOpts
-	migrateOpts *MigrateOpts
+	cleanupOpts   *cleanup.Options
+	cleanupResult *cleanup.Result // standalone cleanup flow ("Cleanup & exit" / sentei cleanup)
+	createOpts    *CreateOpts
+	cloneOpts     *CloneOpts
+	migrateOpts   *MigrateOpts
 
 	remove removeState
 	create createState
@@ -261,12 +257,11 @@ func NewModel(worktrees []git.Worktree, runner git.CommandRunner, repoPath strin
 		runner:   runner,
 		repoPath: repoPath,
 		remove: removeState{
-			worktrees:        worktrees,
-			selected:         make(map[string]bool),
-			sortField:        SortByAge,
-			sortAscending:    true,
-			filterInput:      ti,
-			deletionStatuses: make(map[string]string),
+			worktrees:     worktrees,
+			selected:      make(map[string]bool),
+			sortField:     SortByAge,
+			sortAscending: true,
+			filterInput:   ti,
 		},
 		height: 20,
 	}
@@ -281,7 +276,7 @@ func NewMenuModel(runner git.CommandRunner, shell git.ShellRunner, repoPath stri
 
 	baseInput := textinput.New()
 	baseInput.Placeholder = "main"
-	baseInput.SetValue("main")
+	baseInput.SetValue(defaultBaseBranch)
 
 	filterInput := textinput.New()
 	filterInput.Prompt = "filter: "
@@ -340,11 +335,10 @@ func NewMenuModel(runner git.CommandRunner, shell git.ShellRunner, repoPath stri
 		menuItems:          items,
 		worktreeGeneration: initGeneration,
 		remove: removeState{
-			selected:         make(map[string]bool),
-			sortField:        SortByAge,
-			sortAscending:    true,
-			filterInput:      filterInput,
-			deletionStatuses: make(map[string]string),
+			selected:      make(map[string]bool),
+			sortField:     SortByAge,
+			sortAscending: true,
+			filterInput:   filterInput,
 		},
 		create: createState{
 			branchInput:  branchInput,
@@ -487,6 +481,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.updateIntegrationList(msg)
 	case integrationProgressView:
 		return m.updateIntegrationProgress(msg)
+	case integrationSummaryView:
+		return m.updateIntegrationSummary(msg)
 	case migrateIntegrationsView:
 		return m.updateMigrateIntegrations(msg)
 	case cleanupConfirmView:
@@ -541,6 +537,8 @@ func (m Model) View() string {
 		return m.viewIntegrationList()
 	case integrationProgressView:
 		return m.viewIntegrationProgress()
+	case integrationSummaryView:
+		return m.viewIntegrationSummary()
 	case migrateIntegrationsView:
 		return m.viewMigrateIntegrations()
 	case cleanupConfirmView:

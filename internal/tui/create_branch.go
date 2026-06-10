@@ -14,6 +14,29 @@ import (
 	"github.com/abiswas97/sentei/internal/state"
 )
 
+// defaultBaseBranch is the base-branch input's construction default; the
+// reset on menu entry restores it.
+const defaultBaseBranch = "main"
+
+// withCreateFlowReset restores the create flow to its construction defaults
+// so a menu entry never inherits inputs, toggles, events, or results from a
+// previous run (completed or abandoned).
+func (m Model) withCreateFlowReset() Model {
+	m.create.branchInput.SetValue("")
+	m.create.branchInput.Focus()
+	m.create.baseInput.SetValue(defaultBaseBranch)
+	m.create.baseInput.Blur()
+	m.create.focusedField = 0
+	m.create.validationErr = ""
+	m.create.ecoEnabled = make(map[string]bool)
+	m.create.mergeBase = true
+	m.create.copyEnvFiles = true
+	m.create.optionsCursor = 0
+	m.create.events = nil
+	m.create.result = nil
+	return m
+}
+
 type branchValidationError struct {
 	message string
 }

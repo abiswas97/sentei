@@ -39,10 +39,7 @@ func (m Model) updateConfirm(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.progressToken++
 			m.view = progressView
 			selected := m.selectedWorktrees()
-			m.remove.deletionTotal = len(selected)
-			for _, wt := range selected {
-				m.remove.deletionStatuses[wt.Path] = statusPending
-			}
+			m.remove.run = newRemovalRun(selected)
 
 			integrations := integration.All()
 			hasTeardown := false
@@ -56,27 +53,32 @@ func (m Model) updateConfirm(msg tea.Msg) (tea.Model, tea.Cmd) {
 			unlockLockedWorktrees(m.runner, m.repoPath, selected)
 
 			if hasTeardown {
+				m.remove.run.teardownRunning = true
 				return m, m.runTeardownPhase(selected, integrations)
 			}
 
-			ch := make(chan worktree.DeletionEvent, len(selected)*2)
-			m.remove.progressCh = ch
-			go worktree.DeleteWorktrees(os.RemoveAll, selected, 5, ch)
-			return m, waitForDeletionEvent(m.remove.progressCh)
+			return m.startDeletions()
 
 		case key.Matches(msg, keys.No), key.Matches(msg, keys.Back):
 			m.view = listView
 		}
 
 	case teardownCompleteMsg:
-		m.remove.teardownResults = msg.results
-		selected := m.selectedWorktrees()
-		ch := make(chan worktree.DeletionEvent, len(selected)*2)
-		m.remove.progressCh = ch
-		go worktree.DeleteWorktrees(os.RemoveAll, selected, 5, ch)
-		return m, waitForDeletionEvent(m.remove.progressCh)
+		m.remove.run.teardownRunning = false
+		m.remove.run.teardownResults = msg.results
+		return m.startDeletions()
 	}
 	return m, nil
+}
+
+// startDeletions kicks off the deletion goroutine for the current run's
+// worktree snapshot and begins consuming its events.
+func (m Model) startDeletions() (tea.Model, tea.Cmd) {
+	selected := m.remove.run.worktrees
+	ch := make(chan worktree.DeletionEvent, len(selected)*2)
+	m.remove.run.progressCh = ch
+	go worktree.DeleteWorktrees(os.RemoveAll, selected, 5, ch)
+	return m, waitForDeletionEvent(ch)
 }
 
 const maxTeardownConcurrency = 5

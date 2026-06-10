@@ -14,8 +14,7 @@ import (
 )
 
 type integrationFinalizedMsg struct {
-	current map[string]bool
-	err     error
+	err error
 }
 
 func (m Model) updateIntegrationProgress(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -33,19 +32,20 @@ func (m Model) updateIntegrationProgress(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, m.finalizeIntegrationApply()
 
 	case integrationFinalizedMsg:
-		// Only apply the new set to in-memory state when it was actually persisted.
-		// On a save failure, advancing without mutating keeps the UI consistent
-		// with disk instead of showing an integration set that was never saved.
-		if msg.err == nil && m.integ.returnView != migrateNextView {
-			m.integ.current = msg.current
-			for _, integ := range m.integ.integrations {
-				m.integ.staged[integ.Name] = m.integ.current[integ.Name]
-			}
+		// The migrate flow has its own summary; hand off unchanged.
+		if m.integ.returnView == migrateNextView {
+			return m.holdOrAdvance(migrateNextView)
+		}
+		// In-memory current/staged are never mutated here: dismissing the
+		// summary reloads them from persisted state, so the list always
+		// matches disk whether the save succeeded or failed.
+		m.integ.saveErr = msg.err
+		if msg.err == nil {
 			m.worktreeGeneration++
-			updated, holdCmd := m.holdOrAdvance(m.integ.returnView)
+			updated, holdCmd := m.holdOrAdvance(integrationSummaryView)
 			return updated, tea.Batch(holdCmd, loadWorktreeContext(m.runner, m.repoPath, m.worktreeGeneration))
 		}
-		return m.holdOrAdvance(m.integ.returnView)
+		return m.holdOrAdvance(integrationSummaryView)
 	}
 	return m, nil
 }
@@ -74,12 +74,7 @@ func (m Model) finalizeIntegrationApply() tea.Cmd {
 		}
 		err := state.Save(bareDir, &state.State{Integrations: enabled})
 
-		current := make(map[string]bool)
-		for _, integ := range integrations {
-			current[integ.Name] = staged[integ.Name]
-		}
-
-		return integrationFinalizedMsg{current: current, err: err}
+		return integrationFinalizedMsg{err: err}
 	}
 }
 
@@ -91,43 +86,10 @@ func (m Model) viewIntegrationProgress() string {
 	b.WriteString(separator(m.width))
 	b.WriteString("\n\n")
 
-	// Group events by worktree, preserving insertion order.
-	type worktreeGroup struct {
-		name   string
-		events []integration.ManagerEvent
-	}
-	var groups []worktreeGroup
-	indexByWorktree := make(map[string]int)
+	for _, g := range groupIntegrationEvents(m.integ.events) {
+		fmt.Fprintf(&b, "  %s\n", filepath.Base(g.worktree))
 
-	for _, ev := range m.integ.events {
-		if _, exists := indexByWorktree[ev.Worktree]; !exists {
-			indexByWorktree[ev.Worktree] = len(groups)
-			groups = append(groups, worktreeGroup{name: ev.Worktree})
-		}
-		idx := indexByWorktree[ev.Worktree]
-		groups[idx].events = append(groups[idx].events, ev)
-	}
-
-	for _, g := range groups {
-		fmt.Fprintf(&b, "  %s\n", filepath.Base(g.name))
-
-		// Deduplicate steps: keep only the last event per step name.
-		type stepEntry struct {
-			step string
-			ev   integration.ManagerEvent
-		}
-		var steps []stepEntry
-		stepIndex := make(map[string]int)
-		for _, ev := range g.events {
-			if i, exists := stepIndex[ev.Step]; exists {
-				steps[i].ev = ev
-			} else {
-				stepIndex[ev.Step] = len(steps)
-				steps = append(steps, stepEntry{step: ev.Step, ev: ev})
-			}
-		}
-
-		for _, s := range steps {
+		for _, s := range g.steps {
 			if s.ev.Status == integration.StatusSkipped {
 				continue // Don't display skipped steps.
 			}

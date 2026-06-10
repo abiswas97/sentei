@@ -1,0 +1,36 @@
+package tui
+
+import (
+	"github.com/abiswas97/sentei/internal/cleanup"
+	"github.com/abiswas97/sentei/internal/git"
+	"github.com/abiswas97/sentei/internal/pipeline"
+	"github.com/abiswas97/sentei/internal/worktree"
+)
+
+// removalRun holds all state for a single deletion run. It is created fresh
+// when the user confirms a deletion, so no outcomes, statuses, or results
+// from a previous run can leak into the next one. The worktrees slice is a
+// snapshot of the selection at confirm time; the live list may be reloaded
+// while the run renders.
+type removalRun struct {
+	worktrees  []git.Worktree
+	statuses   map[string]string
+	result     worktree.DeletionResult
+	progressCh <-chan worktree.DeletionEvent
+
+	teardownRunning bool
+	teardownResults []pipeline.StepResult
+
+	pruneErr      *error
+	cleanupResult *cleanup.Result
+}
+
+func newRemovalRun(selected []git.Worktree) removalRun {
+	statuses := make(map[string]string, len(selected))
+	for _, wt := range selected {
+		statuses[wt.Path] = statusPending
+	}
+	return removalRun{worktrees: selected, statuses: statuses}
+}
+
+func (r removalRun) total() int { return len(r.worktrees) }
