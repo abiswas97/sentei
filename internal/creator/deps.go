@@ -8,12 +8,13 @@ import (
 	"github.com/abiswas97/sentei/internal/config"
 	"github.com/abiswas97/sentei/internal/ecosystem"
 	"github.com/abiswas97/sentei/internal/git"
+	"github.com/abiswas97/sentei/internal/pipeline"
 )
 
 const maxDepsConcurrency = 5
 
-func runDeps(shell git.ShellRunner, wtPath string, opts Options, emit func(Event)) Phase {
-	phase := Phase{Name: "Dependencies"}
+func runDeps(shell git.ShellRunner, wtPath string, opts Options, emit func(pipeline.Event)) pipeline.Phase {
+	phase := pipeline.Phase{Name: "Dependencies"}
 
 	if len(opts.Ecosystems) == 0 {
 		return phase
@@ -27,19 +28,19 @@ func runDeps(shell git.ShellRunner, wtPath string, opts Options, emit func(Event
 	return phase
 }
 
-func installEcosystem(shell git.ShellRunner, wtPath string, eco config.EcosystemConfig, emit func(Event)) []StepResult {
+func installEcosystem(shell git.ShellRunner, wtPath string, eco config.EcosystemConfig, emit func(pipeline.Event)) []pipeline.StepResult {
 	if eco.Install.WorkspaceDetect == "" || eco.Install.WorkspaceInstall == "" {
 		rootStep := runInstallCommand(shell, wtPath, eco.Name, eco.Install.Command, emit)
-		return []StepResult{rootStep}
+		return []pipeline.StepResult{rootStep}
 	}
 
 	workspaces, err := ecosystem.DetectWorkspaces(wtPath, eco.Install.WorkspaceDetect)
 	if err != nil || len(workspaces) == 0 {
 		rootStep := runInstallCommand(shell, wtPath, eco.Name, eco.Install.Command, emit)
-		return []StepResult{rootStep}
+		return []pipeline.StepResult{rootStep}
 	}
 
-	var steps []StepResult
+	var steps []pipeline.StepResult
 
 	if eco.Install.IsParallel() {
 		wsSteps := installWorkspacesParallel(shell, wtPath, eco, workspaces, emit)
@@ -55,12 +56,12 @@ func installEcosystem(shell git.ShellRunner, wtPath string, eco config.Ecosystem
 	return steps
 }
 
-func installWorkspacesParallel(shell git.ShellRunner, wtPath string, eco config.EcosystemConfig, workspaces []string, emit func(Event)) []StepResult {
-	results := make([]StepResult, len(workspaces))
+func installWorkspacesParallel(shell git.ShellRunner, wtPath string, eco config.EcosystemConfig, workspaces []string, emit func(pipeline.Event)) []pipeline.StepResult {
+	results := make([]pipeline.StepResult, len(workspaces))
 	sem := make(chan struct{}, maxDepsConcurrency)
 	var wg sync.WaitGroup
 	var mu sync.Mutex
-	safeEmit := func(e Event) {
+	safeEmit := func(e pipeline.Event) {
 		mu.Lock()
 		defer mu.Unlock()
 		emit(e)
@@ -84,28 +85,28 @@ func installWorkspacesParallel(shell git.ShellRunner, wtPath string, eco config.
 	return results
 }
 
-func runInstallCommand(shell git.ShellRunner, wtPath, stepName, command string, emit func(Event)) StepResult {
-	emit(Event{Phase: "Dependencies", Step: stepName, Status: StepRunning})
+func runInstallCommand(shell git.ShellRunner, wtPath, stepName, command string, emit func(pipeline.Event)) pipeline.StepResult {
+	emit(pipeline.Event{Phase: "Dependencies", Step: stepName, Status: pipeline.StepRunning})
 
 	if command == "" {
-		emit(Event{Phase: "Dependencies", Step: stepName, Status: StepFailed, Error: fmt.Errorf("empty install command")})
-		return StepResult{
+		emit(pipeline.Event{Phase: "Dependencies", Step: stepName, Status: pipeline.StepFailed, Error: fmt.Errorf("empty install command")})
+		return pipeline.StepResult{
 			Name:   stepName,
-			Status: StepFailed,
+			Status: pipeline.StepFailed,
 			Error:  fmt.Errorf("empty install command for %s", stepName),
 		}
 	}
 
 	_, err := shell.RunShell(wtPath, command)
 	if err != nil {
-		emit(Event{Phase: "Dependencies", Step: stepName, Status: StepFailed, Error: err})
-		return StepResult{
+		emit(pipeline.Event{Phase: "Dependencies", Step: stepName, Status: pipeline.StepFailed, Error: err})
+		return pipeline.StepResult{
 			Name:   stepName,
-			Status: StepFailed,
+			Status: pipeline.StepFailed,
 			Error:  fmt.Errorf("installing %s: %w", stepName, err),
 		}
 	}
 
-	emit(Event{Phase: "Dependencies", Step: stepName, Status: StepDone})
-	return StepResult{Name: stepName, Status: StepDone}
+	emit(pipeline.Event{Phase: "Dependencies", Step: stepName, Status: pipeline.StepDone})
+	return pipeline.StepResult{Name: stepName, Status: pipeline.StepDone}
 }

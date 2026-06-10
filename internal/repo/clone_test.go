@@ -5,6 +5,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/abiswas97/sentei/internal/pipeline"
 )
 
 func TestDeriveRepoName(t *testing.T) {
@@ -68,7 +70,7 @@ func TestClone_Successful(t *testing.T) {
 	}
 	for _, phase := range result.Phases {
 		for _, step := range phase.Steps {
-			if step.Status == StepFailed {
+			if step.Status == pipeline.StepFailed {
 				t.Errorf("step %q failed: %v", step.Name, step.Error)
 			}
 		}
@@ -127,7 +129,7 @@ func TestClone_NonStandardDefaultBranch(t *testing.T) {
 	}
 	for _, phase := range result.Phases {
 		for _, step := range phase.Steps {
-			if step.Status == StepFailed {
+			if step.Status == pipeline.StepFailed {
 				t.Errorf("step %q failed: %v", step.Name, step.Error)
 			}
 		}
@@ -279,7 +281,7 @@ func TestClone_TrackingSkip_PreservesRepoDir(t *testing.T) {
 	barePath := filepath.Join(repoPath, ".bare")
 
 	// Worktree add succeeds; the best-effort fetch fails. The clone must still
-	// succeed (tracking is StepSkipped) and must NOT roll back the repo dir.
+	// succeed (tracking is pipeline.StepSkipped) and must NOT roll back the repo dir.
 	runner := &mockRunner{
 		responses: map[string]mockResponse{
 			fmt.Sprintf("%s:[clone --bare u %s]", dir, barePath):                                         {output: ""},

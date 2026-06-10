@@ -11,6 +11,7 @@ import (
 	"github.com/abiswas97/sentei/internal/config"
 	"github.com/abiswas97/sentei/internal/git"
 	"github.com/abiswas97/sentei/internal/integration"
+	"github.com/abiswas97/sentei/internal/pipeline"
 )
 
 func TestE2E_CreateWorktree(t *testing.T) {
@@ -73,8 +74,8 @@ func TestE2E_CreateWorktree(t *testing.T) {
 	}
 
 	shell := &git.DefaultShellRunner{}
-	var events []Event
-	result := Run(runner, shell, opts, func(e Event) {
+	var events []pipeline.Event
+	result := Run(runner, shell, opts, func(e pipeline.Event) {
 		events = append(events, e)
 	})
 
@@ -117,7 +118,7 @@ func TestE2E_CreateWorktree(t *testing.T) {
 	for _, phase := range result.Phases {
 		if phase.Name == "Setup" {
 			for _, step := range phase.Steps {
-				if step.Status == StepFailed && step.Name == "Create worktree" {
+				if step.Status == pipeline.StepFailed && step.Name == "Create worktree" {
 					t.Errorf("create worktree step failed: %v", step.Error)
 				}
 			}
@@ -153,15 +154,15 @@ func TestE2E_Teardown(t *testing.T) {
 		},
 	}
 
-	var events []Event
-	results := Teardown(shell, tmpDir, integrations, func(e Event) {
+	var events []pipeline.Event
+	results := Teardown(shell, tmpDir, integrations, func(e pipeline.Event) {
 		events = append(events, e)
 	})
 
 	// Both should succeed
 	for _, r := range results {
-		if r.Status != StepDone {
-			t.Errorf("teardown %q: status = %v, want StepDone", r.Name, r.Status)
+		if r.Status != pipeline.StepDone {
+			t.Errorf("teardown %q: status = %v, want pipeline.StepDone", r.Name, r.Status)
 		}
 	}
 

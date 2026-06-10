@@ -9,6 +9,7 @@ import (
 	"github.com/abiswas97/sentei/internal/config"
 	"github.com/abiswas97/sentei/internal/creator"
 	"github.com/abiswas97/sentei/internal/git"
+	"github.com/abiswas97/sentei/internal/pipeline"
 	"github.com/abiswas97/sentei/internal/repo"
 )
 
@@ -70,7 +71,7 @@ func RunCreate(args []string) error {
 
 	fmt.Printf("Creating worktree %q from %s...\n", opts.Branch, opts.Base)
 
-	result := creator.Run(runner, shell, creatorOpts, func(e creator.Event) {
+	result := creator.Run(runner, shell, creatorOpts, func(e pipeline.Event) {
 		printCreateEvent(e)
 	})
 
@@ -82,23 +83,23 @@ func RunCreate(args []string) error {
 	return nil
 }
 
-func printCreateEvent(e creator.Event) {
+func printCreateEvent(e pipeline.Event) {
 	switch e.Status {
-	case creator.StepRunning:
+	case pipeline.StepRunning:
 		fmt.Printf("%s→%s %s: %s\n", blue, nc, e.Phase, e.Step)
-	case creator.StepDone:
+	case pipeline.StepDone:
 		msg := ""
 		if e.Message != "" {
 			msg = " — " + e.Message
 		}
 		fmt.Printf("%s✓%s %s%s\n", green, nc, e.Step, msg)
-	case creator.StepFailed:
+	case pipeline.StepFailed:
 		msg := ""
 		if e.Error != nil {
 			msg = " — " + e.Error.Error()
 		}
 		fmt.Printf("%s✗%s %s%s\n", yellow, nc, e.Step, msg)
-	case creator.StepSkipped:
+	case pipeline.StepSkipped:
 		fmt.Printf("  %s%s (skipped)%s\n", dim, e.Step, nc)
 	}
 }

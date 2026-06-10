@@ -7,21 +7,8 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/abiswas97/sentei/internal/creator"
+	"github.com/abiswas97/sentei/internal/pipeline"
 )
-
-type phaseDisplay struct {
-	name   string
-	steps  []stepDisplay
-	done   int
-	total  int
-	failed int
-}
-
-type stepDisplay struct {
-	name   string
-	status creator.StepStatus
-}
 
 func (m Model) updateCreateProgress(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
@@ -49,50 +36,6 @@ func (m Model) updateCreateProgress(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m Model) buildPhaseDisplays() []phaseDisplay {
-	phases := map[string]*phaseDisplay{}
-	var order []string
-
-	for _, ev := range m.create.events {
-		pd, exists := phases[ev.Phase]
-		if !exists {
-			pd = &phaseDisplay{name: ev.Phase}
-			phases[ev.Phase] = pd
-			order = append(order, ev.Phase)
-		}
-
-		found := false
-		for i := range pd.steps {
-			if pd.steps[i].name == ev.Step {
-				pd.steps[i].status = ev.Status
-				found = true
-				break
-			}
-		}
-		if !found {
-			pd.steps = append(pd.steps, stepDisplay{name: ev.Step, status: ev.Status})
-		}
-	}
-
-	var result []phaseDisplay
-	for _, name := range order {
-		pd := phases[name]
-		pd.total = len(pd.steps)
-		for _, s := range pd.steps {
-			switch s.status {
-			case creator.StepDone:
-				pd.done++
-			case creator.StepFailed:
-				pd.failed++
-				pd.done++
-			}
-		}
-		result = append(result, *pd)
-	}
-
-	return result
-}
-
 func (m Model) viewCreateProgress() string {
 	var b strings.Builder
 
@@ -106,7 +49,7 @@ func (m Model) viewCreateProgress() string {
 	b.WriteString(separator(m.width))
 	b.WriteString("\n\n")
 
-	displays := m.buildPhaseDisplays()
+	displays := buildPhaseDisplays(m.create.events)
 
 	for i, pd := range displays {
 		isComplete := pd.done == pd.total && pd.total > 0
@@ -144,11 +87,11 @@ func (m Model) viewCreateProgress() string {
 			for _, step := range pd.steps {
 				var ind string
 				switch step.status {
-				case creator.StepDone:
+				case pipeline.StepDone:
 					ind = styleIndicatorDone.Render(indicatorDone)
-				case creator.StepRunning:
+				case pipeline.StepRunning:
 					ind = styleIndicatorActive.Render(indicatorActive)
-				case creator.StepFailed:
+				case pipeline.StepFailed:
 					ind = styleIndicatorFailed.Render(indicatorFailed)
 				default:
 					ind = styleIndicatorPending.Render(indicatorPending)

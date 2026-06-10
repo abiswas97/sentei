@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/abiswas97/sentei/internal/pipeline"
 )
 
 type mockGhRunner struct {
@@ -50,7 +52,7 @@ func TestCreate_LocalOnly(t *testing.T) {
 	}
 	for _, phase := range result.Phases {
 		for _, step := range phase.Steps {
-			if step.Status == StepFailed {
+			if step.Status == pipeline.StepFailed {
 				t.Errorf("step %q failed: %v", step.Name, step.Error)
 			}
 		}
@@ -98,7 +100,7 @@ func TestCreate_WithGitHub(t *testing.T) {
 	}
 	for _, phase := range result.Phases {
 		for _, step := range phase.Steps {
-			if step.Status == StepFailed {
+			if step.Status == pipeline.StepFailed {
 				t.Errorf("step %q failed: %v", step.Name, step.Error)
 			}
 		}
@@ -215,7 +217,7 @@ func TestCreate_PushFailure_ReportsOrphanedRepo(t *testing.T) {
 	opts := CreateOptions{Name: repoName, Location: dir, PublishGitHub: true, Visibility: "private"}
 	result := CreateWithGh(runner, runner, ghRunner, opts, ec.emit)
 
-	var pushStep *StepResult
+	var pushStep *pipeline.StepResult
 	for i := range result.Phases {
 		if result.Phases[i].Name != "GitHub" {
 			continue
@@ -226,7 +228,7 @@ func TestCreate_PushFailure_ReportsOrphanedRepo(t *testing.T) {
 			}
 		}
 	}
-	if pushStep == nil || pushStep.Status != StepFailed {
+	if pushStep == nil || pushStep.Status != pipeline.StepFailed {
 		t.Fatal("expected a failed 'Push to GitHub' step")
 	}
 	msg := pushStep.Error.Error()
@@ -242,22 +244,22 @@ func TestCreate_PushFailure_ReportsOrphanedRepo(t *testing.T) {
 }
 
 func TestCreateResult_SetupFailed(t *testing.T) {
-	setupBroken := CreateResult{Phases: []Phase{
-		{Name: "Setup", Steps: []StepResult{{Name: "Initial commit", Status: StepFailed, Error: fmt.Errorf("exit 128")}}},
+	setupBroken := CreateResult{Phases: []pipeline.Phase{
+		{Name: "Setup", Steps: []pipeline.StepResult{{Name: "Initial commit", Status: pipeline.StepFailed, Error: fmt.Errorf("exit 128")}}},
 	}}
 	if failed, err := setupBroken.SetupFailed(); !failed || err == nil {
 		t.Errorf("a Setup-phase failure must be hard, got failed=%v err=%v", failed, err)
 	}
 
-	githubOnly := CreateResult{Phases: []Phase{
-		{Name: "Setup", Steps: []StepResult{{Status: StepDone}}},
-		{Name: PhaseGitHub, Steps: []StepResult{{Status: StepFailed, Error: fmt.Errorf("push")}}},
+	githubOnly := CreateResult{Phases: []pipeline.Phase{
+		{Name: "Setup", Steps: []pipeline.StepResult{{Status: pipeline.StepDone}}},
+		{Name: PhaseGitHub, Steps: []pipeline.StepResult{{Status: pipeline.StepFailed, Error: fmt.Errorf("push")}}},
 	}}
 	if failed, _ := githubOnly.SetupFailed(); failed {
 		t.Error("a GitHub-only failure must be soft (local repo is fine)")
 	}
 
-	clean := CreateResult{Phases: []Phase{{Name: "Setup", Steps: []StepResult{{Status: StepDone}}}}}
+	clean := CreateResult{Phases: []pipeline.Phase{{Name: "Setup", Steps: []pipeline.StepResult{{Status: pipeline.StepDone}}}}}
 	if failed, _ := clean.SetupFailed(); failed {
 		t.Error("a clean result must not report a setup failure")
 	}

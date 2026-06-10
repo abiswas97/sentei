@@ -7,8 +7,8 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/abiswas97/sentei/internal/creator"
 	"github.com/abiswas97/sentei/internal/git"
+	"github.com/abiswas97/sentei/internal/pipeline"
 )
 
 func (m Model) updateCreateSummary(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -71,7 +71,7 @@ func (m Model) viewCreateSummary() string {
 			}
 			for _, step := range phase.Steps {
 				status := styleIndicatorDone.Render(indicatorDone)
-				if step.Status == creator.StepFailed {
+				if step.Status == pipeline.StepFailed {
 					status = styleIndicatorFailed.Render(indicatorFailed)
 					if step.Error != nil {
 						status += "  " + styleError.Render(step.Error.Error())

@@ -11,6 +11,7 @@ import (
 
 	"github.com/abiswas97/sentei/internal/fileutil"
 	"github.com/abiswas97/sentei/internal/git"
+	"github.com/abiswas97/sentei/internal/pipeline"
 )
 
 type MigrateOptions struct {
@@ -24,10 +25,10 @@ type MigrateResult struct {
 	BackupSize   string
 	Branch       string
 	IsDirty      bool
-	Phases       []Phase
+	Phases       []pipeline.Phase
 }
 
-func Migrate(runner git.CommandRunner, shell git.ShellRunner, opts MigrateOptions, emit func(Event)) MigrateResult {
+func Migrate(runner git.CommandRunner, shell git.ShellRunner, opts MigrateOptions, emit func(pipeline.Event)) MigrateResult {
 	result := MigrateResult{BareRoot: opts.RepoPath}
 
 	// Phase 1: Validate
@@ -63,34 +64,34 @@ func Migrate(runner git.CommandRunner, shell git.ShellRunner, opts MigrateOption
 	return result
 }
 
-func runMigrateValidate(runner git.CommandRunner, repoPath string, emit func(Event)) (Phase, string, bool) {
-	phase := Phase{Name: "Validate"}
+func runMigrateValidate(runner git.CommandRunner, repoPath string, emit func(pipeline.Event)) (pipeline.Phase, string, bool) {
+	phase := pipeline.Phase{Name: "Validate"}
 	phaseName := "Validate"
 
 	// Check for uncommitted changes
-	emit(Event{Phase: phaseName, Step: "Check repository status", Status: StepRunning})
+	emit(pipeline.Event{Phase: phaseName, Step: "Check repository status", Status: pipeline.StepRunning})
 	statusOutput, err := runner.Run(repoPath, "status", "--porcelain")
 	if err != nil {
-		step := StepResult{Name: "Check repository status", Status: StepFailed, Error: err}
+		step := pipeline.StepResult{Name: "Check repository status", Status: pipeline.StepFailed, Error: err}
 		phase.Steps = append(phase.Steps, step)
-		emit(Event{Phase: phaseName, Step: step.Name, Status: StepFailed, Error: err})
+		emit(pipeline.Event{Phase: phaseName, Step: step.Name, Status: pipeline.StepFailed, Error: err})
 		return phase, "", false
 	}
 	isDirty := strings.TrimSpace(statusOutput) != ""
 	if isDirty {
-		emit(Event{Phase: phaseName, Step: "Check repository status", Status: StepDone, Message: "uncommitted changes detected"})
+		emit(pipeline.Event{Phase: phaseName, Step: "Check repository status", Status: pipeline.StepDone, Message: "uncommitted changes detected"})
 	} else {
-		emit(Event{Phase: phaseName, Step: "Check repository status", Status: StepDone, Message: "clean"})
+		emit(pipeline.Event{Phase: phaseName, Step: "Check repository status", Status: pipeline.StepDone, Message: "clean"})
 	}
-	phase.Steps = append(phase.Steps, StepResult{Name: "Check repository status", Status: StepDone})
+	phase.Steps = append(phase.Steps, pipeline.StepResult{Name: "Check repository status", Status: pipeline.StepDone})
 
 	// Detect current branch
-	emit(Event{Phase: phaseName, Step: "Detect current branch", Status: StepRunning})
+	emit(pipeline.Event{Phase: phaseName, Step: "Detect current branch", Status: pipeline.StepRunning})
 	branch, err := runner.Run(repoPath, "branch", "--show-current")
 	if err != nil {
-		step := StepResult{Name: "Detect current branch", Status: StepFailed, Error: err}
+		step := pipeline.StepResult{Name: "Detect current branch", Status: pipeline.StepFailed, Error: err}
 		phase.Steps = append(phase.Steps, step)
-		emit(Event{Phase: phaseName, Step: step.Name, Status: StepFailed, Error: err})
+		emit(pipeline.Event{Phase: phaseName, Step: step.Name, Status: pipeline.StepFailed, Error: err})
 		return phase, "", isDirty
 	}
 	// A detached HEAD yields an empty branch name. Reject it now, before any
@@ -98,25 +99,25 @@ func runMigrateValidate(runner git.CommandRunner, repoPath string, emit func(Eve
 	// leaving an empty directory with no recovery path.
 	if strings.TrimSpace(branch) == "" {
 		stepErr := errors.New("cannot migrate a detached HEAD; check out a branch first")
-		step := StepResult{Name: "Detect current branch", Status: StepFailed, Error: stepErr}
+		step := pipeline.StepResult{Name: "Detect current branch", Status: pipeline.StepFailed, Error: stepErr}
 		phase.Steps = append(phase.Steps, step)
-		emit(Event{Phase: phaseName, Step: step.Name, Status: StepFailed, Error: stepErr})
+		emit(pipeline.Event{Phase: phaseName, Step: step.Name, Status: pipeline.StepFailed, Error: stepErr})
 		return phase, "", isDirty
 	}
-	phase.Steps = append(phase.Steps, StepResult{Name: "Detect current branch", Status: StepDone, Message: branch})
-	emit(Event{Phase: phaseName, Step: "Detect current branch", Status: StepDone, Message: branch})
+	phase.Steps = append(phase.Steps, pipeline.StepResult{Name: "Detect current branch", Status: pipeline.StepDone, Message: branch})
+	emit(pipeline.Event{Phase: phaseName, Step: "Detect current branch", Status: pipeline.StepDone, Message: branch})
 
 	return phase, branch, isDirty
 }
 
-func runMigrateBackup(shell git.ShellRunner, repoPath string, emit func(Event)) (Phase, string, string) {
-	phase := Phase{Name: "Backup"}
+func runMigrateBackup(shell git.ShellRunner, repoPath string, emit func(pipeline.Event)) (pipeline.Phase, string, string) {
+	phase := pipeline.Phase{Name: "Backup"}
 	phaseName := "Backup"
 
 	timestamp := time.Now().Format("20060102_150405")
 	backupPath := fmt.Sprintf("%s_backup_%s", repoPath, timestamp)
 
-	emit(Event{Phase: phaseName, Step: "Copy repository to backup", Status: StepRunning})
+	emit(pipeline.Event{Phase: phaseName, Step: "Copy repository to backup", Status: pipeline.StepRunning})
 	parentDir := filepath.Dir(repoPath)
 	cpCmd := fmt.Sprintf("cp -a %q %q", repoPath, backupPath)
 	_, err := shell.RunShell(parentDir, cpCmd)
@@ -126,25 +127,25 @@ func runMigrateBackup(shell git.ShellRunner, repoPath string, emit func(Event)) 
 		// user to `rm -rf <repo> && mv <missing-backup> <repo>` — deleting their
 		// still-intact repo (the Migrate phase never ran).
 		_ = fileutil.RemoveAllRetry(backupPath)
-		step := StepResult{Name: "Copy repository to backup", Status: StepFailed, Error: err}
+		step := pipeline.StepResult{Name: "Copy repository to backup", Status: pipeline.StepFailed, Error: err}
 		phase.Steps = append(phase.Steps, step)
-		emit(Event{Phase: phaseName, Step: step.Name, Status: StepFailed, Error: err})
+		emit(pipeline.Event{Phase: phaseName, Step: step.Name, Status: pipeline.StepFailed, Error: err})
 		return phase, "", ""
 	}
-	phase.Steps = append(phase.Steps, StepResult{Name: "Copy repository to backup", Status: StepDone, Message: backupPath})
-	emit(Event{Phase: phaseName, Step: "Copy repository to backup", Status: StepDone, Message: backupPath})
+	phase.Steps = append(phase.Steps, pipeline.StepResult{Name: "Copy repository to backup", Status: pipeline.StepDone, Message: backupPath})
+	emit(pipeline.Event{Phase: phaseName, Step: "Copy repository to backup", Status: pipeline.StepDone, Message: backupPath})
 
 	// Calculate backup size
-	emit(Event{Phase: phaseName, Step: "Calculate backup size", Status: StepRunning})
+	emit(pipeline.Event{Phase: phaseName, Step: "Calculate backup size", Status: pipeline.StepRunning})
 	size := calculateDirSize(backupPath)
-	phase.Steps = append(phase.Steps, StepResult{Name: "Calculate backup size", Status: StepDone, Message: size})
-	emit(Event{Phase: phaseName, Step: "Calculate backup size", Status: StepDone, Message: size})
+	phase.Steps = append(phase.Steps, pipeline.StepResult{Name: "Calculate backup size", Status: pipeline.StepDone, Message: size})
+	emit(pipeline.Event{Phase: phaseName, Step: "Calculate backup size", Status: pipeline.StepDone, Message: size})
 
 	return phase, backupPath, size
 }
 
-func runMigrateBare(runner git.CommandRunner, repoPath, branch string, emit func(Event)) Phase {
-	phase := Phase{Name: "Migrate"}
+func runMigrateBare(runner git.CommandRunner, repoPath, branch string, emit func(pipeline.Event)) pipeline.Phase {
+	phase := pipeline.Phase{Name: "Migrate"}
 	phaseName := "Migrate"
 	barePath := filepath.Join(repoPath, ".bare")
 
@@ -154,77 +155,77 @@ func runMigrateBare(runner git.CommandRunner, repoPath, branch string, emit func
 	originURL, _ := runner.Run(repoPath, "remote", "get-url", "origin")
 
 	// Clone bare
-	emit(Event{Phase: phaseName, Step: "Create bare repository", Status: StepRunning})
+	emit(pipeline.Event{Phase: phaseName, Step: "Create bare repository", Status: pipeline.StepRunning})
 	_, err := runner.Run(repoPath, "clone", "--bare", ".git", barePath)
 	if err != nil {
-		step := StepResult{Name: "Create bare repository", Status: StepFailed, Error: err}
+		step := pipeline.StepResult{Name: "Create bare repository", Status: pipeline.StepFailed, Error: err}
 		phase.Steps = append(phase.Steps, step)
-		emit(Event{Phase: phaseName, Step: step.Name, Status: StepFailed, Error: err})
+		emit(pipeline.Event{Phase: phaseName, Step: step.Name, Status: pipeline.StepFailed, Error: err})
 		return phase
 	}
-	phase.Steps = append(phase.Steps, StepResult{Name: "Create bare repository", Status: StepDone})
-	emit(Event{Phase: phaseName, Step: "Create bare repository", Status: StepDone})
+	phase.Steps = append(phase.Steps, pipeline.StepResult{Name: "Create bare repository", Status: pipeline.StepDone})
+	emit(pipeline.Event{Phase: phaseName, Step: "Create bare repository", Status: pipeline.StepDone})
 
 	// Remove original .git. Retry: it was just read by clone --bare, so on macOS
 	// Spotlight may briefly hold its object dir (ENOTEMPTY) — a single RemoveAll
 	// would fail the migration after the backup was already taken.
-	emit(Event{Phase: phaseName, Step: "Remove original .git", Status: StepRunning})
+	emit(pipeline.Event{Phase: phaseName, Step: "Remove original .git", Status: pipeline.StepRunning})
 	gitDir := filepath.Join(repoPath, ".git")
 	if err := fileutil.RemoveAllRetry(gitDir); err != nil {
-		step := StepResult{Name: "Remove original .git", Status: StepFailed, Error: err}
+		step := pipeline.StepResult{Name: "Remove original .git", Status: pipeline.StepFailed, Error: err}
 		phase.Steps = append(phase.Steps, step)
-		emit(Event{Phase: phaseName, Step: step.Name, Status: StepFailed, Error: err})
+		emit(pipeline.Event{Phase: phaseName, Step: step.Name, Status: pipeline.StepFailed, Error: err})
 		return phase
 	}
-	phase.Steps = append(phase.Steps, StepResult{Name: "Remove original .git", Status: StepDone})
-	emit(Event{Phase: phaseName, Step: "Remove original .git", Status: StepDone})
+	phase.Steps = append(phase.Steps, pipeline.StepResult{Name: "Remove original .git", Status: pipeline.StepDone})
+	emit(pipeline.Event{Phase: phaseName, Step: "Remove original .git", Status: pipeline.StepDone})
 
 	// Create .git pointer
-	emit(Event{Phase: phaseName, Step: "Create .git pointer", Status: StepRunning})
+	emit(pipeline.Event{Phase: phaseName, Step: "Create .git pointer", Status: pipeline.StepRunning})
 	gitPointerPath := filepath.Join(repoPath, ".git")
 	if err := os.WriteFile(gitPointerPath, []byte("gitdir: .bare\n"), 0644); err != nil {
-		step := StepResult{Name: "Create .git pointer", Status: StepFailed, Error: err}
+		step := pipeline.StepResult{Name: "Create .git pointer", Status: pipeline.StepFailed, Error: err}
 		phase.Steps = append(phase.Steps, step)
-		emit(Event{Phase: phaseName, Step: step.Name, Status: StepFailed, Error: err})
+		emit(pipeline.Event{Phase: phaseName, Step: step.Name, Status: pipeline.StepFailed, Error: err})
 		return phase
 	}
-	phase.Steps = append(phase.Steps, StepResult{Name: "Create .git pointer", Status: StepDone})
-	emit(Event{Phase: phaseName, Step: "Create .git pointer", Status: StepDone})
+	phase.Steps = append(phase.Steps, pipeline.StepResult{Name: "Create .git pointer", Status: pipeline.StepDone})
+	emit(pipeline.Event{Phase: phaseName, Step: "Create .git pointer", Status: pipeline.StepDone})
 
 	// Configure refspec
-	emit(Event{Phase: phaseName, Step: "Configure refspec", Status: StepRunning})
+	emit(pipeline.Event{Phase: phaseName, Step: "Configure refspec", Status: pipeline.StepRunning})
 	_, err = runner.Run(barePath, "config", "remote.origin.fetch", "+refs/heads/*:refs/remotes/origin/*")
 	if err != nil {
-		step := StepResult{Name: "Configure refspec", Status: StepFailed, Error: err}
+		step := pipeline.StepResult{Name: "Configure refspec", Status: pipeline.StepFailed, Error: err}
 		phase.Steps = append(phase.Steps, step)
-		emit(Event{Phase: phaseName, Step: step.Name, Status: StepFailed, Error: err})
+		emit(pipeline.Event{Phase: phaseName, Step: step.Name, Status: pipeline.StepFailed, Error: err})
 		return phase
 	}
-	phase.Steps = append(phase.Steps, StepResult{Name: "Configure refspec", Status: StepDone})
-	emit(Event{Phase: phaseName, Step: "Configure refspec", Status: StepDone})
+	phase.Steps = append(phase.Steps, pipeline.StepResult{Name: "Configure refspec", Status: pipeline.StepDone})
+	emit(pipeline.Event{Phase: phaseName, Step: "Configure refspec", Status: pipeline.StepDone})
 
 	// Restore the real origin URL (clone --bare set it to the local .git path).
 	// Best-effort: a local-only repo has no origin to restore.
 	if strings.TrimSpace(originURL) != "" {
-		emit(Event{Phase: phaseName, Step: "Restore origin remote", Status: StepRunning})
+		emit(pipeline.Event{Phase: phaseName, Step: "Restore origin remote", Status: pipeline.StepRunning})
 		if _, err := runner.Run(barePath, "remote", "set-url", "origin", originURL); err != nil {
-			step := StepResult{Name: "Restore origin remote", Status: StepFailed, Error: err}
+			step := pipeline.StepResult{Name: "Restore origin remote", Status: pipeline.StepFailed, Error: err}
 			phase.Steps = append(phase.Steps, step)
-			emit(Event{Phase: phaseName, Step: step.Name, Status: StepFailed, Error: err})
+			emit(pipeline.Event{Phase: phaseName, Step: step.Name, Status: pipeline.StepFailed, Error: err})
 			return phase
 		}
-		phase.Steps = append(phase.Steps, StepResult{Name: "Restore origin remote", Status: StepDone, Message: originURL})
-		emit(Event{Phase: phaseName, Step: "Restore origin remote", Status: StepDone, Message: originURL})
+		phase.Steps = append(phase.Steps, pipeline.StepResult{Name: "Restore origin remote", Status: pipeline.StepDone, Message: originURL})
+		emit(pipeline.Event{Phase: phaseName, Step: "Restore origin remote", Status: pipeline.StepDone, Message: originURL})
 	}
 
 	// Remove old working files from root (they'll be in the worktree instead)
 	// Keep only .bare, .git (pointer), and directories that are worktrees
-	emit(Event{Phase: phaseName, Step: "Clean root directory", Status: StepRunning})
+	emit(pipeline.Event{Phase: phaseName, Step: "Clean root directory", Status: pipeline.StepRunning})
 	entries, err := os.ReadDir(repoPath)
 	if err != nil {
-		step := StepResult{Name: "Clean root directory", Status: StepFailed, Error: err}
+		step := pipeline.StepResult{Name: "Clean root directory", Status: pipeline.StepFailed, Error: err}
 		phase.Steps = append(phase.Steps, step)
-		emit(Event{Phase: phaseName, Step: step.Name, Status: StepFailed, Error: err})
+		emit(pipeline.Event{Phase: phaseName, Step: step.Name, Status: pipeline.StepFailed, Error: err})
 		return phase
 	}
 	for _, entry := range entries {
@@ -234,35 +235,35 @@ func runMigrateBare(runner git.CommandRunner, repoPath, branch string, emit func
 			continue
 		}
 		if err := os.RemoveAll(filepath.Join(repoPath, name)); err != nil {
-			emit(Event{Phase: phaseName, Step: "Clean root directory", Status: StepRunning,
+			emit(pipeline.Event{Phase: phaseName, Step: "Clean root directory", Status: pipeline.StepRunning,
 				Message: fmt.Sprintf("warning: could not remove %s: %v", name, err)})
 		}
 	}
-	phase.Steps = append(phase.Steps, StepResult{Name: "Clean root directory", Status: StepDone})
-	emit(Event{Phase: phaseName, Step: "Clean root directory", Status: StepDone})
+	phase.Steps = append(phase.Steps, pipeline.StepResult{Name: "Clean root directory", Status: pipeline.StepDone})
+	emit(pipeline.Event{Phase: phaseName, Step: "Clean root directory", Status: pipeline.StepDone})
 
 	// Create worktree for current branch. The branch is passed explicitly as
 	// the commit-ish: without it, git derives a NEW branch from the path's
 	// basename instead of checking out the existing one.
-	emit(Event{Phase: phaseName, Step: "Create worktree", Status: StepRunning})
+	emit(pipeline.Event{Phase: phaseName, Step: "Create worktree", Status: pipeline.StepRunning})
 	_, err = runner.Run(repoPath, "worktree", "add", git.WorktreePath(repoPath, branch), branch)
 	if err != nil {
-		step := StepResult{Name: "Create worktree", Status: StepFailed, Error: err}
+		step := pipeline.StepResult{Name: "Create worktree", Status: pipeline.StepFailed, Error: err}
 		phase.Steps = append(phase.Steps, step)
-		emit(Event{Phase: phaseName, Step: step.Name, Status: StepFailed, Error: err})
+		emit(pipeline.Event{Phase: phaseName, Step: step.Name, Status: pipeline.StepFailed, Error: err})
 		return phase
 	}
-	phase.Steps = append(phase.Steps, StepResult{Name: "Create worktree", Status: StepDone})
-	emit(Event{Phase: phaseName, Step: "Create worktree", Status: StepDone})
+	phase.Steps = append(phase.Steps, pipeline.StepResult{Name: "Create worktree", Status: pipeline.StepDone})
+	emit(pipeline.Event{Phase: phaseName, Step: "Create worktree", Status: pipeline.StepDone})
 
 	return phase
 }
 
-func runMigrateCopy(backupPath, worktreePath string, emit func(Event)) Phase {
-	phase := Phase{Name: "Copy"}
+func runMigrateCopy(backupPath, worktreePath string, emit func(pipeline.Event)) pipeline.Phase {
+	phase := pipeline.Phase{Name: "Copy"}
 	phaseName := "Copy"
 
-	emit(Event{Phase: phaseName, Step: "Restore working files", Status: StepRunning})
+	emit(pipeline.Event{Phase: phaseName, Step: "Restore working files", Status: pipeline.StepRunning})
 
 	// Copy EVERYTHING from the backup working tree (untracked, ignored, and
 	// uncommitted-modified files) into the new worktree, which otherwise holds
@@ -271,8 +272,8 @@ func runMigrateCopy(backupPath, worktreePath string, emit func(Event)) Phase {
 	entries, err := os.ReadDir(backupPath)
 	if err != nil {
 		// No backup to restore from (e.g. a clean repo with nothing extra).
-		phase.Steps = append(phase.Steps, StepResult{Name: "Restore working files", Status: StepDone, Message: "nothing to restore"})
-		emit(Event{Phase: phaseName, Step: "Restore working files", Status: StepDone, Message: "nothing to restore"})
+		phase.Steps = append(phase.Steps, pipeline.StepResult{Name: "Restore working files", Status: pipeline.StepDone, Message: "nothing to restore"})
+		emit(pipeline.Event{Phase: phaseName, Step: "Restore working files", Status: pipeline.StepDone, Message: "nothing to restore"})
 		return phase
 	}
 
@@ -285,7 +286,7 @@ func runMigrateCopy(backupPath, worktreePath string, emit func(Event)) Phase {
 		src := filepath.Join(backupPath, name)
 		dst := filepath.Join(worktreePath, name)
 		if copyErr := copyTree(src, dst); copyErr != nil {
-			emit(Event{Phase: phaseName, Step: "Restore working files", Status: StepRunning,
+			emit(pipeline.Event{Phase: phaseName, Step: "Restore working files", Status: pipeline.StepRunning,
 				Message: fmt.Sprintf("warning: could not copy %s: %v", name, copyErr)})
 			continue
 		}
@@ -296,8 +297,8 @@ func runMigrateCopy(backupPath, worktreePath string, emit func(Event)) Phase {
 	if copied == 0 {
 		msg = "nothing to restore"
 	}
-	phase.Steps = append(phase.Steps, StepResult{Name: "Restore working files", Status: StepDone, Message: msg})
-	emit(Event{Phase: phaseName, Step: "Restore working files", Status: StepDone, Message: msg})
+	phase.Steps = append(phase.Steps, pipeline.StepResult{Name: "Restore working files", Status: pipeline.StepDone, Message: msg})
+	emit(pipeline.Event{Phase: phaseName, Step: "Restore working files", Status: pipeline.StepDone, Message: msg})
 
 	return phase
 }

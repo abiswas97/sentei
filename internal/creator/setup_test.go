@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/abiswas97/sentei/internal/git"
+	"github.com/abiswas97/sentei/internal/pipeline"
 )
 
 type mockRunner struct {
@@ -44,10 +45,10 @@ func (m *mockRunner) RunShell(dir string, command string) (string, error) {
 }
 
 type eventCollector struct {
-	events []Event
+	events []pipeline.Event
 }
 
-func (c *eventCollector) emit(e Event) {
+func (c *eventCollector) emit(e pipeline.Event) {
 	c.events = append(c.events, e)
 }
 
@@ -59,7 +60,7 @@ func TestCreateWorktreeStep(t *testing.T) {
 		repoPath     string
 		branchExists bool
 		runnerErr    error
-		wantStatus   StepStatus
+		wantStatus   pipeline.StepStatus
 		wantPath     string
 	}{
 		{
@@ -67,7 +68,7 @@ func TestCreateWorktreeStep(t *testing.T) {
 			branch:     "feature/auth",
 			baseBranch: "main",
 			repoPath:   "/repo",
-			wantStatus: StepDone,
+			wantStatus: pipeline.StepDone,
 			wantPath:   "/repo/feature-auth",
 		},
 		{
@@ -76,7 +77,7 @@ func TestCreateWorktreeStep(t *testing.T) {
 			baseBranch:   "main",
 			repoPath:     "/repo",
 			branchExists: true,
-			wantStatus:   StepDone,
+			wantStatus:   pipeline.StepDone,
 			wantPath:     "/repo/feature-dup",
 		},
 		{
@@ -85,7 +86,7 @@ func TestCreateWorktreeStep(t *testing.T) {
 			baseBranch: "main",
 			repoPath:   "/repo",
 			runnerErr:  fmt.Errorf("fatal: something went wrong"),
-			wantStatus: StepFailed,
+			wantStatus: pipeline.StepFailed,
 		},
 	}
 
@@ -116,7 +117,7 @@ func TestCreateWorktreeStep(t *testing.T) {
 			if result.Status != tt.wantStatus {
 				t.Errorf("status = %v, want %v", result.Status, tt.wantStatus)
 			}
-			if tt.wantStatus == StepDone && path != tt.wantPath {
+			if tt.wantStatus == pipeline.StepDone && path != tt.wantPath {
 				t.Errorf("path = %q, want %q", path, tt.wantPath)
 			}
 			if len(ec.events) == 0 {
@@ -132,26 +133,26 @@ func TestMergeBaseStep(t *testing.T) {
 		mergeBase  bool
 		baseBranch string
 		runnerErr  error
-		wantStatus StepStatus
+		wantStatus pipeline.StepStatus
 	}{
 		{
 			name:       "successful merge",
 			mergeBase:  true,
 			baseBranch: "main",
-			wantStatus: StepDone,
+			wantStatus: pipeline.StepDone,
 		},
 		{
 			name:       "merge conflict continues",
 			mergeBase:  true,
 			baseBranch: "main",
 			runnerErr:  fmt.Errorf("merge conflict"),
-			wantStatus: StepFailed,
+			wantStatus: pipeline.StepFailed,
 		},
 		{
 			name:       "merge disabled",
 			mergeBase:  false,
 			baseBranch: "main",
-			wantStatus: StepSkipped,
+			wantStatus: pipeline.StepSkipped,
 		},
 	}
 
@@ -179,24 +180,24 @@ func TestCopyEnvFilesStep(t *testing.T) {
 		name       string
 		envFiles   []string
 		srcFiles   []string
-		wantStatus StepStatus
+		wantStatus pipeline.StepStatus
 	}{
 		{
 			name:       "copies existing files",
 			envFiles:   []string{".env", ".env.local"},
 			srcFiles:   []string{".env"},
-			wantStatus: StepDone,
+			wantStatus: pipeline.StepDone,
 		},
 		{
 			name:       "no env files configured",
 			envFiles:   nil,
-			wantStatus: StepSkipped,
+			wantStatus: pipeline.StepSkipped,
 		},
 		{
 			name:       "no source files exist",
 			envFiles:   []string{".env"},
 			srcFiles:   nil,
-			wantStatus: StepDone,
+			wantStatus: pipeline.StepDone,
 		},
 	}
 

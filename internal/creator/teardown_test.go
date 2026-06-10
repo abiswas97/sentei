@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/abiswas97/sentei/internal/integration"
+	"github.com/abiswas97/sentei/internal/pipeline"
 )
 
 func TestScanArtifacts(t *testing.T) {
@@ -98,8 +99,8 @@ func TestTeardown_WithCommand(t *testing.T) {
 	if len(results) != 1 {
 		t.Fatalf("result count = %d, want 1", len(results))
 	}
-	if results[0].Status != StepDone {
-		t.Errorf("status = %v, want StepDone", results[0].Status)
+	if results[0].Status != pipeline.StepDone {
+		t.Errorf("status = %v, want pipeline.StepDone", results[0].Status)
 	}
 }
 
@@ -129,8 +130,8 @@ func TestTeardown_CommandFailsFallsBackToDirDelete(t *testing.T) {
 	if len(results) != 1 {
 		t.Fatalf("result count = %d, want 1", len(results))
 	}
-	if results[0].Status != StepDone {
-		t.Errorf("status = %v, want StepDone (fallback should succeed)", results[0].Status)
+	if results[0].Status != pipeline.StepDone {
+		t.Errorf("status = %v, want pipeline.StepDone (fallback should succeed)", results[0].Status)
 	}
 
 	if _, err := os.Stat(artifactDir); !os.IsNotExist(err) {
@@ -180,8 +181,8 @@ func TestTeardown_DirOnlyNoCommand(t *testing.T) {
 	if len(results) != 1 {
 		t.Fatalf("result count = %d, want 1", len(results))
 	}
-	if results[0].Status != StepDone {
-		t.Errorf("status = %v, want StepDone", results[0].Status)
+	if results[0].Status != pipeline.StepDone {
+		t.Errorf("status = %v, want pipeline.StepDone", results[0].Status)
 	}
 
 	if _, err := os.Stat(artifactDir); !os.IsNotExist(err) {

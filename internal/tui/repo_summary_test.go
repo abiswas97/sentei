@@ -8,6 +8,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/abiswas97/sentei/internal/config"
+	"github.com/abiswas97/sentei/internal/pipeline"
 	"github.com/abiswas97/sentei/internal/repo"
 )
 
@@ -24,10 +25,10 @@ func cloneFailureResult() repo.CloneResult {
 		RepoPath:      "/tmp/myrepo",
 		DefaultBranch: "main",
 		// WorktreePath intentionally empty: the worktree was never created.
-		Phases: []repo.Phase{
-			{Name: "Clone", Steps: []repo.StepResult{{Name: "Clone bare repository", Status: repo.StepDone}}},
-			{Name: "Worktree", Steps: []repo.StepResult{
-				{Name: "Create worktree", Status: repo.StepFailed, Error: errors.New("fatal: invalid reference: main")},
+		Phases: []pipeline.Phase{
+			{Name: "Clone", Steps: []pipeline.StepResult{{Name: "Clone bare repository", Status: pipeline.StepDone}}},
+			{Name: "Worktree", Steps: []pipeline.StepResult{
+				{Name: "Create worktree", Status: pipeline.StepFailed, Error: errors.New("fatal: invalid reference: main")},
 			}},
 		},
 	}
@@ -39,8 +40,8 @@ func cloneSuccessResult() repo.CloneResult {
 		DefaultBranch: "main",
 		WorktreePath:  "/tmp/myrepo/main",
 		OriginURL:     "git@github.com:user/myrepo.git",
-		Phases: []repo.Phase{
-			{Name: "Worktree", Steps: []repo.StepResult{{Name: "Create worktree", Status: repo.StepDone}}},
+		Phases: []pipeline.Phase{
+			{Name: "Worktree", Steps: []pipeline.StepResult{{Name: "Create worktree", Status: pipeline.StepDone}}},
 		},
 	}
 }
@@ -84,9 +85,9 @@ func TestViewCloneRepoSummary_Success_ShowsReady(t *testing.T) {
 func TestViewCreateRepoSummary_SetupFailure_ShowsFailed(t *testing.T) {
 	result := repo.CreateResult{
 		RepoPath: "/tmp/my-project",
-		Phases: []repo.Phase{
-			{Name: "Setup", Steps: []repo.StepResult{
-				{Name: "Initial commit", Status: repo.StepFailed, Error: errors.New("git commit: exit status 128")},
+		Phases: []pipeline.Phase{
+			{Name: "Setup", Steps: []pipeline.StepResult{
+				{Name: "Initial commit", Status: pipeline.StepFailed, Error: errors.New("git commit: exit status 128")},
 			}},
 		},
 	}
@@ -111,10 +112,10 @@ func TestViewCreateRepoSummary_GitHubFailure_ShowsLocalOnly(t *testing.T) {
 	result := repo.CreateResult{
 		RepoPath:     "/tmp/my-project",
 		WorktreePath: "/tmp/my-project/main",
-		Phases: []repo.Phase{
-			{Name: "Setup", Steps: []repo.StepResult{{Name: "Create main worktree", Status: repo.StepDone}}},
-			{Name: "GitHub", Steps: []repo.StepResult{
-				{Name: "Push to GitHub", Status: repo.StepFailed, Error: errors.New("permission denied (publickey)")},
+		Phases: []pipeline.Phase{
+			{Name: "Setup", Steps: []pipeline.StepResult{{Name: "Create main worktree", Status: pipeline.StepDone}}},
+			{Name: "GitHub", Steps: []pipeline.StepResult{
+				{Name: "Push to GitHub", Status: pipeline.StepFailed, Error: errors.New("permission denied (publickey)")},
 			}},
 		},
 	}

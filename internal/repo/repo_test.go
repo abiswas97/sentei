@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+
+	"github.com/abiswas97/sentei/internal/pipeline"
 )
 
 type mockRunner struct {
@@ -41,10 +43,10 @@ func (m *mockRunner) RunShell(dir string, command string) (string, error) {
 }
 
 type eventCollector struct {
-	events []Event
+	events []pipeline.Event
 }
 
-func (c *eventCollector) emit(e Event) {
+func (c *eventCollector) emit(e pipeline.Event) {
 	c.events = append(c.events, e)
 }
 

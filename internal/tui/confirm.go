@@ -12,11 +12,12 @@ import (
 	"github.com/abiswas97/sentei/internal/creator"
 	"github.com/abiswas97/sentei/internal/git"
 	"github.com/abiswas97/sentei/internal/integration"
+	"github.com/abiswas97/sentei/internal/pipeline"
 	"github.com/abiswas97/sentei/internal/worktree"
 )
 
 type teardownCompleteMsg struct {
-	results []creator.StepResult
+	results []pipeline.StepResult
 }
 
 func unlockLockedWorktrees(runner git.CommandRunner, repoPath string, worktrees []git.Worktree) {
@@ -85,7 +86,7 @@ func (m Model) runTeardownPhase(worktrees []git.Worktree, integrations []integra
 		shell := m.shell
 		type indexedResults struct {
 			index   int
-			results []creator.StepResult
+			results []pipeline.StepResult
 		}
 
 		resultsCh := make(chan indexedResults, len(worktrees))
@@ -95,18 +96,18 @@ func (m Model) runTeardownPhase(worktrees []git.Worktree, integrations []integra
 			sem <- struct{}{}
 			go func(idx int, wtPath string) {
 				defer func() { <-sem }()
-				results := creator.Teardown(shell, wtPath, integrations, func(creator.Event) {})
+				results := creator.Teardown(shell, wtPath, integrations, func(pipeline.Event) {})
 				resultsCh <- indexedResults{index: idx, results: results}
 			}(i, wt.Path)
 		}
 
-		collected := make([][]creator.StepResult, len(worktrees))
+		collected := make([][]pipeline.StepResult, len(worktrees))
 		for range worktrees {
 			ir := <-resultsCh
 			collected[ir.index] = ir.results
 		}
 
-		var allResults []creator.StepResult
+		var allResults []pipeline.StepResult
 		for _, r := range collected {
 			allResults = append(allResults, r...)
 		}

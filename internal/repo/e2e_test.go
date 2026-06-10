@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/abiswas97/sentei/internal/git"
+	"github.com/abiswas97/sentei/internal/pipeline"
 	"github.com/abiswas97/sentei/internal/testtmp"
 )
 
@@ -53,7 +54,7 @@ func TestE2E_CreateRepo(t *testing.T) {
 	// No failures
 	for _, phase := range result.Phases {
 		for _, step := range phase.Steps {
-			if step.Status == StepFailed {
+			if step.Status == pipeline.StepFailed {
 				t.Errorf("step %q failed: %v", step.Name, step.Error)
 			}
 		}
@@ -126,7 +127,7 @@ func TestE2E_CloneNonMainDefaultSetsUpstream(t *testing.T) {
 
 	for _, phase := range result.Phases {
 		for _, step := range phase.Steps {
-			if step.Status == StepFailed {
+			if step.Status == pipeline.StepFailed {
 				t.Errorf("step %q failed: %v", step.Name, step.Error)
 			}
 		}

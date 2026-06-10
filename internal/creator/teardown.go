@@ -8,6 +8,7 @@ import (
 
 	"github.com/abiswas97/sentei/internal/git"
 	"github.com/abiswas97/sentei/internal/integration"
+	"github.com/abiswas97/sentei/internal/pipeline"
 )
 
 // ArtifactInfo describes the artifact directories found for an integration.
@@ -43,13 +44,13 @@ func ScanArtifacts(wtPath string, integrations []integration.Integration) []Arti
 // Teardown removes integration artifacts from wtPath. For each integration that has
 // artifacts present, it runs the teardown command if configured; if the command fails
 // or is absent, it falls back to deleting the artifact directories directly.
-func Teardown(shell git.ShellRunner, wtPath string, integrations []integration.Integration, emit func(Event)) []StepResult {
+func Teardown(shell git.ShellRunner, wtPath string, integrations []integration.Integration, emit func(pipeline.Event)) []pipeline.StepResult {
 	artifacts := ScanArtifacts(wtPath, integrations)
 	if len(artifacts) == 0 {
 		return nil
 	}
 
-	var results []StepResult
+	var results []pipeline.StepResult
 
 	for _, artifact := range artifacts {
 		integ := findIntegration(integrations, artifact.IntegrationName)
@@ -58,13 +59,13 @@ func Teardown(shell git.ShellRunner, wtPath string, integrations []integration.I
 		}
 
 		stepName := fmt.Sprintf("Teardown %s", integ.Name)
-		emit(Event{Phase: "Teardown", Step: stepName, Status: StepRunning})
+		emit(pipeline.Event{Phase: "Teardown", Step: stepName, Status: pipeline.StepRunning})
 
 		if integ.Teardown.Command != "" {
 			_, err := shell.RunShell(wtPath, integ.Teardown.Command)
 			if err == nil {
-				emit(Event{Phase: "Teardown", Step: stepName, Status: StepDone})
-				results = append(results, StepResult{Name: stepName, Status: StepDone})
+				emit(pipeline.Event{Phase: "Teardown", Step: stepName, Status: pipeline.StepDone})
+				results = append(results, pipeline.StepResult{Name: stepName, Status: pipeline.StepDone})
 				continue
 			}
 		}
@@ -79,13 +80,13 @@ func Teardown(shell git.ShellRunner, wtPath string, integrations []integration.I
 		}
 
 		if allRemoved {
-			emit(Event{Phase: "Teardown", Step: stepName, Status: StepDone, Message: "removed artifact dirs"})
-			results = append(results, StepResult{Name: stepName, Status: StepDone, Message: "removed artifact dirs"})
+			emit(pipeline.Event{Phase: "Teardown", Step: stepName, Status: pipeline.StepDone, Message: "removed artifact dirs"})
+			results = append(results, pipeline.StepResult{Name: stepName, Status: pipeline.StepDone, Message: "removed artifact dirs"})
 		} else {
-			emit(Event{Phase: "Teardown", Step: stepName, Status: StepFailed, Error: fmt.Errorf("failed to remove some artifact dirs")})
-			results = append(results, StepResult{
+			emit(pipeline.Event{Phase: "Teardown", Step: stepName, Status: pipeline.StepFailed, Error: fmt.Errorf("failed to remove some artifact dirs")})
+			results = append(results, pipeline.StepResult{
 				Name:   stepName,
-				Status: StepFailed,
+				Status: pipeline.StepFailed,
 				Error:  fmt.Errorf("failed to remove some artifact dirs for %s", integ.Name),
 			})
 		}

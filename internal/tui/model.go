@@ -13,6 +13,7 @@ import (
 	"github.com/abiswas97/sentei/internal/creator"
 	"github.com/abiswas97/sentei/internal/git"
 	"github.com/abiswas97/sentei/internal/integration"
+	"github.com/abiswas97/sentei/internal/pipeline"
 	"github.com/abiswas97/sentei/internal/repo"
 	"github.com/abiswas97/sentei/internal/worktree"
 )
@@ -112,7 +113,7 @@ type removeState struct {
 	deletionTotal    int
 	progressCh       <-chan worktree.DeletionEvent
 
-	teardownResults []creator.StepResult
+	teardownResults []pipeline.StepResult
 
 	pruneErr      *error
 	cleanupResult *cleanup.Result
@@ -139,9 +140,9 @@ type createState struct {
 	copyEnvFiles           bool
 	optionsCursor          int
 
-	eventCh  chan creator.Event
+	eventCh  chan pipeline.Event
 	resultCh chan creator.Result
-	events   []creator.Event
+	events   []pipeline.Event
 	result   *creator.Result
 }
 
@@ -177,9 +178,9 @@ type repoState struct {
 	migrateInfo MigrateInfo
 
 	// Shared progress/summary
-	eventCh  chan repo.Event
+	eventCh  chan pipeline.Event
 	resultCh chan interface{} // receives CreateResult, CloneResult, or MigrateResult
-	events   []repo.Event
+	events   []pipeline.Event
 	result   interface{}
 	opType   string // "create", "clone", "migrate"
 }
