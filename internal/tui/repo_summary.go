@@ -76,9 +76,9 @@ func (m Model) viewCreateRepoSummary(result repo.CreateResult) string {
 
 	repoName := filepath.Base(result.RepoPath)
 
-	b.WriteString(styleTitle.Render(fmt.Sprintf("  sentei %s Repository Created", "\u2500")))
+	b.WriteString(viewTitle("Repository Created"))
 	b.WriteString("\n\n")
-	b.WriteString(separator(m.width))
+	b.WriteString(viewSeparator(m.width))
 	b.WriteString("\n\n")
 
 	// A Setup-phase failure means the local repo is broken (e.g. the initial
@@ -93,7 +93,7 @@ func (m Model) viewCreateRepoSummary(result repo.CreateResult) string {
 		}
 		fmt.Fprintf(&b, "    %-10s %s\n", styleDim.Render("Path"), result.RepoPath)
 		b.WriteString("\n")
-		b.WriteString(separator(m.width))
+		b.WriteString(viewSeparator(m.width))
 		b.WriteString("\n\n")
 		b.WriteString(styleDim.Render("  q quit"))
 		b.WriteString("\n")
@@ -146,10 +146,10 @@ func (m Model) viewCreateRepoSummary(result repo.CreateResult) string {
 	}
 
 	b.WriteString("\n")
-	b.WriteString(separator(m.width))
+	b.WriteString(viewSeparator(m.width))
 	b.WriteString("\n\n")
 	fmt.Fprintf(&b, "    cd %s\n\n", styleDim.Render(worktreePath))
-	b.WriteString(styleDim.Render("  enter open in sentei \u00b7 q quit"))
+	b.WriteString(viewKeyHints(KeyHint{"enter", "open in sentei"}, KeyHint{"q", "quit"}))
 	b.WriteString("\n")
 
 	return b.String()
@@ -160,9 +160,9 @@ func (m Model) viewCloneRepoSummary(result repo.CloneResult) string {
 
 	repoName := filepath.Base(result.RepoPath)
 
-	b.WriteString(styleTitle.Render(fmt.Sprintf("  sentei %s Repository Cloned", "\u2500")))
+	b.WriteString(viewTitle("Repository Cloned"))
 	b.WriteString("\n\n")
-	b.WriteString(separator(m.width))
+	b.WriteString(viewSeparator(m.width))
 	b.WriteString("\n\n")
 
 	if failed, failErr := cloneFailed(result); failed {
@@ -180,7 +180,7 @@ func (m Model) viewCloneRepoSummary(result repo.CloneResult) string {
 		// A failed clone never has a usable worktree (tracking-only failures are
 		// StepSkipped, not failures), so there is no cd hint to offer.
 		b.WriteString("\n")
-		b.WriteString(separator(m.width))
+		b.WriteString(viewSeparator(m.width))
 		b.WriteString("\n\n")
 		b.WriteString(styleDim.Render("  q quit"))
 		b.WriteString("\n")
@@ -202,10 +202,10 @@ func (m Model) viewCloneRepoSummary(result repo.CloneResult) string {
 	}
 
 	b.WriteString("\n")
-	b.WriteString(separator(m.width))
+	b.WriteString(viewSeparator(m.width))
 	b.WriteString("\n\n")
 	fmt.Fprintf(&b, "    cd %s\n\n", styleDim.Render(worktreePath))
-	b.WriteString(styleDim.Render("  enter open in sentei \u00b7 q quit"))
+	b.WriteString(viewKeyHints(KeyHint{"enter", "open in sentei"}, KeyHint{"q", "quit"}))
 	b.WriteString("\n")
 
 	return b.String()

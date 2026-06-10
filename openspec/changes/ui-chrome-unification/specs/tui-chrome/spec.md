@@ -46,7 +46,7 @@ The system SHALL provide a `ProgressLayout` struct with a `View() string` method
 
 #### Scenario: Completed phase collapses steps
 - **WHEN** a phase has Done == Total and no failed steps
-- **THEN** the phase SHALL render as a single line with `100% ●` and no individual step lines
+- **THEN** the phase SHALL render as a single line `  ● <Name>  <total>/<total>  100%` and no individual step lines
 
 #### Scenario: Completed phase with failures keeps steps visible
 - **WHEN** a phase has Done == Total but Failed > 0
@@ -70,7 +70,7 @@ The system SHALL provide a `ProgressLayout` struct with a `View() string` method
 
 #### Scenario: Phase status line format
 - **WHEN** a phase named "Removing worktrees" has 12 done out of 30 total
-- **THEN** the phase header SHALL render as `  Removing worktrees     12/30  40%` with the count and percentage right-aligned
+- **THEN** the phase header SHALL render as `  ◐ Removing worktrees   12/30  40%` with the status indicator left of the phase name and the count and percentage after it
 
 ### Requirement: Adaptive windowing for step lists
 The system SHALL provide a `WindowSteps(steps []ProgressStep, availableLines int) WindowResult` function that selects which steps to display when the list exceeds available terminal space.
@@ -104,7 +104,7 @@ The system SHALL provide a `viewStatLine(stats WindowStats) string` function tha
 
 #### Scenario: Standard stat line
 - **WHEN** stats show 10 done, 3 active, 17 pending, 0 failed, showing 6 of 30
-- **THEN** the output SHALL render `    ● 10 done · ◐ 3 active · · 17 pending  showing 6 of 30` with appropriate indicator colors and gray text
+- **THEN** the output SHALL render `    ● 10 done  ◐ 3 active  · 17 pending  showing 6 of 30` with appropriate indicator colors and gray text (entries joined by two spaces so the `·` pending indicator never collides with a separator)
 
 #### Scenario: Stat line with failures
 - **WHEN** stats include 2 failed items

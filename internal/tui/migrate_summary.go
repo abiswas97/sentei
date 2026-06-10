@@ -76,9 +76,9 @@ func (m Model) viewMigrateSummary() string {
 		}
 	}
 
-	b.WriteString(styleTitle.Render(fmt.Sprintf("  sentei %s Migration Complete", "\u2500")))
+	b.WriteString(viewTitle("Migration Complete"))
 	b.WriteString("\n\n")
-	b.WriteString(separator(m.width))
+	b.WriteString(viewSeparator(m.width))
 	b.WriteString("\n\n")
 
 	if hasCriticalFailure {
@@ -98,7 +98,7 @@ func (m Model) viewMigrateSummary() string {
 			fmt.Fprintf(&b, "    %s\n", result.RestoreCommand())
 		}
 		b.WriteString("\n")
-		b.WriteString(separator(m.width))
+		b.WriteString(viewSeparator(m.width))
 		b.WriteString("\n\n")
 		b.WriteString(styleDim.Render("  q quit"))
 		b.WriteString("\n")
@@ -123,9 +123,9 @@ func (m Model) viewMigrateSummary() string {
 	b.WriteString("\n")
 	b.WriteString("  Delete backup?\n")
 	b.WriteString("\n")
-	b.WriteString(separator(m.width))
+	b.WriteString(viewSeparator(m.width))
 	b.WriteString("\n\n")
-	b.WriteString(styleDim.Render("  y delete \u00b7 n keep \u00b7 q quit"))
+	b.WriteString(viewKeyHints(KeyHint{"y", "delete"}, KeyHint{"n", "keep"}, KeyHint{"q", "quit"}))
 	b.WriteString("\n")
 
 	return b.String()
@@ -171,9 +171,9 @@ func (m Model) viewMigrateNext() string {
 		worktreePath = git.WorktreePath(result.BareRoot, result.Branch)
 	}
 
-	b.WriteString(styleTitle.Render(fmt.Sprintf("  sentei %s Migration Complete", "\u2500")))
+	b.WriteString(viewTitle("Migration Complete"))
 	b.WriteString("\n\n")
-	b.WriteString(separator(m.width))
+	b.WriteString(viewSeparator(m.width))
 	b.WriteString("\n\n")
 
 	fmt.Fprintf(&b, "  %s %s ready\n\n",
@@ -192,9 +192,9 @@ func (m Model) viewMigrateNext() string {
 	b.WriteString("\n")
 
 	b.WriteString("\n")
-	b.WriteString(separator(m.width))
+	b.WriteString(viewSeparator(m.width))
 	b.WriteString("\n\n")
-	b.WriteString(styleDim.Render("  enter open in sentei \u00b7 q exit"))
+	b.WriteString(viewKeyHints(KeyHint{"enter", "open in sentei"}, KeyHint{"q", "exit"}))
 	b.WriteString("\n")
 
 	return b.String()

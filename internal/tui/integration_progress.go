@@ -1,14 +1,14 @@
 package tui
 
 import (
-	"fmt"
 	"maps"
 	"path/filepath"
-	"strings"
 
+	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/abiswas97/sentei/internal/integration"
+	"github.com/abiswas97/sentei/internal/pipeline"
 	"github.com/abiswas97/sentei/internal/repo"
 	"github.com/abiswas97/sentei/internal/state"
 )
@@ -22,6 +22,12 @@ func (m Model) updateIntegrationProgress(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = max(msg.Height-6, 5)
+		return m, nil
+
+	case tea.KeyMsg:
+		if key.Matches(msg, keys.Quit) {
+			return m, tea.Quit
+		}
 		return m, nil
 
 	case integrationEventMsg:
@@ -79,73 +85,80 @@ func (m Model) finalizeIntegrationApply() tea.Cmd {
 }
 
 func (m Model) viewIntegrationProgress() string {
-	var b strings.Builder
+	done, total := m.integrationOverallProgress()
+	return ProgressLayout{
+		Title:        "Applying Integration Changes",
+		Phases:       m.buildIntegrationPhases(),
+		Width:        m.width,
+		Height:       m.height,
+		Hints:        []KeyHint{{"q", "quit"}},
+		OverallDone:  done,
+		OverallTotal: total,
+	}.View()
+}
 
-	b.WriteString(styleTitle.Render("  sentei \u2500 Applying Integration Changes"))
-	b.WriteString("\n\n")
-	b.WriteString(separator(m.width))
-	b.WriteString("\n\n")
+// buildIntegrationPhases maps apply events onto the shared phase shape, one
+// phase per worktree, with every target worktree visible as pending before
+// its events arrive. Failed step errors are baked into the step label.
+func (m Model) buildIntegrationPhases() []phaseDisplay {
+	var phases []phaseDisplay
+	seen := make(map[string]bool)
 
 	for _, g := range groupIntegrationEvents(m.integ.events) {
-		fmt.Fprintf(&b, "  %s\n", filepath.Base(g.worktree))
-
+		pd := phaseDisplay{name: filepath.Base(g.worktree)}
+		seen[g.worktree] = true
 		for _, s := range g.steps {
 			if s.ev.Status == integration.StatusSkipped {
-				continue // Don't display skipped steps.
+				continue // skipped steps stay hidden, as before
 			}
-			var ind string
+			label := s.step
+			if s.ev.Error != nil {
+				label += " " + s.ev.Error.Error()
+			}
+			var status pipeline.StepStatus
 			switch s.ev.Status {
 			case integration.StatusDone:
-				ind = styleIndicatorDone.Render(indicatorDone)
+				status = pipeline.StepDone
+				pd.done++
 			case integration.StatusRunning:
-				ind = styleIndicatorActive.Render(indicatorActive)
+				status = pipeline.StepRunning
 			case integration.StatusFailed:
-				ind = styleIndicatorFailed.Render(indicatorFailed)
+				status = pipeline.StepFailed
+				pd.failed++
+				pd.done++
 			}
-
-			line := fmt.Sprintf("    %s %s", ind, s.ev.Step)
-			if s.ev.Error != nil {
-				line += " " + styleError.Render(s.ev.Error.Error())
-			}
-			b.WriteString(line)
-			b.WriteString("\n")
+			pd.steps = append(pd.steps, stepDisplay{name: label, status: status})
 		}
-		b.WriteString("\n")
+		pd.total = len(pd.steps)
+		phases = append(phases, pd)
 	}
 
-	b.WriteString(separator(m.width))
-	b.WriteString("\n\n")
+	for _, path := range m.integ.targetWorktrees {
+		if !seen[path] {
+			phases = append(phases, phaseDisplay{name: filepath.Base(path)})
+		}
+	}
+	return phases
+}
 
-	// Progress bar — use upfront total, count unique completed steps.
-	total := m.integ.totalSteps
-	stepStatus := make(map[string]bool)
-	done := 0
+// integrationOverallProgress counts resolved unique steps against the
+// upfront step total so the bar reflects the whole apply, not just the
+// worktrees that have emitted events.
+func (m Model) integrationOverallProgress() (done, total int) {
+	total = m.integ.totalSteps
+	resolved := make(map[string]bool)
 	for _, ev := range m.integ.events {
 		key := ev.Worktree + ":" + ev.Step
-		if stepStatus[key] {
-			continue // Already counted this step.
+		if resolved[key] {
+			continue
 		}
 		if ev.Status == integration.StatusDone || ev.Status == integration.StatusFailed || ev.Status == integration.StatusSkipped {
-			stepStatus[key] = true
+			resolved[key] = true
 			done++
 		}
 	}
-	// If no upfront total was set, fall back to discovered steps.
 	if total == 0 {
 		total = done
 	}
-
-	const barWidth = 20
-	filled := 0
-	if total > 0 {
-		filled = (done * barWidth) / total
-	}
-	bar := strings.Repeat("\u2588", filled) + strings.Repeat("\u2591", barWidth-filled)
-	pct := 0
-	if total > 0 {
-		pct = (done * 100) / total
-	}
-	fmt.Fprintf(&b, "  %s %d%%\n", bar, pct)
-
-	return b.String()
+	return done, total
 }

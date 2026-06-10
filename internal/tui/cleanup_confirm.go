@@ -38,6 +38,7 @@ func (m Model) cleanupConfirmationVM() ConfirmationViewModel {
 	}
 
 	return ConfirmationViewModel{
+		Width: m.width,
 		Title: "Confirm Cleanup",
 		Items: []ConfirmationItem{
 			{Label: "Mode:", Value: mode},

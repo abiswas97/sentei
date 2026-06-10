@@ -143,12 +143,12 @@ func (m Model) viewMenu() string {
 	var b strings.Builder
 
 	repoName := filepath.Base(m.repoPath)
-	b.WriteString(styleTitle.Render(fmt.Sprintf("  sentei %s Git Worktree Manager", "\u2500")))
+	b.WriteString(viewTitle("Git Worktree Manager"))
 	b.WriteString("\n\n")
 
 	switch m.context {
 	case repo.ContextBareRepo:
-		b.WriteString(styleDim.Render(fmt.Sprintf("  %s (bare) %s %s", repoName, "\u00b7", m.repoPath)))
+		b.WriteString(styleDim.Render(truncateWithEllipsis(fmt.Sprintf("  %s (bare) · %s", repoName, m.repoPath), max(m.width, 40))))
 		b.WriteString("\n")
 		if len(m.remove.worktrees) > 0 {
 			clean, dirty, locked := 0, 0, 0
@@ -175,7 +175,7 @@ func (m Model) viewMenu() string {
 	}
 
 	b.WriteString("\n")
-	b.WriteString(separator(m.width))
+	b.WriteString(viewSeparator(m.width))
 	b.WriteString("\n\n")
 
 	for i, item := range m.menuItems {
@@ -203,7 +203,7 @@ func (m Model) viewMenu() string {
 	}
 
 	b.WriteString("\n")
-	b.WriteString(separator(m.width))
+	b.WriteString(viewSeparator(m.width))
 	b.WriteString("\n\n")
 	b.WriteString(styleDim.Render("  j/k navigate \u00b7 enter select \u00b7 q quit"))
 	b.WriteString("\n")
