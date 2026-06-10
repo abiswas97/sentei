@@ -1,0 +1,19 @@
+internal/repo/create.go
+  s_8e2c58024a52e1::t_9ed1d8405b8cb5 188
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "e8c05dc66d127d4a31f2d51c06a43c2d07ecf3eb",
+  "prompts": {},
+  "sessions": {
+    "s_8e2c58024a52e1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ce6ce258-0f38-4b1c-9b68-41415998356e",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Test <t@t.com>"
+    }
+  }
+}
