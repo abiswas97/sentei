@@ -71,6 +71,12 @@ func ValidateRepository(runner CommandRunner, repoPath string) error {
 	return nil
 }
 
+// BranchExists reports whether a local branch exists in the repository.
+func BranchExists(runner CommandRunner, repoPath, branch string) bool {
+	_, err := runner.Run(repoPath, "show-ref", "--verify", "refs/heads/"+branch)
+	return err == nil
+}
+
 func ListWorktrees(runner CommandRunner, repoPath string) ([]Worktree, error) {
 	if err := ValidateRepository(runner, repoPath); err != nil {
 		return nil, err
