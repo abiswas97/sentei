@@ -41,7 +41,7 @@ func (m Model) viewSummary() string {
 	if r.FailureCount == 0 {
 		fmt.Fprintf(&b, "  %s %s\n",
 			styleIndicatorDone.Render(indicatorDone),
-			styleSuccess.Render(fmt.Sprintf("%d worktree(s) removed successfully", r.SuccessCount)))
+			styleSuccess.Render(fmt.Sprintf("%d %s removed successfully", r.SuccessCount, pluralize(r.SuccessCount, "worktree", "worktrees"))))
 	} else {
 		fmt.Fprintf(&b, "  %s, %s\n",
 			styleSuccess.Render(fmt.Sprintf("%d removed", r.SuccessCount)),
@@ -76,16 +76,16 @@ func (m Model) viewSummary() string {
 			b.WriteString(styleDim.Render("  Cleanup:"))
 			b.WriteString("\n")
 			if cr.StaleRefsRemoved > 0 {
-				fmt.Fprintf(&b, "    %s Pruned %d remote ref(s)\n", styleIndicatorDone.Render(indicatorDone), cr.StaleRefsRemoved)
+				fmt.Fprintf(&b, "    %s Pruned %d remote %s\n", styleIndicatorDone.Render(indicatorDone), cr.StaleRefsRemoved, pluralize(cr.StaleRefsRemoved, "ref", "refs"))
 			}
 			if cr.ConfigDedupResult.Removed > 0 {
-				fmt.Fprintf(&b, "    %s Removed %d config duplicates\n", styleIndicatorDone.Render(indicatorDone), cr.ConfigDedupResult.Removed)
+				fmt.Fprintf(&b, "    %s Removed %d config %s\n", styleIndicatorDone.Render(indicatorDone), cr.ConfigDedupResult.Removed, pluralize(cr.ConfigDedupResult.Removed, "duplicate", "duplicates"))
 			}
 			if cr.GoneBranchesDeleted > 0 {
-				fmt.Fprintf(&b, "    %s Deleted %d branch(es) with gone upstream\n", styleIndicatorDone.Render(indicatorDone), cr.GoneBranchesDeleted)
+				fmt.Fprintf(&b, "    %s Deleted %d %s with gone upstream\n", styleIndicatorDone.Render(indicatorDone), cr.GoneBranchesDeleted, pluralize(cr.GoneBranchesDeleted, "branch", "branches"))
 			}
 			if cr.ConfigOrphanResult.Removed > 0 {
-				fmt.Fprintf(&b, "    %s Removed %d orphaned config section(s)\n", styleIndicatorDone.Render(indicatorDone), cr.ConfigOrphanResult.Removed)
+				fmt.Fprintf(&b, "    %s Removed %d orphaned config %s\n", styleIndicatorDone.Render(indicatorDone), cr.ConfigOrphanResult.Removed, pluralize(cr.ConfigOrphanResult.Removed, "section", "sections"))
 			}
 		}
 		if cr.NonWtBranchesRemaining > 0 {
