@@ -1,0 +1,25 @@
+internal/cleanup/dryrun.go
+  s_dd70ced0a890b0::t_b7b37cbe7d175b 120
+  s_dd70ced0a890b0::t_f4078d7c74a828 128-148
+internal/cleanup/dryrun_test.go
+  s_dd70ced0a890b0::t_67554e8f3afff7 4
+  s_dd70ced0a890b0::t_2ecc576946c564 34-39
+  s_dd70ced0a890b0::t_a6798692f4f937 69-77,79-102
+  s_dd70ced0a890b0::t_3f6725df6e94be 78
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "ebac38b909bcbdc490eadf928e501c5aaa9def13",
+  "prompts": {},
+  "sessions": {
+    "s_dd70ced0a890b0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "1d4c7900-8a46-4b76-a13e-5f766c2a5f97",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Test <t@t.com>"
+    }
+  }
+}
