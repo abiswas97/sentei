@@ -11,4 +11,4 @@
 
 - [x] 2.1 Full gauntlet; playground: ? on integrations opens portal with all sections, esc restores, h/l swallowed
 - [x] 2.2 .impeccable.md Dialogs section + decision log updated
-- [ ] 2.3 PR refactor/portal-absorb, CI green, merge, cleanup, archive
+- [x] 2.3 PR refactor/portal-absorb, CI green, merge, cleanup, archive
