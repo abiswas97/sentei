@@ -34,9 +34,11 @@ func (m Model) updateIntegrationProgress(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, m.finalizeIntegrationApply()
 
 	case integrationFinalizedMsg:
+		finalSync := m.syncProgressBar()
 		// The migrate flow has its own summary; hand off unchanged.
 		if m.integ.returnView == migrateNextView {
-			return m.holdOrAdvance(migrateNextView)
+			updated, holdCmd := m.holdOrAdvance(migrateNextView)
+			return updated, tea.Batch(finalSync, holdCmd)
 		}
 		// In-memory current/staged are never mutated here: dismissing the
 		// summary reloads them from persisted state, so the list always
@@ -45,9 +47,10 @@ func (m Model) updateIntegrationProgress(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.err == nil {
 			m.worktreeGeneration++
 			updated, holdCmd := m.holdOrAdvance(integrationSummaryView)
-			return updated, tea.Batch(holdCmd, loadWorktreeContext(m.runner, m.repoPath, m.worktreeGeneration))
+			return updated, tea.Batch(finalSync, holdCmd, loadWorktreeContext(m.runner, m.repoPath, m.worktreeGeneration))
 		}
-		return m.holdOrAdvance(integrationSummaryView)
+		updated, holdCmd := m.holdOrAdvance(integrationSummaryView)
+		return updated, tea.Batch(finalSync, holdCmd)
 	}
 	return m, nil
 }

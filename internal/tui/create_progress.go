@@ -22,20 +22,22 @@ func (m Model) updateCreateProgress(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case createCompleteMsg:
 		m.create.result = &msg.Result
 		m.worktreeGeneration++
+		syncCmd := m.syncProgressBar()
 		updated, holdCmd := m.holdOrAdvance(createSummaryView)
-		return updated, tea.Batch(holdCmd, loadWorktreeContext(m.runner, m.repoPath, m.worktreeGeneration))
+		return updated, tea.Batch(syncCmd, holdCmd, loadWorktreeContext(m.runner, m.repoPath, m.worktreeGeneration))
 	}
 	return m, nil
 }
 
 func (m Model) createLayout() ProgressLayout {
 	return ProgressLayout{
-		Title:    "Creating Worktree",
-		Subtitle: fmt.Sprintf("%s \u2192 from %s", m.create.branchInput.Value(), m.create.baseInput.Value()),
-		Phases:   withPendingPhases(buildPhaseDisplays(m.create.events), "Setup", "Dependencies", "Integrations"),
-		Width:    m.width,
-		Height:   m.height,
-		Hints:    progressFooter,
+		Title:     "Creating Worktree",
+		Completed: m.create.result != nil,
+		Subtitle:  fmt.Sprintf("%s \u2192 from %s", m.create.branchInput.Value(), m.create.baseInput.Value()),
+		Phases:    withPendingPhases(buildPhaseDisplays(m.create.events), "Setup", "Dependencies", "Integrations"),
+		Width:     m.width,
+		Height:    m.height,
+		Hints:     progressFooter,
 	}
 }
 
