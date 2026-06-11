@@ -4,7 +4,7 @@
 TBD - created by archiving change detail-portal-component. Update Purpose after archive.
 ## Requirements
 ### Requirement: DetailPortal renders scrollable overlay
-The system SHALL provide a `DetailPortal` component that renders pre-formatted content in a scrollable viewport composited centered over the current background view (in-repo ANSI-aware overlay helper).
+The system SHALL provide a `DetailPortal` component that renders pre-formatted content in a scrollable viewport composited centered over the current background view using lipgloss cell-accurate layer compositing, with no background glyphs bleeding through the overlay region.
 
 #### Scenario: Portal displayed over background
 - **WHEN** the portal is opened with content and the current view is the removal progress view
@@ -17,6 +17,11 @@ The system SHALL provide a `DetailPortal` component that renders pre-formatted c
 #### Scenario: Short content fits without scrolling
 - **WHEN** the portal content fits within the viewport
 - **THEN** no scroll indicators SHALL be shown
+
+#### Scenario: No background bleed-through
+- **WHEN** the portal is open over a list with an active cursor row
+- **THEN** no background glyph (including the cursor marker) SHALL appear inside or beside the portal box region
+
 
 ### Requirement: Portal chrome
 The portal SHALL render with consistent chrome: a title bar at the top, scroll indicator when scrollable, and a key hints line at the bottom.

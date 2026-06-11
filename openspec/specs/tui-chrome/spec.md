@@ -122,7 +122,7 @@ The system SHALL provide a `viewStatLine(stats WindowStats) string` function tha
 - **THEN** that category SHALL be omitted from the stat line
 
 ### Requirement: Styled overall progress bar
-The system SHALL render the overall progress bar with the filled portion in the accent color and the unfilled track in dim; the percentage label SHALL use the default foreground and SHALL reflect actual completed progress. In live progress views the bar fill SHALL animate smoothly (spring easing) toward each new completion target rather than jumping; a dim `elapsed Ns` readout SHALL render beside the bar. A bar SHALL never render uncolored.
+The system SHALL render the overall progress bar with the filled portion in the accent color and the unfilled track in dim; the percentage label SHALL use the default foreground and SHALL reflect the displayed fill, so the bar and its label never disagree. Actual completion counts SHALL remain visible in the phase headers. In live progress views the bar fill SHALL animate smoothly (spring easing) toward each new completion target and SHALL visibly settle at the target within the completion hold; a dim `elapsed Ns` readout SHALL render beside the bar. A bar SHALL never render uncolored.
 
 #### Scenario: Bar colors
 - **WHEN** a progress view renders a bar at 53%
@@ -132,13 +132,18 @@ The system SHALL render the overall progress bar with the filled portion in the 
 - **WHEN** the done count exceeds the total for any reason
 - **THEN** the bar SHALL clamp to 100% and never panic on a negative repeat count
 
-#### Scenario: Animation toward target
-- **WHEN** a step completes and the overall target moves from 40% to 50%
-- **THEN** subsequent animation frames SHALL move the fill toward 50% while the percentage text reads the actual 50%
+#### Scenario: Label follows the fill
+- **WHEN** the fill is easing through 40% toward a 100% target
+- **THEN** the label SHALL read 40%, and the phase headers SHALL state the actual completion counts
+
+#### Scenario: Completion settles within the hold
+- **WHEN** a flow completes and the view holds before transitioning
+- **THEN** the bar SHALL visibly reach a full fill with a 100% label during the hold
 
 #### Scenario: Elapsed readout
 - **WHEN** a progress flow has been running for 12 seconds
 - **THEN** the bar line SHALL include a dim `elapsed 12s` readout
+
 
 ### Requirement: Ellipsis truncation for overflowing text
 The system SHALL provide a truncation helper used wherever paths, branch names, or error messages can exceed the available width, cutting the string to fit with a trailing `…`. Raw hard clipping at the terminal edge SHALL NOT occur in chrome-rendered content.
@@ -151,3 +156,18 @@ The system SHALL provide a truncation helper used wherever paths, branch names, 
 - **WHEN** the text fits within the available width
 - **THEN** it SHALL render unchanged with no ellipsis
 
+
+### Requirement: Progress flows end truthfully
+When a progress flow completes, its layout SHALL reach a coherent terminal state before transitioning: the overall bar's final target SHALL be 100%, and any phase that never discovered work SHALL render as a dim `– <Name>  skipped` line and SHALL NOT count as outstanding work. Quitting the application from a live progress view SHALL print a one-line stderr notice naming the interrupted operation.
+
+#### Scenario: No-work phases at completion
+- **WHEN** a worktree creation completes with no dependencies or integrations enabled
+- **THEN** those phases SHALL read `– skipped` (dim) and the overall bar SHALL target and settle at 100%
+
+#### Scenario: Mid-run pending unchanged
+- **WHEN** the same phases have not yet run while the flow is still in flight
+- **THEN** they SHALL keep the existing `· pending` treatment and count as outstanding
+
+#### Scenario: Quit leaves a trace
+- **WHEN** the user quits during repository creation
+- **THEN** stderr SHALL carry a warning naming the interrupted operation after exit
