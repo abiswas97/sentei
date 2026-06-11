@@ -140,7 +140,7 @@ func TestTruncateWithEllipsis(t *testing.T) {
 
 func TestViewStatLine_Standard(t *testing.T) {
 	got := stripANSI(viewStatLine(WindowStats{Done: 10, Active: 3, Pending: 17, Showing: 6, Total: 30}, indicatorActiveFallback))
-	want := "    ● 10 done  ∙ 3 active  · 17 pending  showing 6 of 30"
+	want := "    ✦ 10 done  ✻ 3 active  · 17 pending  showing 6 of 30"
 	if got != want {
 		t.Errorf("viewStatLine = %q, want %q", got, want)
 	}

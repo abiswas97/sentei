@@ -113,10 +113,10 @@ func (m Model) viewCreateRepoSummary(result repo.CreateResult) string {
 
 	if ghFailed {
 		fmt.Fprintf(&b, "  %s %s ready (local only)\n\n",
-			styleIndicatorDone.Render(indicatorSuccess), repoName)
+			styleIndicatorDone.Render(indicatorDone), repoName)
 	} else {
 		fmt.Fprintf(&b, "  %s %s ready\n\n",
-			styleIndicatorDone.Render(indicatorSuccess), repoName)
+			styleIndicatorDone.Render(indicatorDone), repoName)
 	}
 
 	fmt.Fprintf(&b, "    %-10s %s\n", styleDim.Render("Path"), result.RepoPath)
@@ -183,7 +183,7 @@ func (m Model) viewCloneRepoSummary(result repo.CloneResult) string {
 	}
 
 	fmt.Fprintf(&b, "  %s %s ready\n\n",
-		styleIndicatorDone.Render(indicatorSuccess), repoName)
+		styleIndicatorDone.Render(indicatorDone), repoName)
 
 	fmt.Fprintf(&b, "    %-10s %s\n", styleDim.Render("Path"), result.RepoPath)
 	fmt.Fprintf(&b, "    %-10s %s\n", styleDim.Render("Branch"), result.DefaultBranch)
