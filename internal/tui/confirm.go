@@ -158,7 +158,7 @@ func (m Model) viewConfirm() string {
 			label = styleWarning.Render("[^] commits not on any remote")
 			unpushedCount++
 		default:
-			label = styleSuccess.Render("(clean)")
+			label = styleStatusClean.Render("[ok]") + " clean"
 		}
 
 		fmt.Fprintf(&b, "    %s %s\n", branch, label)
@@ -213,7 +213,7 @@ func (m Model) viewConfirm() string {
 	b.WriteString("\n")
 	b.WriteString(viewSeparator(m.width))
 	b.WriteString("\n\n")
-	b.WriteString(viewFooter(m.width, confirmFooter) + "\n")
+	b.WriteString(viewFooterDanger(m.width, confirmFooter) + "\n")
 
 	return b.String()
 }

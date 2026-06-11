@@ -107,7 +107,11 @@ func (m Model) viewRepoName() string {
 	b.WriteString(viewSeparator(m.width))
 	b.WriteString("\n\n")
 
-	b.WriteString("  Repository name\n")
+	if m.repo.focusedField == 0 {
+		b.WriteString(styleAccent.Render("  Repository name") + "\n")
+	} else {
+		b.WriteString("  Repository name\n")
+	}
 	if m.repo.focusedField == 0 {
 		b.WriteString("  " + m.repo.nameInput.View())
 	} else {
@@ -119,7 +123,11 @@ func (m Model) viewRepoName() string {
 	}
 	b.WriteString("\n\n")
 
-	b.WriteString("  Location\n")
+	if m.repo.focusedField == 1 {
+		b.WriteString(styleAccent.Render("  Location") + "\n")
+	} else {
+		b.WriteString("  Location\n")
+	}
 	if m.repo.focusedField == 1 {
 		b.WriteString("  " + m.repo.locationInput.View())
 	} else {

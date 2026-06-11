@@ -246,7 +246,7 @@ func (m Model) viewIntegrationList() string {
 	for i, integ := range m.integ.integrations {
 		cursor := "  "
 		if i == m.integ.cursor {
-			cursor = "> "
+			cursor = "▸ "
 		}
 
 		staged := m.integ.staged[integ.Name]
@@ -259,13 +259,14 @@ func (m Model) viewIntegrationList() string {
 		case !staged && current:
 			checkbox = styleStagedRemove.Render("[-]")
 		case staged && current:
-			checkbox = styleCheckboxOn.Render("[x]")
+			// Settled state stays neutral; green is reserved for staged adds.
+			checkbox = "[x]"
 		default:
 			checkbox = styleCheckboxOff.Render("[ ]")
 		}
 
 		if i == m.integ.cursor {
-			b.WriteString(styleAccent.Render(cursor) + checkbox + " " + integ.Name)
+			b.WriteString(styleAccent.Render(cursor) + checkbox + " " + styleAccent.Render(integ.Name))
 		} else {
 			b.WriteString("  " + checkbox + " " + integ.Name)
 		}
@@ -280,19 +281,21 @@ func (m Model) viewIntegrationList() string {
 
 	b.WriteString("\n")
 
+	// The pending line is always reserved so the chrome below never shifts
+	// while the user toggles.
 	pending := m.pendingChangeCount()
 	if pending > 0 {
 		b.WriteString(styleAccent.Render(fmt.Sprintf("  %d %s pending",
 			pending, pluralize(pending, "change", "changes"))))
-		b.WriteString("\n")
 	}
+	b.WriteString("\n")
 
 	b.WriteString("\n")
 	b.WriteString(viewSeparator(m.width))
 	b.WriteString("\n\n")
 
 	legend := fmt.Sprintf("  %s active  %s inactive  %s adding  %s removing",
-		styleCheckboxOn.Render("[x]"),
+		"[x]",
 		styleCheckboxOff.Render("[ ]"),
 		styleStagedAdd.Render("[+]"),
 		styleStagedRemove.Render("[-]"),
