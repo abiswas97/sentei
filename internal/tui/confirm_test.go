@@ -29,7 +29,7 @@ func TestViewConfirm_CleanWorktrees(t *testing.T) {
 
 	output := stripAnsi(m.viewConfirm())
 
-	if !strings.Contains(output, "delete 2 worktree(s)") {
+	if !strings.Contains(output, "delete 2 worktrees") {
 		t.Error("should mention count of worktrees")
 	}
 	if !strings.Contains(output, "feature-a") {
@@ -350,7 +350,7 @@ func TestViewConfirm_UnpushedWarning(t *testing.T) {
 	view := stripANSI(m.viewConfirm())
 	for _, want := range []string{
 		"[^] commits not on any remote",
-		"⚠ 1 worktree(s) have commits not pushed to any remote",
+		"⚠ 1 worktree with commits not pushed to any remote",
 	} {
 		if !strings.Contains(view, want) {
 			t.Errorf("missing %q:\n%s", want, view)

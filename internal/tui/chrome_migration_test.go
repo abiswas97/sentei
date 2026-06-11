@@ -107,7 +107,7 @@ func TestViewSummary_DoneMarkerAndNoEmptyCleanupHeader(t *testing.T) {
 	m.view = summaryView
 
 	view := stripANSI(m.viewSummary())
-	if !strings.Contains(view, "● 2 worktree(s) removed successfully") {
+	if !strings.Contains(view, "● 2 worktrees removed successfully") {
 		t.Errorf("expected ● success marker, view:\n%s", view)
 	}
 	if strings.Contains(view, "Cleanup:") {
@@ -118,6 +118,41 @@ func TestViewSummary_DoneMarkerAndNoEmptyCleanupHeader(t *testing.T) {
 	}
 	if strings.Contains(view, " v ") {
 		t.Errorf("legacy \"v\" marker must be gone, view:\n%s", view)
+	}
+}
+
+func TestViewSummary_CleanupLinesPluralizeSingular(t *testing.T) {
+	m := NewModel(nil, nil, "/repo")
+	m.width = 80
+	m.remove.run = newRemovalRun(nil)
+	m.remove.run.result.SuccessCount = 1
+	m.remove.run.cleanupResult = &cleanup.Result{
+		StaleRefsRemoved:    1,
+		GoneBranchesDeleted: 1,
+		ConfigDedupResult:   cleanup.ConfigResult{Removed: 1},
+		ConfigOrphanResult:  cleanup.ConfigResult{Removed: 1},
+	}
+	m.view = summaryView
+
+	view := stripANSI(m.viewSummary())
+
+	for _, want := range []string{
+		"1 worktree removed successfully",
+		"Pruned 1 remote ref",
+		"Removed 1 config duplicate",
+		"Deleted 1 branch with gone upstream",
+		"Removed 1 orphaned config section",
+	} {
+		if !strings.Contains(view, want) {
+			t.Errorf("expected singular %q, view:\n%s", want, view)
+		}
+	}
+	// Singular nouns are prefixes of their plurals, so guard against the naive
+	// always-plural regression explicitly.
+	for _, plural := range []string{"worktrees removed", "remote refs", "config duplicates", "branches with gone", "config sections"} {
+		if strings.Contains(view, plural) {
+			t.Errorf("count of 1 must not read as plural %q, view:\n%s", plural, view)
+		}
 	}
 }
 
