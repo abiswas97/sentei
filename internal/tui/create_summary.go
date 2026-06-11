@@ -54,7 +54,7 @@ func (m Model) viewCreateSummary() string {
 			styleIndicatorWarning.Render(indicatorWarning), branch)
 	} else {
 		fmt.Fprintf(&b, "  %s %s ready\n\n",
-			styleIndicatorDone.Render(indicatorSuccess), branch)
+			styleIndicatorDone.Render(indicatorDone), branch)
 	}
 
 	fmt.Fprintf(&b, "    %-10s %s\n", styleDim.Render("Path"), truncateWithEllipsis(wtPath, max(m.width-16, 20)))

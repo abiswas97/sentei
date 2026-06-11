@@ -56,7 +56,7 @@ func TestProgressLayout_CompletedPhaseCollapses(t *testing.T) {
 	}
 	view := stripANSI(l.View())
 
-	if !strings.Contains(view, "● Setup  2/2  100%") {
+	if !strings.Contains(view, "✦ Setup  2/2  100%") {
 		t.Errorf("expected collapsed completed phase, view:\n%s", view)
 	}
 	if strings.Contains(view, "Create worktree") {
@@ -97,10 +97,10 @@ func TestProgressLayout_ActivePhaseShowsSteps(t *testing.T) {
 	}
 	view := stripANSI(l.View())
 
-	if !strings.Contains(view, "∙ Removing worktrees  12/30  40%") {
+	if !strings.Contains(view, "✻ Removing worktrees  12/30  40%") {
 		t.Errorf("expected active phase header with indicator left and count/pct, view:\n%s", view)
 	}
-	for _, want := range []string{"    ● done-step", "    ∙ active-step", "    · pending-step"} {
+	for _, want := range []string{"    ✦ done-step", "    ✻ active-step", "    · pending-step"} {
 		if !strings.Contains(view, want) {
 			t.Errorf("expected 4-space indented step %q, view:\n%s", want, view)
 		}
