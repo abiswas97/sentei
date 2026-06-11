@@ -72,10 +72,12 @@ func (m Model) updateCreateBranch(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.create.focusedField == 0 {
 				m.create.focusedField = 1
 				m.create.branchInput.Blur()
+				m.create.baseInput.CursorEnd()
 				return m, m.create.baseInput.Focus()
 			}
 			m.create.focusedField = 0
 			m.create.baseInput.Blur()
+			m.create.branchInput.CursorEnd()
 			return m, m.create.branchInput.Focus()
 
 		case key.Matches(msg, keys.QuickCreate):

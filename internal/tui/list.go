@@ -300,6 +300,16 @@ func (m Model) viewList() string {
 	if !m.remove.sortAscending {
 		arrow = " ▼"
 	}
+	// The Age column displays elapsed time, which runs opposite to the
+	// commit-date sort underneath: date-ascending means the largest ages
+	// first. The arrow describes what the eye sees, so Age flips it.
+	if m.remove.sortField == SortByAge {
+		if arrow == " ▲" {
+			arrow = " ▼"
+		} else {
+			arrow = " ▲"
+		}
+	}
 	hdrBranch := "Branch"
 	hdrAge := "Age"
 	hdrSubject := "Subject"
