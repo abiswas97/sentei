@@ -112,7 +112,9 @@ func orderOutcomesFailuresFirst(groups []integrationWorktreeOutcomes) []integrat
 // renderIntegrationOutcomes writes the per-worktree breakdown to b: a worktree
 // header followed by a `✦`/`✗` line per resolved step. Shared by the inline
 // summary peek and the detail portal.
-func renderIntegrationOutcomes(b *strings.Builder, groups []integrationWorktreeOutcomes) {
+// width bounds failure peeks; width <= 0 renders the full untrimmed error
+// (the detail portal's mode — nothing is lost, only deferred).
+func renderIntegrationOutcomes(b *strings.Builder, groups []integrationWorktreeOutcomes, width int) {
 	for _, g := range groups {
 		fmt.Fprintf(b, "  %s\n", filepath.Base(g.worktree))
 		for _, s := range g.steps {
@@ -120,11 +122,24 @@ func renderIntegrationOutcomes(b *strings.Builder, groups []integrationWorktreeO
 			case integration.StatusDone:
 				fmt.Fprintf(b, "    %s %s\n", styleIndicatorDone.Render(indicatorDone), s.step)
 			case integration.StatusFailed:
-				line := fmt.Sprintf("    %s %s", styleIndicatorFailed.Render(indicatorFailed), s.step)
-				if s.ev.Error != nil {
-					line += " " + styleError.Render(s.ev.Error.Error())
+				fmt.Fprintf(b, "    %s %s\n", styleIndicatorFailed.Render(indicatorFailed), s.step)
+				if s.ev.Error == nil {
+					continue
 				}
-				b.WriteString(line + "\n")
+				if width <= 0 {
+					for _, line := range nonEmptyLines(s.ev.Error.Error()) {
+						fmt.Fprintf(b, "      %s\n", styleError.Render(line))
+					}
+					continue
+				}
+				peek := errorPeekLines(s.ev.Error.Error(), max(width-8, 20))
+				for i, line := range peek {
+					style := styleDim
+					if i == 1 || len(peek) == 1 {
+						style = styleError
+					}
+					fmt.Fprintf(b, "      %s\n", style.Render(line))
+				}
 			}
 		}
 		b.WriteString("\n")
@@ -132,14 +147,15 @@ func renderIntegrationOutcomes(b *strings.Builder, groups []integrationWorktreeO
 }
 
 // integrationSummaryDetailContent renders the full per-worktree breakdown for
-// the detail portal, exposed only when outcomes overflow the inline peek.
+// the detail portal, exposed when outcomes overflow the inline peek or any
+// failure carries error output (the inline peek promises "? for full output").
 func (m Model) integrationSummaryDetailContent() (string, string) {
 	groups := orderOutcomesFailuresFirst(groupIntegrationEvents(m.integ.events))
-	if len(groups) <= inlineSummaryPreview {
+	if len(groups) <= inlineSummaryPreview && !outcomesHaveErrorOutput(groups) {
 		return "", ""
 	}
 	var b strings.Builder
-	renderIntegrationOutcomes(&b, groups)
+	renderIntegrationOutcomes(&b, groups, 0)
 	return "Apply Details", strings.TrimRight(b.String(), "\n")
 }
 
@@ -175,7 +191,7 @@ func (m Model) viewIntegrationSummary() string {
 	b.WriteString("\n\n")
 
 	shown := min(len(groups), inlineSummaryPreview)
-	renderIntegrationOutcomes(&b, groups[:shown])
+	renderIntegrationOutcomes(&b, groups[:shown], m.width)
 	if rest := len(groups) - shown; rest > 0 {
 		b.WriteString(styleDim.Render(fmt.Sprintf("  and %d more %s — ? for details",
 			rest, pluralize(rest, "worktree", "worktrees"))))
@@ -185,7 +201,7 @@ func (m Model) viewIntegrationSummary() string {
 	b.WriteString(viewSeparator(m.width))
 	b.WriteString("\n\n")
 	hints := []key.Binding{integrationsOpenHint}
-	if len(groups) > shown {
+	if len(groups) > shown || outcomesHaveErrorOutput(groups) {
 		hints = append(hints, detailsHint)
 	}
 	hints = append(hints, keys.Quit)
@@ -193,4 +209,17 @@ func (m Model) viewIntegrationSummary() string {
 	b.WriteString("\n")
 
 	return b.String()
+}
+
+// outcomesHaveErrorOutput reports whether any failed step carries error text
+// worth a portal visit.
+func outcomesHaveErrorOutput(groups []integrationWorktreeOutcomes) bool {
+	for _, g := range groups {
+		for _, s := range g.steps {
+			if s.ev.Status == integration.StatusFailed && s.ev.Error != nil {
+				return true
+			}
+		}
+	}
+	return false
 }

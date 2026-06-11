@@ -136,7 +136,9 @@ func DisableIntegration(
 func detectTool(shell git.ShellRunner, wtPath string, integ Integration) bool {
 	cmd := integ.Detect.Command
 	if cmd == "" && integ.Detect.BinaryName != "" {
-		cmd = integ.Detect.BinaryName + " --version"
+		// Presence, not flags: not every CLI implements --version (ccc
+		// exits 2), and a tool installed by any manager must be detected.
+		cmd = "command -v " + integ.Detect.BinaryName
 	}
 	if cmd == "" {
 		return false
