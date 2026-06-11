@@ -1,0 +1,23 @@
+internal/tui/create_branch.go
+  s_e079bea5665c1d::t_1b988f1678a3cc 185
+internal/tui/list.go
+  s_e079bea5665c1d::t_6fdcd124180f2b 497,503-504,506-512
+  s_e079bea5665c1d::t_7e1d23e8bd4628 401-403,405-428,437,452
+  s_e079bea5665c1d::t_0fc71b004bf8c2 313-325,330-331,337-340,343-348,389-393,395-398
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "1d743b06abd7d7c0370c4184150e1cbda83f6a05",
+  "prompts": {},
+  "sessions": {
+    "s_e079bea5665c1d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e853bef1-293d-4109-b048-273e59305a6e",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Test <t@t.com>"
+    }
+  }
+}
