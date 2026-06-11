@@ -62,11 +62,11 @@ The TUI SHALL allow selecting and deselecting individual worktrees with spacebar
 - **THEN** all currently visible non-protected worktrees SHALL become deselected
 
 ### Requirement: Status bar
-The TUI SHALL display a status bar at the bottom showing the count of selected worktrees, filter state, available key bindings, and a status indicator legend. The sort indicator SHALL appear in the column headers (not the status bar). The legend SHALL appear on a separate line below the keybindings line. When filter mode is active, the legend line SHALL be replaced with contextual key hints (`enter: apply | esc: cancel`).
+The TUI SHALL display a status bar at the bottom showing the count of selected worktrees, filter state, available key bindings, and a status indicator legend. The sort indicator SHALL appear in the column headers (not the status bar). The legend SHALL appear on a separate line below the keybindings line. When filter mode is active, the legend line SHALL be replaced with contextual key hints (`enter: apply | esc: cancel`). The key hints SHALL derive from the list view's bindings declared in `keys.go` and SHALL include `?` (details) so the detail portal is discoverable. The hint subset is curated to fit the 80-column minimum beside the selection-count prefix; select-all and sort remain documented in the help sections.
 
 #### Scenario: Status bar content
 - **WHEN** 3 worktrees are selected and no filter is active
-- **THEN** the status bar SHALL display the selection count and key hints (space: toggle, a: all, enter: delete, /: filter, s: sort, q: quit)
+- **THEN** the status bar SHALL display the selection count and key hints (space: toggle, enter: delete, /: filter, ?: details, q: quit) within 80 columns
 
 #### Scenario: Status bar with active filter
 - **WHEN** a filter is applied with text "feat" matching 5 of 12 worktrees
@@ -83,6 +83,10 @@ The TUI SHALL display a status bar at the bottom showing the count of selected w
 #### Scenario: Legend replaced during filter mode
 - **WHEN** the user is actively typing in the filter input
 - **THEN** the legend line SHALL be replaced with `enter: apply | esc: cancel` in dimmed style
+
+#### Scenario: Portal discoverable from the status bar
+- **WHEN** the list view status bar is rendered with no active filter
+- **THEN** it SHALL include a `?` hint derived from the details binding
 
 ### Requirement: Quit the application
 The TUI SHALL exit when the user presses 'q' or Ctrl+C from the list view. The `esc` key SHALL be context-dependent: it clears an active filter first, then quits on a subsequent press.

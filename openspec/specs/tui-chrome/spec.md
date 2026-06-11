@@ -26,15 +26,19 @@ The system SHALL provide a `viewSeparator(width int) string` function that rende
 - **THEN** the output SHALL fall back to a default width of 40
 
 ### Requirement: Key hints rendering
-The system SHALL provide a `viewKeyHints(hints ...KeyHint) string` function that renders key-action pairs separated by ` · ` in gray (color 241) with 2-space left padding.
+The system SHALL render view footers from `key.Binding` sets via `bubbles/help`, through a `viewFooter` helper that produces key-action pairs separated by ` · ` in the dim palette token with 2-space left padding. Render sites SHALL pass bindings declared in `keys.go`, never raw key or label strings.
 
 #### Scenario: Multiple hints
-- **WHEN** `viewKeyHints(KeyHint{"enter", "confirm"}, KeyHint{"esc", "back"}, KeyHint{"q", "quit"})` is called
-- **THEN** the output SHALL render `  enter confirm · esc back · q quit` in gray styling
+- **WHEN** a footer is rendered for bindings (enter "confirm"), (esc "back"), (q "quit")
+- **THEN** the output SHALL render `  enter confirm · esc back · q quit` in dim styling
 
 #### Scenario: Single hint
-- **WHEN** `viewKeyHints(KeyHint{"q", "quit"})` is called
+- **WHEN** a footer is rendered for the single binding (q "quit")
 - **THEN** the output SHALL render `  q quit` with no separator
+
+#### Scenario: Narrow width truncates gracefully
+- **WHEN** the hint row exceeds the available terminal width
+- **THEN** trailing hints SHALL be dropped with an ellipsis rather than wrapping or hard-clipping
 
 ### Requirement: Progress layout rendering
 The system SHALL provide a `ProgressLayout` struct with a `View() string` method that renders the standard progress view layout: title, optional subtitle, separator, phases with steps, separator, overall progress bar, and key hints.
