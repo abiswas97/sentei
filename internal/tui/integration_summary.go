@@ -165,7 +165,7 @@ func (m Model) viewIntegrationSummary() string {
 
 	switch failed {
 	case 0:
-		b.WriteString(styleSuccess.Render(fmt.Sprintf("  %s %d %s applied", indicatorDone, applied, pluralize(applied, "step", "steps"))))
+		b.WriteString(styleSuccess.Render(fmt.Sprintf("  %s %d %s applied", indicatorSuccess, applied, pluralize(applied, "step", "steps"))))
 	default:
 		fmt.Fprintf(&b, "  %s, %s",
 			styleSuccess.Render(fmt.Sprintf("%d %s applied", applied, pluralize(applied, "step", "steps"))),

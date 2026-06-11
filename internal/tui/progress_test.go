@@ -228,20 +228,36 @@ func TestHoldOrAdvance_MinDurationNotElapsed_HoldsAndReturnsCmd(t *testing.T) {
 	}
 }
 
-func TestHoldOrAdvance_MinDurationElapsed_TransitionsImmediately(t *testing.T) {
+func TestHoldOrAdvance_MinDurationElapsed_StillSettles(t *testing.T) {
 	m := NewModel([]git.Worktree{}, nil, "/repo")
 	m.minProgressDuration = 1 * time.Millisecond
-	m.progressStartedAt = time.Now().Add(-100 * time.Millisecond) // started 100ms ago
+	m.progressStartedAt = time.Now().Add(-100 * time.Millisecond) // hold long expired
+	m.progressToken = 1
+
+	result, cmd := m.holdOrAdvance(summaryView)
+	model := result.(Model)
+
+	if model.view == summaryView {
+		t.Error("a flow that outlived the hold must not cut away mid-glide")
+	}
+	if cmd == nil {
+		t.Error("expected a settle-floor tick so the bar visibly finishes")
+	}
+}
+
+func TestHoldOrAdvance_NoHold_TransitionsImmediately(t *testing.T) {
+	m := NewModel([]git.Worktree{}, nil, "/repo")
+	m.minProgressDuration = 0
 	m.progressToken = 1
 
 	result, cmd := m.holdOrAdvance(summaryView)
 	model := result.(Model)
 
 	if model.view != summaryView {
-		t.Errorf("expected summaryView when min elapsed, got %d", model.view)
+		t.Errorf("expected immediate transition with holds disabled, got %d", model.view)
 	}
 	if cmd != nil {
-		t.Error("expected nil cmd when min duration already elapsed")
+		t.Error("expected nil cmd with holds disabled")
 	}
 }
 

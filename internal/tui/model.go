@@ -408,14 +408,18 @@ func NewMenuModel(runner git.CommandRunner, shell git.ShellRunner, repoPath stri
 // The caller must store all result state into the model before calling.
 func (m Model) holdOrAdvance(targetView viewState) (tea.Model, tea.Cmd) {
 	m.progressTargetView = targetView
-	if m.minProgressDuration == 0 || time.Since(m.progressStartedAt) >= m.minProgressDuration {
+	if m.minProgressDuration == 0 {
 		m.view = targetView
 		// Leaving the progress view: discard the spring state so the next
 		// flow starts from zero, not easing down from 100%.
 		m.bar = newOverallBar()
+		m.bar.SetWidth(overallBarWidth(m.width))
 		return m, nil
 	}
-	remaining := m.minProgressDuration - time.Since(m.progressStartedAt)
+	// The hold is measured from view entry, so a flow that outlives it
+	// would otherwise cut away mid-glide; the settle floor guarantees the
+	// spring a beat to visibly finish at 100%.
+	remaining := max(m.minProgressDuration-time.Since(m.progressStartedAt), progressSettleFloor)
 	token := m.progressToken
 	return m, tea.Tick(remaining, func(time.Time) tea.Msg {
 		return progressHoldExpiredMsg{token: token}
