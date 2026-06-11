@@ -147,57 +147,6 @@ func TestUpdateIntegrationList_Navigate(t *testing.T) {
 	}
 }
 
-func TestUpdateIntegrationList_InfoOpen(t *testing.T) {
-	m := makeIntegrationModel()
-	m.integ.cursor = 1
-
-	updated, _ := m.updateIntegrationList(keyMsg("?"))
-	m = updated.(Model)
-
-	if !m.integ.showInfo {
-		t.Error("showInfo should be true after ?")
-	}
-	if m.integ.infoCursor != 1 {
-		t.Errorf("infoCursor should match cursor=1, got %d", m.integ.infoCursor)
-	}
-}
-
-func TestUpdateIntegrationList_InfoClose(t *testing.T) {
-	m := makeIntegrationModel()
-	m.integ.showInfo = true
-	m.integ.infoCursor = 0
-
-	escMsg := tea.KeyPressMsg{Code: tea.KeyEsc}
-	updated, _ := m.updateIntegrationList(escMsg)
-	m = updated.(Model)
-
-	if m.integ.showInfo {
-		t.Error("showInfo should be false after esc")
-	}
-}
-
-func TestUpdateIntegrationList_InfoCarousel(t *testing.T) {
-	m := makeIntegrationModel()
-	m.integ.showInfo = true
-	m.integ.infoCursor = 0
-	total := len(m.integ.integrations)
-
-	// Move right
-	updated, _ := m.updateIntegrationList(keyMsg("l"))
-	m = updated.(Model)
-	if m.integ.infoCursor != 1 {
-		t.Errorf("infoCursor should be 1 after l, got %d", m.integ.infoCursor)
-	}
-
-	// Wrap around at end
-	m.integ.infoCursor = total - 1
-	updated, _ = m.updateIntegrationList(keyMsg("l"))
-	m = updated.(Model)
-	if m.integ.infoCursor != 0 {
-		t.Errorf("infoCursor should wrap to 0, got %d", m.integ.infoCursor)
-	}
-}
-
 func TestUpdateIntegrationList_Back(t *testing.T) {
 	m := makeIntegrationModel()
 	// Stage a change so staged != current
@@ -297,47 +246,41 @@ func TestViewIntegrationList_Legend(t *testing.T) {
 	}
 }
 
-func TestRenderIntegrationInfo(t *testing.T) {
+func TestRenderIntegrationsDetail(t *testing.T) {
 	m := makeIntegrationModel()
-	m.integ.showInfo = true
-	m.integ.infoCursor = 0
+	m.portal = m.portal.SetSize(m.width, m.height)
 
-	integ := m.integ.integrations[0]
-	out := stripAnsi(m.renderIntegrationInfo())
-
-	if !strings.Contains(out, integ.Name) {
-		t.Errorf("info should contain integration name %q", integ.Name)
-	}
-	// Description is word-wrapped by lipgloss; check for a meaningful prefix
-	descPrefix := integ.Description[:30]
-	if !strings.Contains(out, descPrefix) {
-		t.Errorf("info should contain description prefix %q", descPrefix)
-	}
-	if integ.URL != "" && !strings.Contains(out, integ.URL) {
-		t.Errorf("info should contain URL %q", integ.URL)
-	}
-	if len(integ.Dependencies) > 0 && !strings.Contains(out, "Dependencies") {
-		t.Errorf("info should contain 'Dependencies' header")
+	out := stripAnsi(m.renderIntegrationsDetail())
+	for _, integ := range m.integ.integrations {
+		if !strings.Contains(out, integ.Name) {
+			t.Errorf("detail page should contain integration name %q", integ.Name)
+		}
+		if !strings.Contains(out, integ.Description[:30]) {
+			t.Errorf("detail page should contain description prefix for %q", integ.Name)
+		}
+		if integ.URL != "" && !strings.Contains(out, integ.URL) {
+			t.Errorf("detail page should contain URL %q", integ.URL)
+		}
+		if len(integ.Dependencies) > 0 && !strings.Contains(out, "Dependencies") {
+			t.Errorf("detail page should contain 'Dependencies' header")
+		}
 	}
 }
 
-func TestRenderIntegrationInfo_DepStatus(t *testing.T) {
+func TestRenderIntegrationsDetail_DepStatus(t *testing.T) {
 	m := makeIntegrationModel()
-	m.integ.showInfo = true
-	m.integ.infoCursor = 0 // code-review-graph has python3.10+ and pipx deps
+	m.portal = m.portal.SetSize(m.width, m.height)
 
-	// python3.10+ is installed
 	m.integ.depStatus["python3.10+"] = true
-	out := stripAnsi(m.renderIntegrationInfo())
+	out := stripAnsi(m.renderIntegrationsDetail())
 	if !strings.Contains(out, "installed") {
-		t.Errorf("info should show 'installed' for present dep, got:\n%s", out)
+		t.Errorf("detail page should show 'installed' for present dep, got:\n%s", out)
 	}
 
-	// pipx is not installed
 	m.integ.depStatus["pipx"] = false
-	out = stripAnsi(m.renderIntegrationInfo())
+	out = stripAnsi(m.renderIntegrationsDetail())
 	if !strings.Contains(out, "will be installed") {
-		t.Errorf("info should show 'will be installed' for missing dep, got:\n%s", out)
+		t.Errorf("detail page should show 'will be installed' for missing dep, got:\n%s", out)
 	}
 }
 

@@ -13,3 +13,8 @@ const (
 	// progressBarWidth is the cell width of the overall progress bar.
 	progressBarWidth = 20
 )
+
+// viewChromeRows is the vertical chrome budget subtracted from the terminal
+// height when sizing scrollable view bodies: title block, separators, and
+// the footer area.
+const viewChromeRows = 6
