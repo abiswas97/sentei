@@ -20,6 +20,8 @@ type palette struct {
 	selected  color.Color // selected rows
 	protected color.Color // protected worktrees
 	muted     color.Color // locked worktrees
+	barStart  color.Color // overall bar gradient, trailing edge
+	barEnd    color.Color // overall bar gradient, leading edge
 }
 
 // The two palettes, selected by terminal background detection (model.go).
@@ -36,6 +38,10 @@ var (
 		selected:  lipgloss.Color("212"),
 		protected: lipgloss.Color("63"),
 		muted:     lipgloss.Color("245"),
+		// Hex twins of accent (62) and selected (212): blends interpolate
+		// in RGB, which indexed ANSI codes cannot do smoothly.
+		barStart: lipgloss.Color("#5f5fd7"),
+		barEnd:   lipgloss.Color("#ff87d7"),
 	}
 
 	lightPalette = palette{
@@ -49,6 +55,9 @@ var (
 		selected:  lipgloss.Color("168"),
 		protected: lipgloss.Color("26"),
 		muted:     lipgloss.Color("243"),
+		// Hex twins of accent (56) and selected (168).
+		barStart: lipgloss.Color("#5f00d7"),
+		barEnd:   lipgloss.Color("#d75f87"),
 	}
 )
 
@@ -66,6 +75,8 @@ var (
 	colorSelected  color.Color
 	colorProtected color.Color
 	colorMuted     color.Color
+	colorBarStart  color.Color
+	colorBarEnd    color.Color
 
 	// UI chrome
 	styleStatusBar lipgloss.Style
@@ -134,6 +145,8 @@ func applyPalette(p palette) {
 	colorSelected = p.selected
 	colorProtected = p.protected
 	colorMuted = p.muted
+	colorBarStart = p.barStart
+	colorBarEnd = p.barEnd
 
 	styleStatusBar = lipgloss.NewStyle().Foreground(colorDim).Padding(1, 0, 0, 0)
 	styleDim = lipgloss.NewStyle().Foreground(colorDim)
@@ -193,8 +206,16 @@ var (
 // Indicator characters
 const (
 	indicatorDone    = "●"
-	indicatorActive  = "◐"
 	indicatorPending = "·"
 	indicatorFailed  = "✗"
 	indicatorWarning = "⚠"
+
+	// indicatorActiveFallback marks live work in pure layouts with no
+	// animation frame injected: the midpoint of the breath cycle.
+	indicatorActiveFallback = "∙"
 )
+
+// breathFrames animate the active indicator: the pending dot inflating
+// toward the done dot and back. Every frame is one cell so status columns
+// stay aligned, and any frozen frame reads as between pending and done.
+var breathFrames = []string{"·", "∙", "●", "∙"}

@@ -35,15 +35,26 @@ type ProgressLayout struct {
 	OverallDone  int
 	OverallTotal int
 
-	// Bar and Elapsed are injected by the model's render path (animated
-	// spring bar, stopwatch readout). Left empty, View falls back to the
-	// static bar with no elapsed line: direct constructions stay pure.
-	Bar     string
-	Elapsed string
+	// Bar, Elapsed, and ActiveGlyph are injected by the model's render path
+	// (animated spring bar, stopwatch readout, breath frame). Left empty,
+	// View falls back to the static bar, no elapsed line, and the static
+	// active-indicator fallback: direct constructions stay pure.
+	Bar         string
+	Elapsed     string
+	ActiveGlyph string
 
 	// Completed marks a flow whose result has arrived: phases that never
 	// discovered work render as skipped and stop counting as outstanding.
 	Completed bool
+}
+
+// activeGlyph returns the styled active indicator: the injected animation
+// frame, or the static fallback for pure constructions.
+func (l ProgressLayout) activeGlyph() string {
+	if l.ActiveGlyph != "" {
+		return l.ActiveGlyph
+	}
+	return styleIndicatorActive.Render(indicatorActiveFallback)
 }
 
 // overall returns the bar's done/total, honoring the explicit override and
@@ -89,7 +100,8 @@ func (l ProgressLayout) View() string {
 	if l.Bar != "" {
 		b.WriteString(l.Bar)
 	} else {
-		b.WriteString(renderProgressBar(l.overall()))
+		done, total := l.overall()
+		b.WriteString(renderProgressBar(done, total, overallBarWidth(l.Width)-progressBarPercentReserve))
 	}
 	if l.Elapsed != "" {
 		b.WriteString("  " + l.Elapsed)
@@ -138,7 +150,7 @@ func (l ProgressLayout) renderPhase(b *strings.Builder, p phaseDisplay, stepBudg
 	if pct > 100 {
 		pct = 100
 	}
-	ind := styleIndicatorActive.Render(indicatorActive)
+	ind := l.activeGlyph()
 	nameStyle := stylePhaseActive
 	if p.failed > 0 {
 		ind = styleIndicatorFailed.Render(indicatorFailed)
@@ -158,7 +170,7 @@ func (l ProgressLayout) renderPhase(b *strings.Builder, p phaseDisplay, stepBudg
 		case pipeline.StepDone, pipeline.StepSkipped:
 			stepInd = styleIndicatorDone.Render(indicatorDone)
 		case pipeline.StepRunning:
-			stepInd = styleIndicatorActive.Render(indicatorActive)
+			stepInd = l.activeGlyph()
 		case pipeline.StepFailed:
 			stepInd = styleIndicatorFailed.Render(indicatorFailed)
 		default:
@@ -169,7 +181,7 @@ func (l ProgressLayout) renderPhase(b *strings.Builder, p phaseDisplay, stepBudg
 	}
 	used := len(window.Steps)
 	if window.Windowed {
-		b.WriteString(viewStatLine(window.Stats))
+		b.WriteString(viewStatLine(window.Stats, l.activeGlyph()))
 		b.WriteString("\n")
 		used++
 	}
@@ -177,13 +189,15 @@ func (l ProgressLayout) renderPhase(b *strings.Builder, p phaseDisplay, stepBudg
 	return used
 }
 
-// newOverallBar constructs the spring-animated overall bar to the chrome
-// contract: 20 cells, block fill characters, percentage rendered by the
-// caller in the default foreground.
+// newOverallBar constructs the spring-animated overall bar: block fill
+// characters, gradient scaled to the filled portion, sized responsively
+// from WindowSizeMsg (the construction width is only the pre-frame floor).
 func newOverallBar() progress.Model {
 	return progress.New(
-		progress.WithWidth(progressBarWidth),
+		progress.WithWidth(minProgressBarWidth),
 		progress.WithFillCharacters('█', '░'),
+		progress.WithColors(colorBarStart, colorBarEnd),
+		progress.WithScaled(true),
 		// Snappy spring: the fill must visibly settle within the 1.5s
 		// completion hold.
 		progress.WithSpringOptions(30, 1),
@@ -244,11 +258,14 @@ func (m *Model) syncProgressBar() tea.Cmd {
 // ease toward it. Bar colors come from the live palette tokens.
 func (m Model) renderProgressLayout(l ProgressLayout) string {
 	bar := m.bar
-	bar.FullColor = colorAccent
+	// Colors re-read the live palette tokens each render: the adaptive
+	// palette can arrive after the bar is constructed.
+	progress.WithColors(colorBarStart, colorBarEnd)(&bar)
 	bar.EmptyColor = colorDim
 	// The native percentage follows the displayed fill, so bar and label
 	// never disagree; the phase headers state actual counts.
 	l.Bar = "  " + bar.View()
 	l.Elapsed = styleDim.Render(fmt.Sprintf("elapsed %ds", int(time.Since(m.progressStartedAt).Seconds())))
+	l.ActiveGlyph = styleIndicatorActive.Render(m.breath.View())
 	return l.View()
 }

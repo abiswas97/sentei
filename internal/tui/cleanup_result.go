@@ -41,7 +41,7 @@ func (m Model) viewCleanupResult() string {
 		b.WriteString("\n\n")
 		b.WriteString(viewSeparator(m.width))
 		b.WriteString("\n\n")
-		fmt.Fprintf(&b, "  %s Running cleanup\u2026\n", styleIndicatorActive.Render(indicatorActive))
+		fmt.Fprintf(&b, "  %s Running cleanup\u2026\n", styleIndicatorActive.Render(m.breath.View()))
 		return b.String()
 	}
 
