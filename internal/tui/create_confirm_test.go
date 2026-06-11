@@ -11,7 +11,7 @@ import (
 )
 
 func makeCreateConfirmModel(opts *CreateOpts) Model {
-	m := NewMenuModel(nil, nil, "/repo", &config.Config{}, repo.ContextBareRepo)
+	m := NewMenuModel(bareDirRunner("/repo"), nil, "/repo", &config.Config{}, repo.ContextBareRepo)
 	if opts != nil {
 		m.SetCreateOpts(opts)
 	} else {
@@ -25,7 +25,7 @@ func makeCreateConfirmModel(opts *CreateOpts) Model {
 }
 
 func TestSetCreateOpts_BranchAndBase_EntersConfirmView(t *testing.T) {
-	m := NewMenuModel(nil, nil, "/repo", &config.Config{}, repo.ContextBareRepo)
+	m := NewMenuModel(bareDirRunner("/repo"), nil, "/repo", &config.Config{}, repo.ContextBareRepo)
 	opts := &CreateOpts{Branch: "feature/foo", Base: "main"}
 	m.SetCreateOpts(opts)
 
@@ -44,7 +44,7 @@ func TestSetCreateOpts_BranchAndBase_EntersConfirmView(t *testing.T) {
 }
 
 func TestSetCreateOpts_OnlyBranch_EntersOptionsView(t *testing.T) {
-	m := NewMenuModel(nil, nil, "/repo", &config.Config{}, repo.ContextBareRepo)
+	m := NewMenuModel(bareDirRunner("/repo"), nil, "/repo", &config.Config{}, repo.ContextBareRepo)
 	opts := &CreateOpts{Branch: "feature/bar"}
 	m.SetCreateOpts(opts)
 
@@ -54,7 +54,7 @@ func TestSetCreateOpts_OnlyBranch_EntersOptionsView(t *testing.T) {
 }
 
 func TestSetCreateOpts_NothingSet_EntersBranchView(t *testing.T) {
-	m := NewMenuModel(nil, nil, "/repo", &config.Config{}, repo.ContextBareRepo)
+	m := NewMenuModel(bareDirRunner("/repo"), nil, "/repo", &config.Config{}, repo.ContextBareRepo)
 	opts := &CreateOpts{}
 	m.SetCreateOpts(opts)
 
