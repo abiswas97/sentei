@@ -1,0 +1,26 @@
+internal/tui/integration_list.go
+  s_e079bea5665c1d::t_7711f52f206cc6 20
+internal/tui/portal.go
+  s_e079bea5665c1d::t_f17b9faf0e1ed2 28
+.impeccable.md
+  s_e079bea5665c1d::t_cd5a6de5c78409 29-34
+  s_e079bea5665c1d::t_db93fbb2348763 14-27
+internal/tui/styles.go
+  s_e079bea5665c1d::t_91c30d9564b45e 7-21,25,29,36,39,42,45,48,55,58,61,64,67,73,77,80,96,100,104,110,113,116,119,122,128,132,135,138,141,144,147
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "cdf19073f0cb1cad635166e2704923ca16ec31fd",
+  "prompts": {},
+  "sessions": {
+    "s_e079bea5665c1d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e853bef1-293d-4109-b048-273e59305a6e",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Test <t@t.com>"
+    }
+  }
+}
