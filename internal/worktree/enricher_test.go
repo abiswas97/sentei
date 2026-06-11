@@ -287,9 +287,9 @@ func TestEnrichWorktree_UnpushedDetection(t *testing.T) {
 		revList      *mock.Response
 		wantUnpushed bool
 	}{
-		{"up to date with upstream", &mock.Response{Output: "0"}, false},
-		{"ahead of upstream", &mock.Response{Output: "2"}, true},
-		{"no tracking branch", nil, true}, // rev-list errors when @{upstream} is unset
+		{"all commits reachable from a remote", &mock.Response{Output: "0"}, false},
+		{"commits reachable from no remote", &mock.Response{Output: "2"}, true},
+		{"probe failure errs toward caution", nil, true}, // rev-list error -> assume unpushed
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -298,7 +298,7 @@ func TestEnrichWorktree_UnpushedDetection(t *testing.T) {
 				responses[k] = v
 			}
 			if tc.revList != nil {
-				responses["/work/feature:[rev-list --count @{upstream}..HEAD]"] = *tc.revList
+				responses["/work/feature:[rev-list --count HEAD --not --remotes]"] = *tc.revList
 			}
 			runner := &mock.Runner{Responses: responses}
 
@@ -329,5 +329,27 @@ func TestEnrichWorktree_NoRemotesNeverUnpushed(t *testing.T) {
 
 	if wt.HasUnpushedCommits {
 		t.Error("a repo without remotes must not flag branches as unpushed")
+	}
+}
+
+// A branch whose upstream was deleted after merge still has all its commits on
+// a remote (via the merge into the default branch), so it must not be flagged
+// unpushed. The old @{upstream}..HEAD probe errored on the missing upstream and
+// false-flagged it; HEAD --not --remotes counts commits on no remote (0 here).
+func TestEnrichWorktree_GoneUpstreamMergedNotUnpushed(t *testing.T) {
+	runner := &mock.Runner{
+		Responses: map[string]mock.Response{
+			"/work/feature:[log -1 --format=%ai]":                   {Output: "2024-06-01 12:00:00 +0000"},
+			"/work/feature:[log -1 --format=%s]":                    {Output: "Add feature X"},
+			"/work/feature:[status --porcelain]":                    {Output: ""},
+			"/work/feature:[rev-list --count HEAD --not --remotes]": {Output: "0"},
+		},
+	}
+
+	wt := &git.Worktree{Path: "/work/feature"}
+	enrichWorktree(runner, wt, true)
+
+	if wt.HasUnpushedCommits {
+		t.Error("a branch fully contained in a remote must not be flagged unpushed even with no upstream tracking")
 	}
 }
