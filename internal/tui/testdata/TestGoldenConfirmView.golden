@@ -1,0 +1,16 @@
+[1;97m  sentei ─ Confirm deletion[m
+
+[38;5;241m  ┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[m
+
+  You are about to delete 3 worktrees:
+
+    [38;5;42m[ok][m  feature/clean
+    [1;38;5;214m[~] [m  feature/dirty  [1;38;5;214muncommitted changes — will be lost[m
+    [1;38;5;214m[!] [m  experiment/x   [1;38;5;214muntracked files — will be lost[m
+
+[1;38;5;214m  ⚠ 1 worktree with uncommitted changes that will be lost[m
+[1;38;5;214m  ⚠ 1 worktree with untracked files that will be lost[m
+
+[38;5;241m  ┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄[m
+
+  [1;38;5;214my delete[m[38;5;241m · [m[38;5;241mn[m [38;5;241mgo back[m
