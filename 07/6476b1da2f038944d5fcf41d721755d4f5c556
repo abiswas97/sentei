@@ -1,0 +1,20 @@
+internal/tui/errpeek.go
+  s_121ba5aeb12306::t_7f94bf2ef92024 1-2,7-11,14-18,23,25-29,32-53
+  s_121ba5aeb12306::t_d5274a78827ad7 3-6,12-13,19-22,24,30-31
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "076476b1da2f038944d5fcf41d721755d4f5c556",
+  "prompts": {},
+  "sessions": {
+    "s_121ba5aeb12306": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d1da0b9d-4a5f-4e2f-88ec-4088d9f5ce99",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Test <t@t.com>"
+    }
+  }
+}
