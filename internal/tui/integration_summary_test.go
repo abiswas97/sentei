@@ -2,6 +2,7 @@ package tui
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -9,6 +10,18 @@ import (
 
 	"github.com/abiswas97/sentei/internal/integration"
 )
+
+func doneEventsForWorktrees(n int) []integration.ManagerEvent {
+	var events []integration.ManagerEvent
+	for i := 0; i < n; i++ {
+		events = append(events, integration.ManagerEvent{
+			Worktree: fmt.Sprintf("/repo/feature-%d", i),
+			Step:     "Setup code-review-graph",
+			Status:   integration.StatusDone,
+		})
+	}
+	return events
+}
 
 func TestUpdateIntegrationProgress_Finalized_TransitionsToSummary(t *testing.T) {
 	m := makeIntegrationModel()
@@ -122,5 +135,67 @@ func TestViewIntegrationSummary_SaveError(t *testing.T) {
 	}
 	if !strings.Contains(view, "disk full") {
 		t.Errorf("expected save error detail, view:\n%s", view)
+	}
+}
+
+func TestViewIntegrationSummary_OverflowPeeksAndOffersDetails(t *testing.T) {
+	m := makeIntegrationModel()
+	m.view = integrationSummaryView
+	m.width, m.height = 80, 40
+	m.integ.events = doneEventsForWorktrees(5)
+
+	view := stripAnsi(m.viewIntegrationSummary())
+
+	for _, want := range []string{"feature-0", "feature-1", "feature-2"} {
+		if !strings.Contains(view, want) {
+			t.Errorf("expected peek to show %q, view:\n%s", want, view)
+		}
+	}
+	for _, hidden := range []string{"feature-3", "feature-4"} {
+		if strings.Contains(view, hidden) {
+			t.Errorf("expected %q to be hidden behind the portal, view:\n%s", hidden, view)
+		}
+	}
+	if !strings.Contains(view, "and 2 more") {
+		t.Errorf("expected an 'and N more' overflow line, view:\n%s", view)
+	}
+	if !strings.Contains(view, "details") {
+		t.Errorf("expected a `?` details hint when outcomes overflow, view:\n%s", view)
+	}
+}
+
+func TestIntegrationSummaryDetailContent(t *testing.T) {
+	tests := []struct {
+		name        string
+		worktrees   int
+		wantContent bool
+	}{
+		{"within peek has no portal", inlineSummaryPreview, false},
+		{"overflow exposes full breakdown", inlineSummaryPreview + 2, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := makeIntegrationModel()
+			m.view = integrationSummaryView
+			m.width, m.height = 80, 40
+			m.integ.events = doneEventsForWorktrees(tt.worktrees)
+
+			title, content := m.detailContent()
+			if tt.wantContent {
+				if content == "" {
+					t.Fatal("expected portal content when outcomes overflow the peek")
+				}
+				if title != "Apply Details" {
+					t.Errorf("title = %q, want %q", title, "Apply Details")
+				}
+				for i := 0; i < tt.worktrees; i++ {
+					if !strings.Contains(stripAnsi(content), fmt.Sprintf("feature-%d", i)) {
+						t.Errorf("portal must list every worktree; missing feature-%d:\n%s", i, content)
+					}
+				}
+			} else if content != "" {
+				t.Errorf("expected no portal content within the peek, got:\n%s", content)
+			}
+		})
 	}
 }

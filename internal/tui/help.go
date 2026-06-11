@@ -172,6 +172,9 @@ func (m Model) detailContent() (string, string) {
 	if m.view == cleanupPreviewView {
 		return m.cleanupDetailContent()
 	}
+	if m.view == integrationSummaryView {
+		return m.integrationSummaryDetailContent()
+	}
 	if m.view != listView || m.remove.filterActive {
 		return "", ""
 	}
