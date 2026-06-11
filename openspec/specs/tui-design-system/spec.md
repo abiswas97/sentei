@@ -139,27 +139,27 @@ Cursor rows SHALL use the `▸` marker with selected entry text carrying the acc
 - **THEN** the status bar SHALL NOT offer `enter delete`
 
 ### Requirement: One working spinner
-A single animated indicator SHALL mark everything sentei is actively doing: the breathing dot (`· ∙ • ● • ∙`, single-cell frames, 10fps — the pending dot inflating toward the done dot, the only frame family optically centered and weight-matched beside bold text), used by active phase lines, step lines, the windowed-steps stat line, the cleanup running line, the cleanup scan, and the menu worktree load. One spinner instance drives all of them; its ticks run only while any such work is visible, and each entry path starts the tick chain in exactly one place (Init when the model starts in a working state, the dispatch wrapper on transitions into one). Pure layout constructions without a live frame SHALL fall back to the static midpoint `∙`.
+A single animated indicator SHALL mark everything sentei is actively doing: the star twinkle (`· ✢ ✳ ✻ ✽ ✻ ✳ ✢`, single-cell frames, 120ms), used by active phase lines, step lines, the windowed-steps stat line, the cleanup running line, the cleanup scan, and the menu worktree load. All motion derives from one deterministic clock: a gated tick counter from which star frames, star colors, and shimmer band positions are computed as pure functions. Ticks run only while a working surface is visible, and each entry path starts the tick chain in exactly one place (Init when the model starts in a working state, the dispatch wrapper on transitions into one). Pure layout constructions without a live frame SHALL fall back to the static `✻`.
 
-#### Scenario: Active phase spins
+#### Scenario: Active phase twinkles
 - **WHEN** a determinate progress view renders a phase that is running
-- **THEN** the phase indicator SHALL be the spinner's current frame, styled as the active indicator
+- **THEN** the phase indicator SHALL be the star's current frame
 
 #### Scenario: One vocabulary
 - **WHEN** any two working surfaces are visible in the same session (e.g. a scan, then a removal)
-- **THEN** both SHALL render frames from the same spinner
+- **THEN** both SHALL render frames from the same clock
 
 #### Scenario: Ticks gated to visible work
 - **WHEN** no working surface is on screen
-- **THEN** spinner ticks SHALL stop
+- **THEN** motion ticks SHALL stop
 
 #### Scenario: No double tick chains
-- **WHEN** a flow entry path would start the spinner while a tick chain is already running
-- **THEN** at most one tick chain SHALL drive the spinner (frames never advance at multiple speeds)
+- **WHEN** a flow entry path would start the motion clock while a tick chain is already running
+- **THEN** at most one tick chain SHALL drive the clock
 
 #### Scenario: Pure layouts stay static
-- **WHEN** a `ProgressLayout` is rendered without an injected live frame
-- **THEN** active indicators SHALL render the static `∙` fallback
+- **WHEN** a `ProgressLayout` is rendered without injected motion
+- **THEN** active indicators SHALL render the static `✻` fallback
 
 ### Requirement: Gradient bar fill
 The overall progress bar's filled portion SHALL blend from the `barStart` to the `barEnd` palette token, scaled to span exactly the filled cells, in both themes. The fill characters remain `█`/`░`. The spring SHALL be tuned for a visible glide: fills ease over most of a second rather than snapping, while still settling within the completion hold. The static fallback bar (pure constructions) keeps the solid accent fill.
@@ -188,13 +188,47 @@ View-to-view navigation SHALL cut instantly; no slide, fade, or transition anima
 - **THEN** the next view SHALL render immediately with no transition animation
 
 ### Requirement: Verdict and state glyphs
-`✓` and `✗` are verdicts about a whole operation and SHALL mark one-line summary headlines (`✓ 3 worktrees removed successfully`); `●`, the working animation, and `·` are states of items within an operation and SHALL always render among peers. `●` SHALL NOT appear alone on a screen.
+The star family carries the item lifecycle and the success verdict: pending `·` (the star's resting frame), working star morph, done `✦` on item rows, and `✦` in bold success color on operation-level summary headlines. `✗` marks failure at both levels; `⚠` marks warnings; the cleanup preview's would-act lines use accent `▸`. The full circle `●` and the checkmark `✓` SHALL NOT appear anywhere in the TUI. The core rule: anything moving is being worked on; anything still is settled.
 
-#### Scenario: Success headline gets the checkmark
+#### Scenario: Success headline gets the crystallized star
 - **WHEN** a summary or result view renders its operation-level success line
-- **THEN** the line SHALL lead with `✓` in the success color
+- **THEN** the line SHALL lead with `✦` in the success color
 
-#### Scenario: Item rows keep state glyphs
-- **WHEN** a list of steps, actions, or items renders inside a summary or progress view
-- **THEN** completed items SHALL keep `●` alongside their `·`/working-frame peers
+#### Scenario: Done rows crystallize
+- **WHEN** a list of steps, actions, or items renders a completed item
+- **THEN** the item SHALL be marked `✦` alongside its `·`/working-frame peers
+
+#### Scenario: No full circles
+- **WHEN** any view renders
+- **THEN** the glyph `●` SHALL NOT appear in the output
+
+### Requirement: Working-text shimmer
+Every working line SHALL carry a gradient shimmer band sweeping its text in the text's own color family: accent base to light peak on phase headlines, scans, and the cleanup running line; body base to white peak on working step labels; dim ramp on menu loading hints. The star sits inside its line's band. Counts, percentages, and meta text do not shimmer; done and pending lines are still. Ramp endpoints are palette tokens, adapted per theme.
+
+#### Scenario: Phase headline shimmers accent
+- **WHEN** a phase is running
+- **THEN** its label SHALL render with the accent shimmer band, the star inside the band
+
+#### Scenario: Working steps shimmer in body color
+- **WHEN** a step is running
+- **THEN** its label SHALL render with the body shimmer band
+
+#### Scenario: Shimmer preserves content
+- **WHEN** any text is shimmered
+- **THEN** the stripped text SHALL equal the input and the rune count SHALL be unchanged
+
+#### Scenario: Settled text is still
+- **WHEN** a line is done or pending
+- **THEN** it SHALL render with static styling only
+
+### Requirement: Confirm rows are columnar
+The confirm-deletion screen SHALL list selected worktrees with the status badge in a fixed-width left gutter, names aligned in a column after it (pre-truncated to a stable width), and risk notes trailing only on at-risk rows. Clean rows carry no note text.
+
+#### Scenario: Badges align in a gutter
+- **WHEN** the confirm screen renders any mix of clean and at-risk selections
+- **THEN** every badge SHALL start at the same column and every name SHALL start at the same column
+
+#### Scenario: Long names do not shift the columns
+- **WHEN** a selected worktree's label exceeds the name-column cap
+- **THEN** the label SHALL truncate with an ellipsis and the columns SHALL hold
 
