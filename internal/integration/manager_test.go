@@ -190,3 +190,19 @@ func TestDisableIntegration_TeardownFailureEmitsFailedEvent(t *testing.T) {
 		t.Errorf("expected StatusFailed for teardown, got: %+v", events)
 	}
 }
+
+func TestDetectTool_BinaryNameUsesPresenceProbe(t *testing.T) {
+	shell := &managerMockShell{responses: map[string]mockShellResponse{
+		"/repo/wt:shell[command -v ccc]": {output: "/Users/x/.local/bin/ccc"},
+	}}
+	if !detectTool(shell, "/repo/wt", cocoindexCode()) {
+		t.Error("a binary on PATH must be detected even if it lacks --version")
+	}
+
+	missing := &managerMockShell{responses: map[string]mockShellResponse{
+		"/repo/wt:shell[command -v ccc]": {err: fmt.Errorf("not found")},
+	}}
+	if detectTool(missing, "/repo/wt", cocoindexCode()) {
+		t.Error("a binary missing from PATH must not be detected")
+	}
+}

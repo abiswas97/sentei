@@ -121,7 +121,9 @@ func (m Model) buildIntegrationPhases() []phaseDisplay {
 			}
 			label := s.step
 			if s.ev.Error != nil {
-				label += " " + s.ev.Error.Error()
+				// One-line rows law: live progress shows only the error's
+				// final line; the summary's peek and portal carry the rest.
+				label += " " + errorPeekLast(s.ev.Error.Error(), max(m.width-10, 20))
 			}
 			var status pipeline.StepStatus
 			switch s.ev.Status {
