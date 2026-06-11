@@ -1,5 +1,43 @@
 # Changelog
 
+## [1.10.0](https://github.com/abiswas97/sentei/compare/v1.9.0...v1.10.0) (2026-06-11)
+
+
+### Features
+
+* **tui:** animate progress with a breathing dot and gradient bar ([371bc9f](https://github.com/abiswas97/sentei/commit/371bc9f7e2c4e860696b621234ee593e2172d14f))
+* **tui:** animate progress with a breathing dot and gradient bar ([21a4272](https://github.com/abiswas97/sentei/commit/21a42723883ce567522ddc37abaad244b2f34e01))
+* **tui:** columnar confirm rows ([796ff90](https://github.com/abiswas97/sentei/commit/796ff90efc9d06f7e3b20c9500096890936d43fa))
+* **tui:** columnar confirm rows ([804e9a6](https://github.com/abiswas97/sentei/commit/804e9a67755656ce6e2ca07c3cb308445c03114a))
+* **tui:** name the terminal tab and mirror native progress ([ee2440f](https://github.com/abiswas97/sentei/commit/ee2440f6aea113b218045248cf4f62972a394b49))
+* **tui:** name the terminal tab and mirror native progress ([4f62833](https://github.com/abiswas97/sentei/commit/4f62833c01f3998d43faf0a68d78fc298120fc0d))
+* **tui:** star-shimmer vocabulary ([28fca1f](https://github.com/abiswas97/sentei/commit/28fca1f15be7dc27b18bceda06d94f61e4c2758f))
+* **tui:** star-shimmer vocabulary ([d8fd73b](https://github.com/abiswas97/sentei/commit/d8fd73b7366e79c8c0737cb3df02eef2ac99854d))
+* **tui:** weight selection, danger, and input focus ([e54873c](https://github.com/abiswas97/sentei/commit/e54873c619cc62e32ed04bca74f48e11ea0781d4))
+* **tui:** weight selection, danger, and input focus ([750bb93](https://github.com/abiswas97/sentei/commit/750bb93b0b7ca16ec63e751d83677427d61ef1a2))
+
+
+### Bug Fixes
+
+* **integration:** install ccc with the embeddings-local extra ([f372376](https://github.com/abiswas97/sentei/commit/f372376664ef687c06db25293c4ce45ed0168c97))
+* **integration:** install ccc with the embeddings-local extra ([4281d80](https://github.com/abiswas97/sentei/commit/4281d80ecf9bcc7d2680e8918c70e5dd2effa972))
+* **integration:** pin ccc install resolution to python 3.11 ([c51bbe0](https://github.com/abiswas97/sentei/commit/c51bbe02612526443a5f89633fdaab207cf4a149))
+* **integration:** pin ccc install resolution to python 3.11 ([d3f4058](https://github.com/abiswas97/sentei/commit/d3f405829a3b04d6064000b0d86a90c3d66ab385))
+* **integration:** presence-based detection and bounded failure output ([fa83ce7](https://github.com/abiswas97/sentei/commit/fa83ce7e15a9c8e2bd23a5d89ff9369cace5d2d2))
+* **integration:** presence-based detection and bounded failure output ([076476b](https://github.com/abiswas97/sentei/commit/076476b1da2f038944d5fcf41d721755d4f5c556))
+* **tui:** center-aligned breathing dot, verdict checkmarks, settled bar ([527aeb2](https://github.com/abiswas97/sentei/commit/527aeb2a6ee22d4e95fded014deb36910cd9682b))
+* **tui:** center-aligned breathing dot, verdict checkmarks, settled bar ([76ad186](https://github.com/abiswas97/sentei/commit/76ad186ef746d878f1fd4032827f996a8811c559))
+* **tui:** cleanup preview, prompt, and result state effective counts ([58149bc](https://github.com/abiswas97/sentei/commit/58149bc070d3dc9feba7094a300f7aa9ed80b8d6))
+* **tui:** cleanup preview, prompt, and result state effective counts ([35f90d6](https://github.com/abiswas97/sentei/commit/35f90d6c4fde99f47dc2b6e442a8e423b9e52775))
+* **tui:** keep list rows on one line at any terminal width ([3eb18ac](https://github.com/abiswas97/sentei/commit/3eb18acd6fba6fc92ef679eddda3234eda3eca96))
+* **tui:** keep list rows on one line at any terminal width ([1d743b0](https://github.com/abiswas97/sentei/commit/1d743b06abd7d7c0370c4184150e1cbda83f6a05))
+* **tui:** keep the progress bar and its label coherent ([4d89a99](https://github.com/abiswas97/sentei/commit/4d89a9923971b7088c3f6bf0c30aef4b951ab1fd))
+* **tui:** keep the progress bar and its label coherent ([fbc6079](https://github.com/abiswas97/sentei/commit/fbc6079210b1293cf0c2f12f9e90810a64eb22fb))
+* **tui:** one working spinner and a silky bar ([7f069e2](https://github.com/abiswas97/sentei/commit/7f069e2bc6e09e3c0c248096fad4e26288c6b93b))
+* **tui:** one working spinner and a silky bar ([bb8b1d7](https://github.com/abiswas97/sentei/commit/bb8b1d7a79864880a9afcae60b98b0c3f5e77638))
+* **tui:** progress flows end truthfully ([bcaa3ad](https://github.com/abiswas97/sentei/commit/bcaa3ad59c50b25758de714936de8f2311ea8d5a))
+* **tui:** progress flows end truthfully ([471a9c2](https://github.com/abiswas97/sentei/commit/471a9c25ee8d41341b17dcd50544260e9190ddea))
+
 ## [1.9.0](https://github.com/abiswas97/sentei/compare/v1.8.0...v1.9.0) (2026-06-11)
 
 
