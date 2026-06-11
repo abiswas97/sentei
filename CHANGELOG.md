@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.8.0](https://github.com/abiswas97/sentei/compare/v1.7.0...v1.8.0) (2026-06-11)
+
+
+### Features
+
+* **tui:** adapt the palette to light and dark terminal backgrounds ([c71b123](https://github.com/abiswas97/sentei/commit/c71b123cc77972f81eb0a3a77e45d5554a5ecfda))
+* **tui:** adapt the palette to light and dark terminal backgrounds ([1e7abfc](https://github.com/abiswas97/sentei/commit/1e7abfcacb61d0fbb5319cad436be9c44664ffd6))
+
 ## [1.7.0](https://github.com/abiswas97/sentei/compare/v1.6.0...v1.7.0) (2026-06-11)
 
 
