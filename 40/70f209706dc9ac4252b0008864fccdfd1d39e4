@@ -1,0 +1,22 @@
+internal/worktree/enricher.go
+  s_dd70ced0a890b0::t_d94bca8fe62864 71-75,77
+internal/worktree/enricher_test.go
+  s_dd70ced0a890b0::t_69a0f1ac583944 290-292,301
+  s_dd70ced0a890b0::t_07b6c29626df43 334-355
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "4070f209706dc9ac4252b0008864fccdfd1d39e4",
+  "prompts": {},
+  "sessions": {
+    "s_dd70ced0a890b0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "1d4c7900-8a46-4b76-a13e-5f766c2a5f97",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Test <t@t.com>"
+    }
+  }
+}
