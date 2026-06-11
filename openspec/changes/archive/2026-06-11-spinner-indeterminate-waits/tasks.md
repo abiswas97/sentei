@@ -11,4 +11,4 @@
 
 - [x] 2.1 Full gauntlet; playground: cleanup scan animates during hold, menu loading state, no stray animation elsewhere
 - [x] 2.2 .impeccable.md Timing section + decision log updated
-- [ ] 2.3 PR feat/spinner, CI green, merge, cleanup, archive
+- [x] 2.3 PR feat/spinner, CI green, merge, cleanup, archive
