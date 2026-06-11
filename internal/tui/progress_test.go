@@ -57,13 +57,25 @@ func TestUpdateProgress_AllDeletionsComplete_TriggersPrune(t *testing.T) {
 		t.Error("should not transition to summaryView yet — prune should run first")
 	}
 
-	msg := cmd()
-	pruneMsg, ok := msg.(pruneCompleteMsg)
+	// The cmd batches the spring sync with the prune; find the prune result.
+	batch, ok := cmd().(tea.BatchMsg)
 	if !ok {
-		t.Fatalf("expected pruneCompleteMsg, got %T", msg)
+		t.Fatalf("expected tea.BatchMsg, got %T", cmd())
 	}
-	if pruneMsg.Err != nil {
-		t.Errorf("expected prune success, got error: %v", pruneMsg.Err)
+	found := false
+	for _, c := range batch {
+		if c == nil {
+			continue
+		}
+		if pruneMsg, ok := c().(pruneCompleteMsg); ok {
+			found = true
+			if pruneMsg.Err != nil {
+				t.Errorf("expected prune success, got error: %v", pruneMsg.Err)
+			}
+		}
+	}
+	if !found {
+		t.Fatal("expected pruneCompleteMsg in the batch")
 	}
 }
 

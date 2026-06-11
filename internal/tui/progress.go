@@ -104,19 +104,22 @@ func (m Model) updateProgress(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, tea.Batch(m.syncProgressBar(), waitForDeletionEvent(m.remove.run.progressCh))
 
 	case allDeletionsCompleteMsg:
-		return m, runPrune(m.runner, m.repoPath)
+		return m, tea.Batch(m.syncProgressBar(), runPrune(m.runner, m.repoPath))
 
 	case pruneCompleteMsg:
 		pruneErr := msg.Err
 		m.remove.run.pruneErr = &pruneErr
-		return m, runCleanup(m.runner, m.repoPath)
+		return m, tea.Batch(m.syncProgressBar(), runCleanup(m.runner, m.repoPath))
 
 	case cleanupCompleteMsg:
 		m.remove.run.cleanupResult = &msg.Result
 		m.remove.selected = make(map[string]bool)
 		m.worktreeGeneration++
+		// Final spring target before the hold: all phases are complete, so
+		// the bar settles at full while the completion frame holds.
+		syncCmd := m.syncProgressBar()
 		updated, holdCmd := m.holdOrAdvance(summaryView)
-		return updated, tea.Batch(holdCmd, loadWorktreeContext(m.runner, m.repoPath, m.worktreeGeneration))
+		return updated, tea.Batch(syncCmd, holdCmd, loadWorktreeContext(m.runner, m.repoPath, m.worktreeGeneration))
 	}
 	return m, nil
 }
