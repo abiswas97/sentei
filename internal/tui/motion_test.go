@@ -39,40 +39,44 @@ func TestProgressLayout_StaticFallbackUsesMidpointDot(t *testing.T) {
 	}
 }
 
-func TestRenderProgressLayout_InjectsBreathFrame(t *testing.T) {
+func TestRenderProgressLayout_InjectsSpinnerFrame(t *testing.T) {
 	m := NewModel([]git.Worktree{}, nil, "/repo")
 	m.view = progressView
 
 	out := stripAnsi(m.renderProgressLayout(runningLayout()))
-	if !strings.Contains(out, "· Removing worktrees") {
-		t.Errorf("expected initial breath frame · on the active phase, view:\n%s", out)
+	if !strings.Contains(out, workFrames[0]+" Removing worktrees") {
+		t.Errorf("expected initial spinner frame on the active phase, view:\n%s", out)
 	}
 
-	for range 2 {
-		updated, _ := m.Update(spinner.TickMsg{ID: m.breath.ID()})
-		m = updated.(Model)
-	}
+	updated, _ := m.Update(spinner.TickMsg{ID: m.spin.ID()})
+	m = updated.(Model)
 	out = stripAnsi(m.renderProgressLayout(runningLayout()))
-	if !strings.Contains(out, "● Removing worktrees") {
-		t.Errorf("expected third breath frame ● after two ticks, view:\n%s", out)
+	if !strings.Contains(out, workFrames[1]+" Removing worktrees") {
+		t.Errorf("expected second spinner frame after a tick, view:\n%s", out)
 	}
 }
 
-func TestBreathTicks_GatedOutsideProgressViews(t *testing.T) {
+func TestSpinnerTicks_GatedToWorkingSurfaces(t *testing.T) {
 	m := NewModel([]git.Worktree{}, nil, "/repo")
 	m.view = listView
 
-	if _, cmd := m.Update(spinner.TickMsg{ID: m.breath.ID()}); cmd != nil {
-		t.Error("breath ticks outside progress views must be swallowed")
+	if _, cmd := m.Update(spinner.TickMsg{ID: m.spin.ID()}); cmd != nil {
+		t.Error("spinner ticks with no working surface must be swallowed")
 	}
 
 	m.view = progressView
-	if _, cmd := m.Update(spinner.TickMsg{ID: m.breath.ID()}); cmd == nil {
-		t.Error("breath ticks in a progress view must continue the animation")
+	if _, cmd := m.Update(spinner.TickMsg{ID: m.spin.ID()}); cmd == nil {
+		t.Error("spinner ticks in a progress view must continue the animation")
+	}
+
+	m.view = cleanupPreviewView
+	m.cleanupScan = nil
+	if _, cmd := m.Update(spinner.TickMsg{ID: m.spin.ID()}); cmd == nil {
+		t.Error("spinner ticks during the cleanup scan must continue the animation")
 	}
 }
 
-func TestBreathTick_StartsOnFlowEntry(t *testing.T) {
+func TestSpinnerTick_StartsOnFlowEntry(t *testing.T) {
 	m := NewModel([]git.Worktree{{Path: "/work/a", Branch: "refs/heads/a"}}, &mock.Runner{}, "/repo")
 	m.view = confirmView
 	m.remove.selected = map[string]bool{"/work/a": true}
@@ -82,40 +86,47 @@ func TestBreathTick_StartsOnFlowEntry(t *testing.T) {
 	if model.view != progressView {
 		t.Fatalf("expected progressView after confirm, got %d", model.view)
 	}
-	if !containsBreathTick(cmd, model.breath.ID()) {
-		t.Error("entering a progress view must start the breath tick chain")
+	if got := countSpinnerTicks(cmd, model.spin.ID()); got != 1 {
+		t.Errorf("entering a progress view must start exactly one tick chain, got %d", got)
 	}
 }
 
-// containsBreathTick walks a command tree looking for the breath spinner's
-// own TickMsg, expanding batches without executing flow side effects twice.
-func containsBreathTick(cmd tea.Cmd, id int) bool {
+// countSpinnerTicks walks a command tree counting the spinner's own TickMsg,
+// expanding batches.
+func countSpinnerTicks(cmd tea.Cmd, id int) int {
 	if cmd == nil {
-		return false
+		return 0
 	}
 	switch msg := cmd().(type) {
 	case spinner.TickMsg:
-		return msg.ID == id
-	case tea.BatchMsg:
-		for _, sub := range msg {
-			if containsBreathTick(sub, id) {
-				return true
-			}
+		if msg.ID == id {
+			return 1
 		}
+	case tea.BatchMsg:
+		n := 0
+		for _, sub := range msg {
+			n += countSpinnerTicks(sub, id)
+		}
+		return n
 	}
-	return false
+	return 0
 }
 
-func TestCleanupRunningLine_UsesBreathFrame(t *testing.T) {
+func TestCleanupRunningLine_UsesSpinnerFrame(t *testing.T) {
 	m := NewModel([]git.Worktree{}, nil, "/repo")
 	m.view = cleanupResultView
 
 	out := stripAnsi(m.viewCleanupResult())
-	if strings.Contains(out, "◐") {
-		t.Errorf("cleanup running line must not use the retired ◐, view:\n%s", out)
+	if !strings.Contains(out, workFrames[0]+" Running cleanup…") {
+		t.Errorf("expected spinner frame on the running line, view:\n%s", out)
 	}
-	if !strings.Contains(out, "· Running cleanup…") {
-		t.Errorf("expected breath frame on the running line, view:\n%s", out)
+}
+
+func TestWorkFrames_AllSingleCell(t *testing.T) {
+	for _, f := range workFrames {
+		if n := len([]rune(f)); n != 1 {
+			t.Errorf("frame %q is %d runes; status columns need single-cell frames", f, n)
+		}
 	}
 }
 
