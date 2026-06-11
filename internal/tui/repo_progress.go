@@ -77,7 +77,9 @@ func (m Model) updateRepoProgress(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.repo.opType == "migrate" {
 			targetView = migrateSummaryView
 		}
-		return m.holdOrAdvance(targetView)
+		syncCmd := m.syncProgressBar()
+		updated, holdCmd := m.holdOrAdvance(targetView)
+		return updated, tea.Batch(syncCmd, holdCmd)
 	}
 	return m, nil
 }
@@ -97,12 +99,13 @@ func (m Model) repoLayout() ProgressLayout {
 	}
 
 	return ProgressLayout{
-		Title:    title,
-		Subtitle: subject,
-		Phases:   buildPhaseDisplays(m.repo.events),
-		Width:    m.width,
-		Height:   m.height,
-		Hints:    progressFooter,
+		Title:     title,
+		Subtitle:  subject,
+		Completed: m.repo.result != nil,
+		Phases:    buildPhaseDisplays(m.repo.events),
+		Width:     m.width,
+		Height:    m.height,
+		Hints:     progressFooter,
 	}
 }
 
