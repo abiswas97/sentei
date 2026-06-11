@@ -22,6 +22,10 @@ type palette struct {
 	muted     color.Color // locked worktrees
 	barStart  color.Color // overall bar gradient, trailing edge
 	barEnd    color.Color // overall bar gradient, leading edge
+	// Shimmer ramps: base→peak hex pairs for the working-text bands.
+	rampAccent shimmerRamp // phase headlines, scans, running lines
+	rampBody   shimmerRamp // working step labels
+	rampDim    shimmerRamp // menu loading hints
 }
 
 // The two palettes, selected by terminal background detection (model.go).
@@ -40,8 +44,11 @@ var (
 		muted:     lipgloss.Color("245"),
 		// Hex twins of accent (62) and selected (212): blends interpolate
 		// in RGB, which indexed ANSI codes cannot do smoothly.
-		barStart: lipgloss.Color("#5f5fd7"),
-		barEnd:   lipgloss.Color("#ff87d7"),
+		barStart:   lipgloss.Color("#5f5fd7"),
+		barEnd:     lipgloss.Color("#ff87d7"),
+		rampAccent: shimmerRamp{base: "#5f5fd7", peak: "#d3d3ff"},
+		rampBody:   shimmerRamp{base: "#9a9a9a", peak: "#ffffff"},
+		rampDim:    shimmerRamp{base: "#6c6c6c", peak: "#b0b0b0"},
 	}
 
 	lightPalette = palette{
@@ -56,8 +63,11 @@ var (
 		protected: lipgloss.Color("26"),
 		muted:     lipgloss.Color("243"),
 		// Hex twins of accent (56) and selected (168).
-		barStart: lipgloss.Color("#5f00d7"),
-		barEnd:   lipgloss.Color("#d75f87"),
+		barStart:   lipgloss.Color("#5f00d7"),
+		barEnd:     lipgloss.Color("#d75f87"),
+		rampAccent: shimmerRamp{base: "#5f00d7", peak: "#8b5fe8"},
+		rampBody:   shimmerRamp{base: "#6c6c6c", peak: "#1a1a1a"},
+		rampDim:    shimmerRamp{base: "#9e9e9e", peak: "#555555"},
 	}
 )
 
@@ -77,6 +87,9 @@ var (
 	colorMuted     color.Color
 	colorBarStart  color.Color
 	colorBarEnd    color.Color
+	rampAccent     shimmerRamp
+	rampBody       shimmerRamp
+	rampDim        shimmerRamp
 
 	// UI chrome
 	styleStatusBar lipgloss.Style
@@ -147,6 +160,9 @@ func applyPalette(p palette) {
 	colorMuted = p.muted
 	colorBarStart = p.barStart
 	colorBarEnd = p.barEnd
+	rampAccent = p.rampAccent
+	rampBody = p.rampBody
+	rampDim = p.rampDim
 
 	styleStatusBar = lipgloss.NewStyle().Foreground(colorDim).Padding(1, 0, 0, 0)
 	styleDim = lipgloss.NewStyle().Foreground(colorDim)
@@ -203,24 +219,19 @@ var (
 	colWidthAge      = 16 // "12 hours ago" (12) + headroom
 )
 
-// Indicator characters. ✓/✗ are verdicts about a whole operation (summary
-// headlines); ●/·/the work animation are states of items within it, always
-// rendered among peers. ● never appears alone on a screen.
+// Indicator characters. The star family carries the item lifecycle and the
+// success verdict: pending · (the star's resting frame) twinkles while
+// working and crystallizes into ✦ when done; ✗ marks failure, ⚠ warnings,
+// ▸ the cleanup preview's would-act lines. The core rule: anything moving
+// is being worked on; anything still is settled. ● and ✓ are retired.
 const (
-	indicatorSuccess = "✓"
-	indicatorDone    = "●"
-	indicatorPending = "·"
-	indicatorFailed  = "✗"
-	indicatorWarning = "⚠"
+	indicatorDone     = "✦"
+	indicatorPending  = "·"
+	indicatorFailed   = "✗"
+	indicatorWarning  = "⚠"
+	indicatorWouldAct = "▸"
 
 	// indicatorActiveFallback marks live work in pure layouts with no
-	// animation frame injected.
-	indicatorActiveFallback = "∙"
+	// motion injected.
+	indicatorActiveFallback = "✻"
 )
-
-// workFrames is the one working animation: the breathing dot, the pending
-// dot inflating toward the done dot and back. The dot family is the only
-// spinner that is optically centered and weight-matched beside bold text;
-// braille frames hang into the descender zone and sit flush-left, which is
-// font geometry the app cannot fix.
-var workFrames = []string{"·", "∙", "•", "●", "•", "∙"}

@@ -137,7 +137,7 @@ func (m Model) viewCleanupPreview() string {
 
 	scan := m.cleanupScan
 	if scan == nil {
-		fmt.Fprintf(&b, "  %s Scanning repository…\n\n", styleAccent.Render(m.spin.View()))
+		fmt.Fprintf(&b, "  %s\n\n", shimmerLine(starFrame(m.motionTick)+" Scanning repository…", rampAccent, m.motionTick))
 		b.WriteString(viewSeparator(m.width))
 		b.WriteString("\n\n")
 		b.WriteString(viewFooter(m.width, cleanupScanFooter))
@@ -244,7 +244,7 @@ func (m Model) viewCleanupPreview() string {
 func writePreviewLine(b *strings.Builder, count int, actionFormat, singular, plural, noneText string) {
 	if count > 0 {
 		action := fmt.Sprintf(actionFormat, pluralize(count, singular, plural))
-		fmt.Fprintf(b, "  %s %d %s\n", styleIndicatorDone.Render(indicatorDone), count, action)
+		fmt.Fprintf(b, "  %s %d %s\n", styleAccent.Render(indicatorWouldAct), count, action)
 		return
 	}
 	fmt.Fprintf(b, "  %s %s\n", styleIndicatorPending.Render(indicatorPending), styleDim.Render(noneText))

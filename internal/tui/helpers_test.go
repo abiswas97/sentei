@@ -57,7 +57,7 @@ func pumpCmds(model tea.Model, cmd tea.Cmd) tea.Model {
 			continue
 		}
 		switch msg.(type) {
-		case progress.FrameMsg, stopwatch.StartStopMsg, spinner.TickMsg:
+		case progress.FrameMsg, stopwatch.StartStopMsg, spinner.TickMsg, motionTickMsg:
 			continue
 		}
 		var next tea.Cmd

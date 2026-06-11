@@ -110,7 +110,7 @@ func orderOutcomesFailuresFirst(groups []integrationWorktreeOutcomes) []integrat
 }
 
 // renderIntegrationOutcomes writes the per-worktree breakdown to b: a worktree
-// header followed by a `●`/`✗` line per resolved step. Shared by the inline
+// header followed by a `✦`/`✗` line per resolved step. Shared by the inline
 // summary peek and the detail portal.
 func renderIntegrationOutcomes(b *strings.Builder, groups []integrationWorktreeOutcomes) {
 	for _, g := range groups {
@@ -165,7 +165,7 @@ func (m Model) viewIntegrationSummary() string {
 
 	switch failed {
 	case 0:
-		b.WriteString(styleSuccess.Render(fmt.Sprintf("  %s %d %s applied", indicatorSuccess, applied, pluralize(applied, "step", "steps"))))
+		b.WriteString(styleSuccess.Render(fmt.Sprintf("  %s %d %s applied", indicatorDone, applied, pluralize(applied, "step", "steps"))))
 	default:
 		fmt.Fprintf(&b, "  %s, %s",
 			styleSuccess.Render(fmt.Sprintf("%d %s applied", applied, pluralize(applied, "step", "steps"))),

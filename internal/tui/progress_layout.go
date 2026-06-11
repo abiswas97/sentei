@@ -43,6 +43,10 @@ type ProgressLayout struct {
 	Elapsed     string
 	ActiveGlyph string
 
+	// Motion carries the live shimmer closures and star frame; nil falls
+	// back to static styles so direct constructions stay pure.
+	Motion *Motion
+
 	// Completed marks a flow whose result has arrived: phases that never
 	// discovered work render as skipped and stop counting as outstanding.
 	Completed bool
@@ -150,21 +154,31 @@ func (l ProgressLayout) renderPhase(b *strings.Builder, p phaseDisplay, stepBudg
 	if pct > 100 {
 		pct = 100
 	}
-	ind := l.activeGlyph()
-	nameStyle := stylePhaseActive
-	if p.failed > 0 {
-		ind = styleIndicatorFailed.Render(indicatorFailed)
+	counts := styleDim.Render(fmt.Sprintf("%d/%d  %d%%", min(p.done, p.total), p.total, pct))
+	switch {
+	case p.failed > 0:
+		nameStyle := stylePhaseActive
 		if p.done == p.total {
 			nameStyle = stylePhaseDone
 		}
+		fmt.Fprintf(b, "  %s %s  %s\n",
+			styleIndicatorFailed.Render(indicatorFailed), nameStyle.Render(p.name), counts)
+	case l.Motion != nil:
+		// The star rides inside the headline's accent shimmer band.
+		fmt.Fprintf(b, "  %s  %s\n", l.Motion.Accent(l.Motion.Frame+" "+p.name), counts)
+	default:
+		fmt.Fprintf(b, "  %s %s  %s\n",
+			l.activeGlyph(), stylePhaseActive.Render(p.name), counts)
 	}
-	fmt.Fprintf(b, "  %s %s  %s\n",
-		ind,
-		nameStyle.Render(p.name),
-		styleDim.Render(fmt.Sprintf("%d/%d  %d%%", min(p.done, p.total), p.total, pct)))
 
 	window := WindowSteps(p.steps, stepBudget)
 	for _, s := range window.Steps {
+		label := truncateWithEllipsis(s.name, max(l.Width-6, 10))
+		if s.status == pipeline.StepRunning && l.Motion != nil {
+			// Working steps shimmer in the body ramp, star in the band.
+			fmt.Fprintf(b, "    %s\n", l.Motion.Body(l.Motion.Frame+" "+label))
+			continue
+		}
 		var stepInd string
 		switch s.status {
 		case pipeline.StepDone, pipeline.StepSkipped:
@@ -176,7 +190,6 @@ func (l ProgressLayout) renderPhase(b *strings.Builder, p phaseDisplay, stepBudg
 		default:
 			stepInd = styleIndicatorPending.Render(indicatorPending)
 		}
-		label := truncateWithEllipsis(s.name, max(l.Width-6, 10))
 		fmt.Fprintf(b, "    %s %s\n", stepInd, label)
 	}
 	used := len(window.Steps)
@@ -268,6 +281,7 @@ func (m Model) renderProgressLayout(l ProgressLayout) string {
 	// never disagree; the phase headers state actual counts.
 	l.Bar = "  " + bar.View()
 	l.Elapsed = styleDim.Render(fmt.Sprintf("elapsed %ds", int(time.Since(m.progressStartedAt).Seconds())))
-	l.ActiveGlyph = styleIndicatorActive.Render(m.spin.View())
+	l.ActiveGlyph = starGlyph(rampAccent, m.motionTick)
+	l.Motion = m.motion()
 	return l.View()
 }

@@ -4,7 +4,6 @@ import (
 	"strings"
 	"testing"
 
-	"charm.land/bubbles/v2/spinner"
 	tea "charm.land/bubbletea/v2"
 
 	"github.com/abiswas97/sentei/internal/git"
@@ -25,58 +24,117 @@ func runningLayout() ProgressLayout {
 	}
 }
 
-func TestProgressLayout_StaticFallbackUsesMidpointDot(t *testing.T) {
-	view := stripANSI(runningLayout().View())
-
-	if strings.Contains(view, "◐") {
-		t.Errorf("static layouts must not render the retired ◐, view:\n%s", view)
+func TestStarFrame_CyclesSingleCellFrames(t *testing.T) {
+	ticksPerFrame := int(starInterval / motionResolution)
+	for i, want := range starFrames {
+		if n := len([]rune(want)); n != 1 {
+			t.Errorf("frame %q is %d runes; status columns need single-cell frames", want, n)
+		}
+		if got := starFrame(i * ticksPerFrame); got != want {
+			t.Errorf("starFrame(%d) = %q, want %q", i*ticksPerFrame, got, want)
+		}
 	}
-	if !strings.Contains(view, "∙ Removing worktrees") {
-		t.Errorf("expected midpoint-dot fallback on the active phase, view:\n%s", view)
-	}
-	if !strings.Contains(view, "    ∙ active-step") {
-		t.Errorf("expected midpoint-dot fallback on the running step, view:\n%s", view)
+	if got := starFrame(len(starFrames) * ticksPerFrame); got != starFrames[0] {
+		t.Errorf("frames must wrap, got %q", got)
 	}
 }
 
-func TestRenderProgressLayout_InjectsSpinnerFrame(t *testing.T) {
+func TestShimmerLine_PreservesContentAndMoves(t *testing.T) {
+	text := "Removing worktrees"
+	a := shimmerLine(text, shimmerRamp{base: "#5f5fd7", peak: "#d3d3ff"}, 0)
+	b := shimmerLine(text, shimmerRamp{base: "#5f5fd7", peak: "#d3d3ff"}, 10)
+
+	if got := stripAnsi(a); got != text {
+		t.Errorf("stripped shimmer = %q, want %q", got, text)
+	}
+	if a == b {
+		t.Error("the band must move between ticks")
+	}
+	if !strings.Contains(a, "\x1b[1m") && !strings.Contains(a, ";1m") && !strings.Contains(a, "1;") {
+		t.Errorf("shimmered text must be bold, got %q", a)
+	}
+}
+
+func TestLerpHex_Endpoints(t *testing.T) {
+	if got := lerpHex("#000000", "#ffffff", 0); got != "#000000" {
+		t.Errorf("t=0 = %q", got)
+	}
+	if got := lerpHex("#000000", "#ffffff", 1); got != "#ffffff" {
+		t.Errorf("t=1 = %q", got)
+	}
+	if got := lerpHex("#202020", "#404040", 0.5); got != "#303030" {
+		t.Errorf("midpoint = %q", got)
+	}
+}
+
+func TestProgressLayout_StaticFallbackUsesStar(t *testing.T) {
+	view := stripANSI(runningLayout().View())
+
+	for _, retired := range []string{"●", "◐", "✓"} {
+		if strings.Contains(view, retired) {
+			t.Errorf("static layouts must not render retired glyph %q, view:\n%s", retired, view)
+		}
+	}
+	if !strings.Contains(view, "✻ Removing worktrees") {
+		t.Errorf("expected static star fallback on the active phase, view:\n%s", view)
+	}
+	if !strings.Contains(view, "    ✻ active-step") {
+		t.Errorf("expected static star fallback on the running step, view:\n%s", view)
+	}
+	if !strings.Contains(view, "✦ done-step") {
+		t.Errorf("expected crystallized done step, view:\n%s", view)
+	}
+}
+
+func TestRenderProgressLayout_ShimmersWorkingLines(t *testing.T) {
 	m := NewModel([]git.Worktree{}, nil, "/repo")
 	m.view = progressView
 
-	out := stripAnsi(m.renderProgressLayout(runningLayout()))
-	if !strings.Contains(out, workFrames[0]+" Removing worktrees") {
-		t.Errorf("expected initial spinner frame on the active phase, view:\n%s", out)
+	out := m.renderProgressLayout(runningLayout())
+	plain := stripAnsi(out)
+	if !strings.Contains(plain, starFrames[0]+" Removing worktrees") {
+		t.Errorf("expected star frame inside the phase headline, view:\n%s", plain)
 	}
 
-	updated, _ := m.Update(spinner.TickMsg{ID: m.spin.ID()})
-	m = updated.(Model)
-	out = stripAnsi(m.renderProgressLayout(runningLayout()))
-	if !strings.Contains(out, workFrames[1]+" Removing worktrees") {
-		t.Errorf("expected second spinner frame after a tick, view:\n%s", out)
+	// Two motion ticks advance the clock; tick 2 = frame index 1.
+	for range 2 {
+		updated, _ := m.Update(motionTickMsg{})
+		m = updated.(Model)
+	}
+	out2 := m.renderProgressLayout(runningLayout())
+	if !strings.Contains(stripAnsi(out2), starFrames[1]+" Removing worktrees") {
+		t.Errorf("expected the twinkle to advance, view:\n%s", stripAnsi(out2))
+	}
+	if out == out2 {
+		t.Error("ticks must move the shimmer band even within one star frame")
 	}
 }
 
-func TestSpinnerTicks_GatedToWorkingSurfaces(t *testing.T) {
+func TestMotionTicks_GatedToWorkingSurfaces(t *testing.T) {
 	m := NewModel([]git.Worktree{}, nil, "/repo")
 	m.view = listView
 
-	if _, cmd := m.Update(spinner.TickMsg{ID: m.spin.ID()}); cmd != nil {
-		t.Error("spinner ticks with no working surface must be swallowed")
+	if _, cmd := m.Update(motionTickMsg{}); cmd != nil {
+		t.Error("motion ticks with no working surface must be swallowed")
 	}
 
 	m.view = progressView
-	if _, cmd := m.Update(spinner.TickMsg{ID: m.spin.ID()}); cmd == nil {
-		t.Error("spinner ticks in a progress view must continue the animation")
+	updated, cmd := m.Update(motionTickMsg{})
+	if cmd == nil {
+		t.Error("motion ticks in a progress view must continue the chain")
+	}
+	if updated.(Model).motionTick != 1 {
+		t.Error("ticks must advance the clock")
 	}
 
 	m.view = cleanupPreviewView
 	m.cleanupScan = nil
-	if _, cmd := m.Update(spinner.TickMsg{ID: m.spin.ID()}); cmd == nil {
-		t.Error("spinner ticks during the cleanup scan must continue the animation")
+	if _, cmd := m.Update(motionTickMsg{}); cmd == nil {
+		t.Error("motion ticks during the cleanup scan must continue the chain")
 	}
 }
 
-func TestSpinnerTick_StartsOnFlowEntry(t *testing.T) {
+func TestMotionClock_StartsOnFlowEntry(t *testing.T) {
 	m := NewModel([]git.Worktree{{Path: "/work/a", Branch: "refs/heads/a"}}, &mock.Runner{}, "/repo")
 	m.view = confirmView
 	m.remove.selected = map[string]bool{"/work/a": true}
@@ -86,130 +144,78 @@ func TestSpinnerTick_StartsOnFlowEntry(t *testing.T) {
 	if model.view != progressView {
 		t.Fatalf("expected progressView after confirm, got %d", model.view)
 	}
-	if got := countSpinnerTicks(cmd, model.spin.ID()); got != 1 {
+	if got := countMotionTicks(cmd); got != 1 {
 		t.Errorf("entering a progress view must start exactly one tick chain, got %d", got)
 	}
 }
 
-// countSpinnerTicks walks a command tree counting the spinner's own TickMsg,
+// countMotionTicks walks a command tree counting motion tick messages,
 // expanding batches.
-func countSpinnerTicks(cmd tea.Cmd, id int) int {
+func countMotionTicks(cmd tea.Cmd) int {
 	if cmd == nil {
 		return 0
 	}
 	switch msg := cmd().(type) {
-	case spinner.TickMsg:
-		if msg.ID == id {
-			return 1
-		}
+	case motionTickMsg:
+		return 1
 	case tea.BatchMsg:
 		n := 0
 		for _, sub := range msg {
-			n += countSpinnerTicks(sub, id)
+			n += countMotionTicks(sub)
 		}
 		return n
 	}
 	return 0
 }
 
-func TestCleanupRunningLine_UsesSpinnerFrame(t *testing.T) {
+func TestCleanupRunningLine_Shimmers(t *testing.T) {
 	m := NewModel([]git.Worktree{}, nil, "/repo")
 	m.view = cleanupResultView
 
 	out := stripAnsi(m.viewCleanupResult())
-	if !strings.Contains(out, workFrames[0]+" Running cleanup…") {
-		t.Errorf("expected spinner frame on the running line, view:\n%s", out)
+	if !strings.Contains(out, starFrames[0]+" Running cleanup…") {
+		t.Errorf("expected star + label on the running line, view:\n%s", out)
 	}
 }
 
-func TestWorkFrames_AllSingleCell(t *testing.T) {
-	for _, f := range workFrames {
-		if n := len([]rune(f)); n != 1 {
-			t.Errorf("frame %q is %d runes; status columns need single-cell frames", f, n)
+func TestVocabulary_NoRetiredGlyphsInMajorViews(t *testing.T) {
+	m := NewModel([]git.Worktree{{Path: "/work/a", Branch: "refs/heads/a"}}, nil, "/repo")
+	m.width, m.height = 100, 40
+	m.remove.run = newRemovalRun([]git.Worktree{{Path: "/work/a", Branch: "refs/heads/a"}})
+	m.remove.run.result.SuccessCount = 1
+
+	views := map[string]string{
+		"progress": func() string { m.view = progressView; return m.viewProgress() }(),
+		"summary":  func() string { m.view = summaryView; return m.viewSummary() }(),
+		"cleanup":  func() string { m.view = cleanupResultView; return m.viewCleanupResult() }(),
+	}
+	for name, view := range views {
+		plain := stripAnsi(view)
+		for _, retired := range []string{"●", "◐", "✓"} {
+			if strings.Contains(plain, retired) {
+				t.Errorf("%s view contains retired glyph %q:\n%s", name, retired, plain)
+			}
 		}
 	}
 }
 
-func TestViewStatLine_UsesProvidedActiveGlyph(t *testing.T) {
-	line := stripAnsi(viewStatLine(WindowStats{Done: 1, Active: 2, Pending: 3, Showing: 4, Total: 6}, "●"))
-	if !strings.Contains(line, "● 2 active") {
-		t.Errorf("stat line must render the provided glyph, got %q", line)
+func TestSummaryVerdict_CrystallizedStar(t *testing.T) {
+	m := NewModel(nil, nil, "/repo")
+	m.width = 80
+	m.remove.run = newRemovalRun(nil)
+	m.remove.run.result.SuccessCount = 2
+	m.view = summaryView
+
+	view := stripAnsi(m.viewSummary())
+	if !strings.Contains(view, "✦ 2 worktrees removed successfully") {
+		t.Errorf("expected ✦ verdict headline, view:\n%s", view)
 	}
 }
 
-func TestOverallBar_FillsWidthMinusMeta(t *testing.T) {
-	m := NewModel([]git.Worktree{}, nil, "/repo")
-	m.view = progressView
-
-	updated, _ := m.Update(tea.WindowSizeMsg{Width: 120, Height: 40})
-	m = updated.(Model)
-
-	if got := m.bar.Width(); got != 120-2-progressBarElapsedReserve {
-		t.Errorf("bar width = %d, want %d", got, 120-2-progressBarElapsedReserve)
-	}
-
-	updated, _ = m.Update(tea.WindowSizeMsg{Width: 30, Height: 40})
-	m = updated.(Model)
-	if got := m.bar.Width(); got != minProgressBarWidth {
-		t.Errorf("bar width below floor: %d, want %d", got, minProgressBarWidth)
-	}
-}
-
-func TestStaticBar_FollowsLayoutWidth(t *testing.T) {
-	l := runningLayout()
-	l.Width = 120
-	wide := stripANSI(l.View())
-	l.Width = 60
-	narrow := stripANSI(l.View())
-
-	wideBar := barLineLength(t, wide)
-	narrowBar := barLineLength(t, narrow)
-	if wideBar <= narrowBar {
-		t.Errorf("static bar must widen with the layout: %d (120 cols) vs %d (60 cols)", wideBar, narrowBar)
-	}
-}
-
-func barLineLength(t *testing.T, view string) int {
-	t.Helper()
-	for _, line := range strings.Split(view, "\n") {
-		if strings.Contains(line, "█") || strings.Contains(line, "░") {
-			return len([]rune(strings.TrimRight(line, " ")))
-		}
-	}
-	t.Fatalf("no bar line in view:\n%s", view)
-	return 0
-}
-
-func TestOverallBar_GradientSpansFill(t *testing.T) {
-	m := NewModel([]git.Worktree{}, nil, "/repo")
-
-	full := m.bar.ViewAs(1.0)
-	cells := strings.SplitAfter(full, "█")
-	if len(cells) < 3 {
-		t.Fatalf("expected multiple filled cells, got %q", full)
-	}
-	if !strings.Contains(full, "38;2;") {
-		t.Errorf("expected truecolor gradient sequences in the fill, got %q", full)
-	}
-	first := ansiPrefix(cells[0])
-	last := ansiPrefix(cells[len(cells)-2])
-	if first == last {
-		t.Errorf("gradient endpoints must differ: first cell %q == last cell %q", first, last)
-	}
-}
-
-// ansiPrefix returns the escape sequence immediately preceding the cell's rune.
-func ansiPrefix(cell string) string {
-	if i := strings.LastIndex(cell, "\x1b["); i >= 0 {
-		return cell[i:]
-	}
-	return ""
-}
-
-func TestPalettes_DefineGradientTokens(t *testing.T) {
-	for name, p := range map[string]palette{"dark": darkPalette, "light": lightPalette} {
-		if p.barStart == nil || p.barEnd == nil {
-			t.Errorf("%s palette missing gradient tokens", name)
-		}
+func TestCleanupPreview_WouldActUsesArrow(t *testing.T) {
+	var b strings.Builder
+	writePreviewLine(&b, 3, "stale remote %s pruned", "ref", "refs", "No stale remote refs")
+	if got := stripAnsi(b.String()); !strings.Contains(got, "▸ 3 stale remote refs pruned") {
+		t.Errorf("expected would-act arrow line, got %q", got)
 	}
 }

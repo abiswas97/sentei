@@ -9,7 +9,6 @@ import (
 
 	"charm.land/bubbles/v2/key"
 	"charm.land/bubbles/v2/progress"
-	"charm.land/bubbles/v2/spinner"
 	"charm.land/bubbles/v2/stopwatch"
 	"charm.land/bubbles/v2/textinput"
 	tea "charm.land/bubbletea/v2"
@@ -246,10 +245,10 @@ type Model struct {
 	integ  integrationState
 	portal DetailPortal
 
-	// spin is the one working animation (heavy braille dot), shared by
-	// indeterminate waits, active progress rows, and the cleanup running
-	// line; ticks run only while such work is visible (spinnerActive).
-	spin spinner.Model
+	// motionTick is the one animation clock: star frames and shimmer band
+	// positions derive from it as pure functions. The tick chain runs only
+	// while a working surface is visible (motionActive).
+	motionTick int
 
 	// bar springs the overall progress toward each completion target and
 	// watch counts elapsed time; both animate only in determinate progress
@@ -292,7 +291,6 @@ func NewModel(worktrees []git.Worktree, runner git.CommandRunner, repoPath strin
 			filterInput:   ti,
 		},
 		height: 20,
-		spin:   newWorkSpinner(),
 		bar:    newOverallBar(),
 		watch:  stopwatch.New(),
 	}
@@ -365,7 +363,6 @@ func NewMenuModel(runner git.CommandRunner, shell git.ShellRunner, repoPath stri
 		height:             20,
 		menuItems:          items,
 		worktreeGeneration: initGeneration,
-		spin:               newWorkSpinner(),
 		bar:                newOverallBar(),
 		watch:              stopwatch.New(),
 		remove: removeState{
@@ -461,7 +458,7 @@ func (m *Model) SetMigrateOpts(opts *MigrateOpts) {
 
 func (m Model) Init() tea.Cmd {
 	if m.view == menuView && m.context == repo.ContextBareRepo {
-		return tea.Batch(tea.RequestBackgroundColor, m.spin.Tick, loadWorktreeContext(m.runner, m.repoPath, m.worktreeGeneration))
+		return tea.Batch(tea.RequestBackgroundColor, motionTickCmd(), loadWorktreeContext(m.runner, m.repoPath, m.worktreeGeneration))
 	}
 	return tea.RequestBackgroundColor
 }
@@ -540,13 +537,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, cmd
 	}
 
-	if tick, ok := msg.(spinner.TickMsg); ok {
-		if !m.spinnerActive() {
+	if _, ok := msg.(motionTickMsg); ok {
+		if !m.motionActive() {
 			return m, nil
 		}
-		var cmd tea.Cmd
-		m.spin, cmd = m.spin.Update(tick)
-		return m, cmd
+		m.motionTick++
+		return m, motionTickCmd()
 	}
 
 	if bg, ok := msg.(tea.BackgroundColorMsg); ok {
@@ -584,30 +580,22 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	// Per-view dispatch, wrapped so any flow entering a live-work view
-	// starts the spinner tick chain without each entry site knowing about it.
-	wasSpinning := m.spinnerActive()
+	// starts the motion clock without each entry site knowing about it.
+	wasMoving := m.motionActive()
 	updated, cmd := m.dispatchByView(msg)
-	if model, ok := updated.(Model); ok && !wasSpinning && model.spinnerActive() {
-		return model, tea.Batch(cmd, model.spin.Tick)
+	if model, ok := updated.(Model); ok && !wasMoving && model.motionActive() {
+		return model, tea.Batch(cmd, motionTickCmd())
 	}
 	return updated, cmd
 }
 
-// spinnerActive reports whether any working surface is on screen: an
+// motionActive reports whether any working surface is on screen: an
 // indeterminate wait, a determinate progress view, or the cleanup result's
-// running line. The one gate for the one spinner.
-func (m Model) spinnerActive() bool {
+// running line. The one gate for the one motion clock.
+func (m Model) motionActive() bool {
 	return m.indeterminateWaitActive() ||
 		m.determinateProgressActive() ||
 		(m.view == cleanupResultView && m.cleanupResult == nil)
-}
-
-// newWorkSpinner builds the one working animation: heavy braille at 10fps.
-func newWorkSpinner() spinner.Model {
-	return spinner.New(spinner.WithSpinner(spinner.Spinner{
-		Frames: workFrames,
-		FPS:    time.Second / 10,
-	}))
 }
 
 func (m Model) dispatchByView(msg tea.Msg) (tea.Model, tea.Cmd) {
