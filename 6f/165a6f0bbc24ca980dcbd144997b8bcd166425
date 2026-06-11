@@ -1,0 +1,53 @@
+internal/tui/create_options.go
+  s_e079bea5665c1d::t_e87b2c55f5fc1e 99
+internal/tui/create_branch_test.go
+  s_e079bea5665c1d::t_b4b0c884788a50 84-113
+internal/tui/clone_confirm_test.go
+  s_e079bea5665c1d::t_f24fd842fca3d9 193
+internal/tui/list_test.go
+  s_e079bea5665c1d::t_00d678fefc9b36 162-163
+internal/tui/list.go
+  s_e079bea5665c1d::t_2f289350033273 230-253
+  s_e079bea5665c1d::t_5ad87aba9da28d 128
+  s_e079bea5665c1d::t_967e946f480b14 92-103
+  s_e079bea5665c1d::t_e3e9fb0483e8b1 143,146
+internal/tui/removal_e2e_test.go
+  s_e079bea5665c1d::t_181ecd2c3e3e58 67
+internal/tui/integration_list.go
+  s_e079bea5665c1d::t_3b3436efec3855 184-201,208,211
+  s_e079bea5665c1d::t_7e871410fd7133 256,258,263-296
+  s_e079bea5665c1d::t_8ee9c1927932c9 434-436
+internal/tui/menu.go
+  s_e079bea5665c1d::t_9b3cfceb32e697 87
+internal/tui/portal.go
+  s_e079bea5665c1d::t_137a4ed538a0b4 72-73
+  s_e079bea5665c1d::t_83af59c2ab923b 114-116
+  s_e079bea5665c1d::t_34534fdee94df6 51
+internal/tui/mouse_test.go
+  s_e079bea5665c1d::t_260f2a4e3d4429 1-82,100-129
+  s_e079bea5665c1d::t_48ebea517a6090 83-99
+.impeccable.md
+  s_e079bea5665c1d::t_ed5bdd5757cf1a 35-37
+internal/tui/model.go
+  s_e079bea5665c1d::t_8bdd1c3da98606 470-475
+  s_e079bea5665c1d::t_d16fbe53bf72bd 550-553,556,558-561
+internal/tui/create_branch.go
+  s_e079bea5665c1d::t_fd10d8c47c5582 84
+  s_e079bea5665c1d::t_c3f711e128def2 80
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "6f165a6f0bbc24ca980dcbd144997b8bcd166425",
+  "prompts": {},
+  "sessions": {
+    "s_e079bea5665c1d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e853bef1-293d-4109-b048-273e59305a6e",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Test <t@t.com>"
+    }
+  }
+}
