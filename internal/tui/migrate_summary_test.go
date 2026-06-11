@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 
 	"github.com/abiswas97/sentei/internal/config"
 	"github.com/abiswas97/sentei/internal/pipeline"
@@ -86,7 +86,7 @@ func TestUpdateMigrateSummary_Failure_YIsInert(t *testing.T) {
 	m := makeMigrateSummaryModel(result)
 	// On a failed migration, 'y' (delete backup) must be inert — never delete a
 	// backup / advance. Only quit responds.
-	_, cmd := m.updateMigrateSummary(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'y'}})
+	_, cmd := m.updateMigrateSummary(tea.KeyPressMsg{Code: 'y', Text: "y"})
 	if cmd != nil {
 		t.Error("'y' on a failed migration must not delete backup or advance")
 	}
@@ -124,7 +124,7 @@ func TestUpdateMigrateNext_EnterRelaunches(t *testing.T) {
 	m := makeMigrateSummaryModel(repo.MigrateResult{BareRoot: "/bare", Branch: "main"})
 	m.view = migrateNextView
 
-	_, cmd := m.updateMigrateNext(tea.KeyMsg{Type: tea.KeyEnter})
+	_, cmd := m.updateMigrateNext(tea.KeyPressMsg{Code: tea.KeyEnter})
 
 	// relaunchSentei execs a process; assert only that a command was issued.
 	if cmd == nil {

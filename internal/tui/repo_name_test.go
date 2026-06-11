@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 
 	"github.com/abiswas97/sentei/internal/config"
 	"github.com/abiswas97/sentei/internal/repo"
@@ -22,7 +22,7 @@ func repoNameModel(repoPath string) Model {
 func TestUpdateRepoName_EscReturnsToMenu(t *testing.T) {
 	m := repoNameModel("/repo")
 
-	updated, _ := m.updateRepoName(tea.KeyMsg{Type: tea.KeyEsc})
+	updated, _ := m.updateRepoName(tea.KeyPressMsg{Code: tea.KeyEsc})
 
 	if updated.(Model).view != menuView {
 		t.Error("esc should return to the menu")
@@ -32,13 +32,13 @@ func TestUpdateRepoName_EscReturnsToMenu(t *testing.T) {
 func TestUpdateRepoName_TabSwitchesFields(t *testing.T) {
 	m := repoNameModel("/repo")
 
-	updated, _ := m.updateRepoName(tea.KeyMsg{Type: tea.KeyTab})
+	updated, _ := m.updateRepoName(tea.KeyPressMsg{Code: tea.KeyTab})
 	model := updated.(Model)
 	if model.repo.focusedField != 1 || !model.repo.locationInput.Focused() || model.repo.nameInput.Focused() {
 		t.Fatal("tab should move focus to the location field")
 	}
 
-	updated, _ = model.updateRepoName(tea.KeyMsg{Type: tea.KeyTab})
+	updated, _ = model.updateRepoName(tea.KeyPressMsg{Code: tea.KeyTab})
 	model = updated.(Model)
 	if model.repo.focusedField != 0 || !model.repo.nameInput.Focused() {
 		t.Fatal("second tab should move focus back to the name field")
@@ -65,7 +65,7 @@ func TestUpdateRepoName_EnterValidates(t *testing.T) {
 			m.repo.nameInput.SetValue(tc.repoName)
 			m.repo.locationInput.SetValue(tc.location)
 
-			updated, _ := m.updateRepoName(tea.KeyMsg{Type: tea.KeyEnter})
+			updated, _ := m.updateRepoName(tea.KeyPressMsg{Code: tea.KeyEnter})
 			model := updated.(Model)
 
 			if !strings.Contains(model.repo.validationErr, tc.wantErr) {
@@ -84,7 +84,7 @@ func TestUpdateRepoName_EnterValidAdvancesToOptions(t *testing.T) {
 	m.repo.nameInput.SetValue("myrepo")
 	m.repo.locationInput.SetValue(filepath.Join(tmp, "myrepo"))
 
-	updated, cmd := m.updateRepoName(tea.KeyMsg{Type: tea.KeyEnter})
+	updated, cmd := m.updateRepoName(tea.KeyPressMsg{Code: tea.KeyEnter})
 	model := updated.(Model)
 
 	if model.view != repoOptionsView {
@@ -113,7 +113,7 @@ func TestUpdateRepoName_TypingAutoFillsLocation(t *testing.T) {
 		t.Errorf("location = %q, want %q", got, "/repo/a")
 	}
 
-	updated, _ = model.updateRepoName(tea.KeyMsg{Type: tea.KeyBackspace})
+	updated, _ = model.updateRepoName(tea.KeyPressMsg{Code: tea.KeyBackspace})
 	model = updated.(Model)
 	if got := model.repo.locationInput.Value(); got != "/repo" {
 		t.Errorf("location after clearing name = %q, want %q", got, "/repo")

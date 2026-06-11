@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 
 	"github.com/abiswas97/sentei/internal/git"
 	"github.com/abiswas97/sentei/internal/integration"
@@ -134,7 +134,7 @@ func TestConfirmDeletion_UnlocksLockedWorktrees(t *testing.T) {
 	m.view = confirmView
 
 	// Send 'y' to confirm
-	model, cmd := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'y'}})
+	model, cmd := m.Update(tea.KeyPressMsg{Code: 'y', Text: "y"})
 
 	// Pump all commands until no more
 	for cmd != nil {
@@ -196,7 +196,7 @@ func TestPlayground_DeleteAll_IncludesLockedWorktree(t *testing.T) {
 	m.view = confirmView
 
 	// Confirm deletion
-	model, cmd := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'y'}})
+	model, cmd := m.Update(tea.KeyPressMsg{Code: 'y', Text: "y"})
 	for cmd != nil {
 		msg := cmd()
 		if msg == nil {
@@ -300,7 +300,7 @@ func TestRemovalGate_CleanPushedSkipsConfirmation(t *testing.T) {
 		{Path: "/w/b", Branch: "refs/heads/b"},
 	})
 
-	updated, cmd := m.updateList(tea.KeyMsg{Type: tea.KeyEnter})
+	updated, cmd := m.updateList(tea.KeyPressMsg{Code: tea.KeyEnter})
 	model := updated.(Model)
 
 	if model.view != progressView {
@@ -331,7 +331,7 @@ func TestRemovalGate_AtRiskTriggersConfirmation(t *testing.T) {
 				tc.wt,
 			})
 
-			updated, _ := m.updateList(tea.KeyMsg{Type: tea.KeyEnter})
+			updated, _ := m.updateList(tea.KeyPressMsg{Code: tea.KeyEnter})
 			model := updated.(Model)
 
 			if model.view != confirmView {

@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 
 	"github.com/abiswas97/sentei/internal/cleanup"
 	"github.com/abiswas97/sentei/internal/config"
@@ -173,7 +173,7 @@ func TestUpdateCleanupPreview_EnterRunsSafeCleanup(t *testing.T) {
 	m.cleanupScan = scanWithAggressive(0)
 	m.runner = &stubRunner{responses: map[string]stubResponse{}}
 
-	updated, cmd := m.updateCleanupPreview(tea.KeyMsg{Type: tea.KeyEnter})
+	updated, cmd := m.updateCleanupPreview(tea.KeyPressMsg{Code: tea.KeyEnter})
 	model := updated.(Model)
 
 	if model.view != cleanupResultView {
@@ -192,7 +192,7 @@ func TestUpdateCleanupPreview_EnterRunsSafeCleanup(t *testing.T) {
 
 func TestUpdateCleanupPreview_EnterWhileScanningIsNoop(t *testing.T) {
 	m := previewModel()
-	updated, cmd := m.updateCleanupPreview(tea.KeyMsg{Type: tea.KeyEnter})
+	updated, cmd := m.updateCleanupPreview(tea.KeyPressMsg{Code: tea.KeyEnter})
 	if updated.(Model).view != cleanupPreviewView || cmd != nil {
 		t.Error("enter during the scan must do nothing")
 	}
@@ -242,7 +242,7 @@ func TestUpdateCleanupPreview_AggressiveKeyNoopWithoutCandidates(t *testing.T) {
 func TestUpdateCleanupPreview_EscReturnsToMenu(t *testing.T) {
 	m := previewModel()
 	m.cleanupScan = scanWithAggressive(1)
-	updated, _ := m.updateCleanupPreview(tea.KeyMsg{Type: tea.KeyEsc})
+	updated, _ := m.updateCleanupPreview(tea.KeyPressMsg{Code: tea.KeyEsc})
 	if updated.(Model).view != menuView {
 		t.Error("esc must return to the menu")
 	}
@@ -288,7 +288,7 @@ func TestE2E_CleanupPreviewFlow(t *testing.T) {
 	m.menuCursor = 3 // "Cleanup & exit"
 	m.view = menuView
 
-	updated, cmd := m.updateMenu(tea.KeyMsg{Type: tea.KeyEnter})
+	updated, cmd := m.updateMenu(tea.KeyPressMsg{Code: tea.KeyEnter})
 	model := updated.(Model)
 	if model.view != cleanupPreviewView || cmd == nil {
 		t.Fatalf("menu must enter the preview and fire the scan, view=%d", model.view)
@@ -304,7 +304,7 @@ func TestE2E_CleanupPreviewFlow(t *testing.T) {
 		t.Fatalf("expected preview sections:\n%s", view)
 	}
 
-	updated, runCmd := model.updateCleanupPreview(tea.KeyMsg{Type: tea.KeyEnter})
+	updated, runCmd := model.updateCleanupPreview(tea.KeyPressMsg{Code: tea.KeyEnter})
 	model = updated.(Model)
 	if model.view != cleanupResultView || runCmd == nil {
 		t.Fatalf("enter must start the safe run, view=%d", model.view)

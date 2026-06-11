@@ -1,7 +1,7 @@
 package tui
 
 import (
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/lipgloss/v2"
 )
 
 // Palette: the single source for every color in the TUI. Styles below and

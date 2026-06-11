@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 
 	"github.com/abiswas97/sentei/internal/config"
 	"github.com/abiswas97/sentei/internal/pipeline"
@@ -134,7 +134,7 @@ func TestViewCreateRepoSummary_GitHubFailure_ShowsLocalOnly(t *testing.T) {
 // returned command resolves to tea.QuitMsg (quit) rather than a relaunch.
 func quitsOnConfirm(t *testing.T, m Model) bool {
 	t.Helper()
-	_, cmd := m.updateRepoSummary(tea.KeyMsg{Type: tea.KeyEnter})
+	_, cmd := m.updateRepoSummary(tea.KeyPressMsg{Code: tea.KeyEnter})
 	if cmd == nil {
 		t.Fatal("expected a command from Confirm")
 	}

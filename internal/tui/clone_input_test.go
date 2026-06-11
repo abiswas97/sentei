@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 
 	"github.com/abiswas97/sentei/internal/config"
 	"github.com/abiswas97/sentei/internal/repo"
@@ -23,7 +23,7 @@ func cloneInputModel(repoPath string) Model {
 func TestUpdateCloneInput_EscReturnsToMenu(t *testing.T) {
 	m := cloneInputModel("/repo")
 
-	updated, _ := m.updateCloneInput(tea.KeyMsg{Type: tea.KeyEsc})
+	updated, _ := m.updateCloneInput(tea.KeyPressMsg{Code: tea.KeyEsc})
 
 	if updated.(Model).view != menuView {
 		t.Error("esc should return to the menu")
@@ -33,13 +33,13 @@ func TestUpdateCloneInput_EscReturnsToMenu(t *testing.T) {
 func TestUpdateCloneInput_TabSwitchesFields(t *testing.T) {
 	m := cloneInputModel("/repo")
 
-	updated, _ := m.updateCloneInput(tea.KeyMsg{Type: tea.KeyTab})
+	updated, _ := m.updateCloneInput(tea.KeyPressMsg{Code: tea.KeyTab})
 	model := updated.(Model)
 	if model.repo.cloneFocusedField != 1 || !model.repo.cloneNameInput.Focused() || model.repo.urlInput.Focused() {
 		t.Fatal("tab should move focus to the name field")
 	}
 
-	updated, _ = model.updateCloneInput(tea.KeyMsg{Type: tea.KeyTab})
+	updated, _ = model.updateCloneInput(tea.KeyPressMsg{Code: tea.KeyTab})
 	model = updated.(Model)
 	if model.repo.cloneFocusedField != 0 || !model.repo.urlInput.Focused() {
 		t.Fatal("second tab should move focus back to the URL field")
@@ -49,7 +49,7 @@ func TestUpdateCloneInput_TabSwitchesFields(t *testing.T) {
 func TestUpdateCloneInput_EnterEmptyURLRejected(t *testing.T) {
 	m := cloneInputModel("/repo")
 
-	updated, _ := m.updateCloneInput(tea.KeyMsg{Type: tea.KeyEnter})
+	updated, _ := m.updateCloneInput(tea.KeyPressMsg{Code: tea.KeyEnter})
 	model := updated.(Model)
 
 	if model.repo.validationErr != "repository URL is required" {
@@ -68,7 +68,7 @@ func TestUpdateCloneInput_EnterExistingDestinationRejected(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	updated, _ := m.updateCloneInput(tea.KeyMsg{Type: tea.KeyEnter})
+	updated, _ := m.updateCloneInput(tea.KeyPressMsg{Code: tea.KeyEnter})
 	model := updated.(Model)
 
 	if !strings.Contains(model.repo.validationErr, "already exists") {
@@ -81,7 +81,7 @@ func TestUpdateCloneInput_EnterStartsClonePipeline(t *testing.T) {
 	m := cloneInputModel(tmp)
 	m.repo.urlInput.SetValue("git@github.com:user/myrepo.git")
 
-	updated, cmd := m.updateCloneInput(tea.KeyMsg{Type: tea.KeyEnter})
+	updated, cmd := m.updateCloneInput(tea.KeyPressMsg{Code: tea.KeyEnter})
 	model := updated.(Model)
 
 	if model.view != repoProgressView {
@@ -110,7 +110,7 @@ func TestUpdateCloneInput_TypingDerivesNameUntilManuallyEdited(t *testing.T) {
 	}
 
 	// Move to the name field and edit it: derivation must stop.
-	updated, _ = model.updateCloneInput(tea.KeyMsg{Type: tea.KeyTab})
+	updated, _ = model.updateCloneInput(tea.KeyPressMsg{Code: tea.KeyTab})
 	model = updated.(Model)
 	updated, _ = model.updateCloneInput(keyMsg("y"))
 	model = updated.(Model)
@@ -118,7 +118,7 @@ func TestUpdateCloneInput_TypingDerivesNameUntilManuallyEdited(t *testing.T) {
 		t.Fatal("editing the name field should mark it manually edited")
 	}
 
-	updated, _ = model.updateCloneInput(tea.KeyMsg{Type: tea.KeyTab})
+	updated, _ = model.updateCloneInput(tea.KeyPressMsg{Code: tea.KeyTab})
 	model = updated.(Model)
 	updated, _ = model.updateCloneInput(keyMsg("z"))
 	model = updated.(Model)

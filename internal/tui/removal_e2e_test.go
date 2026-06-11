@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 
 	"github.com/abiswas97/sentei/internal/git"
 )
@@ -64,7 +64,7 @@ func TestE2E_ProgressViewsQuitOnKeys(t *testing.T) {
 
 	for _, view := range []viewState{progressView, createProgressView, repoProgressView, integrationProgressView} {
 		m.view = view
-		for _, k := range []tea.KeyMsg{{Type: tea.KeyRunes, Runes: []rune{'q'}}, {Type: tea.KeyCtrlC}} {
+		for _, k := range []tea.KeyPressMsg{{Code: 'q', Text: "q"}, {Code: 'c', Mod: tea.ModCtrl}} {
 			_, cmd := m.Update(k)
 			if cmd == nil {
 				t.Errorf("view %d: expected quit Cmd for %v", view, k)

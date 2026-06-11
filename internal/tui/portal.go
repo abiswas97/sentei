@@ -3,10 +3,10 @@ package tui
 import (
 	"strings"
 
-	"github.com/charmbracelet/bubbles/key"
-	"github.com/charmbracelet/bubbles/viewport"
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/bubbles/v2/key"
+	"charm.land/bubbles/v2/viewport"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 )
 
 // portalTrigger records which key opened the portal so the same key toggles
@@ -48,7 +48,7 @@ func (p DetailPortal) Open(trigger portalTrigger, title, content string) DetailP
 	p.trigger = trigger
 	p.title = title
 	p.contentLines = strings.Count(content, "\n") + 1
-	p.viewport = viewport.New(p.contentWidth(), p.fitHeight())
+	p.viewport = viewport.New(viewport.WithWidth(p.contentWidth()), viewport.WithHeight(p.fitHeight()))
 	p.viewport.SetContent(content)
 	p.viewport.GotoTop()
 	return p
@@ -69,8 +69,8 @@ func (p DetailPortal) Close() DetailPortal {
 func (p DetailPortal) SetSize(width, height int) DetailPortal {
 	p.width = width
 	p.height = height
-	p.viewport.Width = p.contentWidth()
-	p.viewport.Height = p.fitHeight()
+	p.viewport.SetWidth(p.contentWidth())
+	p.viewport.SetHeight(p.fitHeight())
 	return p
 }
 
@@ -111,7 +111,9 @@ func (p DetailPortal) View(background string) string {
 	}
 	b.WriteString(hintLine)
 
-	box := stylePortalBox.Width(p.contentWidth() + 2).Render(b.String())
+	// lipgloss v2 Width spans the whole block including border and padding,
+	// so the box adds its full frame (2 border + 2 padding) to the content.
+	box := stylePortalBox.Width(p.contentWidth() + 4).Render(b.String())
 	// A one-cell space margin covers the background characters adjacent to
 	// the border, which otherwise read as clipped artifacts.
 	box = lipgloss.NewStyle().Padding(0, 1).Render(box)
@@ -121,7 +123,7 @@ func (p DetailPortal) View(background string) string {
 // updatePortalKeys handles key input while the portal is open: quit passes
 // through, esc dismisses, F1/? toggle or switch content, everything else
 // scrolls the viewport.
-func (m Model) updatePortalKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m Model) updatePortalKeys(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	switch {
 	case key.Matches(msg, keys.Quit):
 		return m, tea.Quit

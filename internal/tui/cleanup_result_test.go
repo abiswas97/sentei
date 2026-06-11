@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 
 	"github.com/abiswas97/sentei/internal/cleanup"
 	"github.com/abiswas97/sentei/internal/config"
@@ -39,8 +39,8 @@ func TestUpdateCleanupResult_QuitKeys(t *testing.T) {
 	result := cleanup.Result{}
 
 	for _, k := range []tea.Msg{
-		tea.KeyMsg{Type: tea.KeyEnter},
-		tea.KeyMsg{Type: tea.KeyEsc},
+		tea.KeyPressMsg{Code: tea.KeyEnter},
+		tea.KeyPressMsg{Code: tea.KeyEsc},
 		keyMsg("q"),
 	} {
 		m := makeCleanupModel()
