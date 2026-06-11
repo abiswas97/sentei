@@ -189,12 +189,12 @@ func (m Model) viewIntegrationSummary() string {
 
 	b.WriteString(viewSeparator(m.width))
 	b.WriteString("\n\n")
-	hints := []KeyHint{{"enter", "integrations"}}
+	hints := []key.Binding{integrationsOpenHint}
 	if len(groups) > shown {
-		hints = append(hints, KeyHint{"?", "details"})
+		hints = append(hints, detailsHint)
 	}
-	hints = append(hints, KeyHint{"q", "quit"})
-	b.WriteString(viewKeyHints(hints...))
+	hints = append(hints, keys.Quit)
+	b.WriteString(viewFooter(m.width, hints))
 	b.WriteString("\n")
 
 	return b.String()

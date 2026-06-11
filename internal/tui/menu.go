@@ -204,7 +204,7 @@ func (m Model) viewMenu() string {
 	b.WriteString("\n")
 	b.WriteString(viewSeparator(m.width))
 	b.WriteString("\n\n")
-	b.WriteString(viewKeyHints(KeyHint{"j/k", "navigate"}, KeyHint{"enter", "select"}, KeyHint{"F1", "help"}, KeyHint{"q", "quit"}))
+	b.WriteString(viewFooter(m.width, menuFooter))
 	b.WriteString("\n")
 
 	return b.String()

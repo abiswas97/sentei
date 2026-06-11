@@ -100,7 +100,7 @@ func (m Model) viewMigrateSummary() string {
 		b.WriteString("\n")
 		b.WriteString(viewSeparator(m.width))
 		b.WriteString("\n\n")
-		b.WriteString(styleDim.Render("  q quit"))
+		b.WriteString(viewFooter(m.width, quitOnlyFooter))
 		b.WriteString("\n")
 		return b.String()
 	}
@@ -125,7 +125,7 @@ func (m Model) viewMigrateSummary() string {
 	b.WriteString("\n")
 	b.WriteString(viewSeparator(m.width))
 	b.WriteString("\n\n")
-	b.WriteString(viewKeyHints(KeyHint{"y", "delete"}, KeyHint{"n", "keep"}, KeyHint{"q", "quit"}))
+	b.WriteString(viewFooter(m.width, migrateConfirmFooter))
 	b.WriteString("\n")
 
 	return b.String()
@@ -194,7 +194,7 @@ func (m Model) viewMigrateNext() string {
 	b.WriteString("\n")
 	b.WriteString(viewSeparator(m.width))
 	b.WriteString("\n\n")
-	b.WriteString(viewKeyHints(KeyHint{"enter", "open in sentei"}, KeyHint{"q", "exit"}))
+	b.WriteString(viewFooter(m.width, migrateOpenFooter))
 	b.WriteString("\n")
 
 	return b.String()

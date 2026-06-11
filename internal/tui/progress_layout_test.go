@@ -179,7 +179,7 @@ func TestProgressLayout_WindowsStepsOnShortTerminal(t *testing.T) {
 func TestProgressLayout_HintsRendered(t *testing.T) {
 	l := ProgressLayout{
 		Title: "T", Width: 80, Height: 30,
-		Hints: []KeyHint{{"q", "quit"}},
+		Hints: progressFooter,
 	}
 	view := stripANSI(l.View())
 

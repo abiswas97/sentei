@@ -76,7 +76,7 @@ func (c ConfirmationViewModel) View() string {
 
 	b.WriteString(viewSeparator(c.Width))
 	b.WriteString("\n\n")
-	b.WriteString(viewKeyHints(KeyHint{"enter", "confirm"}, KeyHint{"esc", "back"}, KeyHint{"q", "quit"}) + "\n")
+	b.WriteString(viewFooter(c.Width, confirmationFooter) + "\n")
 
 	return b.String()
 }

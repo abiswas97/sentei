@@ -94,7 +94,7 @@ func TestViewIntegrationSummary_AllSucceeded(t *testing.T) {
 		{Worktree: "/repo/feature-b", Step: "Setup code-review-graph", Status: integration.StatusDone},
 	}
 
-	view := m.viewIntegrationSummary()
+	view := stripAnsi(m.viewIntegrationSummary())
 	for _, want := range []string{"feature-a", "feature-b", indicatorDone, "2 steps applied", "enter integrations"} {
 		if !strings.Contains(view, want) {
 			t.Errorf("expected summary to contain %q, view:\n%s", want, view)
