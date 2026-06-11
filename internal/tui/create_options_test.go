@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 
 	"github.com/abiswas97/sentei/internal/config"
 	"github.com/abiswas97/sentei/internal/creator"
@@ -200,7 +200,7 @@ func TestUpdateCreateOptions_EscReturnsToBranchInput(t *testing.T) {
 	m := createOptionsModel()
 	m.create.branchInput.Blur()
 
-	updated, cmd := m.updateCreateOptions(tea.KeyMsg{Type: tea.KeyEsc})
+	updated, cmd := m.updateCreateOptions(tea.KeyPressMsg{Code: tea.KeyEsc})
 	model := updated.(Model)
 
 	if model.view != createBranchView {
@@ -229,7 +229,7 @@ func TestUpdateCreateOptions_EnterStartsCreation(t *testing.T) {
 	m := createOptionsModel()
 	m.runner = &stubRunner{responses: map[string]stubResponse{}}
 
-	updated, cmd := m.updateCreateOptions(tea.KeyMsg{Type: tea.KeyEnter})
+	updated, cmd := m.updateCreateOptions(tea.KeyPressMsg{Code: tea.KeyEnter})
 	model := updated.(Model)
 
 	if model.view != createProgressView {

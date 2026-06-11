@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 
 	"github.com/abiswas97/sentei/internal/cleanup"
 	"github.com/abiswas97/sentei/internal/config"
@@ -102,7 +102,7 @@ func TestEmptyListReload_IncrementsGeneration(t *testing.T) {
 	m.menuCursor = 2
 	m.menuItems[2].enabled = true
 
-	updated, cmd := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	updated, cmd := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	model := updated.(Model)
 
 	if model.worktreeGeneration != 2 {
@@ -272,7 +272,7 @@ func TestE2E_RemovalToMenu_KeypressNotSwallowed(t *testing.T) {
 	m.menuCursor = 0
 
 	// First keypress: j (move down). This must NOT be swallowed.
-	updated, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
+	updated, _ = m.Update(tea.KeyPressMsg{Code: 'j', Text: "j"})
 	m = updated.(Model)
 
 	if m.menuCursor == 0 {

@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/charmbracelet/bubbles/key"
-	tea "github.com/charmbracelet/bubbletea"
+	"charm.land/bubbles/v2/key"
+	tea "charm.land/bubbletea/v2"
 
 	"github.com/abiswas97/sentei/internal/git"
 	"github.com/abiswas97/sentei/internal/repo"
@@ -48,7 +48,7 @@ func (m Model) updateMenu(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.height = max(msg.Height-6, 5)
 		return m, nil
 
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		switch {
 		case key.Matches(msg, keys.Quit), key.Matches(msg, keys.Back):
 			return m, tea.Quit
@@ -84,7 +84,7 @@ func (m Model) updateMenu(msg tea.Msg) (tea.Model, tea.Cmd) {
 				case "Create new worktree":
 					m = m.withCreateFlowReset()
 					m.view = createBranchView
-					return m, m.create.branchInput.Cursor.BlinkCmd()
+					return m, m.create.branchInput.Focus()
 				case "Manage integrations":
 					m.view = integrationListView
 					return m, m.loadIntegrationState()

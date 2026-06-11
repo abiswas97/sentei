@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 )
 
 func TestConfirmationView_ContainsTitle(t *testing.T) {
@@ -87,7 +87,7 @@ func TestConfirmationView_EmptyItems(t *testing.T) {
 }
 
 func TestUpdateConfirmation_EnterReturnsProceedMsg(t *testing.T) {
-	msg := tea.KeyMsg{Type: tea.KeyEnter}
+	msg := tea.KeyPressMsg{Code: tea.KeyEnter}
 
 	cmd := UpdateConfirmation(msg)
 	if cmd == nil {
@@ -101,7 +101,7 @@ func TestUpdateConfirmation_EnterReturnsProceedMsg(t *testing.T) {
 }
 
 func TestUpdateConfirmation_EscReturnsBackMsg(t *testing.T) {
-	msg := tea.KeyMsg{Type: tea.KeyEscape}
+	msg := tea.KeyPressMsg{Code: tea.KeyEscape}
 
 	cmd := UpdateConfirmation(msg)
 	if cmd == nil {
@@ -115,7 +115,7 @@ func TestUpdateConfirmation_EscReturnsBackMsg(t *testing.T) {
 }
 
 func TestUpdateConfirmation_QKeyReturnsQuit(t *testing.T) {
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'q'}}
+	msg := tea.KeyPressMsg{Code: 'q', Text: "q"}
 
 	cmd := UpdateConfirmation(msg)
 	if cmd == nil {
@@ -130,7 +130,7 @@ func TestUpdateConfirmation_QKeyReturnsQuit(t *testing.T) {
 }
 
 func TestUpdateConfirmation_CtrlCReturnsQuit(t *testing.T) {
-	msg := tea.KeyMsg{Type: tea.KeyCtrlC}
+	msg := tea.KeyPressMsg{Code: 'c', Mod: tea.ModCtrl}
 
 	cmd := UpdateConfirmation(msg)
 	if cmd == nil {
@@ -144,7 +144,7 @@ func TestUpdateConfirmation_CtrlCReturnsQuit(t *testing.T) {
 }
 
 func TestUpdateConfirmation_UnhandledKeyReturnsNil(t *testing.T) {
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'x'}}
+	msg := tea.KeyPressMsg{Code: 'x', Text: "x"}
 
 	cmd := UpdateConfirmation(msg)
 	if cmd != nil {

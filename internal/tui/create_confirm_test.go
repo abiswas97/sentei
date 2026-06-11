@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 
 	"github.com/abiswas97/sentei/internal/config"
 	"github.com/abiswas97/sentei/internal/repo"
@@ -163,7 +163,7 @@ func TestUpdateCreateConfirm_WindowSizeMsg(t *testing.T) {
 func TestUpdateCreateConfirm_QuitKey(t *testing.T) {
 	m := makeCreateConfirmModel(nil)
 
-	_, c := m.updateCreateConfirm(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'q'}})
+	_, c := m.updateCreateConfirm(tea.KeyPressMsg{Code: 'q', Text: "q"})
 	if c == nil {
 		t.Fatal("expected quit cmd for q key")
 	}
@@ -207,7 +207,7 @@ func TestCreateConfirm_UpdateDispatch(t *testing.T) {
 func TestCreateConfirm_ViewDispatch(t *testing.T) {
 	m := makeCreateConfirmModel(&CreateOpts{Branch: "feat/x", Base: "main"})
 
-	output := m.View()
+	output := m.View().Content
 
 	if !strings.Contains(stripAnsi(output), "Confirm Create") {
 		t.Error("View() should dispatch to viewCreateConfirm")

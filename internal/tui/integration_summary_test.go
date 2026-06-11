@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 
 	"github.com/abiswas97/sentei/internal/integration"
 )
@@ -74,7 +74,7 @@ func TestUpdateIntegrationSummary_Enter_ReturnsToListAndReloads(t *testing.T) {
 	m := makeIntegrationModel()
 	m.view = integrationSummaryView
 
-	updated, cmd := m.updateIntegrationSummary(tea.KeyMsg{Type: tea.KeyEnter})
+	updated, cmd := m.updateIntegrationSummary(tea.KeyPressMsg{Code: tea.KeyEnter})
 	model := updated.(Model)
 
 	if model.view != integrationListView {

@@ -6,9 +6,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/charmbracelet/bubbles/key"
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/bubbles/v2/key"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 
 	"github.com/abiswas97/sentei/internal/integration"
 )
@@ -181,21 +181,34 @@ func (m Model) updateIntegrationList(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 
-	case tea.KeyMsg:
+	case tea.MouseWheelMsg:
+		switch msg.Button {
+		case tea.MouseWheelDown:
+			if m.integ.showInfo {
+				m = m.integrationInfoNext()
+			} else {
+				m = m.integrationCursorDown()
+			}
+		case tea.MouseWheelUp:
+			if m.integ.showInfo {
+				m = m.integrationInfoPrev()
+			} else {
+				m = m.integrationCursorUp()
+			}
+		}
+		return m, nil
+
+	case tea.KeyPressMsg:
 		if m.integ.showInfo {
 			return m.updateIntegrationInfo(msg)
 		}
 
 		switch {
 		case key.Matches(msg, keys.Down):
-			if len(m.integ.integrations) > 0 && m.integ.cursor < len(m.integ.integrations)-1 {
-				m.integ.cursor++
-			}
+			m = m.integrationCursorDown()
 
 		case key.Matches(msg, keys.Up):
-			if m.integ.cursor > 0 {
-				m.integ.cursor--
-			}
+			m = m.integrationCursorUp()
 
 		case key.Matches(msg, keys.Toggle):
 			if len(m.integ.integrations) > 0 {
@@ -235,24 +248,52 @@ func (m Model) updateIntegrationList(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m Model) updateIntegrationInfo(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m Model) updateIntegrationInfo(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	switch {
 	case key.Matches(msg, keys.Back):
 		m.integ.showInfo = false
 	case key.Matches(msg, keys.Left):
-		if m.integ.infoCursor > 0 {
-			m.integ.infoCursor--
-		} else {
-			m.integ.infoCursor = len(m.integ.integrations) - 1
-		}
+		m = m.integrationInfoPrev()
 	case key.Matches(msg, keys.Right):
-		if m.integ.infoCursor < len(m.integ.integrations)-1 {
-			m.integ.infoCursor++
-		} else {
-			m.integ.infoCursor = 0
-		}
+		m = m.integrationInfoNext()
 	}
 	return m, nil
+}
+
+func (m Model) integrationCursorDown() Model {
+	if len(m.integ.integrations) > 0 && m.integ.cursor < len(m.integ.integrations)-1 {
+		m.integ.cursor++
+	}
+	return m
+}
+
+func (m Model) integrationCursorUp() Model {
+	if m.integ.cursor > 0 {
+		m.integ.cursor--
+	}
+	return m
+}
+
+// integrationInfoPrev moves the info carousel to the previous integration,
+// wrapping at the start. Shared by h/left and the mouse wheel.
+func (m Model) integrationInfoPrev() Model {
+	if m.integ.infoCursor > 0 {
+		m.integ.infoCursor--
+	} else {
+		m.integ.infoCursor = len(m.integ.integrations) - 1
+	}
+	return m
+}
+
+// integrationInfoNext moves the info carousel to the next integration,
+// wrapping at the end. Shared by l/right and the mouse wheel.
+func (m Model) integrationInfoNext() Model {
+	if m.integ.infoCursor < len(m.integ.integrations)-1 {
+		m.integ.infoCursor++
+	} else {
+		m.integ.infoCursor = 0
+	}
+	return m
 }
 
 func (m Model) viewIntegrationList() string {
@@ -390,7 +431,9 @@ func (m Model) renderIntegrationInfo() string {
 	content.WriteString("\n")
 	content.WriteString(styleDim.Render("h/\u25c0 prev \u00b7 l/\u25b6 next \u00b7 esc close"))
 
-	dialog := styleInfoCard.Width(innerWidth + 6).Render(content.String())
+	// lipgloss v2 Width spans the whole block including border and padding
+	// (2 border + 4 padding here), where v1 excluded the border.
+	dialog := styleInfoCard.Width(innerWidth + 8).Render(content.String())
 	return dialog
 }
 

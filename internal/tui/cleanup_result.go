@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/charmbracelet/bubbles/key"
-	tea "github.com/charmbracelet/bubbletea"
+	"charm.land/bubbles/v2/key"
+	tea "charm.land/bubbletea/v2"
 
 	"github.com/abiswas97/sentei/internal/cleanup"
 )
@@ -25,7 +25,7 @@ func (m Model) updateCleanupResult(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.cleanupResult = &msg.result
 		return m, nil
 
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		if m.cleanupResult == nil {
 			return m, nil
 		}

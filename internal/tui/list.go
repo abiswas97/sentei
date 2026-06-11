@@ -6,10 +6,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/charmbracelet/bubbles/key"
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
-	"github.com/charmbracelet/lipgloss/table"
+	"charm.land/bubbles/v2/key"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
+	"charm.land/lipgloss/v2/table"
 
 	"github.com/abiswas97/sentei/internal/git"
 )
@@ -89,7 +89,19 @@ func (m Model) updateList(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.height = max(msg.Height-6, 5)
 		return m, nil
 
-	case tea.KeyMsg:
+	case tea.MouseWheelMsg:
+		if m.remove.filterActive {
+			return m, nil
+		}
+		switch msg.Button {
+		case tea.MouseWheelDown:
+			m = m.listCursorDown()
+		case tea.MouseWheelUp:
+			m = m.listCursorUp()
+		}
+		return m, nil
+
+	case tea.KeyPressMsg:
 		if m.remove.filterActive {
 			return m.updateFilterInput(msg)
 		}
@@ -113,8 +125,7 @@ func (m Model) updateList(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(msg, keys.Filter):
 			m.remove.filterActive = true
 			m.remove.filterInput.SetValue(m.remove.filterText)
-			m.remove.filterInput.Focus()
-			return m, m.remove.filterInput.Cursor.BlinkCmd()
+			return m, m.remove.filterInput.Focus()
 
 		case key.Matches(msg, keys.Sort):
 			m.remove.sortField = (m.remove.sortField + 1) % 2
@@ -129,20 +140,10 @@ func (m Model) updateList(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.reindex()
 
 		case key.Matches(msg, keys.Down):
-			if m.remove.cursor < len(m.remove.visibleIndices)-1 {
-				m.remove.cursor++
-				if m.remove.cursor >= m.remove.offset+m.height {
-					m.remove.offset = m.remove.cursor - m.height + 1
-				}
-			}
+			m = m.listCursorDown()
 
 		case key.Matches(msg, keys.Up):
-			if m.remove.cursor > 0 {
-				m.remove.cursor--
-				if m.remove.cursor < m.remove.offset {
-					m.remove.offset = m.remove.cursor
-				}
-			}
+			m = m.listCursorUp()
 
 		case key.Matches(msg, keys.PageDown):
 			m.remove.cursor += m.height
@@ -226,7 +227,31 @@ func (m Model) updateList(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m Model) updateFilterInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+// listCursorDown moves the cursor one row down, scrolling the window when it
+// passes the bottom edge. Shared by the j/down keys and the mouse wheel.
+func (m Model) listCursorDown() Model {
+	if m.remove.cursor < len(m.remove.visibleIndices)-1 {
+		m.remove.cursor++
+		if m.remove.cursor >= m.remove.offset+m.height {
+			m.remove.offset = m.remove.cursor - m.height + 1
+		}
+	}
+	return m
+}
+
+// listCursorUp moves the cursor one row up, scrolling the window when it
+// passes the top edge. Shared by the k/up keys and the mouse wheel.
+func (m Model) listCursorUp() Model {
+	if m.remove.cursor > 0 {
+		m.remove.cursor--
+		if m.remove.cursor < m.remove.offset {
+			m.remove.offset = m.remove.cursor
+		}
+	}
+	return m
+}
+
+func (m Model) updateFilterInput(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	switch {
 	case key.Matches(msg, keys.Back):
 		m.remove.filterActive = false

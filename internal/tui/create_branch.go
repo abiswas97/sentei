@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/charmbracelet/bubbles/key"
-	tea "github.com/charmbracelet/bubbletea"
+	"charm.land/bubbles/v2/key"
+	tea "charm.land/bubbletea/v2"
 
 	"github.com/abiswas97/sentei/internal/ecosystem"
 	"github.com/abiswas97/sentei/internal/git"
@@ -67,7 +67,7 @@ func (m Model) updateCreateBranch(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.height = max(msg.Height-6, 5)
 		return m, nil
 
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		switch {
 		case key.Matches(msg, keys.Back):
 			m.view = menuView
@@ -77,13 +77,11 @@ func (m Model) updateCreateBranch(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.create.focusedField == 0 {
 				m.create.focusedField = 1
 				m.create.branchInput.Blur()
-				m.create.baseInput.Focus()
-				return m, m.create.baseInput.Cursor.BlinkCmd()
+				return m, m.create.baseInput.Focus()
 			}
 			m.create.focusedField = 0
 			m.create.baseInput.Blur()
-			m.create.branchInput.Focus()
-			return m, m.create.branchInput.Cursor.BlinkCmd()
+			return m, m.create.branchInput.Focus()
 
 		case key.Matches(msg, keys.QuickCreate):
 			branch := m.create.branchInput.Value()
