@@ -182,7 +182,7 @@ func (m Model) viewCreateBranch() string {
 	b.WriteString(viewTitle("Create Worktree"))
 	b.WriteString("\n\n")
 
-	b.WriteString(styleDim.Render(fmt.Sprintf("  %s %s %s", filepath.Base(m.repoPath), "\u00b7", m.repoPath)))
+	b.WriteString(styleDim.Render(truncateWithEllipsis(fmt.Sprintf("  %s %s %s", filepath.Base(m.repoPath), "\u00b7", m.repoPath), max(m.width, 40))))
 	b.WriteString("\n\n")
 
 	b.WriteString(viewSeparator(m.width))
