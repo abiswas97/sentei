@@ -75,11 +75,18 @@ func (m Model) viewCreateSummary() string {
 				status := styleIndicatorDone.Render(indicatorDone)
 				if step.Status == pipeline.StepFailed {
 					status = styleIndicatorFailed.Render(indicatorFailed)
-					if step.Error != nil {
-						status += "  " + styleError.Render(step.Error.Error())
-					}
 				}
 				fmt.Fprintf(&b, "    %-10s %s %s\n", styleDim.Render(label), step.Name, status)
+				if step.Status == pipeline.StepFailed && step.Error != nil {
+					peek := errorPeekLines(step.Error.Error(), max(m.width-8, 20))
+					for i, line := range peek {
+						style := styleDim
+						if i == 1 || len(peek) == 1 {
+							style = styleError
+						}
+						fmt.Fprintf(&b, "      %s\n", style.Render(line))
+					}
+				}
 			}
 		}
 	}
