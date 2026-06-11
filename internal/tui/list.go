@@ -352,7 +352,7 @@ func (m Model) viewList() string {
 
 		cursor := "  "
 		if i == m.remove.cursor {
-			cursor = "> "
+			cursor = "▸ "
 		}
 
 		var checkbox string
@@ -366,18 +366,7 @@ func (m Model) viewList() string {
 
 		status := statusIndicator(wt)
 
-		branch := stripBranchPrefix(wt.Branch)
-		if branch == "" {
-			switch {
-			case wt.IsDetached:
-				branch = wt.HEAD
-				if len(branch) >= 7 {
-					branch = branch[:7]
-				}
-			case wt.IsPrunable:
-				branch = "(prunable)"
-			}
-		}
+		branch := worktreeLabel(wt)
 
 		age := relativeTime(wt.LastCommitDate)
 		subject := wt.LastCommitSubject
@@ -465,7 +454,8 @@ func (m Model) viewList() string {
 
 func (m Model) viewStatusOrFilter() string {
 	if m.remove.filterActive {
-		return m.remove.filterInput.View()
+		// The filter keeps the chrome margin like every other line.
+		return "  " + m.remove.filterInput.View()
 	}
 	return m.viewStatusBar()
 }
@@ -488,8 +478,13 @@ func (m Model) viewStatusBar() string {
 		filterInfo += fmt.Sprintf(" \u00b7 pre-filter: %s", m.remove.filterLabel)
 	}
 
+	// A delete affordance with nothing selected is a dead-end keypress.
+	hintSet := listFooter
+	if count == 0 {
+		hintSet = listFooterNoSelection
+	}
 	prefix := fmt.Sprintf("  %d selected%s \u00b7 ", count, filterInfo)
-	hints := footerHints(m.width-lipgloss.Width(prefix), listFooter)
+	hints := footerHints(m.width-lipgloss.Width(prefix), hintSet)
 	return styleStatusBar.Render(prefix) + hints
 }
 

@@ -47,6 +47,21 @@ func viewFooter(width int, bindings []key.Binding) string {
 	return "  " + footerHints(width-2, bindings)
 }
 
+// viewFooterDanger renders a footer whose FIRST binding performs an
+// irreversible action: that hint carries the warning style so danger never
+// hides in dim text. Remaining hints render as usual.
+func viewFooterDanger(width int, bindings []key.Binding) string {
+	if len(bindings) == 0 {
+		return ""
+	}
+	danger := bindings[0].Help()
+	out := "  " + styleWarning.Render(danger.Key+" "+danger.Desc)
+	if len(bindings) > 1 {
+		out += styleDim.Render(" · ") + footerHints(width-2-lipgloss.Width(out), bindings[1:])
+	}
+	return out
+}
+
 // footerHints renders the hint row itself within budget columns; callers
 // that prepend their own prefix (the list status bar) pass the remaining
 // budget directly.

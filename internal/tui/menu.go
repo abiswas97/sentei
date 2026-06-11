@@ -176,7 +176,7 @@ func (m Model) viewMenu() string {
 	for i, item := range m.menuItems {
 		cursor := "  "
 		if i == m.menuCursor {
-			cursor = "> "
+			cursor = "▸ "
 		}
 
 		label := item.label
@@ -193,6 +193,10 @@ func (m Model) viewMenu() string {
 		}
 
 		if i == m.menuCursor {
+			// The selected row carries the accent itself, not just the marker.
+			if item.enabled {
+				label = styleAccent.Render(item.label)
+			}
 			b.WriteString(styleAccent.Render(cursor) + label + hint)
 		} else {
 			b.WriteString("  " + label + hint)
