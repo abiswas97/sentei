@@ -58,3 +58,17 @@ A failed step's error SHALL render as a bounded peek, never raw: in summaries, a
 - **WHEN** the user opens the detail portal from a summary with failures
 - **THEN** the failed step's complete error output SHALL be readable there
 
+### Requirement: Installs are functionally complete
+An integration's install command SHALL produce a tool whose default setup command can run: for cocoindex-code that means installing the `embeddings-local` extra so the default local-embedding `ccc index` has its runtime dependencies.
+
+#### Scenario: Fresh ccc install can index
+- **WHEN** sentei installs cocoindex-code on a machine without it
+- **THEN** the install SHALL include the embeddings-local extra so `ccc index` does not fail on missing modules
+
+### Requirement: Install resolution is environment-independent
+Integration install commands SHALL NOT depend on ambient interpreter pins: the ccc install pins its Python so a `.python-version` in the working directory cannot make resolution unsatisfiable.
+
+#### Scenario: Caller directory pins an old Python
+- **WHEN** sentei applies the ccc integration from a directory whose `.python-version` is below 3.11
+- **THEN** the install SHALL still resolve using the pinned interpreter
+
