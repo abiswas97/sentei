@@ -52,11 +52,15 @@ var (
 	}
 
 	lightPalette = palette{
-		accent:    lipgloss.Color("56"),
-		success:   lipgloss.Color("29"),
-		warning:   lipgloss.Color("166"),
-		errorc:    lipgloss.Color("160"),
-		dim:       lipgloss.Color("245"),
+		accent:  lipgloss.Color("56"),
+		success: lipgloss.Color("29"),
+		// 130 over 166: orange on white needs the darker shade to clear
+		// 4.5:1 contrast; 166 washes out on light backgrounds.
+		warning: lipgloss.Color("130"),
+		errorc:  lipgloss.Color("160"),
+		// 243 over 245: one step darker keeps secondary text readable
+		// on white without competing with body text.
+		dim:       lipgloss.Color("243"),
 		emphasis:  lipgloss.Color("235"),
 		body:      lipgloss.Color("238"),
 		selected:  lipgloss.Color("168"),
