@@ -28,4 +28,4 @@
 
 - [x] 4.1 Playground pass (tmux subagent, keys sent individually) at 80x18 and normal size: every view eyeballed against .impeccable.md; explicit portal-over-list composite check
 - [x] 4.2 Update `.impeccable.md` decision log (v2 platform, virtual-cursor choice, wheel-as-alias); verify no spec/code drift introduced
-- [ ] 4.3 PR with refactor-type commits; CI green (build, lint, both OS test jobs, commitlint, codecov/patch); merge and clean up worktree
+- [x] 4.3 PR with refactor-type commits; CI green (build, lint, both OS test jobs, commitlint, codecov/patch); merge and clean up worktree
