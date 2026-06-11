@@ -93,8 +93,10 @@ func (m Model) updateCleanupPreview(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			return m.startCleanupRun(cleanup.ModeSafe)
 
-		case msg.String() == "a":
-			if m.cleanupScan != nil && m.cleanupScan.AggressiveHasWork() {
+		case key.Matches(msg, keys.All):
+			// The gate opens only when aggressive mode would actually delete
+			// something; unmerged-only candidates need --force on the CLI.
+			if m.cleanupScan != nil && m.cleanupScan.DeletableAggressiveCount() > 0 {
 				m.cleanupAggressiveConfirm = true
 			}
 			return m, nil
@@ -132,12 +134,24 @@ func (m Model) viewCleanupPreview() string {
 
 	scan := m.cleanupScan
 	if scan == nil {
-		fmt.Fprintf(&b, "  %s Scanning repository…\n", styleAccent.Render(m.spin.View()))
+		fmt.Fprintf(&b, "  %s Scanning repository…\n\n", styleAccent.Render(m.spin.View()))
+		b.WriteString(viewSeparator(m.width))
+		b.WriteString("\n\n")
+		b.WriteString(viewFooter(m.width, cleanupScanFooter))
+		b.WriteString("\n")
 		return b.String()
 	}
 
 	if !scan.SafeHasWork() && !scan.AggressiveHasWork() {
 		fmt.Fprintf(&b, "  %s Repository is clean\n\n", styleIndicatorDone.Render(indicatorDone))
+		// Show what was checked: the user should learn what cleanup covers
+		// before running it, not after.
+		writePreviewLine(&b, 0, "stale remote %s would be pruned", "ref", "refs", "No stale remote refs")
+		writePreviewLine(&b, 0, "%s with gone upstream would be deleted", "branch", "branches", "No branches with gone upstream")
+		writePreviewLine(&b, 0, "config %s would be removed", "duplicate", "duplicates", "No config duplicates")
+		writePreviewLine(&b, 0, "orphaned config %s would be removed", "section", "sections", "No orphaned config sections")
+		writePreviewLine(&b, 0, "stale %s would be pruned", "worktree", "worktrees", "No stale worktrees")
+		b.WriteString("\n")
 		b.WriteString(viewSeparator(m.width))
 		b.WriteString("\n\n")
 		b.WriteString(viewFooter(m.width, cleanupEmptyFooter))
@@ -156,10 +170,22 @@ func (m Model) viewCleanupPreview() string {
 
 	if scan.AggressiveHasWork() {
 		n := len(scan.AggressiveBranches)
+		deletable := scan.DeletableAggressiveCount()
 		b.WriteString(styleTitle.Render("  Aggressive cleanup available:"))
 		b.WriteString("\n")
-		fmt.Fprintf(&b, "  %s %d %s not in any worktree would be deleted\n",
-			styleIndicatorWarning.Render(indicatorWarning), n, pluralize(n, "branch", "branches"))
+		// The headline states what WILL happen, not what was found; the
+		// dim --force note below carries the remainder.
+		switch {
+		case deletable == 0:
+			fmt.Fprintf(&b, "  %s %d %s not in any worktree — none deletable without --force\n",
+				styleIndicatorWarning.Render(indicatorWarning), n, pluralize(n, "branch", "branches"))
+		case deletable < n:
+			fmt.Fprintf(&b, "  %s %d of %d branches not in any worktree would be deleted\n",
+				styleIndicatorWarning.Render(indicatorWarning), deletable, n)
+		default:
+			fmt.Fprintf(&b, "  %s %d %s not in any worktree would be deleted\n",
+				styleIndicatorWarning.Render(indicatorWarning), n, pluralize(n, "branch", "branches"))
+		}
 		shown := min(n, inlineBranchPreview)
 		for _, info := range scan.AggressiveBranches[:shown] {
 			name := truncateWithEllipsis(info.Name, max(m.width-8, 20))
@@ -197,8 +223,11 @@ func (m Model) viewCleanupPreview() string {
 	b.WriteString(viewSeparator(m.width))
 	b.WriteString("\n\n")
 	hints := []key.Binding{cleanupSafeHint}
+	if scan.DeletableAggressiveCount() > 0 {
+		hints = append(hints, aggressiveHint)
+	}
 	if scan.AggressiveHasWork() {
-		hints = append(hints, aggressiveHint, detailsHint)
+		hints = append(hints, detailsHint)
 	}
 	hints = append(hints, keys.Back, keys.Quit)
 	b.WriteString(viewFooter(m.width, hints))
