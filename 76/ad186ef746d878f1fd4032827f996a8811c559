@@ -1,0 +1,19 @@
+internal/tui/styles.go
+  s_121ba5aeb12306::t_0f41da5feeb2be 206-208,210,221-226
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "76ad186ef746d878f1fd4032827f996a8811c559",
+  "prompts": {},
+  "sessions": {
+    "s_121ba5aeb12306": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d1da0b9d-4a5f-4e2f-88ec-4088d9f5ce99",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Test <t@t.com>"
+    }
+  }
+}
