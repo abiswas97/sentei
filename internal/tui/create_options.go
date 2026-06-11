@@ -2,7 +2,6 @@ package tui
 
 import (
 	"fmt"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -134,8 +133,7 @@ func (m *Model) startCreation() {
 		}
 	}
 
-	bareDir := filepath.Join(m.repoPath, ".bare")
-	st, err := state.Load(bareDir)
+	st, err := m.loadRepoState()
 	if err != nil {
 		st = &state.State{}
 	}

@@ -210,6 +210,7 @@ func TestFinalizeIntegrationApply_SavesStagedIntegrations(t *testing.T) {
 	}
 	m := makeIntegrationModel()
 	m.repoPath = tmp
+	m.runner = bareDirRunner(tmp)
 	m.integ.returnView = integrationListView
 	m.integ.staged = map[string]bool{"code-review-graph": true, "cocoindex-code": false}
 
@@ -239,6 +240,7 @@ func TestFinalizeIntegrationApply_MigrateSavesUnderBareRoot(t *testing.T) {
 	}
 	m := makeIntegrationModel()
 	m.repoPath = "/elsewhere"
+	m.runner = bareDirRunner(bareRoot)
 	m.integ.returnView = migrateNextView
 	m.repo.result = repo.MigrateResult{BareRoot: bareRoot, Branch: "main"}
 	m.integ.staged = map[string]bool{"code-review-graph": true}
@@ -258,8 +260,10 @@ func TestFinalizeIntegrationApply_MigrateSavesUnderBareRoot(t *testing.T) {
 }
 
 func TestFinalizeIntegrationApply_SaveFailureReturnsError(t *testing.T) {
+	missing := filepath.Join(t.TempDir(), "missing") // .bare dir does not exist
 	m := makeIntegrationModel()
-	m.repoPath = filepath.Join(t.TempDir(), "missing") // .bare dir does not exist
+	m.repoPath = missing
+	m.runner = bareDirRunner(missing)
 	m.integ.returnView = integrationListView
 
 	msg := m.finalizeIntegrationApply()()

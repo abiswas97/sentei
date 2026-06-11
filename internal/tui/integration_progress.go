@@ -7,6 +7,7 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/abiswas97/sentei/internal/git"
 	"github.com/abiswas97/sentei/internal/integration"
 	"github.com/abiswas97/sentei/internal/pipeline"
 	"github.com/abiswas97/sentei/internal/repo"
@@ -57,6 +58,7 @@ func (m Model) updateIntegrationProgress(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) finalizeIntegrationApply() tea.Cmd {
+	runner := m.runner
 	repoPath := m.repoPath
 	returnView := m.integ.returnView
 	integrations := m.integ.integrations
@@ -65,11 +67,15 @@ func (m Model) finalizeIntegrationApply() tea.Cmd {
 	repoResult := m.repo.result
 
 	return func() tea.Msg {
-		bareDir := filepath.Join(repoPath, ".bare")
+		root := repoPath
 		if returnView == migrateNextView {
 			if result, ok := repoResult.(repo.MigrateResult); ok {
-				bareDir = filepath.Join(result.BareRoot, ".bare")
+				root = result.BareRoot
 			}
+		}
+		bareDir, err := git.CommonDir(runner, root)
+		if err != nil {
+			return integrationFinalizedMsg{err: err}
 		}
 
 		var enabled []string
@@ -78,7 +84,7 @@ func (m Model) finalizeIntegrationApply() tea.Cmd {
 				enabled = append(enabled, integ.Name)
 			}
 		}
-		err := state.Save(bareDir, &state.State{Integrations: enabled})
+		err = state.Save(bareDir, &state.State{Integrations: enabled})
 
 		return integrationFinalizedMsg{err: err}
 	}
