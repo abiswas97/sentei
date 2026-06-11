@@ -9,6 +9,7 @@ import (
 	"time"
 
 	tea "charm.land/bubbletea/v2"
+	"charm.land/log/v2"
 
 	"github.com/abiswas97/sentei/cmd"
 	"github.com/abiswas97/sentei/internal/cleanup"
@@ -104,7 +105,7 @@ func runCommand(run func([]string) error, args []string) {
 		if errors.Is(err, flag.ErrHelp) {
 			return
 		}
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		log.Error(err)
 		os.Exit(1)
 	}
 }
@@ -118,16 +119,19 @@ func exitOnFlagError(err error) {
 	if errors.Is(err, flag.ErrHelp) {
 		os.Exit(0)
 	}
-	fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+	log.Error(err)
 	os.Exit(1)
 }
 
 func main() {
+	// CLI errors are immediate feedback, not a log stream: no timestamps.
+	log.SetReportTimestamp(false)
+
 	registry := buildRegistry()
 
 	result, err := registry.Dispatch(os.Args[1:])
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		log.Error(err)
 		if cli.IsUnknownCommand(err) {
 			fmt.Fprint(os.Stderr, registry.UsageString())
 		}
@@ -187,7 +191,7 @@ func launchInteractiveDecision(result cli.DispatchResult) {
 			config.WithKnownIntegrations(integration.Names()),
 		)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Warning: failed to load config: %v\n", err)
+			log.Warn("failed to load config", "err", err)
 		}
 	}
 
@@ -231,7 +235,7 @@ func launchInteractiveDecision(result cli.DispatchResult) {
 		if opts.Merged || opts.All || opts.Stale > 0 {
 			worktrees, err := git.ListWorktrees(runner, repoPath)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+				log.Error(err)
 				os.Exit(1)
 			}
 			worktrees = worktree.EnrichWorktrees(runner, worktrees, worktree.DefaultEnrichConcurrency)
@@ -265,7 +269,7 @@ func launchInteractiveDecision(result cli.DispatchResult) {
 
 	p := tea.NewProgram(model)
 	if _, err := p.Run(); err != nil {
-		fmt.Fprintf(os.Stderr, "Error running TUI: %v\n", err)
+		log.Error("failed to run TUI", "err", err)
 		os.Exit(1)
 	}
 }
@@ -297,7 +301,7 @@ func runRoot(args []string) {
 		var err error
 		repoPath, cleanup, err = playground.Setup()
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error setting up playground: %v\n", err)
+			log.Error("failed to set up playground", "err", err)
 			os.Exit(1)
 		}
 		fmt.Fprintf(os.Stderr, "Playground repo: %s\n", repoPath)
@@ -314,13 +318,13 @@ func runRoot(args []string) {
 
 	if *dryRunFlag {
 		if context != repo.ContextBareRepo {
-			fmt.Fprintf(os.Stderr, "Error: --dry-run requires a bare repository\n")
+			log.Error("--dry-run requires a bare repository")
 			os.Exit(1)
 		}
 
 		worktrees, err := git.ListWorktrees(runner, repoPath)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			log.Error(err)
 			os.Exit(1)
 		}
 
@@ -339,7 +343,7 @@ func runRoot(args []string) {
 		}
 
 		if err := dryrun.Print(filtered, os.Stdout); err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			log.Error(err)
 			os.Exit(1)
 		}
 		os.Exit(0)
@@ -353,7 +357,7 @@ func runRoot(args []string) {
 			config.WithKnownIntegrations(integration.Names()),
 		)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Warning: failed to load config: %v\n", err)
+			log.Warn("failed to load config", "err", err)
 		}
 	}
 
@@ -365,7 +369,7 @@ func runRoot(args []string) {
 	p := tea.NewProgram(model)
 
 	if _, err := p.Run(); err != nil {
-		fmt.Fprintf(os.Stderr, "Error running TUI: %v\n", err)
+		log.Error("failed to run TUI", "err", err)
 		os.Exit(1)
 	}
 }
