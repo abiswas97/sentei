@@ -144,6 +144,9 @@ var (
 		keys.Toggle, withDesc(keys.Confirm, "delete"),
 		keys.Filter, withDesc(keys.Info, "details"), keys.Quit,
 	}
+	listFooterNoSelection = []key.Binding{
+		keys.Toggle, keys.Filter, withDesc(keys.Info, "details"), keys.Quit,
+	}
 	listFilterFooter = []key.Binding{withDesc(keys.Confirm, "apply"), withDesc(keys.Back, "cancel")}
 	listSections     = []keySection{
 		{name: "Navigation", bindings: []key.Binding{

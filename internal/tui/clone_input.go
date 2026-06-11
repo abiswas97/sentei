@@ -103,7 +103,11 @@ func (m Model) viewCloneInput() string {
 	b.WriteString(viewSeparator(m.width))
 	b.WriteString("\n\n")
 
-	b.WriteString("  Repository URL\n")
+	if m.repo.cloneFocusedField == 0 {
+		b.WriteString(styleAccent.Render("  Repository URL") + "\n")
+	} else {
+		b.WriteString("  Repository URL\n")
+	}
 	if m.repo.cloneFocusedField == 0 {
 		b.WriteString("  " + m.repo.urlInput.View())
 	} else {
@@ -128,7 +132,11 @@ func (m Model) viewCloneInput() string {
 	}
 	cloneDest := filepath.Join(location, name)
 
-	b.WriteString("  Clone to\n")
+	if m.repo.cloneFocusedField == 1 {
+		b.WriteString(styleAccent.Render("  Clone to") + "\n")
+	} else {
+		b.WriteString("  Clone to\n")
+	}
 	if m.repo.cloneFocusedField == 1 {
 		b.WriteString("  " + m.repo.cloneNameInput.View())
 		b.WriteString(styleDim.Render(fmt.Sprintf("  → %s", cloneDest)))

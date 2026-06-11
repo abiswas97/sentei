@@ -188,7 +188,11 @@ func (m Model) viewCreateBranch() string {
 	b.WriteString(viewSeparator(m.width))
 	b.WriteString("\n\n")
 
-	b.WriteString("  Branch name\n")
+	if m.create.focusedField == 0 {
+		b.WriteString(styleAccent.Render("  Branch name") + "\n")
+	} else {
+		b.WriteString("  Branch name\n")
+	}
 	if m.create.focusedField == 0 {
 		b.WriteString("  " + m.create.branchInput.View())
 	} else {
@@ -205,7 +209,11 @@ func (m Model) viewCreateBranch() string {
 	}
 	b.WriteString("\n")
 
-	b.WriteString("  Base branch\n")
+	if m.create.focusedField == 1 {
+		b.WriteString(styleAccent.Render("  Base branch") + "\n")
+	} else {
+		b.WriteString("  Base branch\n")
+	}
 	if m.create.focusedField == 1 {
 		b.WriteString("  " + m.create.baseInput.View())
 	} else {
