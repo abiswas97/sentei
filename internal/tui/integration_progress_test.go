@@ -183,11 +183,16 @@ func TestViewIntegrationProgress_TotalKnownUpfront(t *testing.T) {
 		{Worktree: "/repo/main", Step: "Install ccc", Status: integration.StatusRunning},
 	}
 
-	output := stripAnsi(m.viewIntegrationProgress())
-
-	// 1 done out of 9 → 11%.
-	if !strings.Contains(output, "11%") {
-		t.Errorf("expected progress '11%%' (upfront total), got:\n%s", output)
+	// 1 done out of 9: the upfront total is the spring target's denominator.
+	done, total := m.integrationLayout().overall()
+	if done != 1 || total != 9 {
+		t.Errorf("overall() = %d/%d, want 1/9 (upfront total)", done, total)
+	}
+	if cmd := m.syncProgressBar(); cmd == nil {
+		t.Error("expected a spring target command from the upfront total")
+	}
+	if pct := m.bar.Percent(); pct < 0.11 || pct > 0.12 {
+		t.Errorf("spring target = %.3f, want ~0.111 (1/9)", pct)
 	}
 }
 
