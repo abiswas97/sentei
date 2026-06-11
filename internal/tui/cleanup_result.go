@@ -168,7 +168,7 @@ func (m Model) viewCleanupResult() string {
 	b.WriteString("\n")
 	b.WriteString(viewSeparator(m.width))
 	b.WriteString("\n\n")
-	b.WriteString(viewKeyHints(KeyHint{"enter", "quit"}))
+	b.WriteString(viewFooter(m.width, cleanupDoneFooter))
 	b.WriteString("\n")
 
 	return b.String()

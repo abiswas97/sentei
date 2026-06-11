@@ -7,6 +7,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
+	"charm.land/lipgloss/v2"
 	"github.com/abiswas97/sentei/internal/git"
 )
 
@@ -281,5 +282,24 @@ func TestDeselectAll_WithProtected(t *testing.T) {
 
 	if len(m.remove.selected) != 0 {
 		t.Errorf("expected 0 selected after deselect-all, got %d", len(m.remove.selected))
+	}
+}
+
+func TestViewStatusBar_FitsMinimumWidth(t *testing.T) {
+	wts := []git.Worktree{{Path: "/work/feature", Branch: "refs/heads/feature/x"}}
+	m := NewModel(wts, nil, "/repo")
+	m.width = 80
+
+	bar := m.viewStatusBar()
+	for _, line := range strings.Split(bar, "\n") {
+		if w := lipgloss.Width(line); w > 80 {
+			t.Errorf("status bar line exceeds 80 cols (%d): %q", w, stripAnsi(line))
+		}
+	}
+	plain := stripAnsi(bar)
+	for _, want := range []string{"? details", "q quit"} {
+		if !strings.Contains(plain, want) {
+			t.Errorf("status bar at 80 cols must include %q, got %q", want, plain)
+		}
 	}
 }

@@ -132,7 +132,7 @@ func (m Model) viewProgress() string {
 		Phases: m.buildRemovalPhases(),
 		Width:  m.width,
 		Height: m.height,
-		Hints:  []KeyHint{{"q", "quit"}},
+		Hints:  progressFooter,
 	}.View()
 }
 

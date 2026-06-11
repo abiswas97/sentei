@@ -130,7 +130,7 @@ func (m Model) viewCleanupPreview() string {
 			styleError.Render(truncateWithEllipsis("Scan failed: "+m.cleanupScanErr.Error(), max(m.width-6, 20))))
 		b.WriteString(viewSeparator(m.width))
 		b.WriteString("\n\n")
-		b.WriteString(viewKeyHints(KeyHint{"esc", "back"}, KeyHint{"q", "quit"}))
+		b.WriteString(viewFooter(m.width, cleanupScanFooter))
 		b.WriteString("\n")
 		return b.String()
 	}
@@ -145,7 +145,7 @@ func (m Model) viewCleanupPreview() string {
 		fmt.Fprintf(&b, "  %s Repository is clean\n\n", styleIndicatorDone.Render(indicatorDone))
 		b.WriteString(viewSeparator(m.width))
 		b.WriteString("\n\n")
-		b.WriteString(viewKeyHints(KeyHint{"enter", "back"}, KeyHint{"q", "quit"}))
+		b.WriteString(viewFooter(m.width, cleanupEmptyFooter))
 		b.WriteString("\n")
 		return b.String()
 	}
@@ -194,19 +194,19 @@ func (m Model) viewCleanupPreview() string {
 		b.WriteString("\n\n")
 		b.WriteString(viewSeparator(m.width))
 		b.WriteString("\n\n")
-		b.WriteString(viewKeyHints(KeyHint{"y", "delete"}, KeyHint{"n", "go back"}))
+		b.WriteString(viewFooter(m.width, confirmFooter))
 		b.WriteString("\n")
 		return b.String()
 	}
 
 	b.WriteString(viewSeparator(m.width))
 	b.WriteString("\n\n")
-	hints := []KeyHint{{"enter", "safe cleanup"}}
+	hints := []key.Binding{cleanupSafeHint}
 	if scan.AggressiveHasWork() {
-		hints = append(hints, KeyHint{"a", "aggressive"}, KeyHint{"?", "details"})
+		hints = append(hints, aggressiveHint, detailsHint)
 	}
-	hints = append(hints, KeyHint{"esc", "back"}, KeyHint{"q", "quit"})
-	b.WriteString(viewKeyHints(hints...))
+	hints = append(hints, keys.Back, keys.Quit)
+	b.WriteString(viewFooter(m.width, hints))
 	b.WriteString("\n")
 
 	return b.String()

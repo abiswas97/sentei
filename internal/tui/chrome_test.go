@@ -3,6 +3,8 @@ package tui
 import (
 	"strings"
 	"testing"
+
+	"charm.land/bubbles/v2/key"
 )
 
 func TestViewTitle_Standard(t *testing.T) {
@@ -40,24 +42,76 @@ func TestViewSeparator_NarrowWidthFallsBack(t *testing.T) {
 	}
 }
 
-func TestViewKeyHints_Multiple(t *testing.T) {
-	got := stripANSI(viewKeyHints(KeyHint{"enter", "confirm"}, KeyHint{"esc", "back"}, KeyHint{"q", "quit"}))
+func TestViewFooter_Multiple(t *testing.T) {
+	got := stripANSI(viewFooter(80, confirmationFooter))
 	want := "  enter confirm · esc back · q quit"
 	if got != want {
-		t.Errorf("viewKeyHints = %q, want %q", got, want)
+		t.Errorf("viewFooter = %q, want %q", got, want)
 	}
 }
 
-func TestViewKeyHints_Single(t *testing.T) {
-	got := stripANSI(viewKeyHints(KeyHint{"q", "quit"}))
+func TestViewFooter_Single(t *testing.T) {
+	got := stripANSI(viewFooter(80, quitOnlyFooter))
 	if got != "  q quit" {
-		t.Errorf("viewKeyHints = %q, want %q", got, "  q quit")
+		t.Errorf("viewFooter = %q, want %q", got, "  q quit")
 	}
 }
 
-func TestViewKeyHints_None(t *testing.T) {
-	if got := viewKeyHints(); got != "" {
-		t.Errorf("viewKeyHints() = %q, want empty", got)
+func TestViewFooter_None(t *testing.T) {
+	if got := viewFooter(80, nil); got != "" {
+		t.Errorf("viewFooter(nil) = %q, want empty", got)
+	}
+}
+
+func TestViewFooter_NarrowWidthTruncates(t *testing.T) {
+	got := stripANSI(viewFooter(24, listFooter))
+	if len([]rune(got)) > 24 {
+		t.Errorf("footer wider than budget: %q (%d runes)", got, len([]rune(got)))
+	}
+	if !strings.Contains(got, "…") {
+		t.Errorf("truncated footer must end with ellipsis, got %q", got)
+	}
+}
+
+// Drift guard: every binding a view advertises in its footer must also appear
+// in that view's help sections, keyed by the rendered key label.
+func TestFooterBindingsAppearInSections(t *testing.T) {
+	cases := []struct {
+		name     string
+		footer   []key.Binding
+		sections []keySection
+	}{
+		{"menu", menuFooter, append(menuSections, helpGlobalSection)},
+		{"list", listFooter, append(listSections, helpGlobalSection)},
+		{"confirm", confirmFooter, confirmSections},
+		{"options", optionsFooter, append(optionsSections, helpGlobalSection)},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			inSections := make(map[string]bool)
+			for _, s := range tc.sections {
+				for _, b := range s.bindings {
+					inSections[b.Help().Key] = true
+				}
+			}
+			// Combined presentation labels (j/k) and global quit are covered
+			// by section variants; compare on the primary token.
+			for _, b := range tc.footer {
+				label := b.Help().Key
+				found := inSections[label]
+				if !found {
+					for k := range inSections {
+						if strings.Contains(k, label) || strings.Contains(label, k) {
+							found = true
+							break
+						}
+					}
+				}
+				if !found {
+					t.Errorf("footer binding %q has no counterpart in help sections", label)
+				}
+			}
+		})
 	}
 }
 

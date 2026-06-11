@@ -7,28 +7,14 @@ import (
 	"github.com/abiswas97/sentei/internal/git"
 )
 
-type helpEntry struct {
-	key  string
-	desc string
-}
-
-type helpSection struct {
-	name    string
-	entries []helpEntry
-}
-
-var helpGlobalSection = helpSection{name: "Global", entries: []helpEntry{
-	{"F1", "toggle this help"},
-	{"q / ctrl+c", "quit"},
-}}
-
 // renderHelpSections formats key bindings as an aligned two-column table
-// grouped by category.
-func renderHelpSections(sections []helpSection) string {
+// grouped by category. Sections are the keys.go presentation declarations,
+// the same data that drives the footer hints.
+func renderHelpSections(sections []keySection) string {
 	keyWidth := 0
 	for _, s := range sections {
-		for _, e := range s.entries {
-			keyWidth = max(keyWidth, len(e.key))
+		for _, bd := range s.bindings {
+			keyWidth = max(keyWidth, len(bd.Help().Key))
 		}
 	}
 
@@ -39,8 +25,9 @@ func renderHelpSections(sections []helpSection) string {
 		}
 		b.WriteString(styleDim.Render(s.name))
 		b.WriteString("\n")
-		for _, e := range s.entries {
-			fmt.Fprintf(&b, "  %s  %s\n", styleAccent.Render(fmt.Sprintf("%-*s", keyWidth, e.key)), e.desc)
+		for _, bd := range s.bindings {
+			h := bd.Help()
+			fmt.Fprintf(&b, "  %s  %s\n", styleAccent.Render(fmt.Sprintf("%-*s", keyWidth, h.Key)), h.Desc)
 		}
 	}
 	return b.String()
@@ -53,116 +40,56 @@ func (m Model) helpContent() (string, string) {
 	name, sections := m.helpForView()
 	covered := make(map[string]bool)
 	for _, s := range sections {
-		for _, e := range s.entries {
-			covered[e.key] = true
+		for _, bd := range s.bindings {
+			covered[bd.Help().Key] = true
 		}
 	}
-	global := helpSection{name: helpGlobalSection.name}
-	for _, e := range helpGlobalSection.entries {
-		if !covered[e.key] {
-			global.entries = append(global.entries, e)
+	global := keySection{name: helpGlobalSection.name}
+	for _, bd := range helpGlobalSection.bindings {
+		if !covered[bd.Help().Key] {
+			global.bindings = append(global.bindings, bd)
 		}
 	}
-	if len(global.entries) > 0 {
+	if len(global.bindings) > 0 {
 		sections = append(sections, global)
 	}
 	return "Help — " + name, renderHelpSections(sections)
 }
 
-func (m Model) helpForView() (string, []helpSection) {
+func (m Model) helpForView() (string, []keySection) {
 	switch m.view {
 	case menuView:
-		return "Menu", []helpSection{{name: "Navigation", entries: []helpEntry{
-			{"j/k, ↑/↓", "move between entries"},
-			{"enter", "select entry"},
-		}}}
-
+		return "Menu", menuSections
 	case listView:
-		return "Worktree List", []helpSection{
-			{name: "Navigation", entries: []helpEntry{
-				{"j/k, ↑/↓", "move cursor"},
-				{"pgup/pgdn", "page"},
-			}},
-			{name: "Selection", entries: []helpEntry{
-				{"space", "toggle worktree"},
-				{"a", "select all"},
-				{"enter", "delete selected"},
-			}},
-			{name: "Organize", entries: []helpEntry{
-				{"/", "filter by name"},
-				{"s / S", "cycle / reverse sort"},
-				{"?", "details for highlighted worktree"},
-			}},
-		}
-
+		return "Worktree List", listSections
 	case confirmView:
-		return "Confirm Deletion", []helpSection{{name: "Actions", entries: []helpEntry{
-			{"y", "delete the selected worktrees"},
-			{"n", "go back to the list"},
-		}}}
+		return "Confirm Deletion", confirmSections
 
 	case progressView:
-		return "Removing Worktrees", progressHelp()
+		return "Removing Worktrees", progressSections
 	case createProgressView:
-		return "Creating Worktree", progressHelp()
+		return "Creating Worktree", progressSections
 	case repoProgressView, migrateProgressView:
-		return "Repository Operation", progressHelp()
+		return "Repository Operation", progressSections
 	case integrationProgressView:
-		return "Applying Integrations", progressHelp()
+		return "Applying Integrations", progressSections
 
 	case summaryView, createSummaryView, repoSummaryView, migrateSummaryView, integrationSummaryView:
-		return "Summary", []helpSection{{name: "Actions", entries: []helpEntry{
-			{"enter", "continue"},
-			{"esc", "back"},
-		}}}
-
+		return "Summary", summarySections
 	case createBranchView, repoNameView, cloneInputView:
-		return "Input", []helpSection{{name: "Editing", entries: []helpEntry{
-			{"tab", "switch field"},
-			{"enter", "continue"},
-			{"esc", "back"},
-		}}}
-
+		return "Input", inputSections
 	case createOptionsView, repoOptionsView:
-		return "Options", []helpSection{{name: "Actions", entries: []helpEntry{
-			{"j/k", "move"},
-			{"space", "toggle option"},
-			{"enter", "continue"},
-			{"esc", "back"},
-		}}}
-
+		return "Options", optionsSections
 	case integrationListView, migrateIntegrationsView:
-		return "Integrations", []helpSection{{name: "Actions", entries: []helpEntry{
-			{"j/k", "move"},
-			{"space", "toggle integration"},
-			{"?", "integration info"},
-			{"enter", "apply changes"},
-			{"esc", "back"},
-		}}}
-
+		return "Integrations", integrationSections
 	case cleanupPreviewView:
-		return "Cleanup Preview", []helpSection{{name: "Actions", entries: []helpEntry{
-			{"enter", "run safe cleanup"},
-			{"a", "aggressive cleanup (when available)"},
-			{"?", "full branch details"},
-			{"esc", "back"},
-		}}}
-
+		return "Cleanup Preview", cleanupPreviewSections
 	case cleanupConfirmView, createConfirmView, cloneConfirmView, migrateConfirmView:
-		return "Confirmation", []helpSection{{name: "Actions", entries: []helpEntry{
-			{"enter", "confirm"},
-			{"esc", "back"},
-		}}}
+		return "Confirmation", confirmationSections
 
 	default:
 		return "sentei", nil
 	}
-}
-
-func progressHelp() []helpSection {
-	return []helpSection{{name: "Actions", entries: []helpEntry{
-		{"q / ctrl+c", "quit (operation keeps running in git)"},
-	}}}
 }
 
 // detailContent returns the `?` portal content for the active view, or empty

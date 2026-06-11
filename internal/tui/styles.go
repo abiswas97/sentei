@@ -175,6 +175,11 @@ func applyPalette(p palette) {
 
 	stylePortalBox = lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(colorAccent).Padding(0, 1)
 	styleInfoCard = lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(colorAccent).Padding(1, 2)
+
+	footerHelp.Styles.ShortKey = styleDim
+	footerHelp.Styles.ShortDesc = styleDim
+	footerHelp.Styles.ShortSeparator = styleDim
+	footerHelp.Styles.Ellipsis = styleDim
 }
 
 // Fixed column widths for the worktree list table.

@@ -150,7 +150,7 @@ func (m Model) viewCloneInput() string {
 	b.WriteString("\n")
 	b.WriteString(viewSeparator(m.width))
 	b.WriteString("\n\n")
-	b.WriteString(viewKeyHints(KeyHint{"enter", "clone"}, KeyHint{"tab", "switch field"}, KeyHint{"esc", "back"}))
+	b.WriteString(viewFooter(m.width, cloneInputFooter))
 	b.WriteString("\n")
 
 	return b.String()
