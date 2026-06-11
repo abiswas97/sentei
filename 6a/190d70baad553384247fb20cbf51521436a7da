@@ -1,0 +1,52 @@
+openspec/changes/bubbles-help-adoption/proposal.md
+  s_e079bea5665c1d::t_2a81f6dc2911fe 1-35
+openspec/changes/bubbles-help-adoption/specs/tui-list-view/spec.md
+  s_e079bea5665c1d::t_d1663bd670033a 1-5,7-9,11-30
+  s_e079bea5665c1d::t_da9d2f3387b114 6,10
+internal/tui/help.go
+  s_e079bea5665c1d::t_b6fa83fdab115b 59,62,64,66,69,71,73,75,78,80,82,84,86,88
+  s_e079bea5665c1d::t_cde2e6aac06b94 11-13,16-17,28-30,43-44,47-50,53
+openspec/changes/bubbles-help-adoption/specs/tui-chrome/spec.md
+  s_e079bea5665c1d::t_c6b385cf69dbd4 1-18
+openspec/changes/bubbles-help-adoption/design.md
+  s_e079bea5665c1d::t_263450dd12773d 1-38
+openspec/changes/bubbles-help-adoption/specs/tui-design-system/spec.md
+  s_e079bea5665c1d::t_1837c5553577c9 1-26
+openspec/changes/bubbles-help-adoption/specs/tui-help/spec.md
+  s_e079bea5665c1d::t_b9f615559039b5 1-18
+internal/tui/list.go
+  s_e079bea5665c1d::t_6435644073a3bf 451-453
+internal/tui/chrome_test.go
+  s_e079bea5665c1d::t_698fa4417e5ecd 45-46,49,53-54,56-72,76-114
+openspec/changes/bubbles-help-adoption/tasks.md
+  s_e079bea5665c1d::t_4dcc182ec8ffd5 1-4,7-9,12-14,18-20,24
+internal/tui/keys.go
+  s_e079bea5665c1d::t_a911c88cf34209 126-130
+  s_e079bea5665c1d::t_33918fd77d7830 151-154
+internal/tui/chrome.go
+  s_e079bea5665c1d::t_e2a381380580ec 59-63,66,75-80
+  s_e079bea5665c1d::t_980912aa3bf2b3 40-43,54,57
+  s_e079bea5665c1d::t_b0071bb693acb1 6-8,12-19
+  s_e079bea5665c1d::t_bf0f0eab2725f2 64-65,67-74
+  s_e079bea5665c1d::t_fd19dc6f92362d 47-53,58,82
+  s_e079bea5665c1d::t_b37e07cd28c497 44-46
+.impeccable.md
+  s_e079bea5665c1d::t_01f3c86bbd86ee 59
+  s_e079bea5665c1d::t_4cf5391d3722fe 87
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "6a190d70baad553384247fb20cbf51521436a7da",
+  "prompts": {},
+  "sessions": {
+    "s_e079bea5665c1d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e853bef1-293d-4109-b048-273e59305a6e",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Test <t@t.com>"
+    }
+  }
+}
