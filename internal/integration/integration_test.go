@@ -1,6 +1,9 @@
 package integration
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestAll(t *testing.T) {
 	all := All()
@@ -91,5 +94,12 @@ func TestDependencyFieldsComplete(t *testing.T) {
 				}
 			})
 		}
+	}
+}
+
+func TestCocoindexCode_InstallCarriesEmbeddingsExtra(t *testing.T) {
+	cmd := cocoindexCode().Install.Command
+	if !strings.Contains(cmd, "cocoindex-code[embeddings-local]") {
+		t.Errorf("ccc install must carry the embeddings-local extra (ccc index needs sentence-transformers), got %q", cmd)
 	}
 }
