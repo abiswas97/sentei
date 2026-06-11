@@ -37,7 +37,7 @@ func scanWithAggressive(n int) *cleanup.DryRunResult {
 func TestViewCleanupPreview_ScanningState(t *testing.T) {
 	m := previewModel()
 	view := stripANSI(m.viewCleanupPreview())
-	for _, want := range []string{"sentei ─ Cleanup Preview", "◐ Scanning repository…"} {
+	for _, want := range []string{"sentei ─ Cleanup Preview", stripANSI(m.spin.View()) + " Scanning repository…"} {
 		if !strings.Contains(view, want) {
 			t.Errorf("missing %q:\n%s", want, view)
 		}

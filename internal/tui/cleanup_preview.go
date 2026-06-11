@@ -33,10 +33,10 @@ func (m Model) startCleanupScan() (Model, tea.Cmd) {
 	m.progressStartedAt = time.Now()
 	m.progressToken++
 	runner, repoPath := m.runner, m.repoPath
-	return m, func() tea.Msg {
+	return m, tea.Batch(m.spin.Tick, func() tea.Msg {
 		result, err := cleanup.DryRun(runner, repoPath)
 		return cleanupScanDoneMsg{result: result, err: err}
-	}
+	})
 }
 
 func (m Model) updateCleanupPreview(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -137,7 +137,7 @@ func (m Model) viewCleanupPreview() string {
 
 	scan := m.cleanupScan
 	if scan == nil {
-		fmt.Fprintf(&b, "  %s Scanning repository…\n", styleIndicatorActive.Render(indicatorActive))
+		fmt.Fprintf(&b, "  %s Scanning repository…\n", styleAccent.Render(m.spin.View()))
 		return b.String()
 	}
 
