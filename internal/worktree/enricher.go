@@ -68,11 +68,13 @@ func enrichWorktree(runner git.CommandRunner, wt *git.Worktree, repoHasRemotes b
 	}
 	wt.HasUncommittedChanges, wt.HasUntrackedFiles = ParseStatusPorcelain(statusOutput)
 
-	// In a repo with remotes, a missing upstream (or detached HEAD) counts
-	// as unpushed: nothing guards the commits remotely. Without any remote,
-	// "unpushed" is meaningless and must not flag every branch as at-risk.
+	// In a repo with remotes, "unpushed" means HEAD has commits that no
+	// remote-tracking branch contains. Counting against every remote ref (not
+	// just @{upstream}) keeps a branch whose upstream was deleted after merge
+	// from being false-flagged: its commits still live in the default branch
+	// on the remote. Without any remote, "unpushed" is meaningless.
 	if repoHasRemotes {
-		if countOutput, err := runner.Run(wt.Path, "rev-list", "--count", "@{upstream}..HEAD"); err != nil {
+		if countOutput, err := runner.Run(wt.Path, "rev-list", "--count", "HEAD", "--not", "--remotes"); err != nil {
 			wt.HasUnpushedCommits = true
 		} else {
 			wt.HasUnpushedCommits = ParseAheadCount(countOutput) > 0
