@@ -1,0 +1,80 @@
+openspec/changes/progress-motion/proposal.md
+  s_e079bea5665c1d::t_16af7d93319656 1-25
+internal/tui/constants.go
+  s_e079bea5665c1d::t_564a53dfe39f6a 13-25,28-32
+internal/tui/cleanup_result.go
+  s_e079bea5665c1d::t_b0077f3ff5e45e 44
+internal/tui/model.go
+  s_e079bea5665c1d::t_53e60527235f1a 493
+  s_e079bea5665c1d::t_fbc51e79790240 545-559,561
+  s_e079bea5665c1d::t_0fdf9c547381e7 514
+  s_e079bea5665c1d::t_dab6d9974f855f 253-256
+  s_e079bea5665c1d::t_d4245d727b12a9 598-623
+  s_e079bea5665c1d::t_0d798fb1ca45a2 299
+  s_e079bea5665c1d::t_71c2e8b54347ac 373
+internal/tui/styles.go
+  s_e079bea5665c1d::t_d824b91cbc9904 23-24
+  s_e079bea5665c1d::t_e4d1f511db25f8 41-44
+  s_e079bea5665c1d::t_808bee5c68726e 58-60
+  s_e079bea5665c1d::t_fd61aea8af6e47 148-149
+  s_e079bea5665c1d::t_ef5bda43c23ea5 212-215,217-221
+  s_e079bea5665c1d::t_865c46cae88911 78-79
+openspec/changes/progress-motion/design.md
+  s_e079bea5665c1d::t_d018ce2f2355ea 1-69
+internal/tui/chrome.go
+  s_e079bea5665c1d::t_d62f341ebfb93c 140-145,155,157,159
+  s_e079bea5665c1d::t_9db2bc6f82b8c4 119-121,127
+openspec/changes/progress-motion/specs/tui-design-system/spec.md
+  s_e079bea5665c1d::t_4cadbbd924e5b3 1-42
+internal/tui/cleanup_e2e_test.go
+  s_e079bea5665c1d::t_ebbeefc6f516d7 227-229
+internal/tui/progress_layout.go
+  s_e079bea5665c1d::t_bf364d16106c2d 261-263,269
+  s_e079bea5665c1d::t_c1ed95e844a247 173
+  s_e079bea5665c1d::t_fd1efc4948c1c8 192-194,197,199-200
+  s_e079bea5665c1d::t_78e4ae11cf10ed 153
+  s_e079bea5665c1d::t_16824f90625446 184
+  s_e079bea5665c1d::t_489ae352df5758 38-44
+  s_e079bea5665c1d::t_12ab4ac00c0612 51-59
+  s_e079bea5665c1d::t_10951993849c5e 103-104
+internal/tui/progress_layout_test.go
+  s_e079bea5665c1d::t_c7b6638f32cdce 139-140
+  s_e079bea5665c1d::t_f83e0a42beb786 100,103
+internal/tui/remove_run_test.go
+  s_e079bea5665c1d::t_7ef9f2f1faa10b 153,157-158
+.impeccable.md
+  s_e079bea5665c1d::t_ed6cd0aa4f74a7 76-77
+  s_e079bea5665c1d::t_954e9954ab4be4 96
+  s_e079bea5665c1d::t_d9a04a7ea2332c 83,88-90
+  s_e079bea5665c1d::t_1b7f5fcc61e15a 113
+  s_e079bea5665c1d::t_224d185fe9a8e8 49-50
+internal/tui/motion_test.go
+  s_e079bea5665c1d::t_95b22ea798846f 8,12
+  s_e079bea5665c1d::t_4c7b090d477f40 76
+  s_e079bea5665c1d::t_1dee62220e9f70 1-7,9-11,13-75,77-204
+internal/tui/chrome_test.go
+  s_e079bea5665c1d::t_b2d56a5e103c74 157
+  s_e079bea5665c1d::t_16dcb5c651c075 150
+  s_e079bea5665c1d::t_e13117bfb511f8 142-143
+  s_e079bea5665c1d::t_9699fe90a42828 174
+  s_e079bea5665c1d::t_c60805effd2938 182
+  s_e079bea5665c1d::t_b295e66433a433 166
+openspec/changes/progress-motion/tasks.md
+  s_e079bea5665c1d::t_ca32a89839505c 1-4,9
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "21a42723883ce567522ddc37abaad244b2f34e01",
+  "prompts": {},
+  "sessions": {
+    "s_e079bea5665c1d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e853bef1-293d-4109-b048-273e59305a6e",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Test <t@t.com>"
+    }
+  }
+}
