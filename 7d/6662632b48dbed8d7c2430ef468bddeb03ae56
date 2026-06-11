@@ -1,0 +1,25 @@
+internal/tui/integration_summary_test.go
+  s_dd70ced0a890b0::t_a154ad2ad207b0 5,14-24
+  s_dd70ced0a890b0::t_3e759f85d644f8 140-201
+internal/tui/integration_summary.go
+  s_dd70ced0a890b0::t_28f7b27e6d5d8e 71-73,75-76,87-147,149-160,182-187,192-197
+  s_dd70ced0a890b0::t_0329ca1741715b 148
+internal/tui/help.go
+  s_dd70ced0a890b0::t_b07d51fa2e755e 175-177
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "7d6662632b48dbed8d7c2430ef468bddeb03ae56",
+  "prompts": {},
+  "sessions": {
+    "s_dd70ced0a890b0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "1d4c7900-8a46-4b76-a13e-5f766c2a5f97",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Test <t@t.com>"
+    }
+  }
+}
