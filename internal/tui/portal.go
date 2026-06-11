@@ -23,11 +23,6 @@ const (
 // terminal edge.
 const portalMargin = 2
 
-var stylePortalBox = lipgloss.NewStyle().
-	Border(lipgloss.RoundedBorder()).
-	BorderForeground(colorAccent).
-	Padding(0, 1)
-
 // DetailPortal is a scrollable read-only overlay composited over the active
 // view: the shared home for contextual details (?) and global help (F1).
 // It is a sub-model on Model, not a standalone tea.Model.

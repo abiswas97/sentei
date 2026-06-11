@@ -434,9 +434,9 @@ func (m *Model) SetMigrateOpts(opts *MigrateOpts) {
 
 func (m Model) Init() tea.Cmd {
 	if m.view == menuView && m.context == repo.ContextBareRepo {
-		return loadWorktreeContext(m.runner, m.repoPath, m.worktreeGeneration)
+		return tea.Batch(tea.RequestBackgroundColor, loadWorktreeContext(m.runner, m.repoPath, m.worktreeGeneration))
 	}
-	return nil
+	return tea.RequestBackgroundColor
 }
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -461,6 +461,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// The portal tracks the raw terminal size; views keep receiving the
 		// message through their own routing below.
 		m.portal = m.portal.SetSize(size.Width, size.Height)
+	}
+
+	if bg, ok := msg.(tea.BackgroundColorMsg); ok {
+		if !bg.IsDark() {
+			applyPalette(lightPalette)
+		}
+		return m, nil
 	}
 
 	if m.portal.Visible() {

@@ -124,14 +124,17 @@ func TestInit_BareRepo_SetsGenerationAndReturnsCmd(t *testing.T) {
 	}
 }
 
-func TestInit_NonBareRepo_NoGenerationNoCmd(t *testing.T) {
+func TestInit_NonBareRepo_NoWorktreeLoad(t *testing.T) {
 	m := NewMenuModel(nil, nil, "/repo", &config.Config{}, repo.ContextNoRepo)
 	if m.worktreeGeneration != 0 {
 		t.Errorf("worktreeGeneration = %d, want 0", m.worktreeGeneration)
 	}
 	cmd := m.Init()
-	if cmd != nil {
-		t.Error("expected nil Cmd from Init for non-bare repo")
+	if cmd == nil {
+		t.Fatal("Init must still request background detection for non-bare repos")
+	}
+	if _, isLoad := cmd().(worktreeContextMsg); isLoad {
+		t.Error("Init must not load worktree context for non-bare repos")
 	}
 }
 

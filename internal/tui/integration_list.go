@@ -13,13 +13,6 @@ import (
 	"github.com/abiswas97/sentei/internal/integration"
 )
 
-// styleInfoCard frames the integration info carousel — the one true
-// overlay until the DetailPortal component lands and absorbs it.
-var styleInfoCard = lipgloss.NewStyle().
-	Border(lipgloss.RoundedBorder()).
-	BorderForeground(colorAccent).
-	Padding(1, 2)
-
 type integrationStateLoadedMsg struct {
 	integrations []integration.Integration
 	current      map[string]bool
