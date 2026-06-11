@@ -112,27 +112,38 @@ func DryRun(runner git.CommandRunner, repoPath string) (DryRunResult, error) {
 			result.Errors = append(result.Errors, OperationError{Step: "branch-metadata", Err: err})
 			meta = nil
 		}
-		merged := make(map[string]bool)
-		if output, err := runner.Run(repoPath, "branch", "--merged", "--format=%(refname:short)"); err != nil {
-			result.Errors = append(result.Errors, OperationError{Step: "merged-branches", Err: err})
-		} else {
-			for _, line := range strings.Split(output, "\n") {
-				if b := strings.TrimSpace(line); b != "" {
-					merged[b] = true
-				}
-			}
-		}
 		for _, name := range candidates {
 			result.AggressiveBranches = append(result.AggressiveBranches, BranchInfo{
 				Name:              name,
 				LastCommitDate:    meta[name].LastCommitDate,
 				LastCommitSubject: meta[name].LastCommitSubject,
-				Merged:            merged[name],
+				Merged:            branchDeletableByGit(runner, repoPath, name),
 			})
 		}
 	}
 
 	return result, nil
+}
+
+// branchDeletableByGit predicts whether `git branch -d` would delete branch.
+// git refuses unless the branch is fully merged into its upstream (when one is
+// configured) or into HEAD (when it is not) — notably it checks the upstream,
+// not HEAD, when both exist. Replicating that here keeps the preview's
+// "M will be skipped" count in step with what aggressive cleanup actually does;
+// the old `branch --merged HEAD` probe diverged whenever a branch was merged
+// into HEAD but not into its upstream (or vice versa, when local HEAD lagged).
+func branchDeletableByGit(runner git.CommandRunner, repoPath, branch string) bool {
+	base := "HEAD"
+	if upstream, err := runner.Run(repoPath, "rev-parse", "--abbrev-ref", branch+"@{upstream}"); err == nil {
+		if u := strings.TrimSpace(upstream); u != "" {
+			base = u
+		}
+	}
+	// `merge-base --is-ancestor` exits 0 when branch is reachable from base
+	// (i.e. merged) and non-zero otherwise; a bad/gone base also fails, which
+	// conservatively marks the branch unmerged.
+	_, err := runner.Run(repoPath, "merge-base", "--is-ancestor", branch, base)
+	return err == nil
 }
 
 // branchMetadata fetches commit date and subject for every local branch in

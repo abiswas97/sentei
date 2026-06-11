@@ -1,6 +1,7 @@
 package cleanup
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -30,6 +31,12 @@ func dryRunMock(t *testing.T) (*mock.Runner, string) {
 		"/repo:[worktree list --porcelain]":        {Output: "worktree /repo\nbare\n\nworktree /repo/main\nHEAD def456\nbranch refs/heads/main\n"},
 		"/repo:[branch --format=%(refname:short)]": {Output: "feature/gone\nfeature/extra\nmain"},
 		"/repo:[for-each-ref --format=%(refname:short)\x1f%(committerdate:iso8601-strict)\x1f%(subject) refs/heads/]": {Output: "feature/gone\x1f2026-02-10T19:00:00+05:30\x1fold work\nfeature/extra\x1f2026-06-01T10:00:00+05:30\x1fwip\nmain\x1f2026-06-10T12:00:00+05:30\x1flatest"},
+		// feature/extra is merged into its live upstream; feature/gone's upstream
+		// is gone, so the ancestor check against it fails (conservatively unmerged).
+		"/repo:[rev-parse --abbrev-ref feature/extra@{upstream}]":             {Output: "origin/feature/extra"},
+		"/repo:[merge-base --is-ancestor feature/extra origin/feature/extra]": {Output: ""},
+		"/repo:[rev-parse --abbrev-ref feature/gone@{upstream}]":              {Output: "origin/feature/gone"},
+		"/repo:[merge-base --is-ancestor feature/gone origin/feature/gone]":   {Err: errors.New("not an ancestor")},
 	}}
 	return runner, configPath
 }
@@ -58,6 +65,40 @@ func TestDryRun_CollectsBothModes(t *testing.T) {
 	extra := result.AggressiveBranches[1]
 	if extra.Name != "feature/extra" || extra.LastCommitSubject != "wip" || extra.LastCommitDate.IsZero() {
 		t.Errorf("expected metadata on aggressive branches, got %+v", extra)
+	}
+	if !extra.Merged {
+		t.Error("feature/extra is merged into its upstream and should be marked Merged")
+	}
+	if gone := result.AggressiveBranches[0]; gone.Name == "feature/gone" && gone.Merged {
+		t.Error("feature/gone has a gone upstream and must be marked unmerged (git branch -d would skip it)")
+	}
+}
+
+func TestBranchDeletableByGit(t *testing.T) {
+	merged := mock.Response{}                             // exit 0 -> ancestor of base
+	notMerged := mock.Response{Err: errors.New("exit 1")} // non-zero -> not an ancestor
+	tests := []struct {
+		name     string
+		upstream mock.Response // rev-parse --abbrev-ref b@{upstream}
+		base     string        // base the is-ancestor check targets
+		ancestor mock.Response // merge-base --is-ancestor b base
+		want     bool
+	}{
+		{"merged into live upstream", mock.Response{Output: "origin/b"}, "origin/b", merged, true},
+		{"merged into HEAD but not upstream", mock.Response{Output: "origin/b"}, "origin/b", notMerged, false},
+		{"no upstream, merged into HEAD", mock.Response{Err: errors.New("no upstream")}, "HEAD", merged, true},
+		{"no upstream, not merged into HEAD", mock.Response{Err: errors.New("no upstream")}, "HEAD", notMerged, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			runner := &mock.Runner{Responses: map[string]mock.Response{
+				"/repo:[rev-parse --abbrev-ref b@{upstream}]":        tt.upstream,
+				"/repo:[merge-base --is-ancestor b " + tt.base + "]": tt.ancestor,
+			}}
+			if got := branchDeletableByGit(runner, "/repo", "b"); got != tt.want {
+				t.Errorf("branchDeletableByGit = %v, want %v", got, tt.want)
+			}
+		})
 	}
 }
 
