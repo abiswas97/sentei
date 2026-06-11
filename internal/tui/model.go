@@ -5,9 +5,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/charmbracelet/bubbles/key"
-	"github.com/charmbracelet/bubbles/textinput"
-	tea "github.com/charmbracelet/bubbletea"
+	"charm.land/bubbles/v2/key"
+	"charm.land/bubbles/v2/textinput"
+	tea "charm.land/bubbletea/v2"
 
 	"github.com/abiswas97/sentei/internal/cleanup"
 	"github.com/abiswas97/sentei/internal/config"
@@ -464,11 +464,17 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	if m.portal.Visible() {
-		if keyMsg, ok := msg.(tea.KeyMsg); ok {
+		if keyMsg, ok := msg.(tea.KeyPressMsg); ok {
 			return m.updatePortalKeys(keyMsg)
 		}
+		if wheel, ok := msg.(tea.MouseWheelMsg); ok {
+			// The wheel scrolls the portal viewport and never the background.
+			var cmd tea.Cmd
+			m.portal, cmd = m.portal.Update(wheel)
+			return m, cmd
+		}
 		// Non-key messages (progress events, timers) keep flowing to views.
-	} else if keyMsg, ok := msg.(tea.KeyMsg); ok {
+	} else if keyMsg, ok := msg.(tea.KeyPressMsg); ok {
 		if key.Matches(keyMsg, keys.GlobalHelp) {
 			title, content := m.helpContent()
 			m.portal = m.portal.Open(portalHelp, title, content)
@@ -541,12 +547,18 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m Model) View() string {
+// View declares terminal features alongside the frame: the alternate screen
+// and cell-motion mouse mode live here, the only place v2 reads them. Basic
+// key disambiguation (ctrl+enter) is always requested by the v2 renderer.
+func (m Model) View() tea.View {
 	content := m.viewContent()
 	if m.portal.Visible() {
-		return m.portal.View(content)
+		content = m.portal.View(content)
 	}
-	return content
+	v := tea.NewView(content)
+	v.AltScreen = true
+	v.MouseMode = tea.MouseModeCellMotion
+	return v
 }
 
 func (m Model) viewContent() string {

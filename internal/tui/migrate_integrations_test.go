@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 
 	"github.com/abiswas97/sentei/internal/integration"
 	"github.com/abiswas97/sentei/internal/repo"
@@ -63,7 +63,7 @@ func TestUpdateMigrateIntegrations_ConfirmNoSelections(t *testing.T) {
 		m.integ.staged[integ.Name] = false
 	}
 
-	updated, _ := m.updateMigrateIntegrations(tea.KeyMsg{Type: tea.KeyEnter})
+	updated, _ := m.updateMigrateIntegrations(tea.KeyPressMsg{Code: tea.KeyEnter})
 	m = updated.(Model)
 
 	if m.view != migrateNextView {
@@ -76,7 +76,7 @@ func TestUpdateMigrateIntegrations_Skip(t *testing.T) {
 	m.view = migrateIntegrationsView
 	m.integ.integrations = integration.All()
 
-	updated, _ := m.updateMigrateIntegrations(tea.KeyMsg{Type: tea.KeyEsc})
+	updated, _ := m.updateMigrateIntegrations(tea.KeyPressMsg{Code: tea.KeyEsc})
 	m = updated.(Model)
 
 	if m.view != migrateNextView {

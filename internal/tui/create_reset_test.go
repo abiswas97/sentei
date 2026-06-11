@@ -3,7 +3,7 @@ package tui
 import (
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 
 	"github.com/abiswas97/sentei/internal/creator"
 	"github.com/abiswas97/sentei/internal/pipeline"
@@ -27,7 +27,7 @@ func TestMenuEntry_CreateWorktree_ResetsFlowState(t *testing.T) {
 	m.create.events = []pipeline.Event{{Phase: "Setup", Step: "old"}}
 	m.create.result = &creator.Result{}
 
-	updated, _ := m.updateMenu(tea.KeyMsg{Type: tea.KeyEnter})
+	updated, _ := m.updateMenu(tea.KeyPressMsg{Code: tea.KeyEnter})
 	model := updated.(Model)
 
 	if model.view != createBranchView {
@@ -67,14 +67,14 @@ func TestMenuEntry_CreateWorktree_ResetAfterAbandonedFlow(t *testing.T) {
 	m.menuCursor = 0
 	m.view = menuView
 
-	updated, _ := m.updateMenu(tea.KeyMsg{Type: tea.KeyEnter})
+	updated, _ := m.updateMenu(tea.KeyPressMsg{Code: tea.KeyEnter})
 	m = updated.(Model)
 
 	// Abandon mid-flow: type a partial name, then leave for the menu.
 	m.create.branchInput.SetValue("feature/abando")
 	m.view = menuView
 
-	updated, _ = m.updateMenu(tea.KeyMsg{Type: tea.KeyEnter})
+	updated, _ = m.updateMenu(tea.KeyPressMsg{Code: tea.KeyEnter})
 	m = updated.(Model)
 
 	if got := m.create.branchInput.Value(); got != "" {

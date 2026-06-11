@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 
 	"github.com/abiswas97/sentei/internal/config"
 	"github.com/abiswas97/sentei/internal/repo"
@@ -172,7 +172,7 @@ func TestUpdateRepoOptions_DescriptionReceivesTyping(t *testing.T) {
 func TestUpdateRepoOptions_BackReturnsToNameView(t *testing.T) {
 	m := repoOptionsModel(t)
 
-	updated, cmd := m.updateRepoOptions(tea.KeyMsg{Type: tea.KeyEsc})
+	updated, cmd := m.updateRepoOptions(tea.KeyPressMsg{Code: tea.KeyEsc})
 
 	if updated.(Model).view != repoNameView {
 		t.Error("esc should return to the name view")
@@ -185,7 +185,7 @@ func TestUpdateRepoOptions_BackReturnsToNameView(t *testing.T) {
 func TestUpdateRepoOptions_EnterStartsCreatePipeline(t *testing.T) {
 	m := repoOptionsModel(t)
 
-	updated, cmd := m.updateRepoOptions(tea.KeyMsg{Type: tea.KeyEnter})
+	updated, cmd := m.updateRepoOptions(tea.KeyPressMsg{Code: tea.KeyEnter})
 	model := updated.(Model)
 
 	if model.view != repoProgressView {

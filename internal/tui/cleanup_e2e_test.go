@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/x/exp/teatest"
+	tea "charm.land/bubbletea/v2"
+	"github.com/charmbracelet/x/exp/teatest/v2"
 
 	"github.com/abiswas97/sentei/internal/cleanup"
 	"github.com/abiswas97/sentei/internal/config"
@@ -171,7 +171,7 @@ func TestE2E_CleanupConfirmBackQuitsWhenDirectLaunch(t *testing.T) {
 	tm := teatest.NewTestModel(t, m, teatest.WithInitialTermSize(80, 24))
 
 	// Send Esc — should quit since we launched directly into confirmation.
-	tm.Send(tea.KeyMsg{Type: tea.KeyEscape})
+	tm.Send(tea.KeyPressMsg{Code: tea.KeyEscape})
 
 	tm.WaitFinished(t, teatest.WithFinalTimeout(testTimeout))
 }

@@ -3,7 +3,7 @@ package tui
 import (
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 
 	"github.com/abiswas97/sentei/internal/config"
 	"github.com/abiswas97/sentei/internal/repo"
@@ -12,11 +12,11 @@ import (
 func TestUpdateSummary_MenuLaunch_KeysReturnToMenu(t *testing.T) {
 	cases := []struct {
 		name string
-		msg  tea.KeyMsg
+		msg  tea.KeyPressMsg
 	}{
-		{"enter", tea.KeyMsg{Type: tea.KeyEnter}},
+		{"enter", tea.KeyPressMsg{Code: tea.KeyEnter}},
 		{"quit key", keyMsg("q")},
-		{"esc", tea.KeyMsg{Type: tea.KeyEsc}},
+		{"esc", tea.KeyPressMsg{Code: tea.KeyEsc}},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -38,11 +38,11 @@ func TestUpdateSummary_MenuLaunch_KeysReturnToMenu(t *testing.T) {
 func TestUpdateSummary_DirectLaunch_KeysQuit(t *testing.T) {
 	cases := []struct {
 		name string
-		msg  tea.KeyMsg
+		msg  tea.KeyPressMsg
 	}{
-		{"enter", tea.KeyMsg{Type: tea.KeyEnter}},
+		{"enter", tea.KeyPressMsg{Code: tea.KeyEnter}},
 		{"quit key", keyMsg("q")},
-		{"esc", tea.KeyMsg{Type: tea.KeyEsc}},
+		{"esc", tea.KeyPressMsg{Code: tea.KeyEsc}},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

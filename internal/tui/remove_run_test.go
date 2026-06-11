@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 
 	"github.com/abiswas97/sentei/internal/cleanup"
 	"github.com/abiswas97/sentei/internal/git"
@@ -13,8 +13,8 @@ import (
 	"github.com/abiswas97/sentei/internal/worktree"
 )
 
-func keyRune(r rune) tea.KeyMsg {
-	return tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{r}}
+func keyRune(r rune) tea.KeyPressMsg {
+	return tea.KeyPressMsg{Code: r, Text: string(r)}
 }
 
 // pollutedRun returns run state as a completed previous deletion left it:
@@ -131,7 +131,7 @@ func TestMenuEntry_RemoveWorktrees_ClearsSelection(t *testing.T) {
 	m.remove.selected = map[string]bool{"/work/a": true}
 	m.view = menuView
 
-	updated, _ := m.updateMenu(tea.KeyMsg{Type: tea.KeyEnter})
+	updated, _ := m.updateMenu(tea.KeyPressMsg{Code: tea.KeyEnter})
 	model := updated.(Model)
 
 	if model.view != listView {

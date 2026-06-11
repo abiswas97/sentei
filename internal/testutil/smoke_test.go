@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/x/exp/teatest"
+	tea "charm.land/bubbletea/v2"
+	"github.com/charmbracelet/x/exp/teatest/v2"
 )
 
 func TestSmoke_LaunchAndQuit(t *testing.T) {
@@ -20,7 +20,7 @@ func TestSmoke_LaunchAndQuit(t *testing.T) {
 	}, teatest.WithDuration(10*time.Second), teatest.WithCheckInterval(50*time.Millisecond))
 
 	// Send 'q' to quit.
-	tm.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("q")})
+	tm.Send(tea.KeyPressMsg{Code: 'q', Text: "q"})
 
 	// Wait for clean exit.
 	tm.WaitFinished(t, teatest.WithFinalTimeout(5*time.Second))

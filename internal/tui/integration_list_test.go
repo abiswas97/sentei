@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 
 	"github.com/abiswas97/sentei/internal/git"
 	"github.com/abiswas97/sentei/internal/integration"
@@ -167,7 +167,7 @@ func TestUpdateIntegrationList_InfoClose(t *testing.T) {
 	m.integ.showInfo = true
 	m.integ.infoCursor = 0
 
-	escMsg := tea.KeyMsg{Type: tea.KeyEsc}
+	escMsg := tea.KeyPressMsg{Code: tea.KeyEsc}
 	updated, _ := m.updateIntegrationList(escMsg)
 	m = updated.(Model)
 
@@ -203,7 +203,7 @@ func TestUpdateIntegrationList_Back(t *testing.T) {
 	// Stage a change so staged != current
 	m.integ.staged["cocoindex-code"] = true // current is false
 
-	escMsg := tea.KeyMsg{Type: tea.KeyEsc}
+	escMsg := tea.KeyPressMsg{Code: tea.KeyEsc}
 	updated, _ := m.updateIntegrationList(escMsg)
 	m = updated.(Model)
 

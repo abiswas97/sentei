@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/charmbracelet/bubbles/key"
-	tea "github.com/charmbracelet/bubbletea"
+	"charm.land/bubbles/v2/key"
+	tea "charm.land/bubbletea/v2"
 
 	"github.com/abiswas97/sentei/internal/git"
 	"github.com/abiswas97/sentei/internal/pipeline"
@@ -30,7 +30,7 @@ func (m Model) updateRepoSummary(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.height = max(msg.Height-6, 5)
 		return m, nil
 
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		var repoPath string
 		canRelaunch := false
 		switch r := m.repo.result.(type) {

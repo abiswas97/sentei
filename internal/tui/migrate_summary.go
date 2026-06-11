@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/charmbracelet/bubbles/key"
-	tea "github.com/charmbracelet/bubbletea"
+	"charm.land/bubbles/v2/key"
+	tea "charm.land/bubbletea/v2"
 
 	"github.com/abiswas97/sentei/internal/git"
 	"github.com/abiswas97/sentei/internal/pipeline"
@@ -24,7 +24,7 @@ func (m Model) updateMigrateSummary(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// so a Validate or Backup failure also leaves the repo unmigrated.
 	if result.HasFailures() {
 		// Critical failure — only q to quit
-		if msg, ok := msg.(tea.KeyMsg); ok && key.Matches(msg, keys.Quit) {
+		if msg, ok := msg.(tea.KeyPressMsg); ok && key.Matches(msg, keys.Quit) {
 			return m, tea.Quit
 		}
 		return m, nil
@@ -36,7 +36,7 @@ func (m Model) updateMigrateSummary(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.height = max(msg.Height-6, 5)
 		return m, nil
 
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		switch {
 		case key.Matches(msg, keys.Yes):
 			// Delete backup, then show integration selection screen
@@ -144,7 +144,7 @@ func (m Model) updateMigrateNext(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.height = max(msg.Height-6, 5)
 		return m, nil
 
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		switch {
 		case key.Matches(msg, keys.Confirm):
 			// Re-launch sentei at the migrated repo

@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"strings"
 
+	"charm.land/bubbles/v2/key"
+	tea "charm.land/bubbletea/v2"
 	"github.com/abiswas97/sentei/internal/cli"
-	"github.com/charmbracelet/bubbles/key"
-	tea "github.com/charmbracelet/bubbletea"
 )
 
 // ConfirmProceedMsg is sent when the user presses Enter to confirm.
@@ -33,7 +33,7 @@ type ConfirmationViewModel struct {
 // the appropriate command. Returns nil if the message was not handled.
 func UpdateConfirmation(msg tea.Msg) tea.Cmd {
 	switch msg := msg.(type) {
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		switch {
 		case key.Matches(msg, keys.Confirm):
 			return func() tea.Msg { return ConfirmProceedMsg{} }

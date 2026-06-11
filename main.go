@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"time"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 
 	"github.com/abiswas97/sentei/cmd"
 	"github.com/abiswas97/sentei/internal/cleanup"
@@ -263,7 +263,7 @@ func launchInteractiveDecision(result cli.DispatchResult) {
 		})
 	}
 
-	p := tea.NewProgram(model, tea.WithAltScreen())
+	p := tea.NewProgram(model)
 	if _, err := p.Run(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error running TUI: %v\n", err)
 		os.Exit(1)
@@ -362,7 +362,7 @@ func runRoot(args []string) {
 		menuOpts = append(menuOpts, tui.WithMinProgressDuration(1500*time.Millisecond))
 	}
 	model := tui.NewMenuModel(runner, shell, repoPath, cfg, context, menuOpts...)
-	p := tea.NewProgram(model, tea.WithAltScreen())
+	p := tea.NewProgram(model)
 
 	if _, err := p.Run(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error running TUI: %v\n", err)

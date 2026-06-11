@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 
 	"github.com/abiswas97/sentei/internal/config"
 	"github.com/abiswas97/sentei/internal/git"
@@ -22,7 +22,7 @@ func createBranchModel() Model {
 func TestUpdateCreateBranch_TypingFillsFocusedField(t *testing.T) {
 	m := createBranchModel()
 
-	updated, _ := m.updateCreateBranch(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("feature/new")})
+	updated, _ := m.updateCreateBranch(tea.KeyPressMsg{Text: "feature/new"})
 	model := updated.(Model)
 
 	if got := model.create.branchInput.Value(); got != "feature/new" {
@@ -36,13 +36,13 @@ func TestUpdateCreateBranch_TypingFillsFocusedField(t *testing.T) {
 func TestUpdateCreateBranch_TabSwitchesFields(t *testing.T) {
 	m := createBranchModel()
 
-	updated, _ := m.updateCreateBranch(tea.KeyMsg{Type: tea.KeyTab})
+	updated, _ := m.updateCreateBranch(tea.KeyPressMsg{Code: tea.KeyTab})
 	model := updated.(Model)
 	if model.create.focusedField != 1 || !model.create.baseInput.Focused() || model.create.branchInput.Focused() {
 		t.Fatal("tab should move focus to the base field")
 	}
 
-	updated, _ = model.updateCreateBranch(tea.KeyMsg{Type: tea.KeyTab})
+	updated, _ = model.updateCreateBranch(tea.KeyPressMsg{Code: tea.KeyTab})
 	model = updated.(Model)
 	if model.create.focusedField != 0 || !model.create.branchInput.Focused() {
 		t.Fatal("second tab should move focus back to the branch field")
@@ -65,7 +65,7 @@ func TestUpdateCreateBranch_EnterValidates(t *testing.T) {
 			m := createBranchModel()
 			m.create.branchInput.SetValue(tc.branch)
 
-			updated, _ := m.updateCreateBranch(tea.KeyMsg{Type: tea.KeyEnter})
+			updated, _ := m.updateCreateBranch(tea.KeyPressMsg{Code: tea.KeyEnter})
 			model := updated.(Model)
 
 			if model.view != tc.wantView {
@@ -81,9 +81,39 @@ func TestUpdateCreateBranch_EnterValidates(t *testing.T) {
 	}
 }
 
+func TestUpdateCreateBranch_QuickCreateSkipsOptions(t *testing.T) {
+	m := createBranchModel()
+	m.create.branchInput.SetValue("feature/new")
+
+	updated, cmd := m.updateCreateBranch(tea.KeyPressMsg{Code: tea.KeyEnter, Mod: tea.ModCtrl})
+	model := updated.(Model)
+
+	if model.view != createProgressView {
+		t.Errorf("view = %d, want createProgressView (quick create skips options)", model.view)
+	}
+	if cmd == nil {
+		t.Error("quick create should return the creation event wait Cmd")
+	}
+}
+
+func TestUpdateCreateBranch_QuickCreateValidates(t *testing.T) {
+	m := createBranchModel()
+	m.create.branchInput.SetValue("")
+
+	updated, _ := m.updateCreateBranch(tea.KeyPressMsg{Code: tea.KeyEnter, Mod: tea.ModCtrl})
+	model := updated.(Model)
+
+	if model.view != createBranchView {
+		t.Error("invalid branch must stay on the input view")
+	}
+	if model.create.validationErr == "" {
+		t.Error("expected a validation error")
+	}
+}
+
 func TestUpdateCreateBranch_EscReturnsToMenu(t *testing.T) {
 	m := createBranchModel()
-	updated, _ := m.updateCreateBranch(tea.KeyMsg{Type: tea.KeyEsc})
+	updated, _ := m.updateCreateBranch(tea.KeyPressMsg{Code: tea.KeyEsc})
 	if updated.(Model).view != menuView {
 		t.Error("esc should return to the menu")
 	}
@@ -93,7 +123,7 @@ func TestUpdateCreateBranch_TypingClearsValidationError(t *testing.T) {
 	m := createBranchModel()
 	m.create.validationErr = "branch name is required"
 
-	updated, _ := m.updateCreateBranch(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("f")})
+	updated, _ := m.updateCreateBranch(tea.KeyPressMsg{Code: 'f', Text: "f"})
 	if got := updated.(Model).create.validationErr; got != "" {
 		t.Errorf("typing should clear the validation error, got %q", got)
 	}

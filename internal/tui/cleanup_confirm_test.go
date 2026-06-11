@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 
 	"github.com/abiswas97/sentei/internal/cleanup"
 	"github.com/abiswas97/sentei/internal/config"
@@ -141,7 +141,7 @@ func TestUpdateCleanupConfirm_WindowSizeMsg(t *testing.T) {
 func TestUpdateCleanupConfirm_QuitKey(t *testing.T) {
 	m := makeCleanupConfirmModel(nil)
 
-	_, cmd := m.updateCleanupConfirm(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'q'}})
+	_, cmd := m.updateCleanupConfirm(tea.KeyPressMsg{Code: 'q', Text: "q"})
 	if cmd == nil {
 		t.Fatal("expected quit cmd for q key")
 	}
@@ -159,7 +159,7 @@ func TestMenuCleanupTransitionsToPreview(t *testing.T) {
 	// Move cursor to "Cleanup & exit" (index 3 in bare repo menu).
 	m.menuCursor = 3
 
-	updated, cmd := m.updateMenu(tea.KeyMsg{Type: tea.KeyEnter})
+	updated, cmd := m.updateMenu(tea.KeyPressMsg{Code: tea.KeyEnter})
 	result := updated.(Model)
 
 	if result.view != cleanupPreviewView {
