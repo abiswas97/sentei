@@ -140,3 +140,25 @@ func TestViewCleanupResult_AggressiveTip(t *testing.T) {
 		t.Errorf("expected 'aggressive' in output, got:\n%s", output)
 	}
 }
+
+func TestViewCleanupResult_SkippedBranchesAreNotPending(t *testing.T) {
+	m := makeCleanupModel()
+	m.cleanupRanMode = cleanup.ModeAggressive
+	m.cleanupResult = &cleanup.Result{
+		BranchesSkipped: []cleanup.SkippedBranch{{Name: "feature/wip"}},
+	}
+
+	output := stripAnsi(m.viewCleanupResult())
+
+	if !strings.Contains(output, "1 branch skipped") {
+		t.Errorf("expected skipped count line, got:\n%s", output)
+	}
+	if !strings.Contains(output, "feature/wip") {
+		t.Errorf("expected skipped branch name, got:\n%s", output)
+	}
+	// A terminal result has nothing pending: the skipped name must not borrow
+	// the pending indicator as a list bullet.
+	if strings.Contains(output, indicatorPending+" feature/wip") {
+		t.Errorf("skipped name must not use the pending indicator, got:\n%s", output)
+	}
+}

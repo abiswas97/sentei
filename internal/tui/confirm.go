@@ -137,7 +137,7 @@ func (m Model) viewConfirm() string {
 	b.WriteString("\n\n")
 	b.WriteString(viewSeparator(m.width))
 	b.WriteString("\n\n")
-	fmt.Fprintf(&b, "  You are about to delete %d worktree(s):\n\n", len(selected))
+	fmt.Fprintf(&b, "  You are about to delete %d %s:\n\n", len(selected), pluralize(len(selected), "worktree", "worktrees"))
 
 	var dirtyCount, untrackedCount, lockedCount, unpushedCount int
 	for _, wt := range selected {
@@ -180,36 +180,32 @@ func (m Model) viewConfirm() string {
 	if len(dirCounts) > 0 {
 		b.WriteString("  Cleaning up:\n\n")
 		for dir, count := range dirCounts {
-			noun := "worktree"
-			if count > 1 {
-				noun = "worktrees"
-			}
-			fmt.Fprintf(&b, "    %-28s in %d %s\n", dir, count, noun)
+			fmt.Fprintf(&b, "    %-28s in %d %s\n", dir, count, pluralize(count, "worktree", "worktrees"))
 		}
 		b.WriteString("\n")
 	}
 
 	if dirtyCount > 0 {
 		b.WriteString(styleWarning.Render(
-			fmt.Sprintf("  ⚠ %d worktree(s) have uncommitted changes that will be lost", dirtyCount),
+			fmt.Sprintf("  ⚠ %d %s with uncommitted changes that will be lost", dirtyCount, pluralize(dirtyCount, "worktree", "worktrees")),
 		))
 		b.WriteString("\n")
 	}
 	if untrackedCount > 0 {
 		b.WriteString(styleWarning.Render(
-			fmt.Sprintf("  ⚠ %d worktree(s) have untracked files that will be lost", untrackedCount),
+			fmt.Sprintf("  ⚠ %d %s with untracked files that will be lost", untrackedCount, pluralize(untrackedCount, "worktree", "worktrees")),
 		))
 		b.WriteString("\n")
 	}
 	if lockedCount > 0 {
 		b.WriteString(styleWarning.Render(
-			fmt.Sprintf("  ⚠ %d worktree(s) are locked and will be force-removed", lockedCount),
+			fmt.Sprintf("  ⚠ %d %s locked and will be force-removed", lockedCount, pluralize(lockedCount, "worktree", "worktrees")),
 		))
 		b.WriteString("\n")
 	}
 	if unpushedCount > 0 {
 		b.WriteString(styleWarning.Render(
-			fmt.Sprintf("  ⚠ %d worktree(s) have commits not pushed to any remote", unpushedCount),
+			fmt.Sprintf("  ⚠ %d %s with commits not pushed to any remote", unpushedCount, pluralize(unpushedCount, "worktree", "worktrees")),
 		))
 		b.WriteString("\n")
 	}

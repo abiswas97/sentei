@@ -128,7 +128,7 @@ func (m Model) viewCleanupResult() string {
 			len(r.BranchesSkipped),
 			pluralize(len(r.BranchesSkipped), "branch", "branches"))
 		for _, s := range r.BranchesSkipped {
-			fmt.Fprintf(&b, "    %s %s\n", styleDim.Render(indicatorPending), truncateWithEllipsis(s.Name, max(m.width-8, 20)))
+			fmt.Fprintf(&b, "      %s\n", styleDim.Render(truncateWithEllipsis(s.Name, max(m.width-8, 20))))
 		}
 	}
 
