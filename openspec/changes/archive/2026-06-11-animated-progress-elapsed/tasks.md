@@ -11,4 +11,4 @@
 
 - [x] 2.1 Full gauntlet; playground: removal progress animates smoothly with elapsed readout; no animation residue after completion
 - [x] 2.2 .impeccable.md Progress Views section + decision log (incl. fang declined)
-- [ ] 2.3 PR feat/animated-progress, CI green, merge, cleanup, archive
+- [x] 2.3 PR feat/animated-progress, CI green, merge, cleanup, archive
