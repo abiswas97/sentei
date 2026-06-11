@@ -21,4 +21,4 @@
 - [x] 4.1 Full gauntlet (suite + race, vet, gofmt, golangci-lint)
 - [x] 4.2 Playground tmux: every view footer at 80x18, F1 portal spot checks, narrow-width (60 col) truncation check
 - [x] 4.3 .impeccable.md View Chrome + Key Mapping sections updated, decision log entry
-- [ ] 4.4 PR feat/bubbles-help, CI green, merge, cleanup, archive change
+- [x] 4.4 PR feat/bubbles-help, CI green, merge, cleanup, archive change
