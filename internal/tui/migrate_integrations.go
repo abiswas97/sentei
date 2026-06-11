@@ -69,6 +69,7 @@ func (m Model) updateMigrateIntegrations(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			if hasStagedSelections {
 				m.integ.events = nil
+				m.integ.finalized = false
 				m.integ.returnView = migrateNextView
 				m.progressStartedAt = time.Now()
 				m.progressToken++

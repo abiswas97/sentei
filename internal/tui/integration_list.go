@@ -195,6 +195,7 @@ func (m Model) updateIntegrationList(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(msg, keys.Confirm):
 			if m.integrationHasPendingChanges() {
 				m.integ.events = nil
+				m.integ.finalized = false
 				m.integ.returnView = integrationListView
 				m.progressStartedAt = time.Now()
 				m.progressToken++

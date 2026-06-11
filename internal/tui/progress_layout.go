@@ -274,8 +274,13 @@ func (m *Model) syncProgressBar() tea.Cmd {
 func (m Model) renderProgressLayout(l ProgressLayout) string {
 	bar := m.bar
 	// Colors re-read the live palette tokens each render: the adaptive
-	// palette can arrive after the bar is constructed.
-	progress.WithColors(colorBarStart, colorBarEnd)(&bar)
+	// palette can arrive after the bar is constructed. A completed flow
+	// settles the fill green for its hold — the bar joins the ✦ moment.
+	if l.Completed {
+		progress.WithColors(colorBarDoneStart, colorBarDoneEnd)(&bar)
+	} else {
+		progress.WithColors(colorBarStart, colorBarEnd)(&bar)
+	}
 	bar.EmptyColor = colorDim
 	// The native percentage follows the displayed fill, so bar and label
 	// never disagree; the phase headers state actual counts.
