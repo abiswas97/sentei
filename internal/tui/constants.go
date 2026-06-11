@@ -43,3 +43,7 @@ const viewChromeRows = 6
 // instead of cutting away mid-glide. Part of the hold mechanism, applied
 // only when holds are enabled (minProgressDuration > 0).
 const progressSettleFloor = time.Second
+
+// confirmNameWidthCap bounds the confirm screen's name column so one long
+// branch cannot push the risk notes off to the right.
+const confirmNameWidthCap = 28

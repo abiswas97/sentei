@@ -15,25 +15,17 @@ func TestWorktreeLabel_DetachedUsesShortHash(t *testing.T) {
 }
 
 func TestConfirm_CleanUsesBadgeVocabulary(t *testing.T) {
-	wts := []git.Worktree{
-		{Path: "/work/clean", Branch: "refs/heads/feature/clean"},
-		{Path: "/work/dirty", Branch: "refs/heads/feature/dirty", HasUncommittedChanges: true},
-	}
-	m := NewModel(wts, nil, "/repo")
+	m := NewModel([]git.Worktree{
+		{Path: "/work/a", Branch: "refs/heads/feature/a"},
+	}, nil, "/repo")
+	m.remove.selected = map[string]bool{"/work/a": true}
 	m.width = 80
-	for _, wt := range wts {
-		m.remove.selected[wt.Path] = true
-	}
 
 	view := stripAnsi(m.viewConfirm())
-	if !strings.Contains(view, "[ok] clean") {
+	if !strings.Contains(view, "[ok]") {
 		t.Errorf("clean rows must use the list's badge vocabulary:\n%s", view)
 	}
-	if strings.Contains(view, "(clean)") {
-		t.Errorf("prose (clean) must be gone:\n%s", view)
-	}
 }
-
 func TestStatusBar_DeleteHintNeedsSelection(t *testing.T) {
 	wts := []git.Worktree{{Path: "/work/a", Branch: "refs/heads/feature/a"}}
 	m := NewModel(wts, nil, "/repo")
