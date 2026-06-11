@@ -75,19 +75,23 @@ The TUI SHALL request keyboard enhancements so terminals supporting the kitty ke
 - **THEN** `enter` (continue to options) SHALL remain fully functional and no error SHALL surface
 
 ### Requirement: Adaptive palette
-The TUI SHALL detect the terminal background at startup via `tea.RequestBackgroundColor` and select the palette accordingly: the dark palette on dark backgrounds and the light palette on light backgrounds. Both palettes SHALL be declared as data in `internal/tui/styles.go`, one value per token, and documented side by side in `.impeccable.md`. When the terminal does not report a background color, the dark palette SHALL remain active.
+The TUI SHALL select its palette from the terminal's reported background: dark terminals keep the dark palette (the documented baseline), light terminals get the light palette, and no report defaults to dark. Light-palette tokens SHALL hold readable contrast on white: dim text uses 243 and warning orange uses 130.
 
 #### Scenario: Light terminal gets the light palette
-- **WHEN** the terminal reports a light background (`BackgroundColorMsg.IsDark()` is false)
-- **THEN** all subsequent renders SHALL use the light palette values for every token
+- **WHEN** the terminal reports a light background
+- **THEN** rendering SHALL use the light palette tokens
 
 #### Scenario: Dark terminal keeps the dark palette
 - **WHEN** the terminal reports a dark background
-- **THEN** rendering SHALL be unchanged from the pre-detection output
+- **THEN** rendering SHALL use the dark palette tokens
 
 #### Scenario: No background report defaults to dark
-- **WHEN** the terminal never responds to the background query
-- **THEN** the dark palette SHALL remain active and no error SHALL surface
+- **WHEN** the terminal does not answer the background query
+- **THEN** rendering SHALL use the dark palette
+
+#### Scenario: Light dim and warning are readable
+- **WHEN** the light palette is active
+- **THEN** dim text SHALL render in 243 and warnings in 130
 
 ### Requirement: Indeterminate wait indicator
 Indeterminate waits (operations with no measurable progress: the cleanup repository scan and the menu's worktree-context load) SHALL display an animated spinner in the accent color. Determinate progress SHALL keep the static indicator vocabulary and the progress bar. Spinner ticks SHALL run only while an indeterminate wait is visible.
@@ -231,4 +235,70 @@ The confirm-deletion screen SHALL list selected worktrees with the status badge 
 #### Scenario: Long names do not shift the columns
 - **WHEN** a selected worktree's label exceeds the name-column cap
 - **THEN** the label SHALL truncate with an ellipsis and the columns SHALL hold
+
+### Requirement: One voice, declared once
+Every view and portal title SHALL be declared exactly once in the copy registry (`internal/tui/copy.go`) and referenced by const at render sites. Titles use sentence case. The same physical key SHALL carry the same verb across views unless the action genuinely differs (`?` is always "details").
+
+#### Scenario: Title changes are one-line edits
+- **WHEN** a view title needs rewording
+- **THEN** exactly one declaration SHALL change
+
+#### Scenario: Sentence case
+- **WHEN** any view renders its title
+- **THEN** the title SHALL be sentence case (first word capitalized only, proper nouns excepted)
+
+### Requirement: Portal boxes carry no brand
+The detail portal SHALL render its bare title inside the box; the `sentei ─` brand appears only on the view chrome behind it.
+
+#### Scenario: Portal title is bare
+- **WHEN** any portal opens
+- **THEN** its title line SHALL NOT contain `sentei ─`
+
+### Requirement: Completion settles the bar green
+While a flow is working, the overall bar fills with the accent gradient; once the flow's result has arrived, the fill SHALL render in the success gradient (`barDoneStart→barDoneEnd`, per theme) for the remainder of the hold.
+
+#### Scenario: Working bar is accent
+- **WHEN** a flow is still producing events
+- **THEN** the bar fill SHALL use the accent gradient
+
+#### Scenario: Done bar is green
+- **WHEN** the flow's completion result has arrived
+- **THEN** the bar fill SHALL use the success gradient until the view transitions
+
+### Requirement: Milestone whisper
+The repository state SHALL carry a lifetime count of worktrees removed through the TUI. When a removal run crosses a power of ten, the removal summary SHALL show one dim line acknowledging it; otherwise no line renders. State errors SHALL degrade silently — the whisper never becomes a warning.
+
+#### Scenario: Crossing a power of ten
+- **WHEN** a run takes the lifetime count from below a power of ten to at or above it
+- **THEN** the summary SHALL whisper that milestone in dim text
+
+#### Scenario: Ordinary runs stay quiet
+- **WHEN** a run crosses no power of ten
+- **THEN** the summary SHALL render no whisper line
+
+#### Scenario: Garnish never alarms
+- **WHEN** the state file cannot be read or written
+- **THEN** the summary SHALL render normally with no whisper and no error
+
+### Requirement: Golden chrome pinning
+The stable views (worktree list, confirm, removal summary, cleanup result, create input) SHALL be pinned by golden-file tests capturing their exact rendered output including styling. Golden updates SHALL be explicit (`-update`), never incidental.
+
+#### Scenario: Chrome regression fails loudly
+- **WHEN** any change alters a pinned view's exact output
+- **THEN** the golden test SHALL fail until the golden is intentionally regenerated
+
+### Requirement: P3 presentation rules
+Sort arrows SHALL describe the displayed values' order (the Age column flips relative to its underlying date sort). Portal scroll hints SHALL appear only when content scrolls. Option footers SHALL include navigation hints. Tabbing into a prefilled input SHALL place the cursor at the end. Option-view cursors use `▸` and no view renders `●`.
+
+#### Scenario: Age arrow matches the column
+- **WHEN** the list sorts by age, date-ascending
+- **THEN** the Age header SHALL show ▼ (the displayed ages descend)
+
+#### Scenario: Fitting portal content offers no scroll keys
+- **WHEN** portal content fits its viewport
+- **THEN** the footer SHALL offer only close
+
+#### Scenario: Tab lands at the end
+- **WHEN** the user tabs into a field holding text
+- **THEN** the cursor SHALL sit after the last character
 
