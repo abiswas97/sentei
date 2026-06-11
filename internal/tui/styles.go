@@ -203,8 +203,11 @@ var (
 	colWidthAge      = 16 // "12 hours ago" (12) + headroom
 )
 
-// Indicator characters
+// Indicator characters. ✓/✗ are verdicts about a whole operation (summary
+// headlines); ●/·/the work animation are states of items within it, always
+// rendered among peers. ● never appears alone on a screen.
 const (
+	indicatorSuccess = "✓"
 	indicatorDone    = "●"
 	indicatorPending = "·"
 	indicatorFailed  = "✗"
@@ -215,7 +218,9 @@ const (
 	indicatorActiveFallback = "∙"
 )
 
-// workFrames is the one working animation: the heavy braille dot. The
-// bubbles builtin Dot ships two-cell frames (trailing space); these are
-// single-cell so status columns stay aligned.
-var workFrames = []string{"⣾", "⣽", "⣻", "⢿", "⡿", "⣟", "⣯", "⣷"}
+// workFrames is the one working animation: the breathing dot, the pending
+// dot inflating toward the done dot and back. The dot family is the only
+// spinner that is optically centered and weight-matched beside bold text;
+// braille frames hang into the descender zone and sit flush-left, which is
+// font geometry the app cannot fix.
+var workFrames = []string{"·", "∙", "•", "●", "•", "∙"}

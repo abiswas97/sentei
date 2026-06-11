@@ -53,7 +53,7 @@ func TestE2E_RemovalFlowChrome(t *testing.T) {
 	}
 
 	summaryScreen := stripANSI(m.viewSummary())
-	if !strings.Contains(summaryScreen, "sentei ─ Removal Complete") || !strings.Contains(summaryScreen, "● 2 worktrees removed successfully") {
+	if !strings.Contains(summaryScreen, "sentei ─ Removal Complete") || !strings.Contains(summaryScreen, "✓ 2 worktrees removed successfully") {
 		t.Fatalf("summary screen chrome wrong:\n%s", summaryScreen)
 	}
 }
