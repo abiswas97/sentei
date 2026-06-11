@@ -25,7 +25,10 @@ func cocoindexCode() Integration {
 			// (>=1.0.6): without it `ccc index` fails at runtime with
 			// "No module named 'sentence_transformers'" — the default
 			// config embeds locally.
-			Command:      `uv tool install --upgrade "cocoindex-code[embeddings-local]" --prerelease explicit`,
+			// --python pins resolution: uv otherwise honors any
+			// .python-version in the cwd, and a 3.10 pin makes the
+			// >=3.11 requirement unsatisfiable.
+			Command:      `uv tool install --upgrade --python 3.11 "cocoindex-code[embeddings-local]" --prerelease explicit`,
 			FirstRunNote: "Downloads ~87MB embedding model on first use",
 		},
 		Setup: SetupSpec{
