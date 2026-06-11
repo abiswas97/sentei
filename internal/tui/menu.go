@@ -189,7 +189,7 @@ func (m Model) viewMenu() string {
 			hint = "  " + styleDim.Render(item.hint)
 		}
 		if item.loading {
-			hint = "  " + styleAccent.Render(m.spin.View()) + " " + styleDim.Render(item.hint)
+			hint = "  " + shimmerLine(starFrame(m.motionTick)+" "+item.hint, rampDim, m.motionTick)
 		}
 
 		if i == m.menuCursor {

@@ -41,7 +41,7 @@ func (m Model) viewCleanupResult() string {
 		b.WriteString("\n\n")
 		b.WriteString(viewSeparator(m.width))
 		b.WriteString("\n\n")
-		fmt.Fprintf(&b, "  %s Running cleanup\u2026\n", styleIndicatorActive.Render(m.spin.View()))
+		fmt.Fprintf(&b, "  %s\n", shimmerLine(starFrame(m.motionTick)+" Running cleanup\u2026", rampAccent, m.motionTick))
 		return b.String()
 	}
 
@@ -63,7 +63,7 @@ func (m Model) viewCleanupResult() string {
 			len(r.BranchesSkipped), pluralize(len(r.BranchesSkipped), "branch", "branches"))
 	case len(r.Errors) == 0 && totalActions == 0:
 		fmt.Fprintf(&b, "  %s Repository is clean\n\n",
-			styleIndicatorDone.Render(indicatorSuccess))
+			styleIndicatorDone.Render(indicatorDone))
 	case totalActions > 0 && len(r.BranchesSkipped) > 0:
 		fmt.Fprintf(&b, "  %s Cleanup complete — %d %s remain (unmerged)\n\n",
 			styleIndicatorWarning.Render(indicatorWarning),

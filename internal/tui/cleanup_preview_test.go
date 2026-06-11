@@ -37,7 +37,7 @@ func scanWithAggressive(n int) *cleanup.DryRunResult {
 func TestViewCleanupPreview_ScanningState(t *testing.T) {
 	m := previewModel()
 	view := stripANSI(m.viewCleanupPreview())
-	for _, want := range []string{"sentei ─ Cleanup Preview", stripANSI(m.spin.View()) + " Scanning repository…"} {
+	for _, want := range []string{"sentei ─ Cleanup Preview", starFrame(m.motionTick) + " Scanning repository…"} {
 		if !strings.Contains(view, want) {
 			t.Errorf("missing %q:\n%s", want, view)
 		}
@@ -48,7 +48,7 @@ func TestViewCleanupPreview_CleanRepository(t *testing.T) {
 	m := previewModel()
 	m.cleanupScan = &cleanup.DryRunResult{}
 	view := stripANSI(m.viewCleanupPreview())
-	if !strings.Contains(view, "● Repository is clean") {
+	if !strings.Contains(view, "✦ Repository is clean") {
 		t.Errorf("expected clean message:\n%s", view)
 	}
 	if !strings.Contains(view, "enter back · q quit") {
@@ -63,9 +63,9 @@ func TestViewCleanupPreview_SafeResults(t *testing.T) {
 
 	for _, want := range []string{
 		"Safe cleanup:",
-		"● 3 stale remote refs would be pruned",
-		"● 1 config duplicate would be removed",
-		"● 1 stale worktree would be pruned",
+		"▸ 3 stale remote refs would be pruned",
+		"▸ 1 config duplicate would be removed",
+		"▸ 1 stale worktree would be pruned",
 		"· No branches with gone upstream",
 		"· No orphaned config sections",
 	} {
