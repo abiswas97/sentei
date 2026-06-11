@@ -153,8 +153,7 @@ func (m *Model) prepareCreateOptions() {
 
 	// Load active integration names from repo state for display. A corrupt
 	// sentei.json returns (nil, err); default to empty so we never nil-deref.
-	bareDir := filepath.Join(m.repoPath, ".bare")
-	st, err := state.Load(bareDir)
+	st, err := m.loadRepoState()
 	if err != nil || st == nil {
 		st = &state.State{}
 	}

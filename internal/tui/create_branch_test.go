@@ -12,7 +12,7 @@ import (
 )
 
 func createBranchModel() Model {
-	m := NewMenuModel(nil, nil, "/repo", &config.Config{}, repo.ContextBareRepo)
+	m := NewMenuModel(bareDirRunner("/repo"), nil, "/repo", &config.Config{}, repo.ContextBareRepo)
 	m.width, m.height = 80, 24
 	m.view = createBranchView
 	m.remove.worktrees = []git.Worktree{{Path: "/repo/feature-taken", Branch: "refs/heads/feature/taken"}}

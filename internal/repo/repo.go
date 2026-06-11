@@ -34,41 +34,23 @@ func DetectContext(runner git.CommandRunner, path string) RepoContext {
 		return ContextNoRepo
 	}
 
-	// Inside a git repo — check for sentei's .bare directory via --git-common-dir
-	// (--show-toplevel returns the worktree root, not the bare repo root)
-	commonDir, err := runner.Run(path, "rev-parse", "--git-common-dir")
-	if err == nil {
-		if !filepath.IsAbs(commonDir) {
-			commonDir = filepath.Join(path, commonDir)
-		}
-		// commonDir is .bare itself (sentei's structure)
-		if filepath.Base(commonDir) == ".bare" {
-			return ContextBareRepo
-		}
+	// Inside a git repo — sentei's bare layout has a ".bare" common dir.
+	// (--show-toplevel returns the worktree root, not the bare repo root.)
+	if commonDir, err := git.CommonDir(runner, path); err == nil && filepath.Base(commonDir) == ".bare" {
+		return ContextBareRepo
 	}
 
 	return ContextNonBareRepo
 }
 
 // ResolveBareRoot resolves the bare repo root from any path (worktree, bare root, or inside .bare).
-// Falls back to path if git commands fail or the structure isn't recognized.
+// The root is the parent of git's common dir (the .bare or repo.git directory).
+// Falls back to path if git commands fail or the path is already the common dir.
 func ResolveBareRoot(runner git.CommandRunner, path string) string {
-	commonDir, err := runner.Run(path, "rev-parse", "--git-common-dir")
-	if err != nil {
+	commonDir, err := git.CommonDir(runner, path)
+	if err != nil || commonDir == path {
 		return path
 	}
-	if !filepath.IsAbs(commonDir) {
-		commonDir = filepath.Join(path, commonDir)
-	}
-	// Already at the bare root (--git-common-dir returned ".")
-	if commonDir == path {
-		return path
-	}
-	// If commonDir is .bare, parent is the bare repo root
-	if filepath.Base(commonDir) == ".bare" {
-		return filepath.Dir(commonDir)
-	}
-	// Otherwise return parent of commonDir (e.g., parent of .git)
 	return filepath.Dir(commonDir)
 }
 
