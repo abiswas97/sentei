@@ -11,7 +11,6 @@ import (
 	"github.com/charmbracelet/lipgloss"
 
 	"github.com/abiswas97/sentei/internal/integration"
-	"github.com/abiswas97/sentei/internal/state"
 )
 
 // styleInfoCard frames the integration info carousel — the one true
@@ -46,8 +45,7 @@ func (m Model) loadIntegrationState() tea.Cmd {
 
 		depStatus := integration.DetectDeps(m.shell, all)
 
-		bareDir := filepath.Join(m.repoPath, ".bare")
-		st, err := state.Load(bareDir)
+		st, err := m.loadRepoState()
 		if err != nil {
 			return integrationStateLoadedMsg{
 				integrations: all,
