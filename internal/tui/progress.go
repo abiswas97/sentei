@@ -119,7 +119,10 @@ func (m Model) updateProgress(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// the bar settles at full while the completion frame holds.
 		syncCmd := m.syncProgressBar()
 		updated, holdCmd := m.holdOrAdvance(summaryView)
-		return updated, tea.Batch(syncCmd, holdCmd, loadWorktreeContext(m.runner, m.repoPath, m.worktreeGeneration))
+		return updated, tea.Batch(syncCmd, holdCmd,
+			recordRemovals(m.repoPath, m.remove.run.result.SuccessCount),
+			loadWorktreeContext(m.runner, m.repoPath, m.worktreeGeneration))
+
 	}
 	return m, nil
 }
