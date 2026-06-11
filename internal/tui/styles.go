@@ -113,7 +113,6 @@ var (
 
 	// Bordered overlays
 	stylePortalBox lipgloss.Style
-	styleInfoCard  lipgloss.Style
 )
 
 func init() {
@@ -174,7 +173,6 @@ func applyPalette(p palette) {
 	styleStagedRemove = lipgloss.NewStyle().Foreground(colorWarning)
 
 	stylePortalBox = lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(colorAccent).Padding(0, 1)
-	styleInfoCard = lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(colorAccent).Padding(1, 2)
 
 	footerHelp.Styles.ShortKey = styleDim
 	footerHelp.Styles.ShortDesc = styleDim

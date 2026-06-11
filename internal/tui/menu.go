@@ -43,11 +43,6 @@ func loadWorktreeContext(runner git.CommandRunner, repoPath string, generation u
 
 func (m Model) updateMenu(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
-	case tea.WindowSizeMsg:
-		m.width = msg.Width
-		m.height = max(msg.Height-6, 5)
-		return m, nil
-
 	case tea.KeyPressMsg:
 		switch {
 		case key.Matches(msg, keys.Quit), key.Matches(msg, keys.Back):

@@ -67,11 +67,6 @@ func runCleanup(runner git.CommandRunner, repoPath string) tea.Cmd {
 
 func (m Model) updateProgress(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
-	case tea.WindowSizeMsg:
-		m.width = msg.Width
-		m.height = max(msg.Height-6, 5)
-		return m, nil
-
 	case tea.KeyPressMsg:
 		if key.Matches(msg, keys.Quit) {
 			return m, tea.Quit

@@ -35,11 +35,6 @@ func loadMigrateInfo(runner git.CommandRunner, repoPath string) tea.Cmd {
 
 func (m Model) updateMigrateConfirm(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
-	case tea.WindowSizeMsg:
-		m.width = msg.Width
-		m.height = max(msg.Height-6, 5)
-		return m, nil
-
 	case migrateInfoMsg:
 		if msg.err != nil {
 			m.repo.validationErr = fmt.Sprintf("failed to load repo info: %v", msg.err)
