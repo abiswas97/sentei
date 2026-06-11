@@ -107,9 +107,9 @@ func (m Model) viewSummary() string {
 	b.WriteString(viewSeparator(m.width))
 	b.WriteString("\n\n")
 	if m.menuItems != nil {
-		b.WriteString(viewKeyHints(KeyHint{"enter", "menu"}, KeyHint{"q", "quit"}))
+		b.WriteString(viewFooter(m.width, summaryMenuFooter))
 	} else {
-		b.WriteString(viewKeyHints(KeyHint{"enter", "quit"}, KeyHint{"esc", "quit"}))
+		b.WriteString(viewFooter(m.width, summaryQuitFooter))
 	}
 	b.WriteString("\n")
 

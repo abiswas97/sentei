@@ -107,6 +107,6 @@ func (m Model) viewRepoProgress() string {
 		Phases:   buildPhaseDisplays(m.repo.events),
 		Width:    m.width,
 		Height:   m.height,
-		Hints:    []KeyHint{{"q", "quit"}},
+		Hints:    progressFooter,
 	}.View()
 }

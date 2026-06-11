@@ -213,7 +213,7 @@ func (m Model) viewConfirm() string {
 	b.WriteString("\n")
 	b.WriteString(viewSeparator(m.width))
 	b.WriteString("\n\n")
-	b.WriteString(viewKeyHints(KeyHint{"y", "delete"}, KeyHint{"n", "go back"}) + "\n")
+	b.WriteString(viewFooter(m.width, confirmFooter) + "\n")
 
 	return b.String()
 }

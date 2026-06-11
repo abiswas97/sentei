@@ -152,7 +152,7 @@ func (m Model) viewMigrateConfirm() string {
 	b.WriteString("\n")
 	b.WriteString(viewSeparator(m.width))
 	b.WriteString("\n\n")
-	b.WriteString(viewKeyHints(KeyHint{"enter", "confirm"}, KeyHint{"esc", "back"}, KeyHint{"q", "quit"}))
+	b.WriteString(viewFooter(m.width, confirmationFooter))
 	b.WriteString("\n")
 
 	return b.String()

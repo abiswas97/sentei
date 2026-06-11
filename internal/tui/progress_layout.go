@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strings"
 
+	"charm.land/bubbles/v2/key"
+
 	"github.com/abiswas97/sentei/internal/pipeline"
 )
 
@@ -23,7 +25,7 @@ type ProgressLayout struct {
 	Phases   []phaseDisplay
 	Width    int
 	Height   int
-	Hints    []KeyHint
+	Hints    []key.Binding
 
 	// OverallTotal overrides the bar's denominator when the flow knows its
 	// full step count upfront and discovered phase totals would undercount.
@@ -70,7 +72,7 @@ func (l ProgressLayout) View() string {
 
 	if len(l.Hints) > 0 {
 		b.WriteString("\n")
-		b.WriteString(viewKeyHints(l.Hints...))
+		b.WriteString(viewFooter(l.Width, l.Hints))
 		b.WriteString("\n")
 	}
 

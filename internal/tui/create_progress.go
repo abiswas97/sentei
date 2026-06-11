@@ -40,6 +40,6 @@ func (m Model) viewCreateProgress() string {
 		Phases:   withPendingPhases(buildPhaseDisplays(m.create.events), "Setup", "Dependencies", "Integrations"),
 		Width:    m.width,
 		Height:   m.height,
-		Hints:    []KeyHint{{"q", "quit"}},
+		Hints:    progressFooter,
 	}.View()
 }

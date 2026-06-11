@@ -265,7 +265,7 @@ func (m Model) viewRepoOptions() string {
 	b.WriteString("\n")
 	b.WriteString(viewSeparator(m.width))
 	b.WriteString("\n\n")
-	b.WriteString(styleDim.Render("  space toggle \u00b7 enter create \u00b7 esc back"))
+	b.WriteString(viewFooter(m.width, optionsFooter))
 	b.WriteString("\n")
 
 	return b.String()

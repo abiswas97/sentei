@@ -95,7 +95,7 @@ func (m Model) viewCreateRepoSummary(result repo.CreateResult) string {
 		b.WriteString("\n")
 		b.WriteString(viewSeparator(m.width))
 		b.WriteString("\n\n")
-		b.WriteString(styleDim.Render("  q quit"))
+		b.WriteString(viewFooter(m.width, quitOnlyFooter))
 		b.WriteString("\n")
 		return b.String()
 	}
@@ -149,7 +149,7 @@ func (m Model) viewCreateRepoSummary(result repo.CreateResult) string {
 	b.WriteString(viewSeparator(m.width))
 	b.WriteString("\n\n")
 	fmt.Fprintf(&b, "    cd %s\n\n", styleDim.Render(worktreePath))
-	b.WriteString(viewKeyHints(KeyHint{"enter", "open in sentei"}, KeyHint{"q", "quit"}))
+	b.WriteString(viewFooter(m.width, repoSummaryFooter))
 	b.WriteString("\n")
 
 	return b.String()
@@ -182,7 +182,7 @@ func (m Model) viewCloneRepoSummary(result repo.CloneResult) string {
 		b.WriteString("\n")
 		b.WriteString(viewSeparator(m.width))
 		b.WriteString("\n\n")
-		b.WriteString(styleDim.Render("  q quit"))
+		b.WriteString(viewFooter(m.width, quitOnlyFooter))
 		b.WriteString("\n")
 		return b.String()
 	}
@@ -205,7 +205,7 @@ func (m Model) viewCloneRepoSummary(result repo.CloneResult) string {
 	b.WriteString(viewSeparator(m.width))
 	b.WriteString("\n\n")
 	fmt.Fprintf(&b, "    cd %s\n\n", styleDim.Render(worktreePath))
-	b.WriteString(viewKeyHints(KeyHint{"enter", "open in sentei"}, KeyHint{"q", "quit"}))
+	b.WriteString(viewFooter(m.width, repoSummaryFooter))
 	b.WriteString("\n")
 
 	return b.String()

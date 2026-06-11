@@ -97,7 +97,7 @@ func (m Model) viewIntegrationProgress() string {
 		Phases:       m.buildIntegrationPhases(),
 		Width:        m.width,
 		Height:       m.height,
-		Hints:        []KeyHint{{"q", "quit"}},
+		Hints:        progressFooter,
 		OverallDone:  done,
 		OverallTotal: total,
 	}.View()
