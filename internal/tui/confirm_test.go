@@ -35,8 +35,8 @@ func TestViewConfirm_CleanWorktrees(t *testing.T) {
 	if !strings.Contains(output, "feature-a") {
 		t.Error("should list feature-a")
 	}
-	if !strings.Contains(output, "(clean)") {
-		t.Error("should show (clean) label for clean worktrees")
+	if !strings.Contains(output, "[ok] clean") {
+		t.Error("should show the [ok] clean badge for clean worktrees")
 	}
 	if strings.Contains(output, "⚠") {
 		t.Error("should not show warnings for clean worktrees")
