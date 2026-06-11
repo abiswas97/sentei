@@ -97,10 +97,10 @@ func TestProgressLayout_ActivePhaseShowsSteps(t *testing.T) {
 	}
 	view := stripANSI(l.View())
 
-	if !strings.Contains(view, "◐ Removing worktrees  12/30  40%") {
+	if !strings.Contains(view, "∙ Removing worktrees  12/30  40%") {
 		t.Errorf("expected active phase header with indicator left and count/pct, view:\n%s", view)
 	}
-	for _, want := range []string{"    ● done-step", "    ◐ active-step", "    · pending-step"} {
+	for _, want := range []string{"    ● done-step", "    ∙ active-step", "    · pending-step"} {
 		if !strings.Contains(view, want) {
 			t.Errorf("expected 4-space indented step %q, view:\n%s", want, view)
 		}
@@ -136,7 +136,8 @@ func TestProgressLayout_OverallBarAggregatesPhases(t *testing.T) {
 	}
 	view := stripANSI(l.View())
 
-	want := strings.Repeat("█", 10) + strings.Repeat("░", 10) + " 50%"
+	barWidth := overallBarWidth(80) - progressBarPercentReserve
+	want := strings.Repeat("█", barWidth/2) + strings.Repeat("░", barWidth-barWidth/2) + " 50%"
 	if !strings.Contains(view, want) {
 		t.Errorf("expected aggregated 50%% bar, view:\n%s", view)
 	}

@@ -139,22 +139,22 @@ func TestTruncateWithEllipsis(t *testing.T) {
 }
 
 func TestViewStatLine_Standard(t *testing.T) {
-	got := stripANSI(viewStatLine(WindowStats{Done: 10, Active: 3, Pending: 17, Showing: 6, Total: 30}))
-	want := "    ● 10 done  ◐ 3 active  · 17 pending  showing 6 of 30"
+	got := stripANSI(viewStatLine(WindowStats{Done: 10, Active: 3, Pending: 17, Showing: 6, Total: 30}, indicatorActiveFallback))
+	want := "    ● 10 done  ∙ 3 active  · 17 pending  showing 6 of 30"
 	if got != want {
 		t.Errorf("viewStatLine = %q, want %q", got, want)
 	}
 }
 
 func TestViewStatLine_WithFailures(t *testing.T) {
-	got := stripANSI(viewStatLine(WindowStats{Done: 1, Failed: 2, Showing: 3, Total: 3}))
+	got := stripANSI(viewStatLine(WindowStats{Done: 1, Failed: 2, Showing: 3, Total: 3}, indicatorActiveFallback))
 	if !strings.Contains(got, "✗ 2 failed") {
 		t.Errorf("expected failed legend, got %q", got)
 	}
 }
 
 func TestViewStatLine_ZeroCountsOmitted(t *testing.T) {
-	got := stripANSI(viewStatLine(WindowStats{Done: 5, Showing: 5, Total: 5}))
+	got := stripANSI(viewStatLine(WindowStats{Done: 5, Showing: 5, Total: 5}, indicatorActiveFallback))
 	for _, absent := range []string{"active", "pending", "failed"} {
 		if strings.Contains(got, absent) {
 			t.Errorf("zero-count category %q should be omitted, got %q", absent, got)
@@ -163,7 +163,7 @@ func TestViewStatLine_ZeroCountsOmitted(t *testing.T) {
 }
 
 func TestRenderProgressBar_Halfway(t *testing.T) {
-	got := stripANSI(renderProgressBar(10, 20))
+	got := stripANSI(renderProgressBar(10, 20, 20))
 	want := "  " + strings.Repeat("█", 10) + strings.Repeat("░", 10) + " 50%"
 	if got != want {
 		t.Errorf("renderProgressBar(10,20) = %q, want %q", got, want)
@@ -171,7 +171,7 @@ func TestRenderProgressBar_Halfway(t *testing.T) {
 }
 
 func TestRenderProgressBar_DoneExceedsTotal_ClampsNoPanic(t *testing.T) {
-	got := stripANSI(renderProgressBar(3, 1))
+	got := stripANSI(renderProgressBar(3, 1, 20))
 	want := "  " + strings.Repeat("█", 20) + " 100%"
 	if got != want {
 		t.Errorf("renderProgressBar(3,1) = %q, want clamped 100%%", got)
@@ -179,7 +179,7 @@ func TestRenderProgressBar_DoneExceedsTotal_ClampsNoPanic(t *testing.T) {
 }
 
 func TestRenderProgressBar_ZeroTotal(t *testing.T) {
-	got := stripANSI(renderProgressBar(0, 0))
+	got := stripANSI(renderProgressBar(0, 0, 20))
 	want := "  " + strings.Repeat("░", 20) + " 0%"
 	if got != want {
 		t.Errorf("renderProgressBar(0,0) = %q, want empty bar at 0%%", got)

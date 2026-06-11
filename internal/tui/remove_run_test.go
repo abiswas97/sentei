@@ -150,12 +150,12 @@ func TestViewProgress_TeardownRunning_ShowsActivePhase(t *testing.T) {
 	m.remove.run.teardownRunning = true
 	m.view = progressView
 
-	view := m.viewProgress()
+	view := stripAnsi(m.viewProgress())
 	if !strings.Contains(view, "Teardown") {
 		t.Errorf("expected Teardown phase visible while running, view:\n%s", view)
 	}
-	if !strings.Contains(view, indicatorActive) {
-		t.Errorf("expected active indicator on running teardown, view:\n%s", view)
+	if !strings.Contains(view, "· Teardown") {
+		t.Errorf("expected breath frame on running teardown, view:\n%s", view)
 	}
 }
 
