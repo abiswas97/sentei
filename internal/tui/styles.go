@@ -211,11 +211,11 @@ const (
 	indicatorWarning = "⚠"
 
 	// indicatorActiveFallback marks live work in pure layouts with no
-	// animation frame injected: the midpoint of the breath cycle.
+	// animation frame injected.
 	indicatorActiveFallback = "∙"
 )
 
-// breathFrames animate the active indicator: the pending dot inflating
-// toward the done dot and back. Every frame is one cell so status columns
-// stay aligned, and any frozen frame reads as between pending and done.
-var breathFrames = []string{"·", "∙", "●", "∙"}
+// workFrames is the one working animation: the heavy braille dot. The
+// bubbles builtin Dot ships two-cell frames (trailing space); these are
+// single-cell so status columns stay aligned.
+var workFrames = []string{"⣾", "⣽", "⣻", "⢿", "⡿", "⣟", "⣯", "⣷"}
