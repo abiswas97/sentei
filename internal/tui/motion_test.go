@@ -219,3 +219,36 @@ func TestCleanupPreview_WouldActUsesArrow(t *testing.T) {
 		t.Errorf("expected would-act arrow line, got %q", got)
 	}
 }
+
+func TestCompletedBar_SettlesGreen(t *testing.T) {
+	m := NewModel([]git.Worktree{}, nil, "/repo")
+	m.view = progressView
+
+	// Drive the spring to full so the bar has filled cells to color.
+	cmd := m.bar.SetPercent(1)
+	for range 400 {
+		msg := cmd()
+		updated, next := m.Update(msg)
+		m = updated.(Model)
+		if next == nil {
+			break
+		}
+		cmd = next
+	}
+
+	working := runningLayout()
+	done := runningLayout()
+	done.Phases[0].done = done.Phases[0].total
+	done.Phases[0].steps = nil
+	done.Completed = true
+
+	wOut := m.renderProgressLayout(working)
+	dOut := m.renderProgressLayout(done)
+	// Success-green truecolor must appear only in the completed bar.
+	if strings.Contains(wOut, "0;135;95") {
+		t.Error("working bar must not carry the done-green fill")
+	}
+	if !strings.Contains(dOut, "0;135;95") {
+		t.Errorf("completed bar must settle to the done-green fill:\n%q", dOut)
+	}
+}

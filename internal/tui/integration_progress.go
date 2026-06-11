@@ -34,6 +34,7 @@ func (m Model) updateIntegrationProgress(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, m.finalizeIntegrationApply()
 
 	case integrationFinalizedMsg:
+		m.integ.finalized = true
 		finalSync := m.syncProgressBar()
 		// The migrate flow has its own summary; hand off unchanged.
 		if m.integ.returnView == migrateNextView {
@@ -98,6 +99,7 @@ func (m Model) integrationLayout() ProgressLayout {
 		Hints:        progressFooter,
 		OverallDone:  done,
 		OverallTotal: total,
+		Completed:    m.integ.finalized,
 	}
 }
 
