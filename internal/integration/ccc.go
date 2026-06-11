@@ -21,7 +21,11 @@ func cocoindexCode() Integration {
 			BinaryName: "ccc",
 		},
 		Install: InstallSpec{
-			Command:      `uv tool install --upgrade cocoindex-code --prerelease explicit --with "cocoindex>=1.0.0a24"`,
+			// The embeddings-local extra pulls cocoindex[sentence-transformers]
+			// (>=1.0.6): without it `ccc index` fails at runtime with
+			// "No module named 'sentence_transformers'" — the default
+			// config embeds locally.
+			Command:      `uv tool install --upgrade "cocoindex-code[embeddings-local]" --prerelease explicit`,
 			FirstRunNote: "Downloads ~87MB embedding model on first use",
 		},
 		Setup: SetupSpec{
