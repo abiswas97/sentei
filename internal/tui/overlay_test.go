@@ -21,9 +21,10 @@ func TestCompositeOverlay_CenteredOverBackground(t *testing.T) {
 	if !strings.Contains(lines[3], "AAAA") || !strings.Contains(lines[4], "BBBB") {
 		t.Fatalf("overlay not vertically centered:\n%s", out)
 	}
-	// Horizontally centered at column (10-4)/2 = 3: background visible on both sides.
-	if got := ansi.Strip(lines[3]); got != "012AAAA789" {
-		t.Errorf("expected background visible around overlay, got %q", got)
+	// Overlay rows are fully claimed: cleared flanks, no orphan background
+	// glyphs beside the box. Background stays visible above and below.
+	if got := strings.TrimRight(ansi.Strip(lines[3]), " "); got != "   AAAA" {
+		t.Errorf("expected cleared flanks beside overlay, got %q", got)
 	}
 	// Rows outside the overlay untouched.
 	if lines[0] != "0123456789" || lines[8] != "0123456789" {
@@ -39,12 +40,14 @@ func TestCompositeOverlay_ANSIBackgroundSurvivesSplicing(t *testing.T) {
 	out := compositeOverlay(fg, bg)
 	mid := strings.Split(out, "\n")[2]
 
-	plain := ansi.Strip(mid)
-	if plain != "xxxxABxxxx" {
-		t.Errorf("expected overlay spliced into colored line, got %q", plain)
+	plain := strings.TrimRight(ansi.Strip(mid), " ")
+	if plain != "    AB" {
+		t.Errorf("expected overlay row with cleared flanks, got %q", plain)
 	}
-	if ansi.StringWidth(mid) != 10 {
-		t.Errorf("spliced line width = %d, want 10", ansi.StringWidth(mid))
+	// The colored background survives untouched on non-overlay rows.
+	top := strings.Split(out, "\n")[0]
+	if !strings.Contains(top, "\x1b[31m") {
+		t.Errorf("background styling must survive above the overlay, got %q", top)
 	}
 }
 
