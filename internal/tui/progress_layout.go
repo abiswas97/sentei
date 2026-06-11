@@ -198,9 +198,11 @@ func newOverallBar() progress.Model {
 		progress.WithFillCharacters('█', '░'),
 		progress.WithColors(colorBarStart, colorBarEnd),
 		progress.WithScaled(true),
-		// Silky spring: fills glide over most of a second rather than
-		// snapping, while still settling within the 1.5s completion hold.
-		progress.WithSpringOptions(8, 1),
+		// Luxurious spring: a full sweep takes ~1.2s (bar visually full at
+		// ~1.0s), inside the hold plus settle floor. Critically damped:
+		// the component clamps at 100%, so any overshoot would render as
+		// the bar retreating.
+		progress.WithSpringOptions(6, 1),
 	)
 }
 

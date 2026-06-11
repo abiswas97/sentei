@@ -40,7 +40,7 @@ func (m Model) viewSummary() string {
 	r := m.remove.run.result
 	if r.FailureCount == 0 {
 		fmt.Fprintf(&b, "  %s %s\n",
-			styleIndicatorDone.Render(indicatorDone),
+			styleIndicatorDone.Render(indicatorSuccess),
 			styleSuccess.Render(fmt.Sprintf("%d %s removed successfully", r.SuccessCount, pluralize(r.SuccessCount, "worktree", "worktrees"))))
 	} else {
 		fmt.Fprintf(&b, "  %s, %s\n",

@@ -102,7 +102,7 @@ func (m Model) viewMigrateSummary() string {
 
 	repoName := filepath.Base(result.BareRoot)
 	fmt.Fprintf(&b, "  %s %s migrated\n\n",
-		styleIndicatorDone.Render(indicatorDone), repoName)
+		styleIndicatorDone.Render(indicatorSuccess), repoName)
 
 	fmt.Fprintf(&b, "    %-10s %s\n", styleDim.Render("Path"), result.BareRoot)
 	fmt.Fprintf(&b, "    %-10s %s\n", styleDim.Render("Branch"), result.Branch)
@@ -167,7 +167,7 @@ func (m Model) viewMigrateNext() string {
 	b.WriteString("\n\n")
 
 	fmt.Fprintf(&b, "  %s %s ready\n\n",
-		styleIndicatorDone.Render(indicatorDone), repoName)
+		styleIndicatorDone.Render(indicatorSuccess), repoName)
 
 	fmt.Fprintf(&b, "    cd %s\n", styleDim.Render(worktreePath))
 	b.WriteString("\n")

@@ -1,5 +1,7 @@
 package tui
 
+import "time"
+
 // Layout constants shared by all progress views.
 const (
 	// WindowCompletedTrail is how many recently completed steps stay visible
@@ -35,3 +37,9 @@ func overallBarWidth(viewWidth int) int {
 // height when sizing scrollable view bodies: title block, separators, and
 // the footer area.
 const viewChromeRows = 6
+
+// progressSettleFloor is the minimum time a held progress view stays up
+// after its final event, so the bar's spring visibly finishes at 100%
+// instead of cutting away mid-glide. Part of the hold mechanism, applied
+// only when holds are enabled (minProgressDuration > 0).
+const progressSettleFloor = time.Second
