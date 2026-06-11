@@ -14,3 +14,12 @@
 - [x] 2.2 Silky bar: spring frequency lowered so fills glide rather than snap, still settling within the hold; tests unchanged (behavioral contract)
 - [x] 2.3 Docs: status indicator table, timing section, decision log entry recording the revision and the instant-cuts transition principle
 - [x] 2.4 Gauntlet; VHS re-record incl. slow-deletion repo; PR, CI, merge
+
+## 3. Polish revision (user GIF review: braille misaligned, lone circle on summaries, sweep still fast)
+
+- [x] 3.1 Breathing dot done properly: workFrames `· ∙ • ● • ∙` at 10fps (braille retired: descender-zone geometry is font-baked); single-spinner architecture unchanged
+- [x] 3.2 Verdict/state split: `indicatorSuccess` ✓ on summary headlines (removal, cleanup clean, repo, migrate, create, integrations); `●` stays an item state among peers
+- [x] 3.3 Spring frequency 6 + `progressSettleFloor` (holds measured from entry cut long flows mid-glide); holdOrAdvance fast path also restores responsive bar width
+- [x] 3.4 Docs: vocabulary table with verdict/state rule, timing section, decision log
+- [x] 3.5 Gauntlet; VHS re-record + frame review; PR, CI, merge
+

@@ -63,7 +63,7 @@ func (m Model) viewCleanupResult() string {
 			len(r.BranchesSkipped), pluralize(len(r.BranchesSkipped), "branch", "branches"))
 	case len(r.Errors) == 0 && totalActions == 0:
 		fmt.Fprintf(&b, "  %s Repository is clean\n\n",
-			styleIndicatorDone.Render(indicatorDone))
+			styleIndicatorDone.Render(indicatorSuccess))
 	case totalActions > 0 && len(r.BranchesSkipped) > 0:
 		fmt.Fprintf(&b, "  %s Cleanup complete — %d %s remain (unmerged)\n\n",
 			styleIndicatorWarning.Render(indicatorWarning),

@@ -98,7 +98,7 @@ func TestBuildIntegrationPhases_ErrorBakedIntoLabel(t *testing.T) {
 	}
 }
 
-func TestViewSummary_DoneMarkerAndNoEmptyCleanupHeader(t *testing.T) {
+func TestViewSummary_VerdictMarkerAndNoEmptyCleanupHeader(t *testing.T) {
 	m := NewModel(nil, nil, "/repo")
 	m.width = 80
 	m.remove.run = newRemovalRun(nil)
@@ -107,8 +107,8 @@ func TestViewSummary_DoneMarkerAndNoEmptyCleanupHeader(t *testing.T) {
 	m.view = summaryView
 
 	view := stripANSI(m.viewSummary())
-	if !strings.Contains(view, "● 2 worktrees removed successfully") {
-		t.Errorf("expected ● success marker, view:\n%s", view)
+	if !strings.Contains(view, "✓ 2 worktrees removed successfully") {
+		t.Errorf("expected ✓ verdict marker on the headline, view:\n%s", view)
 	}
 	if strings.Contains(view, "Cleanup:") {
 		t.Errorf("Cleanup header must be omitted when nothing was cleaned, view:\n%s", view)
