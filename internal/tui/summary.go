@@ -103,6 +103,12 @@ func (m Model) viewSummary() string {
 		b.WriteString("\n")
 	}
 
+	if m.remove.milestone > 0 {
+		b.WriteString("\n")
+		b.WriteString(styleDim.Render("  " + fmt.Sprintf(whisperMilestone, m.remove.milestone)))
+		b.WriteString("\n")
+	}
+
 	b.WriteString("\n")
 	b.WriteString(viewSeparator(m.width))
 	b.WriteString("\n\n")

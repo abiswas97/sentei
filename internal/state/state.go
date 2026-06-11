@@ -14,6 +14,10 @@ const stateFile = "sentei.json"
 // State holds persistent configuration for a bare repository.
 type State struct {
 	Integrations []string `json:"integrations"`
+	// LifetimeRemoved counts every worktree this repository has pruned
+	// through the TUI, across all sessions. Garnish, not bookkeeping:
+	// it exists so summaries can whisper at milestones.
+	LifetimeRemoved int `json:"lifetime_removed,omitempty"`
 }
 
 // HasIntegration reports whether name is in the Integrations slice.
