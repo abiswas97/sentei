@@ -136,7 +136,7 @@ func TestUpdateMigrateNext_WindowSize(t *testing.T) {
 	m := makeMigrateSummaryModel(repo.MigrateResult{BareRoot: "/bare", Branch: "main"})
 	m.view = migrateNextView
 
-	updated, _ := m.updateMigrateNext(tea.WindowSizeMsg{Width: 100, Height: 40})
+	updated, _ := m.Update(tea.WindowSizeMsg{Width: 100, Height: 40})
 	model := updated.(Model)
 
 	if model.width != 100 || model.height != 34 {

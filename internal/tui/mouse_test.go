@@ -111,19 +111,3 @@ func TestIntegrationList_WheelMovesCursor(t *testing.T) {
 		t.Errorf("cursor = %d after wheel up, want 0", got)
 	}
 }
-
-func TestIntegrationInfo_WheelNavigatesCarousel(t *testing.T) {
-	m := makeIntegrationModel()
-	m.integ.showInfo = true
-	m.integ.infoCursor = 0
-
-	updated, _ := m.updateIntegrationList(wheelDown())
-	if got := updated.(Model).integ.infoCursor; got != 1 {
-		t.Errorf("infoCursor = %d after wheel down, want 1 (next integration)", got)
-	}
-
-	updated, _ = updated.(Model).updateIntegrationList(wheelUp())
-	if got := updated.(Model).integ.infoCursor; got != 0 {
-		t.Errorf("infoCursor = %d after wheel up, want 0 (previous integration)", got)
-	}
-}

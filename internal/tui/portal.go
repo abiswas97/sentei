@@ -44,6 +44,10 @@ func (p DetailPortal) Open(trigger portalTrigger, title, content string) DetailP
 	p.title = title
 	p.contentLines = strings.Count(content, "\n") + 1
 	p.viewport = viewport.New(viewport.WithWidth(p.contentWidth()), viewport.WithHeight(p.fitHeight()))
+	// The portal scrolls vertically only; keyless bindings disable the
+	// viewport's default h/l horizontal scrolling.
+	p.viewport.KeyMap.Left = key.NewBinding()
+	p.viewport.KeyMap.Right = key.NewBinding()
 	p.viewport.SetContent(content)
 	p.viewport.GotoTop()
 	return p
