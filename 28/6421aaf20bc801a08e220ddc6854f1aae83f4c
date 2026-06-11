@@ -1,0 +1,34 @@
+internal/tui/animated_progress_test.go
+  s_e079bea5665c1d::t_c391efbd314596 35-39
+openspec/changes/animated-progress-elapsed/design.md
+  s_e079bea5665c1d::t_e8f6719d53c120 1-34
+openspec/changes/animated-progress-elapsed/specs/tui-chrome/spec.md
+  s_e079bea5665c1d::t_de8a2fca92ef52 1-22
+internal/tui/repo_progress.go
+  s_e079bea5665c1d::t_da6de6aadca3c7 85,106-110
+openspec/changes/animated-progress-elapsed/proposal.md
+  s_e079bea5665c1d::t_14907eb02f25fe 1-28
+openspec/changes/animated-progress-elapsed/tasks.md
+  s_e079bea5665c1d::t_3bb5a58109a307 1-4,9-11,14
+internal/tui/progress_layout.go
+  s_e079bea5665c1d::t_99b9c26fd864b2 37-60
+  s_e079bea5665c1d::t_4e353a81d13103 85-91
+internal/tui/model.go
+  s_e079bea5665c1d::t_b086694e4631ab 512-513
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "286421aaf20bc801a08e220ddc6854f1aae83f4c",
+  "prompts": {},
+  "sessions": {
+    "s_e079bea5665c1d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e853bef1-293d-4109-b048-273e59305a6e",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Test <t@t.com>"
+    }
+  }
+}
