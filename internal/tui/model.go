@@ -194,10 +194,6 @@ type integrationState struct {
 	cursor       int                       //nolint:unused
 	colCursor    int                       // 0-based column index for future expansion //nolint:unused
 
-	// Info dialog
-	showInfo   bool //nolint:unused
-	infoCursor int  // which integration is shown in the carousel //nolint:unused
-
 	// Progress
 	events          []integration.ManagerEvent    //nolint:unused
 	totalSteps      int                           // known upfront for progress bar
@@ -483,9 +479,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	if size, ok := msg.(tea.WindowSizeMsg); ok {
-		// The portal tracks the raw terminal size; views keep receiving the
-		// message through their own routing below.
+		// Sizing is global: the portal tracks the raw terminal size, views
+		// share the chrome-budgeted body height. No view sizes itself.
 		m.portal = m.portal.SetSize(size.Width, size.Height)
+		m.width = size.Width
+		m.height = max(size.Height-viewChromeRows, 5)
+		return m, nil
 	}
 
 	if tick, ok := msg.(spinner.TickMsg); ok {

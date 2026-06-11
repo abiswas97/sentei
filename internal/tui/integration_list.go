@@ -151,11 +151,6 @@ func (m Model) startIntegrationApply() (Model, tea.Cmd) {
 
 func (m Model) updateIntegrationList(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
-	case tea.WindowSizeMsg:
-		m.width = msg.Width
-		m.height = max(msg.Height-6, 5)
-		return m, nil
-
 	case integrationStateLoadedMsg:
 		m.integ.integrations = msg.integrations
 		m.integ.current = msg.current
@@ -177,25 +172,13 @@ func (m Model) updateIntegrationList(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.MouseWheelMsg:
 		switch msg.Button {
 		case tea.MouseWheelDown:
-			if m.integ.showInfo {
-				m = m.integrationInfoNext()
-			} else {
-				m = m.integrationCursorDown()
-			}
+			m = m.integrationCursorDown()
 		case tea.MouseWheelUp:
-			if m.integ.showInfo {
-				m = m.integrationInfoPrev()
-			} else {
-				m = m.integrationCursorUp()
-			}
+			m = m.integrationCursorUp()
 		}
 		return m, nil
 
 	case tea.KeyPressMsg:
-		if m.integ.showInfo {
-			return m.updateIntegrationInfo(msg)
-		}
-
 		switch {
 		case key.Matches(msg, keys.Down):
 			m = m.integrationCursorDown()
@@ -207,12 +190,6 @@ func (m Model) updateIntegrationList(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if len(m.integ.integrations) > 0 {
 				name := m.integ.integrations[m.integ.cursor].Name
 				m.integ.staged[name] = !m.integ.staged[name]
-			}
-
-		case key.Matches(msg, keys.Info):
-			if len(m.integ.integrations) > 0 {
-				m.integ.showInfo = true
-				m.integ.infoCursor = m.integ.cursor
 			}
 
 		case key.Matches(msg, keys.Confirm):
@@ -241,18 +218,6 @@ func (m Model) updateIntegrationList(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m Model) updateIntegrationInfo(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
-	switch {
-	case key.Matches(msg, keys.Back):
-		m.integ.showInfo = false
-	case key.Matches(msg, keys.Left):
-		m = m.integrationInfoPrev()
-	case key.Matches(msg, keys.Right):
-		m = m.integrationInfoNext()
-	}
-	return m, nil
-}
-
 func (m Model) integrationCursorDown() Model {
 	if len(m.integ.integrations) > 0 && m.integ.cursor < len(m.integ.integrations)-1 {
 		m.integ.cursor++
@@ -263,28 +228,6 @@ func (m Model) integrationCursorDown() Model {
 func (m Model) integrationCursorUp() Model {
 	if m.integ.cursor > 0 {
 		m.integ.cursor--
-	}
-	return m
-}
-
-// integrationInfoPrev moves the info carousel to the previous integration,
-// wrapping at the start. Shared by h/left and the mouse wheel.
-func (m Model) integrationInfoPrev() Model {
-	if m.integ.infoCursor > 0 {
-		m.integ.infoCursor--
-	} else {
-		m.integ.infoCursor = len(m.integ.integrations) - 1
-	}
-	return m
-}
-
-// integrationInfoNext moves the info carousel to the next integration,
-// wrapping at the end. Shared by l/right and the mouse wheel.
-func (m Model) integrationInfoNext() Model {
-	if m.integ.infoCursor < len(m.integ.integrations)-1 {
-		m.integ.infoCursor++
-	} else {
-		m.integ.infoCursor = 0
 	}
 	return m
 }
@@ -358,76 +301,56 @@ func (m Model) viewIntegrationList() string {
 	b.WriteString("\n\n")
 
 	if pending > 0 {
-		b.WriteString(styleDim.Render("  j/k navigate \u00b7 space toggle \u00b7 ? info \u00b7 enter apply \u00b7 esc back"))
+		b.WriteString(viewFooter(m.width, integrationPendingFooter))
 	} else {
-		b.WriteString(styleDim.Render("  j/k navigate \u00b7 space toggle \u00b7 ? info \u00b7 esc back"))
+		b.WriteString(viewFooter(m.width, integrationFooter))
 	}
 	b.WriteString("\n")
-
-	if m.integ.showInfo {
-		overlay := m.renderIntegrationInfo()
-		return lipgloss.Place(m.width, m.height+6, lipgloss.Center, lipgloss.Center, overlay,
-			lipgloss.WithWhitespaceChars(" "))
-	}
 
 	return b.String()
 }
 
-func (m Model) renderIntegrationInfo() string {
-	if len(m.integ.integrations) == 0 {
-		return ""
-	}
+// renderIntegrationsDetail builds the `?` portal page: one section per
+// integration with its description, dependency install status, and URL.
+// Content is wrapped/truncated to the portal width so the viewport never
+// holds over-wide lines.
+func (m Model) renderIntegrationsDetail() string {
+	width := m.portal.contentWidth()
+	wrap := lipgloss.NewStyle().Width(width)
 
-	integ := m.integ.integrations[m.integ.infoCursor]
+	var b strings.Builder
+	for i, integ := range m.integ.integrations {
+		if i > 0 {
+			b.WriteString("\n")
+		}
+		b.WriteString(styleTitle.Render(truncateWithEllipsis(integ.Name, width)))
+		b.WriteString("\n")
+		b.WriteString(wrap.Render(integ.Description))
+		b.WriteString("\n")
 
-	// Dialog width: responsive to terminal, clamped between 36 and 60 chars
-	innerWidth := min(max(m.width-10, 36), 60)
-
-	var content strings.Builder
-
-	// Header: name + page indicator
-	page := styleDim.Render(fmt.Sprintf("%d / %d", m.integ.infoCursor+1, len(m.integ.integrations)))
-	content.WriteString(styleTitle.Render(integ.Name) + "  " + page)
-	content.WriteString("\n\n")
-
-	// Description: wrapped, normal weight
-	content.WriteString(lipgloss.NewStyle().Width(innerWidth).Render(integ.Description))
-	content.WriteString("\n")
-
-	// Dependencies: show each with install status
-	if len(integ.Dependencies) > 0 {
-		content.WriteString("\n")
-		content.WriteString(styleDim.Render("  Dependencies"))
-		content.WriteString("\n")
-		for _, dep := range integ.Dependencies {
-			installed := m.integ.depStatus[dep.Name]
-			var indicator, status string
-			if installed {
-				indicator = styleStatusClean.Render(indicatorDone)
-				status = styleStatusClean.Render("installed")
-			} else {
-				indicator = styleIndicatorPending.Render(indicatorPending)
-				status = styleDim.Render("will be installed")
+		if len(integ.Dependencies) > 0 {
+			b.WriteString(styleDim.Render("Dependencies"))
+			b.WriteString("\n")
+			for _, dep := range integ.Dependencies {
+				installed := m.integ.depStatus[dep.Name]
+				var indicator, status string
+				if installed {
+					indicator = styleStatusClean.Render(indicatorDone)
+					status = styleStatusClean.Render("installed")
+				} else {
+					indicator = styleIndicatorPending.Render(indicatorPending)
+					status = styleDim.Render("will be installed")
+				}
+				fmt.Fprintf(&b, "  %s %-20s %s\n", indicator, dep.Name, status)
 			}
-			fmt.Fprintf(&content, "    %s %-20s %s\n", indicator, dep.Name, status)
+		}
+
+		if integ.URL != "" {
+			b.WriteString(styleDim.Render(truncateWithEllipsis(integ.URL, width)))
+			b.WriteString("\n")
 		}
 	}
-
-	// URL: bottom, dim, reference only
-	if integ.URL != "" {
-		content.WriteString("\n")
-		content.WriteString(styleDim.Render(integ.URL))
-		content.WriteString("\n")
-	}
-
-	// Navigation: single compact line
-	content.WriteString("\n")
-	content.WriteString(styleDim.Render("h/\u25c0 prev \u00b7 l/\u25b6 next \u00b7 esc close"))
-
-	// lipgloss v2 Width spans the whole block including border and padding
-	// (2 border + 4 padding here), where v1 excluded the border.
-	dialog := styleInfoCard.Width(innerWidth + 8).Render(content.String())
-	return dialog
+	return b.String()
 }
 
 func pluralize(n int, singular, plural string) string {

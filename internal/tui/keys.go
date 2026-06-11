@@ -19,8 +19,6 @@ type keyMap struct {
 	Sort        key.Binding
 	ReverseSort key.Binding
 	Filter      key.Binding
-	Left        key.Binding
-	Right       key.Binding
 	Info        key.Binding
 	GlobalHelp  key.Binding
 }
@@ -89,14 +87,6 @@ var keys = keyMap{
 	Filter: key.NewBinding(
 		key.WithKeys("/"),
 		key.WithHelp("/", "filter"),
-	),
-	Left: key.NewBinding(
-		key.WithKeys("left", "h"),
-		key.WithHelp("h/left", "left"),
-	),
-	Right: key.NewBinding(
-		key.WithKeys("right", "l"),
-		key.WithHelp("l/right", "right"),
 	),
 	Info: key.NewBinding(
 		key.WithKeys("?"),
@@ -225,6 +215,9 @@ var (
 	progressSections = []keySection{{name: "Actions", bindings: []key.Binding{
 		hintOnly("q / ctrl+c", "quit (operation keeps running in git)"),
 	}}}
+
+	integrationFooter        = []key.Binding{navHint, keys.Toggle, withDesc(keys.Info, "info"), keys.Back}
+	integrationPendingFooter = []key.Binding{navHint, keys.Toggle, withDesc(keys.Info, "info"), withDesc(keys.Confirm, "apply"), keys.Back}
 
 	integrationSections = []keySection{{name: "Actions", bindings: []key.Binding{
 		hintOnly("j/k", "move"),

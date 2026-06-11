@@ -217,7 +217,7 @@ func TestUpdateCreateOptions_EscReturnsToBranchInput(t *testing.T) {
 func TestUpdateCreateOptions_WindowSize(t *testing.T) {
 	m := createOptionsModel()
 
-	updated, _ := m.updateCreateOptions(tea.WindowSizeMsg{Width: 90, Height: 30})
+	updated, _ := m.Update(tea.WindowSizeMsg{Width: 90, Height: 30})
 	model := updated.(Model)
 
 	if model.width != 90 || model.height != 24 {
