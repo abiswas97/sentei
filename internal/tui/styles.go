@@ -4,65 +4,80 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
+// Palette: the single source for every color in the TUI. Styles below and
+// the bordered overlays reference these tokens, never raw color values.
+var (
+	colorAccent    = lipgloss.Color("62")  // purple: active, accent, borders
+	colorSuccess   = lipgloss.Color("42")  // green: clean, done, success
+	colorWarning   = lipgloss.Color("214") // orange: dirty, warnings
+	colorError     = lipgloss.Color("196") // red: untracked, failed, errors
+	colorDim       = lipgloss.Color("241") // gray: secondary text, pending
+	colorEmphasis  = lipgloss.Color("15")  // white: titles, cursor row
+	colorBody      = lipgloss.Color("252") // light gray: normal rows
+	colorSelected  = lipgloss.Color("212") // pink: selected rows
+	colorProtected = lipgloss.Color("63")  // blue-purple: protected worktrees
+	colorMuted     = lipgloss.Color("245") // mid gray: locked worktrees
+)
+
 // UI chrome
 var (
 	styleStatusBar = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("241")).
+			Foreground(colorDim).
 			Padding(1, 0, 0, 0)
 
 	styleDim = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("241"))
+			Foreground(colorDim)
 )
 
 // Row styles
 var (
 	styleCursorRow = lipgloss.NewStyle().
 			Bold(true).
-			Foreground(lipgloss.Color("15"))
+			Foreground(colorEmphasis)
 
 	styleSelectedRow = lipgloss.NewStyle().
-				Foreground(lipgloss.Color("212"))
+				Foreground(colorSelected)
 
 	styleNormalRow = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("252"))
+			Foreground(colorBody)
 
 	styleColumnHeader = lipgloss.NewStyle().
-				Foreground(lipgloss.Color("241"))
+				Foreground(colorDim)
 
 	styleColumnHeaderSorted = lipgloss.NewStyle().
-				Foreground(lipgloss.Color("15")).
+				Foreground(colorEmphasis).
 				Bold(true)
 )
 
 // Status indicators
 var (
 	styleStatusClean = lipgloss.NewStyle().
-				Foreground(lipgloss.Color("42"))
+				Foreground(colorSuccess)
 
 	styleStatusDirty = lipgloss.NewStyle().
-				Foreground(lipgloss.Color("214"))
+				Foreground(colorWarning)
 
 	styleStatusUntracked = lipgloss.NewStyle().
-				Foreground(lipgloss.Color("196"))
+				Foreground(colorError)
 
 	styleStatusLocked = lipgloss.NewStyle().
-				Foreground(lipgloss.Color("245"))
+				Foreground(colorMuted)
 
 	styleStatusProtected = lipgloss.NewStyle().
-				Foreground(lipgloss.Color("63"))
+				Foreground(colorProtected)
 )
 
 // Semantic styles
 var (
 	styleWarning = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("214")).
+			Foreground(colorWarning).
 			Bold(true)
 
 	styleSuccess = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("42"))
+			Foreground(colorSuccess)
 
 	styleError = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("196"))
+			Foreground(colorError)
 )
 
 // Fixed column widths for the worktree list table.
@@ -78,58 +93,58 @@ var (
 // Phase header styles
 var (
 	stylePhaseDone = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("42")).
+			Foreground(colorSuccess).
 			Bold(true)
 
 	stylePhaseActive = lipgloss.NewStyle().
-				Foreground(lipgloss.Color("62")).
+				Foreground(colorAccent).
 				Bold(true)
 
 	stylePhasePending = lipgloss.NewStyle().
-				Foreground(lipgloss.Color("241"))
+				Foreground(colorDim)
 )
 
 // Progress indicators
 var (
 	styleIndicatorDone = lipgloss.NewStyle().
-				Foreground(lipgloss.Color("42"))
+				Foreground(colorSuccess)
 
 	styleIndicatorActive = lipgloss.NewStyle().
-				Foreground(lipgloss.Color("62"))
+				Foreground(colorAccent)
 
 	styleIndicatorPending = lipgloss.NewStyle().
-				Foreground(lipgloss.Color("241"))
+				Foreground(colorDim)
 
 	styleIndicatorFailed = lipgloss.NewStyle().
-				Foreground(lipgloss.Color("196"))
+				Foreground(colorError)
 
 	styleIndicatorWarning = lipgloss.NewStyle().
-				Foreground(lipgloss.Color("214"))
+				Foreground(colorWarning)
 )
 
 // Layout elements
 var (
 	styleSeparator = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("241"))
+			Foreground(colorDim)
 
 	styleTitle = lipgloss.NewStyle().
 			Bold(true).
-			Foreground(lipgloss.Color("15"))
+			Foreground(colorEmphasis)
 
 	styleAccent = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("62"))
+			Foreground(colorAccent)
 
 	styleCheckboxOn = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("42"))
+			Foreground(colorSuccess)
 
 	styleCheckboxOff = lipgloss.NewStyle().
-				Foreground(lipgloss.Color("241"))
+				Foreground(colorDim)
 
 	styleStagedAdd = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("42")) // green — same as clean/success
+			Foreground(colorSuccess)
 
 	styleStagedRemove = lipgloss.NewStyle().
-				Foreground(lipgloss.Color("214")) // orange — same as dirty/warning
+				Foreground(colorWarning)
 )
 
 // Indicator characters

@@ -17,7 +17,7 @@ import (
 // overlay until the DetailPortal component lands and absorbs it.
 var styleInfoCard = lipgloss.NewStyle().
 	Border(lipgloss.RoundedBorder()).
-	BorderForeground(lipgloss.Color("62")).
+	BorderForeground(colorAccent).
 	Padding(1, 2)
 
 type integrationStateLoadedMsg struct {
