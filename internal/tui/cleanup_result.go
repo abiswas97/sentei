@@ -55,9 +55,19 @@ func (m Model) viewCleanupResult() string {
 		r.GoneBranchesDeleted + r.ConfigOrphanResult.Removed +
 		r.NonWtBranchesDeleted + r.WorktreesPruned
 
-	if len(r.Errors) == 0 && totalActions == 0 {
+	switch {
+	case len(r.Errors) == 0 && totalActions == 0 && len(r.BranchesSkipped) > 0:
+		// Nothing happened but branches were skipped: never claim clean.
+		fmt.Fprintf(&b, "  %s Nothing cleaned — %d %s remain (unmerged)\n\n",
+			styleIndicatorWarning.Render(indicatorWarning),
+			len(r.BranchesSkipped), pluralize(len(r.BranchesSkipped), "branch", "branches"))
+	case len(r.Errors) == 0 && totalActions == 0:
 		fmt.Fprintf(&b, "  %s Repository is clean\n\n",
 			styleIndicatorDone.Render(indicatorDone))
+	case totalActions > 0 && len(r.BranchesSkipped) > 0:
+		fmt.Fprintf(&b, "  %s Cleanup complete — %d %s remain (unmerged)\n\n",
+			styleIndicatorWarning.Render(indicatorWarning),
+			len(r.BranchesSkipped), pluralize(len(r.BranchesSkipped), "branch", "branches"))
 	}
 
 	// Stale refs
@@ -71,17 +81,6 @@ func (m Model) viewCleanupResult() string {
 			styleIndicatorPending.Render(indicatorPending))
 	}
 
-	// Config dedup
-	if r.ConfigDedupResult.Removed > 0 {
-		fmt.Fprintf(&b, "  %s Removed %d config %s\n",
-			styleIndicatorDone.Render(indicatorDone),
-			r.ConfigDedupResult.Removed,
-			pluralize(r.ConfigDedupResult.Removed, "duplicate", "duplicates"))
-	} else if len(r.Errors) == 0 {
-		fmt.Fprintf(&b, "  %s No config duplicates\n",
-			styleIndicatorPending.Render(indicatorPending))
-	}
-
 	// Gone branches
 	if r.GoneBranchesDeleted > 0 {
 		fmt.Fprintf(&b, "  %s Deleted %d %s with gone upstream\n",
@@ -90,6 +89,17 @@ func (m Model) viewCleanupResult() string {
 			pluralize(r.GoneBranchesDeleted, "branch", "branches"))
 	} else if len(r.Errors) == 0 {
 		fmt.Fprintf(&b, "  %s No branches with gone upstream\n",
+			styleIndicatorPending.Render(indicatorPending))
+	}
+
+	// Config dedup
+	if r.ConfigDedupResult.Removed > 0 {
+		fmt.Fprintf(&b, "  %s Removed %d config %s\n",
+			styleIndicatorDone.Render(indicatorDone),
+			r.ConfigDedupResult.Removed,
+			pluralize(r.ConfigDedupResult.Removed, "duplicate", "duplicates"))
+	} else if len(r.Errors) == 0 {
+		fmt.Fprintf(&b, "  %s No config duplicates\n",
 			styleIndicatorPending.Render(indicatorPending))
 	}
 
@@ -156,7 +166,7 @@ func (m Model) viewCleanupResult() string {
 
 	if m.cleanupRanMode != "" {
 		b.WriteString("\n")
-		b.WriteString(styleDim.Render("  " + BuildCLICommand("cleanup", map[string]string{"mode": string(m.cleanupRanMode)})))
+		b.WriteString(styleDim.Render("  ran: " + BuildCLICommand("cleanup", map[string]string{"mode": string(m.cleanupRanMode)})))
 		b.WriteString("\n")
 	}
 
