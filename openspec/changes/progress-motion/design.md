@@ -67,3 +67,36 @@ only in pure/static contexts (tests, pre-first-frame), and the spec records that
 Spring physics (harmonica via bubbles/progress), the percentage-follows-fill contract,
 elapsed readout, completion holds, `– skipped` semantics, and the OSC 9;4 mirror all
 stay as shipped.
+
+## Revision: smoothing (post-#73 GIF review)
+
+User review found the breath staccato (4 frames at 3fps = a visible jump every
+333ms) and the bar snappy rather than smooth, and flagged the two animated
+vocabularies (braille waits vs dot rows). The dot's smoothness is capped by
+glyph resolution — Unicode offers ~4 usable dot sizes — so rather than tune it,
+the active indicator standardizes on the heavy braille dot, single-cell frames
+at 10fps:
+
+```go
+spinner.Spinner{Frames: []string{"⣾", "⣽", "⣻", "⢿", "⡿", "⣟", "⣯", "⣷"}, FPS: time.Second / 10}
+```
+
+(The bubbles builtin `Dot` ships two-cell frames with a trailing space; the
+custom set strips it so the status column stays aligned.)
+
+With one vocabulary the two spinner instances merge into one: `m.spin` carries
+every working surface, gated by `spinnerActive()` (indeterminate waits ∪
+determinate progress ∪ cleanup running line). The dispatch wrapper starts the
+tick chain on any transition into a working state; the explicit tick in the
+cleanup-preview entry is removed so no path double-starts the chain (two
+chains advance frames at double speed — the spinner dedupes by ID, not by
+chain).
+
+The bar spring drops from frequency 30 to 8 (damping 1): fills glide over
+most of a second instead of snapping in ~0.2s, still settling within the
+1.5s completion hold.
+
+Transitions stay instant cuts by decision: motion belongs to state-driven
+elements (spring, spinner, holds), never to keypress navigation. Slide
+transitions via Canvas+harmonica were considered and declined — every
+navigation would pay latency in a productivity tool.

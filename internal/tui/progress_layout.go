@@ -36,7 +36,7 @@ type ProgressLayout struct {
 	OverallTotal int
 
 	// Bar, Elapsed, and ActiveGlyph are injected by the model's render path
-	// (animated spring bar, stopwatch readout, breath frame). Left empty,
+	// (animated spring bar, stopwatch readout, spinner frame). Left empty,
 	// View falls back to the static bar, no elapsed line, and the static
 	// active-indicator fallback: direct constructions stay pure.
 	Bar         string
@@ -198,9 +198,9 @@ func newOverallBar() progress.Model {
 		progress.WithFillCharacters('█', '░'),
 		progress.WithColors(colorBarStart, colorBarEnd),
 		progress.WithScaled(true),
-		// Snappy spring: the fill must visibly settle within the 1.5s
-		// completion hold.
-		progress.WithSpringOptions(30, 1),
+		// Silky spring: fills glide over most of a second rather than
+		// snapping, while still settling within the 1.5s completion hold.
+		progress.WithSpringOptions(8, 1),
 	)
 }
 
@@ -266,6 +266,6 @@ func (m Model) renderProgressLayout(l ProgressLayout) string {
 	// never disagree; the phase headers state actual counts.
 	l.Bar = "  " + bar.View()
 	l.Elapsed = styleDim.Render(fmt.Sprintf("elapsed %ds", int(time.Since(m.progressStartedAt).Seconds())))
-	l.ActiveGlyph = styleIndicatorActive.Render(m.breath.View())
+	l.ActiveGlyph = styleIndicatorActive.Render(m.spin.View())
 	return l.View()
 }
