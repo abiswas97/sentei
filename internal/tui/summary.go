@@ -32,7 +32,7 @@ func (m Model) updateSummary(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m Model) viewSummary() string {
 	var b strings.Builder
 
-	b.WriteString(viewTitle("Removal Complete"))
+	b.WriteString(viewTitle(titleRemovalComplete))
 	b.WriteString("\n\n")
 	b.WriteString(viewSeparator(m.width))
 	b.WriteString("\n\n")

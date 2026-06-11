@@ -100,7 +100,7 @@ func (m Model) createConfirmationVM() ConfirmationViewModel {
 
 	return ConfirmationViewModel{
 		Width:      m.width,
-		Title:      "Confirm Create",
+		Title:      titleConfirmCreate,
 		Items:      items,
 		CLICommand: cli.BuildFlagString("sentei create", flags),
 	}

@@ -60,8 +60,8 @@ func TestCloneConfirmationVM_RendersURLAndName(t *testing.T) {
 	})
 	vm := m.cloneConfirmationVM()
 
-	if vm.Title != "Confirm Clone" {
-		t.Errorf("expected title 'Confirm Clone', got %q", vm.Title)
+	if vm.Title != "Confirm clone" {
+		t.Errorf("expected title 'Confirm clone', got %q", vm.Title)
 	}
 
 	output := stripAnsi(vm.View())
@@ -165,7 +165,7 @@ func TestViewCloneConfirm_RendersContent(t *testing.T) {
 
 	output := stripAnsi(m.viewCloneConfirm())
 
-	if !strings.Contains(output, "Confirm Clone") {
+	if !strings.Contains(output, "Confirm clone") {
 		t.Error("view should contain title")
 	}
 	if !strings.Contains(output, "URL:") {
@@ -192,7 +192,7 @@ func TestCloneConfirm_ViewDispatch(t *testing.T) {
 
 	output := m.View().Content
 
-	if !strings.Contains(stripAnsi(output), "Confirm Clone") {
+	if !strings.Contains(stripAnsi(output), "Confirm clone") {
 		t.Error("View() should dispatch to viewCloneConfirm")
 	}
 }

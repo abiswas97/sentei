@@ -272,7 +272,7 @@ func (m Model) updateFilterInput(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 func (m Model) viewList() string {
 	var b strings.Builder
 
-	b.WriteString(viewTitle("Remove Worktrees"))
+	b.WriteString(viewTitle(titleList))
 	b.WriteString("\n\n")
 	b.WriteString(styleDim.Render(fmt.Sprintf("  %s (bare)", filepath.Base(m.repoPath))))
 	b.WriteString("\n\n")

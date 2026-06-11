@@ -71,7 +71,7 @@ func (m Model) viewCreateRepoSummary(result repo.CreateResult) string {
 
 	repoName := filepath.Base(result.RepoPath)
 
-	b.WriteString(viewTitle("Repository Created"))
+	b.WriteString(viewTitle(titleRepoCreated))
 	b.WriteString("\n\n")
 	b.WriteString(viewSeparator(m.width))
 	b.WriteString("\n\n")
@@ -155,7 +155,7 @@ func (m Model) viewCloneRepoSummary(result repo.CloneResult) string {
 
 	repoName := filepath.Base(result.RepoPath)
 
-	b.WriteString(viewTitle("Repository Cloned"))
+	b.WriteString(viewTitle(titleRepoCloned))
 	b.WriteString("\n\n")
 	b.WriteString(viewSeparator(m.width))
 	b.WriteString("\n\n")

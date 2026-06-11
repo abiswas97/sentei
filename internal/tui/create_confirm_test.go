@@ -70,8 +70,8 @@ func TestCreateConfirmationVM_RendersBranchAndBase(t *testing.T) {
 	})
 	vm := m.createConfirmationVM()
 
-	if vm.Title != "Confirm Create" {
-		t.Errorf("expected title 'Confirm Create', got %q", vm.Title)
+	if vm.Title != "Confirm create" {
+		t.Errorf("expected title 'Confirm create', got %q", vm.Title)
 	}
 
 	output := stripAnsi(vm.View())
@@ -178,7 +178,7 @@ func TestViewCreateConfirm_RendersContent(t *testing.T) {
 
 	output := stripAnsi(m.viewCreateConfirm())
 
-	if !strings.Contains(output, "Confirm Create") {
+	if !strings.Contains(output, "Confirm create") {
 		t.Error("view should contain title")
 	}
 	if !strings.Contains(output, "Branch:") {
@@ -209,7 +209,7 @@ func TestCreateConfirm_ViewDispatch(t *testing.T) {
 
 	output := m.View().Content
 
-	if !strings.Contains(stripAnsi(output), "Confirm Create") {
+	if !strings.Contains(stripAnsi(output), "Confirm create") {
 		t.Error("View() should dispatch to viewCreateConfirm")
 	}
 }

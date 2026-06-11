@@ -102,7 +102,7 @@ func (m Model) updateRepoName(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m Model) viewRepoName() string {
 	var b strings.Builder
 
-	b.WriteString(viewTitle("Create Repository"))
+	b.WriteString(viewTitle(titleCreateRepo))
 	b.WriteString("\n\n")
 	b.WriteString(viewSeparator(m.width))
 	b.WriteString("\n\n")
