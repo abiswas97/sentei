@@ -139,29 +139,47 @@ func (m Model) viewConfirm() string {
 	b.WriteString("\n\n")
 	fmt.Fprintf(&b, "  You are about to delete %d %s:\n\n", len(selected), pluralize(len(selected), "worktree", "worktrees"))
 
+	// Columnar rows: badge gutter first so one vertical sweep answers
+	// "anything risky?", names aligned after it, notes only on at-risk rows.
+	nameWidth := 0
+	for _, wt := range selected {
+		nameWidth = max(nameWidth, len([]rune(worktreeLabel(wt))))
+	}
+	nameWidth = min(nameWidth, confirmNameWidthCap)
+
 	var dirtyCount, untrackedCount, lockedCount, unpushedCount int
 	for _, wt := range selected {
-		branch := worktreeLabel(wt)
-
-		var label string
+		var badge, note string
+		risky := true
 		switch {
 		case wt.IsLocked:
-			label = styleWarning.Render("[L] locked — will force-remove")
+			badge, note = "[L]", "locked — will force-remove"
 			lockedCount++
 		case wt.HasUncommittedChanges:
-			label = styleWarning.Render("[~] uncommitted changes — will be lost")
+			badge, note = "[~]", "uncommitted changes — will be lost"
 			dirtyCount++
 		case wt.HasUntrackedFiles:
-			label = styleWarning.Render("[!] untracked files — will be lost")
+			badge, note = "[!]", "untracked files — will be lost"
 			untrackedCount++
 		case wt.HasUnpushedCommits:
-			label = styleWarning.Render("[^] commits not on any remote")
+			badge, note = "[^]", "commits not on any remote"
 			unpushedCount++
 		default:
-			label = styleStatusClean.Render("[ok]") + " clean"
+			badge, risky = "[ok]", false
 		}
 
-		fmt.Fprintf(&b, "    %s %s\n", branch, label)
+		badgeStyle := styleStatusClean
+		if risky {
+			badgeStyle = styleWarning
+		}
+		name := truncateWithEllipsis(worktreeLabel(wt), nameWidth)
+		// Pad by rune count: fmt's %-*s pads by bytes and drifts on …
+		pad := strings.Repeat(" ", max(nameWidth-len([]rune(name)), 0))
+		line := fmt.Sprintf("    %s  %s%s", badgeStyle.Render(fmt.Sprintf("%-4s", badge)), name, pad)
+		if risky {
+			line += "  " + styleWarning.Render(note)
+		}
+		b.WriteString(strings.TrimRight(line, " ") + "\n")
 	}
 
 	b.WriteString("\n")
