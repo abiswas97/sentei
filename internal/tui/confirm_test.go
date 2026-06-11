@@ -35,8 +35,11 @@ func TestViewConfirm_CleanWorktrees(t *testing.T) {
 	if !strings.Contains(output, "feature-a") {
 		t.Error("should list feature-a")
 	}
-	if !strings.Contains(output, "[ok] clean") {
-		t.Error("should show the [ok] clean badge for clean worktrees")
+	if !strings.Contains(output, "[ok]") {
+		t.Error("should show the [ok] badge for clean worktrees")
+	}
+	if strings.Contains(output, "[ok]  clean") || strings.Contains(output, "] clean") {
+		t.Error("clean rows carry no note text; the badge says it")
 	}
 	if strings.Contains(output, "⚠") {
 		t.Error("should not show warnings for clean worktrees")
@@ -336,11 +339,50 @@ func TestViewConfirm_UnpushedWarning(t *testing.T) {
 
 	view := stripANSI(m.viewConfirm())
 	for _, want := range []string{
-		"[^] commits not on any remote",
+		"commits not on any remote",
 		"⚠ 1 worktree with commits not pushed to any remote",
 	} {
 		if !strings.Contains(view, want) {
 			t.Errorf("missing %q:\n%s", want, view)
 		}
+	}
+}
+
+func TestViewConfirm_ColumnsAlign(t *testing.T) {
+	m := NewModel([]git.Worktree{
+		{Path: "/work/a", Branch: "refs/heads/chore/old-deps"},
+		{Path: "/work/b", Branch: "refs/heads/experiment/abandoned", HasUntrackedFiles: true},
+		{Path: "/work/c", Branch: "refs/heads/x", HasUncommittedChanges: true},
+	}, nil, "/repo")
+	m.remove.selected = map[string]bool{"/work/a": true, "/work/b": true, "/work/c": true}
+	m.width = 100
+
+	view := stripAnsi(m.viewConfirm())
+	var nameCols, noteCols []int
+	for _, line := range strings.Split(view, "\n") {
+		trimmed := strings.TrimLeft(line, " ")
+		if !strings.HasPrefix(trimmed, "[") || strings.HasPrefix(trimmed, "[ok]  clean") {
+			continue
+		}
+		if i := strings.Index(line, "]"); i >= 0 {
+			rest := line[i+1:]
+			nameCols = append(nameCols, i+1+(len(rest)-len(strings.TrimLeft(rest, " "))))
+		}
+		for _, note := range []string{"untracked files", "uncommitted changes"} {
+			if j := strings.Index(line, note); j >= 0 {
+				noteCols = append(noteCols, j)
+			}
+		}
+	}
+	if len(nameCols) != 3 {
+		t.Fatalf("expected 3 badge rows, got %d:\n%s", len(nameCols), view)
+	}
+	for _, c := range nameCols[1:] {
+		if c != nameCols[0] {
+			t.Errorf("names must start at one column: %v\n%s", nameCols, view)
+		}
+	}
+	if len(noteCols) == 2 && noteCols[0] != noteCols[1] {
+		t.Errorf("risk notes must start at one column: %v\n%s", noteCols, view)
 	}
 }
