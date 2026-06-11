@@ -1,0 +1,19 @@
+internal/tui/golden_test.go
+  s_121ba5aeb12306::t_ed465609d66424 1-22,27-77
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "dcb2c7f6d4fb2b20bdf7073c5e8afae7a1553c11",
+  "prompts": {},
+  "sessions": {
+    "s_121ba5aeb12306": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d1da0b9d-4a5f-4e2f-88ec-4088d9f5ce99",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Test <t@t.com>"
+    }
+  }
+}
