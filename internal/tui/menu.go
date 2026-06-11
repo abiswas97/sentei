@@ -136,6 +136,7 @@ func (m *Model) updateMenuHints() {
 		m.menuItems[2].hint = "none"
 		m.menuItems[2].enabled = false
 	}
+	m.menuItems[2].loading = false
 }
 
 func (m Model) viewMenu() string {
@@ -191,6 +192,9 @@ func (m Model) viewMenu() string {
 		hint := ""
 		if item.hint != "" {
 			hint = "  " + styleDim.Render(item.hint)
+		}
+		if item.loading {
+			hint = "  " + styleAccent.Render(m.spin.View()) + " " + styleDim.Render(item.hint)
 		}
 
 		if i == m.menuCursor {
