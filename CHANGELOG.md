@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.9.0](https://github.com/abiswas97/sentei/compare/v1.8.0...v1.9.0) (2026-06-11)
+
+
+### Features
+
+* **cli:** adopt charm log for CLI errors and warnings ([220a536](https://github.com/abiswas97/sentei/commit/220a536ecf04cd9416537caa04924b9c7c07a65e))
+* **cli:** adopt charm log for CLI errors and warnings ([e765fb4](https://github.com/abiswas97/sentei/commit/e765fb4e12f523231939057da643e6e5c2d41428))
+* **tui:** animate indeterminate waits with bubbles/spinner ([d71c1a8](https://github.com/abiswas97/sentei/commit/d71c1a848ac53c028914aa0de2da3e026d385cc1))
+* **tui:** animate indeterminate waits with bubbles/spinner ([f26e105](https://github.com/abiswas97/sentei/commit/f26e105912a9d6b440e36eb88bb9010dc49cdb81))
+* **tui:** animate the overall progress bar and show elapsed time ([55f1938](https://github.com/abiswas97/sentei/commit/55f19388988f25bc023baa69cfe32fdb3045088a))
+* **tui:** animate the overall progress bar and show elapsed time ([286421a](https://github.com/abiswas97/sentei/commit/286421aaf20bc801a08e220ddc6854f1aae83f4c))
+* **tui:** derive all key hints and help from keys.go via bubbles/help ([d9bcc62](https://github.com/abiswas97/sentei/commit/d9bcc622fc0ce11f8fc0de95ac5a7f4435f05f52))
+* **tui:** derive all key hints and help from keys.go via bubbles/help ([6a190d7](https://github.com/abiswas97/sentei/commit/6a190d70baad553384247fb20cbf51521436a7da))
+
 ## [1.8.0](https://github.com/abiswas97/sentei/compare/v1.7.0...v1.8.0) (2026-06-11)
 
 
