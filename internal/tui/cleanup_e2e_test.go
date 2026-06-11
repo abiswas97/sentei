@@ -224,9 +224,9 @@ func TestE2E_FullCleanupFlow(t *testing.T) {
 	}
 
 	// Step 3: Execute the cleanup command (simulates Bubble Tea's runtime).
-	msg := cmd()
-	newModel, _ = m.Update(msg)
-	m = newModel.(Model)
+	// The entry batch includes the breath tick; pumpCmds expands it and
+	// drops animation messages.
+	m = pumpCmds(m, cmd).(Model)
 
 	// Step 4: Verify cleanup result is populated.
 	if m.cleanupResult == nil {
