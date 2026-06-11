@@ -141,7 +141,7 @@ func (m Model) viewMigrateIntegrations() string {
 	for i, integ := range m.integ.integrations {
 		cursor := "  "
 		if i == m.integ.cursor {
-			cursor = "> "
+			cursor = "▸ "
 		}
 
 		staged := m.integ.staged[integ.Name]

@@ -105,7 +105,13 @@ func (p DetailPortal) View(background string) string {
 	b.WriteString(p.viewport.View())
 	b.WriteString("\n")
 
-	hintLine := viewFooter(p.contentWidth()+2, portalFooter)
+	// Scroll hints are dead weight when everything fits: offer j/k and
+	// the more-marker only when the viewport actually scrolls.
+	footer := portalFooterStatic
+	if p.viewport.TotalLineCount() > p.viewport.VisibleLineCount() {
+		footer = portalFooter
+	}
+	hintLine := viewFooter(p.contentWidth()+2, footer)
 	if !p.viewport.AtBottom() {
 		hintLine += styleDim.Render("  ↓ more")
 	}

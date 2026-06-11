@@ -282,3 +282,18 @@ func TestDetails_IntegrationListKeepsOwnInfoCard(t *testing.T) {
 		t.Error("? on the integration list must fall through to the view's own handling")
 	}
 }
+
+func TestPortal_ScrollHintsOnlyWhenScrollable(t *testing.T) {
+	var p DetailPortal
+	p = p.SetSize(80, 30)
+	p = p.Open(portalDetails, "Short", "one line")
+	if view := stripAnsi(p.View("")); strings.Contains(view, "j/k scroll") || strings.Contains(view, "↓ more") {
+		t.Errorf("fitting content must not offer scroll keys:\n%s", view)
+	}
+
+	long := strings.Repeat("line\n", 80)
+	p = p.Open(portalDetails, "Long", long)
+	if view := stripAnsi(p.View("")); !strings.Contains(view, "j/k scroll") {
+		t.Errorf("scrollable content must offer scroll keys:\n%s", view)
+	}
+}

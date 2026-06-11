@@ -25,10 +25,12 @@ func (m Model) updateCloneInput(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.repo.cloneFocusedField == 0 {
 				m.repo.cloneFocusedField = 1
 				m.repo.urlInput.Blur()
+				m.repo.cloneNameInput.CursorEnd()
 				return m, m.repo.cloneNameInput.Focus()
 			}
 			m.repo.cloneFocusedField = 0
 			m.repo.cloneNameInput.Blur()
+			m.repo.urlInput.CursorEnd()
 			return m, m.repo.urlInput.Focus()
 
 		case key.Matches(msg, keys.Confirm):

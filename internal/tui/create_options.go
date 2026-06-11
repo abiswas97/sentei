@@ -205,7 +205,7 @@ func (m Model) viewCreateOptions() string {
 	for i, item := range items {
 		cursor := "  "
 		if i == m.create.optionsCursor {
-			cursor = "> "
+			cursor = "▸ "
 		}
 
 		var checkbox string
