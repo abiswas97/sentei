@@ -25,7 +25,7 @@ const portalMargin = 2
 
 var stylePortalBox = lipgloss.NewStyle().
 	Border(lipgloss.RoundedBorder()).
-	BorderForeground(lipgloss.Color("62")).
+	BorderForeground(colorAccent).
 	Padding(0, 1)
 
 // DetailPortal is a scrollable read-only overlay composited over the active
