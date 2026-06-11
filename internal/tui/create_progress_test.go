@@ -43,7 +43,7 @@ func TestUpdateCreateProgress_OtherKeysIgnored(t *testing.T) {
 func TestUpdateCreateProgress_WindowSize(t *testing.T) {
 	m := createProgressModel()
 
-	updated, _ := m.updateCreateProgress(tea.WindowSizeMsg{Width: 100, Height: 40})
+	updated, _ := m.Update(tea.WindowSizeMsg{Width: 100, Height: 40})
 	model := updated.(Model)
 
 	if model.width != 100 || model.height != 34 {

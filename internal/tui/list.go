@@ -84,11 +84,6 @@ func statusIndicator(wt git.Worktree) string {
 
 func (m Model) updateList(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
-	case tea.WindowSizeMsg:
-		m.width = msg.Width
-		m.height = max(msg.Height-6, 5)
-		return m, nil
-
 	case tea.MouseWheelMsg:
 		if m.remove.filterActive {
 			return m, nil

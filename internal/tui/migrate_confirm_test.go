@@ -161,7 +161,7 @@ func TestUpdateMigrateConfirm_MigrateInfoUpdatesState(t *testing.T) {
 func TestUpdateMigrateConfirm_WindowSizeMsg(t *testing.T) {
 	m := makeMigrateConfirmModel(nil)
 
-	updated, _ := m.updateMigrateConfirm(tea.WindowSizeMsg{Width: 120, Height: 40})
+	updated, _ := m.Update(tea.WindowSizeMsg{Width: 120, Height: 40})
 	result := updated.(Model)
 
 	if result.width != 120 {

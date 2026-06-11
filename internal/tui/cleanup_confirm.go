@@ -49,12 +49,7 @@ func (m Model) cleanupConfirmationVM() ConfirmationViewModel {
 }
 
 func (m Model) updateCleanupConfirm(msg tea.Msg) (tea.Model, tea.Cmd) {
-	switch msg := msg.(type) {
-	case tea.WindowSizeMsg:
-		m.width = msg.Width
-		m.height = max(msg.Height-6, 5)
-		return m, nil
-
+	switch msg.(type) {
 	case ConfirmProceedMsg:
 		opts := m.resolvedCleanupOpts()
 		m.view = cleanupResultView

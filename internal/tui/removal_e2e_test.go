@@ -88,13 +88,13 @@ func TestUpdateProgress_WindowSizeUpdatesWindowing(t *testing.T) {
 	m.remove.run.statuses[worktrees[0].Path] = statusRemoving
 	m.view = progressView
 
-	updated, _ := m.updateProgress(tea.WindowSizeMsg{Width: 100, Height: 16})
+	updated, _ := m.Update(tea.WindowSizeMsg{Width: 100, Height: 16})
 	m = updated.(Model)
 	if !strings.Contains(stripANSI(m.viewProgress()), "showing") {
 		t.Error("expected windowed step list with stat line at height 16")
 	}
 
-	updated, _ = m.updateProgress(tea.WindowSizeMsg{Width: 100, Height: 80})
+	updated, _ = m.Update(tea.WindowSizeMsg{Width: 100, Height: 80})
 	m = updated.(Model)
 	if strings.Contains(stripANSI(m.viewProgress()), "showing") {
 		t.Error("expected full step list (no stat line) at height 80")

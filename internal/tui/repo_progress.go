@@ -67,11 +67,6 @@ func (m Model) updateRepoProgress(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 
-	case tea.WindowSizeMsg:
-		m.width = msg.Width
-		m.height = max(msg.Height-6, 5)
-		return m, nil
-
 	case repoEventMsg:
 		m.repo.events = append(m.repo.events, pipeline.Event(msg))
 		return m, m.waitForRepoEvent()
