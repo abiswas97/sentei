@@ -60,8 +60,8 @@ func TestMigrateConfirmationVM_RepoPathAndDeleteBackup(t *testing.T) {
 	m := makeMigrateConfirmModel(&MigrateOpts{DeleteBackup: true, RepoPath: "/my/repo"})
 	vm := m.migrateConfirmationVM()
 
-	if vm.Title != "Confirm Migration" {
-		t.Errorf("expected title 'Confirm Migration', got %q", vm.Title)
+	if vm.Title != "Confirm migration" {
+		t.Errorf("expected title 'Confirm migration', got %q", vm.Title)
 	}
 
 	output := stripAnsi(vm.View())
@@ -97,8 +97,8 @@ func TestMigrateConfirmView_DirectLaunchUsesConfirmationVM(t *testing.T) {
 
 	output := stripAnsi(m.viewMigrateConfirm())
 
-	if !strings.Contains(output, "Confirm Migration") {
-		t.Error("expected 'Confirm Migration' title in direct-launch view")
+	if !strings.Contains(output, "Confirm migration") {
+		t.Error("expected 'Confirm migration' title in direct-launch view")
 	}
 	if !strings.Contains(output, "/my/repo") {
 		t.Error("expected repo path in direct-launch view")
@@ -110,8 +110,8 @@ func TestMigrateConfirmView_MenuLaunchUsesOriginalView(t *testing.T) {
 
 	output := stripAnsi(m.viewMigrateConfirm())
 
-	if !strings.Contains(output, "Migrate to Bare Repository") {
-		t.Errorf("expected 'Migrate to Bare Repository' in menu-launch view, got:\n%s", output)
+	if !strings.Contains(output, "Migrate to bare repository") {
+		t.Errorf("expected 'Migrate to bare repository' in menu-launch view, got:\n%s", output)
 	}
 }
 

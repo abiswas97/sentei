@@ -236,7 +236,7 @@ func (m Model) viewIntegrationList() string {
 	var b strings.Builder
 
 	repoName := filepath.Base(m.repoPath)
-	b.WriteString(viewTitle("Integrations"))
+	b.WriteString(viewTitle(titleIntegrations))
 	b.WriteString("\n\n")
 	b.WriteString(styleDim.Render(fmt.Sprintf("  %s (bare)", repoName)))
 	b.WriteString("\n\n")

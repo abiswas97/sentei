@@ -52,7 +52,7 @@ func (m Model) cloneConfirmationVM() ConfirmationViewModel {
 
 	return ConfirmationViewModel{
 		Width:      m.width,
-		Title:      "Confirm Clone",
+		Title:      titleConfirmClone,
 		Items:      items,
 		CLICommand: cli.BuildFlagString("sentei clone", flags),
 	}

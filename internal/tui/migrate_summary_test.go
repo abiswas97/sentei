@@ -159,7 +159,7 @@ func TestViewMigrateNext_SuccessShowsWorktreePath(t *testing.T) {
 
 	view := stripANSI(m.viewMigrateNext())
 
-	for _, want := range []string{"Migration Complete", "myrepo ready", "cd ", "enter open in sentei", "q exit"} {
+	for _, want := range []string{"Migration complete", "myrepo ready", "cd ", "enter open in sentei", "q exit"} {
 		if !strings.Contains(view, want) {
 			t.Errorf("view missing %q:\n%s", want, view)
 		}

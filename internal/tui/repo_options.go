@@ -156,7 +156,7 @@ func (m Model) viewRepoOptions() string {
 	name := m.repo.nameInput.Value()
 	location := m.repo.locationInput.Value()
 
-	b.WriteString(viewTitle("Create Repository"))
+	b.WriteString(viewTitle(titleCreateRepo))
 	b.WriteString("\n\n")
 	b.WriteString(styleDim.Render(fmt.Sprintf("  %s \u00b7 %s", name, location)))
 	b.WriteString("\n\n")

@@ -9,7 +9,7 @@ import (
 
 func TestProgressLayout_WithSubtitle(t *testing.T) {
 	l := ProgressLayout{
-		Title:    "Creating Worktree",
+		Title:    "Creating worktree",
 		Subtitle: "feature/foo → from main",
 		Width:    80,
 		Height:   30,
@@ -24,7 +24,7 @@ func TestProgressLayout_WithSubtitle(t *testing.T) {
 	}
 	view := stripANSI(l.View())
 
-	for _, want := range []string{"sentei ─ Creating Worktree", "feature/foo → from main", "┄", "Setup", "Dependencies", "pending"} {
+	for _, want := range []string{"sentei ─ Creating worktree", "feature/foo → from main", "┄", "Setup", "Dependencies", "pending"} {
 		if !strings.Contains(view, want) {
 			t.Errorf("expected layout to contain %q, view:\n%s", want, view)
 		}
@@ -32,11 +32,11 @@ func TestProgressLayout_WithSubtitle(t *testing.T) {
 }
 
 func TestProgressLayout_WithoutSubtitle(t *testing.T) {
-	l := ProgressLayout{Title: "Removing Worktrees", Width: 80, Height: 30}
+	l := ProgressLayout{Title: "Removing worktrees", Width: 80, Height: 30}
 	view := stripANSI(l.View())
 
 	lines := strings.Split(view, "\n")
-	if !strings.Contains(lines[0], "sentei ─ Removing Worktrees") {
+	if !strings.Contains(lines[0], "sentei ─ Removing worktrees") {
 		t.Errorf("expected title first, got %q", lines[0])
 	}
 	if strings.TrimSpace(lines[1]) != "" {

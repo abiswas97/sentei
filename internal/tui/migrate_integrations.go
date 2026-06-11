@@ -129,7 +129,7 @@ func (m Model) startMigrateIntegrationApply() (Model, tea.Cmd) {
 func (m Model) viewMigrateIntegrations() string {
 	var b strings.Builder
 
-	b.WriteString(viewTitle("Set Up Integrations"))
+	b.WriteString(viewTitle(titleSetUpIntegrations))
 	b.WriteString("\n\n")
 	b.WriteString("  We detected your repo may benefit from\n")
 	b.WriteString("  these dev tools. Select any to enable.\n")

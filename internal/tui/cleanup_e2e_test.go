@@ -112,8 +112,8 @@ func TestE2E_CleanupConfirmUnit(t *testing.T) {
 
 	// Verify confirmation view renders expected content.
 	view := m.viewCleanupConfirm()
-	if !strings.Contains(view, "Confirm Cleanup") {
-		t.Errorf("expected 'Confirm Cleanup' in view, got:\n%s", view)
+	if !strings.Contains(view, "Confirm cleanup") {
+		t.Errorf("expected 'Confirm cleanup' in view, got:\n%s", view)
 	}
 	if !strings.Contains(view, "safe") {
 		t.Errorf("expected 'safe' mode in view, got:\n%s", view)

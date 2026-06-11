@@ -162,8 +162,8 @@ func TestViewRepoSummary_DispatchesByResultType(t *testing.T) {
 		result any
 		want   string
 	}{
-		{"create result", repo.CreateResult{RepoPath: "/tmp/myrepo"}, "Repository Created"},
-		{"clone result", cloneSuccessResult(), "Repository Cloned"},
+		{"create result", repo.CreateResult{RepoPath: "/tmp/myrepo"}, "Repository created"},
+		{"clone result", cloneSuccessResult(), "Repository cloned"},
 		{"unknown result", nil, "Operation complete"},
 	}
 	for _, tc := range cases {

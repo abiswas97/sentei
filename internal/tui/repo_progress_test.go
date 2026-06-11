@@ -116,9 +116,9 @@ func TestViewRepoProgress_TitlePerOperation(t *testing.T) {
 		opType    string
 		wantTitle string
 	}{
-		{"create", "Creating Repository"},
-		{"clone", "Cloning Repository"},
-		{"migrate", "Migrating Repository"},
+		{"create", "Creating repository"},
+		{"clone", "Cloning repository"},
+		{"migrate", "Migrating repository"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.opType, func(t *testing.T) {

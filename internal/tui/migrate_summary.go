@@ -71,7 +71,7 @@ func (m Model) viewMigrateSummary() string {
 		}
 	}
 
-	b.WriteString(viewTitle("Migration Complete"))
+	b.WriteString(viewTitle(titleMigrationComplete))
 	b.WriteString("\n\n")
 	b.WriteString(viewSeparator(m.width))
 	b.WriteString("\n\n")
@@ -161,7 +161,7 @@ func (m Model) viewMigrateNext() string {
 		worktreePath = git.WorktreePath(result.BareRoot, result.Branch)
 	}
 
-	b.WriteString(viewTitle("Migration Complete"))
+	b.WriteString(viewTitle(titleMigrationComplete))
 	b.WriteString("\n\n")
 	b.WriteString(viewSeparator(m.width))
 	b.WriteString("\n\n")

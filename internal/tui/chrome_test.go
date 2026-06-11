@@ -8,8 +8,8 @@ import (
 )
 
 func TestViewTitle_Standard(t *testing.T) {
-	got := viewTitle("Removing Worktrees")
-	if !strings.Contains(got, "sentei ─ Removing Worktrees") {
+	got := viewTitle("Removing worktrees")
+	if !strings.Contains(got, "sentei ─ Removing worktrees") {
 		t.Errorf("viewTitle = %q, want it to contain the prefixed title", got)
 	}
 	if !strings.HasPrefix(stripANSI(got), "  ") {

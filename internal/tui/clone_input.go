@@ -98,7 +98,7 @@ func (m Model) updateCloneInput(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m Model) viewCloneInput() string {
 	var b strings.Builder
 
-	b.WriteString(viewTitle("Clone Repository"))
+	b.WriteString(viewTitle(titleCloneRepo))
 	b.WriteString("\n\n")
 	b.WriteString(viewSeparator(m.width))
 	b.WriteString("\n\n")

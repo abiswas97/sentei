@@ -179,7 +179,7 @@ func (m Model) findSourceWorktree() string {
 func (m Model) viewCreateBranch() string {
 	var b strings.Builder
 
-	b.WriteString(viewTitle("Create Worktree"))
+	b.WriteString(viewTitle(titleCreateWorktree))
 	b.WriteString("\n\n")
 
 	b.WriteString(styleDim.Render(truncateWithEllipsis(fmt.Sprintf("  %s %s %s", filepath.Base(m.repoPath), "\u00b7", m.repoPath), max(m.width, 40))))
