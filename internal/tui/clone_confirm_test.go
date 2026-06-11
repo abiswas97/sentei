@@ -139,7 +139,7 @@ func TestUpdateCloneConfirm_BackQuitsWhenLaunchedDirectly(t *testing.T) {
 func TestUpdateCloneConfirm_WindowSizeMsg(t *testing.T) {
 	m := makeCloneConfirmModel(nil)
 
-	updated, _ := m.updateCloneConfirm(tea.WindowSizeMsg{Width: 120, Height: 40})
+	updated, _ := m.Update(tea.WindowSizeMsg{Width: 120, Height: 40})
 	result := updated.(Model)
 
 	if result.width != 120 {

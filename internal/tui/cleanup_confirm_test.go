@@ -130,7 +130,7 @@ func TestUpdateCleanupConfirm_BackQuitsWhenLaunchedDirectly(t *testing.T) {
 func TestUpdateCleanupConfirm_WindowSizeMsg(t *testing.T) {
 	m := makeCleanupConfirmModel(nil)
 
-	updated, _ := m.updateCleanupConfirm(tea.WindowSizeMsg{Width: 120, Height: 40})
+	updated, _ := m.Update(tea.WindowSizeMsg{Width: 120, Height: 40})
 	result := updated.(Model)
 
 	if result.width != 120 {

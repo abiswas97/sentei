@@ -41,11 +41,6 @@ func (m Model) startCleanupScan() (Model, tea.Cmd) {
 
 func (m Model) updateCleanupPreview(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
-	case tea.WindowSizeMsg:
-		m.width = msg.Width
-		m.height = max(msg.Height-6, 5)
-		return m, nil
-
 	case cleanupScanDoneMsg:
 		if msg.err != nil {
 			m.cleanupScanErr = msg.err

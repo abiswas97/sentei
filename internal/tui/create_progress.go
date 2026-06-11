@@ -15,11 +15,6 @@ func (m Model) updateCreateProgress(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 
-	case tea.WindowSizeMsg:
-		m.width = msg.Width
-		m.height = max(msg.Height-6, 5)
-		return m, nil
-
 	case createEventMsg:
 		m.create.events = append(m.create.events, msg.Event)
 		return m, m.waitForCreateEvent()
