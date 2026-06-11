@@ -15,4 +15,4 @@
 - [x] 3.1 Throwaway in-package test t.Logs light-palette renders of menu, list, and portal for eyeball inspection, then is deleted
 - [x] 3.2 Playground tmux pass on dark terminal at 80x18: no regression vs current rendering
 - [x] 3.3 `.impeccable.md`: palette table gains the Light column, theme line updated from aspiration to fact, decision log entry
-- [ ] 3.4 Full gauntlet, PR `feat/adaptive-theming`, CI green, merge, cleanup, archive change
+- [x] 3.4 Full gauntlet, PR `feat/adaptive-theming`, CI green, merge, cleanup, archive change
