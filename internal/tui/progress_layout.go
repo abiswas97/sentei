@@ -3,8 +3,11 @@ package tui
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"charm.land/bubbles/v2/key"
+	"charm.land/bubbles/v2/progress"
+	tea "charm.land/bubbletea/v2"
 
 	"github.com/abiswas97/sentei/internal/pipeline"
 )
@@ -31,6 +34,30 @@ type ProgressLayout struct {
 	// full step count upfront and discovered phase totals would undercount.
 	OverallDone  int
 	OverallTotal int
+
+	// Bar and Elapsed are injected by the model's render path (animated
+	// spring bar, stopwatch readout). Left empty, View falls back to the
+	// static bar with no elapsed line: direct constructions stay pure.
+	Bar     string
+	Elapsed string
+}
+
+// overall returns the bar's done/total, honoring the explicit override and
+// counting each undiscovered phase as outstanding work so the bar never
+// reads 100% beside pending phases.
+func (l ProgressLayout) overall() (int, int) {
+	if l.OverallTotal != 0 {
+		return l.OverallDone, l.OverallTotal
+	}
+	done, total := 0, 0
+	for _, p := range l.Phases {
+		done += p.done
+		total += p.total
+		if p.total == 0 {
+			total++
+		}
+	}
+	return done, total
 }
 
 func (l ProgressLayout) View() string {
@@ -55,19 +82,14 @@ func (l ProgressLayout) View() string {
 	b.WriteString(viewSeparator(l.Width))
 	b.WriteString("\n\n")
 
-	done, total := l.OverallDone, l.OverallTotal
-	if total == 0 {
-		for _, p := range l.Phases {
-			done += p.done
-			total += p.total
-			if p.total == 0 {
-				// A phase with undiscovered work is still outstanding work;
-				// without this the bar reads 100% beside pending phases.
-				total++
-			}
-		}
+	if l.Bar != "" {
+		b.WriteString(l.Bar)
+	} else {
+		b.WriteString(renderProgressBar(l.overall()))
 	}
-	b.WriteString(renderProgressBar(done, total))
+	if l.Elapsed != "" {
+		b.WriteString("  " + l.Elapsed)
+	}
 	b.WriteString("\n")
 
 	if len(l.Hints) > 0 {
@@ -141,4 +163,77 @@ func (l ProgressLayout) renderPhase(b *strings.Builder, p phaseDisplay, stepBudg
 	}
 	b.WriteString("\n")
 	return used
+}
+
+// newOverallBar constructs the spring-animated overall bar to the chrome
+// contract: 20 cells, block fill characters, percentage rendered by the
+// caller in the default foreground.
+func newOverallBar() progress.Model {
+	return progress.New(
+		progress.WithWidth(progressBarWidth),
+		progress.WithFillCharacters('█', '░'),
+		progress.WithoutPercentage(),
+	)
+}
+
+// determinateProgressActive reports whether a ProgressLayout-rendered flow
+// is on screen: the only place bar frames and stopwatch ticks may animate.
+func (m Model) determinateProgressActive() bool {
+	switch m.view {
+	case progressView, createProgressView, repoProgressView, migrateProgressView, integrationProgressView:
+		return true
+	}
+	return false
+}
+
+// activeProgressLayout returns the layout for the flow on screen, the single
+// source for done/total shared by rendering and the spring target.
+func (m Model) activeProgressLayout() (ProgressLayout, bool) {
+	switch m.view {
+	case progressView:
+		return m.removalLayout(), true
+	case createProgressView:
+		return m.createLayout(), true
+	case repoProgressView, migrateProgressView:
+		return m.repoLayout(), true
+	case integrationProgressView:
+		return m.integrationLayout(), true
+	}
+	return ProgressLayout{}, false
+}
+
+// syncProgressBar springs the bar toward the active flow's completion and
+// starts the elapsed stopwatch on the flow's first event.
+func (m *Model) syncProgressBar() tea.Cmd {
+	l, ok := m.activeProgressLayout()
+	if !ok {
+		return nil
+	}
+	done, total := l.overall()
+	pct := 0.0
+	if total > 0 {
+		pct = min(float64(done)/float64(total), 1)
+	}
+	cmds := []tea.Cmd{m.bar.SetPercent(pct)}
+	if !m.watch.Running() {
+		cmds = append(cmds, m.watch.Start())
+	}
+	return tea.Batch(cmds...)
+}
+
+// renderProgressLayout injects the animated bar and elapsed readout into a
+// flow's layout. The percentage text states actual progress; only the cells
+// ease toward it. Bar colors come from the live palette tokens.
+func (m Model) renderProgressLayout(l ProgressLayout) string {
+	bar := m.bar
+	bar.FullColor = colorAccent
+	bar.EmptyColor = colorDim
+	done, total := l.overall()
+	pct := 0
+	if total > 0 {
+		pct = min((done*100)/total, 100)
+	}
+	l.Bar = fmt.Sprintf("  %s %d%%", bar.View(), pct)
+	l.Elapsed = styleDim.Render(fmt.Sprintf("elapsed %ds", int(time.Since(m.progressStartedAt).Seconds())))
+	return l.View()
 }

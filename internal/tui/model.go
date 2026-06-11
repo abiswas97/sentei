@@ -6,7 +6,9 @@ import (
 	"time"
 
 	"charm.land/bubbles/v2/key"
+	"charm.land/bubbles/v2/progress"
 	"charm.land/bubbles/v2/spinner"
+	"charm.land/bubbles/v2/stopwatch"
 	"charm.land/bubbles/v2/textinput"
 	tea "charm.land/bubbletea/v2"
 
@@ -246,6 +248,12 @@ type Model struct {
 	// ticks run only while such a wait is visible.
 	spin spinner.Model
 
+	// bar springs the overall progress toward each completion target and
+	// watch counts elapsed time; both animate only in determinate progress
+	// views and reset between flows in holdOrAdvance.
+	bar   progress.Model
+	watch stopwatch.Model
+
 	// Progress hold state — used to enforce minimum visible duration for progress views.
 	minProgressDuration time.Duration // 0 = no hold; set via WithMinProgressDuration
 	progressStartedAt   time.Time     // set when entering any progress view
@@ -282,6 +290,8 @@ func NewModel(worktrees []git.Worktree, runner git.CommandRunner, repoPath strin
 		},
 		height: 20,
 		spin:   spinner.New(spinner.WithSpinner(spinner.MiniDot)),
+		bar:    newOverallBar(),
+		watch:  stopwatch.New(),
 	}
 	m.reindex()
 	return m
@@ -353,6 +363,8 @@ func NewMenuModel(runner git.CommandRunner, shell git.ShellRunner, repoPath stri
 		menuItems:          items,
 		worktreeGeneration: initGeneration,
 		spin:               spinner.New(spinner.WithSpinner(spinner.MiniDot)),
+		bar:                newOverallBar(),
+		watch:              stopwatch.New(),
 		remove: removeState{
 			selected:      make(map[string]bool),
 			sortField:     SortByAge,
@@ -395,6 +407,9 @@ func (m Model) holdOrAdvance(targetView viewState) (tea.Model, tea.Cmd) {
 	m.progressTargetView = targetView
 	if m.minProgressDuration == 0 || time.Since(m.progressStartedAt) >= m.minProgressDuration {
 		m.view = targetView
+		// Leaving the progress view: discard the spring state so the next
+		// flow starts from zero, not easing down from 100%.
+		m.bar = newOverallBar()
 		return m, nil
 	}
 	remaining := m.minProgressDuration - time.Since(m.progressStartedAt)
@@ -464,6 +479,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if holdMsg, ok := msg.(progressHoldExpiredMsg); ok {
 		if holdMsg.token == m.progressToken {
 			m.view = m.progressTargetView
+			// Leaving the progress view: discard the spring state so the
+			// next flow starts from zero, not easing down from 100%.
+			m.bar = newOverallBar()
 		}
 		return m, nil
 	}
@@ -485,6 +503,32 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.width = size.Width
 		m.height = max(size.Height-viewChromeRows, 5)
 		return m, nil
+	}
+
+	if frame, ok := msg.(progress.FrameMsg); ok {
+		if !m.determinateProgressActive() {
+			return m, nil
+		}
+		var cmd tea.Cmd
+		m.bar, cmd = m.bar.Update(frame)
+		return m, cmd
+	}
+
+	if tick, ok := msg.(stopwatch.TickMsg); ok {
+		if !m.determinateProgressActive() {
+			// End the tick cycle and clear the running flag so the next
+			// flow restarts the ticker.
+			return m, m.watch.Stop()
+		}
+		var cmd tea.Cmd
+		m.watch, cmd = m.watch.Update(tick)
+		return m, cmd
+	}
+
+	if ss, ok := msg.(stopwatch.StartStopMsg); ok {
+		var cmd tea.Cmd
+		m.watch, cmd = m.watch.Update(ss)
+		return m, cmd
 	}
 
 	if tick, ok := msg.(spinner.TickMsg); ok {

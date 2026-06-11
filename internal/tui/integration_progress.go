@@ -28,7 +28,7 @@ func (m Model) updateIntegrationProgress(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case integrationEventMsg:
 		m.integ.events = append(m.integ.events, msg.Event)
-		return m, waitForIntegrationEvent(m.integ.eventCh, m.integ.doneCh)
+		return m, tea.Batch(m.syncProgressBar(), waitForIntegrationEvent(m.integ.eventCh, m.integ.doneCh))
 
 	case integrationApplyDoneMsg:
 		return m, m.finalizeIntegrationApply()
@@ -85,7 +85,7 @@ func (m Model) finalizeIntegrationApply() tea.Cmd {
 	}
 }
 
-func (m Model) viewIntegrationProgress() string {
+func (m Model) integrationLayout() ProgressLayout {
 	done, total := m.integrationOverallProgress()
 	return ProgressLayout{
 		Title:        "Applying Integration Changes",
@@ -95,7 +95,11 @@ func (m Model) viewIntegrationProgress() string {
 		Hints:        progressFooter,
 		OverallDone:  done,
 		OverallTotal: total,
-	}.View()
+	}
+}
+
+func (m Model) viewIntegrationProgress() string {
+	return m.renderProgressLayout(m.integrationLayout())
 }
 
 // buildIntegrationPhases maps apply events onto the shared phase shape, one

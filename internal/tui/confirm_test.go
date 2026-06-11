@@ -136,14 +136,7 @@ func TestConfirmDeletion_UnlocksLockedWorktrees(t *testing.T) {
 	// Send 'y' to confirm
 	model, cmd := m.Update(tea.KeyPressMsg{Code: 'y', Text: "y"})
 
-	// Pump all commands until no more
-	for cmd != nil {
-		msg := cmd()
-		if msg == nil {
-			break
-		}
-		model, cmd = model.Update(msg)
-	}
+	model = pumpCmds(model, cmd)
 
 	// Verify: directory should be gone
 	if _, err := os.Stat(wtPath); !os.IsNotExist(err) {
@@ -197,13 +190,7 @@ func TestPlayground_DeleteAll_IncludesLockedWorktree(t *testing.T) {
 
 	// Confirm deletion
 	model, cmd := m.Update(tea.KeyPressMsg{Code: 'y', Text: "y"})
-	for cmd != nil {
-		msg := cmd()
-		if msg == nil {
-			break
-		}
-		model, cmd = model.Update(msg)
-	}
+	model = pumpCmds(model, cmd)
 
 	// After deletion + prune, re-list worktrees
 	remaining, err := git.ListWorktrees(runner, repoPath)

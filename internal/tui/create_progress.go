@@ -17,7 +17,7 @@ func (m Model) updateCreateProgress(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case createEventMsg:
 		m.create.events = append(m.create.events, msg.Event)
-		return m, m.waitForCreateEvent()
+		return m, tea.Batch(m.syncProgressBar(), m.waitForCreateEvent())
 
 	case createCompleteMsg:
 		m.create.result = &msg.Result
@@ -28,7 +28,7 @@ func (m Model) updateCreateProgress(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m Model) viewCreateProgress() string {
+func (m Model) createLayout() ProgressLayout {
 	return ProgressLayout{
 		Title:    "Creating Worktree",
 		Subtitle: fmt.Sprintf("%s \u2192 from %s", m.create.branchInput.Value(), m.create.baseInput.Value()),
@@ -36,5 +36,9 @@ func (m Model) viewCreateProgress() string {
 		Width:    m.width,
 		Height:   m.height,
 		Hints:    progressFooter,
-	}.View()
+	}
+}
+
+func (m Model) viewCreateProgress() string {
+	return m.renderProgressLayout(m.createLayout())
 }
