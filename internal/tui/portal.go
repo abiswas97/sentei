@@ -96,7 +96,9 @@ func (p DetailPortal) Update(msg tea.Msg) (DetailPortal, tea.Cmd) {
 func (p DetailPortal) View(background string) string {
 	var b strings.Builder
 
-	b.WriteString(viewTitle(p.title))
+	// The brand is already on screen behind the box; the portal carries
+	// just its own name.
+	b.WriteString("  " + styleTitle.Render(p.title))
 	b.WriteString("\n")
 	b.WriteString(viewSeparator(p.contentWidth() + 2))
 	b.WriteString("\n")

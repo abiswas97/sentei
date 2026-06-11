@@ -85,10 +85,10 @@ func TestPortal_ResizeWhileOpen(t *testing.T) {
 func TestPortal_ChromeTitleHintsAndScrollIndicator(t *testing.T) {
 	var p DetailPortal
 	p = p.SetSize(80, 14)
-	p = p.Open(portalDetails, "Worktree Details", strings.Repeat("content line\n", 40))
+	p = p.Open(portalDetails, "Worktree details", strings.Repeat("content line\n", 40))
 
 	view := stripANSI(p.View("background"))
-	for _, want := range []string{"sentei ─ Worktree Details", "esc close · j/k scroll", "↓"} {
+	for _, want := range []string{"Worktree details", "esc close · j/k scroll", "↓"} {
 		if !strings.Contains(view, want) {
 			t.Errorf("portal chrome missing %q:\n%s", want, view)
 		}
@@ -219,7 +219,7 @@ func TestDetails_QuestionMarkOnListView(t *testing.T) {
 
 	updated, _ := m.Update(keyRune('?'))
 	m = updated.(Model)
-	if !m.portal.Visible() || m.portal.title != "Worktree Details" {
+	if !m.portal.Visible() || m.portal.title != "Worktree details" {
 		t.Fatalf("expected details portal, got visible=%v title=%q", m.portal.Visible(), m.portal.title)
 	}
 
@@ -259,7 +259,7 @@ func TestDetails_HelpAndDetailsSwitch(t *testing.T) {
 	m = updated.(Model)
 	updated, _ = m.Update(keyRune('?'))
 	m = updated.(Model)
-	if m.portal.title != "Worktree Details" {
+	if m.portal.title != "Worktree details" {
 		t.Errorf("expected switch to details, got %q", m.portal.title)
 	}
 

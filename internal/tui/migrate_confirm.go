@@ -87,7 +87,7 @@ func (m Model) migrateConfirmationVM() ConfirmationViewModel {
 
 	return ConfirmationViewModel{
 		Width: m.width,
-		Title: "Confirm Migration",
+		Title: titleConfirmMigration,
 		Items: []ConfirmationItem{
 			{Label: "Repo path:", Value: m.repoPath},
 			{Label: "Delete backup:", Value: deleteBackup},
@@ -103,7 +103,7 @@ func (m Model) viewMigrateConfirm() string {
 
 	var b strings.Builder
 
-	b.WriteString(viewTitle("Migrate to Bare Repository"))
+	b.WriteString(viewTitle(titleMigrate))
 	b.WriteString("\n\n")
 	b.WriteString(styleDim.Render(fmt.Sprintf("  %s", m.repoPath)))
 	b.WriteString("\n\n")

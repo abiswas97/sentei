@@ -88,13 +88,13 @@ func (m Model) repoLayout() ProgressLayout {
 	var title, subject string
 	switch m.repo.opType {
 	case "create":
-		title = "Creating Repository"
+		title = titleCreatingRepo
 		subject = m.repo.nameInput.Value()
 	case "clone":
-		title = "Cloning Repository"
+		title = titleCloningRepo
 		subject = m.repo.urlInput.Value()
 	case "migrate":
-		title = "Migrating Repository"
+		title = titleMigratingRepo
 		subject = m.repoPath
 	}
 

@@ -44,7 +44,7 @@ func (m Model) viewCreateSummary() string {
 
 	hasFailures := result != nil && result.HasFailures()
 
-	b.WriteString(viewTitle("Worktree Created"))
+	b.WriteString(viewTitle(titleWorktreeCreated))
 	b.WriteString("\n\n")
 	b.WriteString(viewSeparator(m.width))
 	b.WriteString("\n\n")

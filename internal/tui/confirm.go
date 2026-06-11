@@ -133,7 +133,7 @@ func (m Model) viewConfirm() string {
 
 	selected := m.selectedWorktrees()
 
-	b.WriteString(viewTitle("Confirm Deletion"))
+	b.WriteString(viewTitle(titleConfirmDeletion))
 	b.WriteString("\n\n")
 	b.WriteString(viewSeparator(m.width))
 	b.WriteString("\n\n")

@@ -185,8 +185,8 @@ func TestIntegrationSummaryDetailContent(t *testing.T) {
 				if content == "" {
 					t.Fatal("expected portal content when outcomes overflow the peek")
 				}
-				if title != "Apply Details" {
-					t.Errorf("title = %q, want %q", title, "Apply Details")
+				if title != "Apply details" {
+					t.Errorf("title = %q, want %q", title, "Apply details")
 				}
 				for i := 0; i < tt.worktrees; i++ {
 					if !strings.Contains(stripAnsi(content), fmt.Sprintf("feature-%d", i)) {

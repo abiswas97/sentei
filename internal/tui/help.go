@@ -106,7 +106,7 @@ func (m Model) detailContent() (string, string) {
 		if len(m.integ.integrations) == 0 {
 			return "", ""
 		}
-		return "Integration Details", m.renderIntegrationsDetail()
+		return portalIntegrationDetails, m.renderIntegrationsDetail()
 	}
 	if m.view != listView || m.remove.filterActive {
 		return "", ""
@@ -133,7 +133,7 @@ func (m Model) detailContent() (string, string) {
 		}
 		fmt.Fprintf(&b, "%s  %s\n", styleDim.Render(fmt.Sprintf("%-12s", r.label)), truncateWithEllipsis(r.value, valueWidth))
 	}
-	return "Worktree Details", b.String()
+	return portalWorktreeDetails, b.String()
 }
 
 func formatCommitDate(wt git.Worktree) string {

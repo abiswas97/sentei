@@ -135,7 +135,7 @@ func TestViewCreateBranch_RendersChromeFieldsAndError(t *testing.T) {
 	m.create.validationErr = "branch name cannot contain spaces"
 
 	view := stripANSI(m.viewCreateBranch())
-	for _, want := range []string{"sentei ─ Create Worktree", "Branch name", "Base branch", "branch name cannot contain spaces", "enter continue"} {
+	for _, want := range []string{"sentei ─ Create worktree", "Branch name", "Base branch", "branch name cannot contain spaces", "enter continue"} {
 		if !strings.Contains(view, want) {
 			t.Errorf("view missing %q:\n%s", want, view)
 		}

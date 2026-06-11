@@ -90,7 +90,7 @@ var keys = keyMap{
 	),
 	Info: key.NewBinding(
 		key.WithKeys("?"),
-		key.WithHelp("?", "info"),
+		key.WithHelp("?", "details"),
 	),
 	GlobalHelp: key.NewBinding(
 		key.WithKeys("f1"),
@@ -134,7 +134,7 @@ var (
 	menuFooter   = []key.Binding{navHint, withDesc(keys.Confirm, "select"), keys.GlobalHelp, keys.Quit}
 	menuSections = []keySection{{name: "Navigation", bindings: []key.Binding{
 		hintOnly("j/k, ↑/↓", "move between entries"),
-		withDesc(keys.Confirm, "select entry"),
+		withDesc(keys.Confirm, "select"),
 	}}}
 
 	// Curated to fit the 80-col minimum beside the selection-count prefix;
@@ -142,10 +142,10 @@ var (
 	// them).
 	listFooter = []key.Binding{
 		keys.Toggle, withDesc(keys.Confirm, "delete"),
-		keys.Filter, withDesc(keys.Info, "details"), keys.Quit,
+		keys.Filter, keys.Info, keys.Quit,
 	}
 	listFooterNoSelection = []key.Binding{
-		keys.Toggle, keys.Filter, withDesc(keys.Info, "details"), keys.Quit,
+		keys.Toggle, keys.Filter, keys.Info, keys.Quit,
 	}
 	listFilterFooter = []key.Binding{withDesc(keys.Confirm, "apply"), withDesc(keys.Back, "cancel")}
 	listSections     = []keySection{
@@ -206,7 +206,7 @@ var (
 	cleanupScanFooter      = []key.Binding{keys.Back, keys.Quit}
 	cleanupEmptyFooter     = []key.Binding{withDesc(keys.Confirm, "back"), keys.Quit}
 	aggressiveHint         = withDesc(keys.All, "aggressive")
-	detailsHint            = withDesc(keys.Info, "details")
+	detailsHint            = keys.Info
 	cleanupPreviewSections = []keySection{{name: "Actions", bindings: []key.Binding{
 		withDesc(keys.Confirm, "run safe cleanup"),
 		withDesc(keys.All, "aggressive cleanup (when available)"),
@@ -219,8 +219,8 @@ var (
 		hintOnly("q / ctrl+c", "quit (operation keeps running in git)"),
 	}}}
 
-	integrationFooter        = []key.Binding{navHint, keys.Toggle, withDesc(keys.Info, "info"), keys.Back}
-	integrationPendingFooter = []key.Binding{navHint, keys.Toggle, withDesc(keys.Info, "info"), withDesc(keys.Confirm, "apply"), keys.Back}
+	integrationFooter        = []key.Binding{navHint, keys.Toggle, keys.Info, keys.Back}
+	integrationPendingFooter = []key.Binding{navHint, keys.Toggle, keys.Info, withDesc(keys.Confirm, "apply"), keys.Back}
 
 	integrationSections = []keySection{{name: "Actions", bindings: []key.Binding{
 		hintOnly("j/k", "move"),

@@ -126,7 +126,7 @@ func TestViewRepoName_RendersFieldsAndError(t *testing.T) {
 
 	view := stripANSI(m.viewRepoName())
 
-	for _, want := range []string{"Create Repository", "Repository name", "Location", "/repo", "repository name is required", "enter continue"} {
+	for _, want := range []string{"Create repository", "Repository name", "Location", "/repo", "repository name is required", "enter continue"} {
 		if !strings.Contains(view, want) {
 			t.Errorf("view missing %q:\n%s", want, view)
 		}
