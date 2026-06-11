@@ -268,9 +268,15 @@ func launchInteractiveDecision(result cli.DispatchResult) {
 	}
 
 	p := tea.NewProgram(model)
-	if _, err := p.Run(); err != nil {
+	final, err := p.Run()
+	if err != nil {
 		log.Error("failed to run TUI", "err", err)
 		os.Exit(1)
+	}
+	if tm, ok := final.(tui.Model); ok {
+		if op := tm.InterruptedFlow(); op != "" {
+			log.Warn("quit during " + op + "; check repository state before retrying")
+		}
 	}
 }
 
@@ -368,8 +374,14 @@ func runRoot(args []string) {
 	model := tui.NewMenuModel(runner, shell, repoPath, cfg, context, menuOpts...)
 	p := tea.NewProgram(model)
 
-	if _, err := p.Run(); err != nil {
+	final, err := p.Run()
+	if err != nil {
 		log.Error("failed to run TUI", "err", err)
 		os.Exit(1)
+	}
+	if tm, ok := final.(tui.Model); ok {
+		if op := tm.InterruptedFlow(); op != "" {
+			log.Warn("quit during " + op + "; check repository state before retrying")
+		}
 	}
 }

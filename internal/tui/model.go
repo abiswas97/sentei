@@ -774,3 +774,27 @@ func (m *Model) reindex() {
 		m.remove.offset = m.remove.cursor - m.height + 1
 	}
 }
+
+// InterruptedFlow names the operation in flight when the model is still on a
+// progress view, used by main to leave a stderr trace after a mid-flow quit.
+func (m Model) InterruptedFlow() string {
+	switch m.view {
+	case progressView:
+		return "worktree removal"
+	case createProgressView:
+		return "worktree creation"
+	case repoProgressView:
+		switch m.repo.opType {
+		case "clone":
+			return "repository clone"
+		case "migrate":
+			return "repository migration"
+		}
+		return "repository creation"
+	case migrateProgressView:
+		return "repository migration"
+	case integrationProgressView:
+		return "integration apply"
+	}
+	return ""
+}

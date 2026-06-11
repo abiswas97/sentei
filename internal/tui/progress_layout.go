@@ -40,6 +40,10 @@ type ProgressLayout struct {
 	// static bar with no elapsed line: direct constructions stay pure.
 	Bar     string
 	Elapsed string
+
+	// Completed marks a flow whose result has arrived: phases that never
+	// discovered work render as skipped and stop counting as outstanding.
+	Completed bool
 }
 
 // overall returns the bar's done/total, honoring the explicit override and
@@ -53,7 +57,7 @@ func (l ProgressLayout) overall() (int, int) {
 	for _, p := range l.Phases {
 		done += p.done
 		total += p.total
-		if p.total == 0 {
+		if p.total == 0 && !l.Completed {
 			total++
 		}
 	}
@@ -106,6 +110,14 @@ func (l ProgressLayout) View() string {
 func (l ProgressLayout) renderPhase(b *strings.Builder, p phaseDisplay, stepBudget int) int {
 	switch {
 	case p.total == 0:
+		if l.Completed {
+			// The flow finished and this phase never had work: skipped.
+			fmt.Fprintf(b, "  %s %s  %s\n\n",
+				styleDim.Render("–"),
+				stylePhasePending.Render(p.name),
+				styleDim.Render("skipped"))
+			return 0
+		}
 		// No work discovered yet: pending, never "100% done".
 		fmt.Fprintf(b, "  %s %s  %s\n\n",
 			styleIndicatorPending.Render(indicatorPending),
@@ -213,8 +225,12 @@ func (m *Model) syncProgressBar() tea.Cmd {
 	}
 	done, total := l.overall()
 	pct := 0.0
-	if total > 0 {
+	switch {
+	case total > 0:
 		pct = min(float64(done)/float64(total), 1)
+	case l.Completed:
+		// Nothing was ever discovered and the flow is done: that is 100%.
+		pct = 1
 	}
 	cmds := []tea.Cmd{m.bar.SetPercent(pct)}
 	if !m.watch.Running() {
