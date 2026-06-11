@@ -19,7 +19,7 @@ The `.impeccable.md` file SHALL include a "Component Patterns" section documenti
 - **THEN** the Component Patterns section SHALL specify `?` as contextual details, `F1` as global help, and all standard navigation keys (j/k, arrows, enter, esc, q, space)
 
 ### Requirement: Key bindings defined in single source file
-All key bindings SHALL be defined in `internal/tui/keys.go` as `key.Binding` variables, with contextual keys (meaning varies by view) and global keys (same meaning everywhere) clearly separated.
+All key bindings SHALL be defined in `internal/tui/keys.go` as `key.Binding` variables, with contextual keys (meaning varies by view) and global keys (same meaning everywhere) clearly separated. Per-view key presentation (footer hint subsets and named help sections) SHALL also be declared in `keys.go`, reusing the canonical key strings and overriding only descriptions; render sites SHALL reference these declarations and SHALL NOT contain raw key or label strings.
 
 #### Scenario: Contextual details key
 - **WHEN** `keyDetails` is referenced
@@ -32,6 +32,14 @@ All key bindings SHALL be defined in `internal/tui/keys.go` as `key.Binding` var
 #### Scenario: No duplicate key definitions
 - **WHEN** a key binding is needed in any view
 - **THEN** it SHALL reference the binding from `keys.go` rather than creating a local binding
+
+#### Scenario: Contextual description declared once per view
+- **WHEN** the enter key means "delete" in the confirm view and "continue" in an input view
+- **THEN** each description SHALL be declared once in that view's `keys.go` presentation data and nowhere else
+
+#### Scenario: Render sites carry no hint literals
+- **WHEN** any view renders its footer or the help portal renders its content
+- **THEN** the key strings and action labels SHALL come from `keys.go` declarations, with no string literals at the render site
 
 ### Requirement: Layout constants defined centrally
 Layout constants SHALL be defined in `internal/tui/constants.go` and used by all progress views. Progress hold timing already exists on the Model (`minProgressDuration` via `WithMinProgressDuration` and `holdOrAdvance`) and SHALL remain the single timing mechanism; no parallel timing constant is introduced.
