@@ -126,11 +126,12 @@ func (m Model) updateProgress(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m Model) removalLayout() ProgressLayout {
 	return ProgressLayout{
-		Title:  "Removing Worktrees",
-		Phases: m.buildRemovalPhases(),
-		Width:  m.width,
-		Height: m.height,
-		Hints:  progressFooter,
+		Title:     "Removing Worktrees",
+		Completed: m.remove.run.cleanupResult != nil,
+		Phases:    m.buildRemovalPhases(),
+		Width:     m.width,
+		Height:    m.height,
+		Hints:     progressFooter,
 	}
 }
 

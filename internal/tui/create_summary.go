@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strings"
 
+	"charm.land/lipgloss/v2"
+
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
 
@@ -85,7 +87,10 @@ func (m Model) viewCreateSummary() string {
 	b.WriteString("\n")
 	b.WriteString(viewSeparator(m.width))
 	b.WriteString("\n\n")
-	fmt.Fprintf(&b, "    cd %s\n", truncateWithEllipsis(wtPath, max(m.width-8, 20)))
+	// The cd line is the flow's one actionable artifact: never truncate it.
+	for _, line := range strings.Split(lipgloss.NewStyle().Width(max(m.width-8, 20)).Render("cd "+wtPath), "\n") {
+		fmt.Fprintf(&b, "    %s\n", line)
+	}
 	b.WriteString("\n")
 
 	if m.menuItems != nil {
