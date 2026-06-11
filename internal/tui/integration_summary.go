@@ -68,16 +68,12 @@ func (m Model) updateIntegrationSummary(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m Model) viewIntegrationSummary() string {
-	var b strings.Builder
+// inlineSummaryPreview is how many worktree outcomes the apply summary shows
+// inline before deferring the rest to the detail portal (`?`).
+const inlineSummaryPreview = 3
 
-	b.WriteString(viewTitle("Apply Complete"))
-	b.WriteString("\n\n")
-	b.WriteString(viewSeparator(m.width))
-	b.WriteString("\n\n")
-
-	groups := groupIntegrationEvents(m.integ.events)
-	applied, failed := 0, 0
+// countIntegrationOutcomes tallies done and failed steps across all groups.
+func countIntegrationOutcomes(groups []integrationWorktreeOutcomes) (applied, failed int) {
 	for _, g := range groups {
 		for _, s := range g.steps {
 			switch s.ev.Status {
@@ -88,6 +84,80 @@ func (m Model) viewIntegrationSummary() string {
 			}
 		}
 	}
+	return applied, failed
+}
+
+func groupHasFailure(g integrationWorktreeOutcomes) bool {
+	for _, s := range g.steps {
+		if s.ev.Status == integration.StatusFailed {
+			return true
+		}
+	}
+	return false
+}
+
+// orderOutcomesFailuresFirst moves worktrees with failures ahead of clean ones
+// so the summary's limited inline space surfaces problems first. Order within
+// each partition is preserved.
+func orderOutcomesFailuresFirst(groups []integrationWorktreeOutcomes) []integrationWorktreeOutcomes {
+	ordered := make([]integrationWorktreeOutcomes, 0, len(groups))
+	for _, g := range groups {
+		if groupHasFailure(g) {
+			ordered = append(ordered, g)
+		}
+	}
+	for _, g := range groups {
+		if !groupHasFailure(g) {
+			ordered = append(ordered, g)
+		}
+	}
+	return ordered
+}
+
+// renderIntegrationOutcomes writes the per-worktree breakdown to b: a worktree
+// header followed by a `●`/`✗` line per resolved step. Shared by the inline
+// summary peek and the detail portal.
+func renderIntegrationOutcomes(b *strings.Builder, groups []integrationWorktreeOutcomes) {
+	for _, g := range groups {
+		fmt.Fprintf(b, "  %s\n", filepath.Base(g.worktree))
+		for _, s := range g.steps {
+			switch s.ev.Status {
+			case integration.StatusDone:
+				fmt.Fprintf(b, "    %s %s\n", styleIndicatorDone.Render(indicatorDone), s.step)
+			case integration.StatusFailed:
+				line := fmt.Sprintf("    %s %s", styleIndicatorFailed.Render(indicatorFailed), s.step)
+				if s.ev.Error != nil {
+					line += " " + styleError.Render(s.ev.Error.Error())
+				}
+				b.WriteString(line + "\n")
+			}
+		}
+		b.WriteString("\n")
+	}
+}
+
+// integrationSummaryDetailContent renders the full per-worktree breakdown for
+// the detail portal, exposed only when outcomes overflow the inline peek.
+func (m Model) integrationSummaryDetailContent() (string, string) {
+	groups := orderOutcomesFailuresFirst(groupIntegrationEvents(m.integ.events))
+	if len(groups) <= inlineSummaryPreview {
+		return "", ""
+	}
+	var b strings.Builder
+	renderIntegrationOutcomes(&b, groups)
+	return "Apply Details", strings.TrimRight(b.String(), "\n")
+}
+
+func (m Model) viewIntegrationSummary() string {
+	var b strings.Builder
+
+	b.WriteString(viewTitle("Apply Complete"))
+	b.WriteString("\n\n")
+	b.WriteString(viewSeparator(m.width))
+	b.WriteString("\n\n")
+
+	groups := orderOutcomesFailuresFirst(groupIntegrationEvents(m.integ.events))
+	applied, failed := countIntegrationOutcomes(groups)
 
 	if m.integ.saveErr != nil {
 		b.WriteString(styleError.Render(truncateWithEllipsis(
@@ -109,27 +179,22 @@ func (m Model) viewIntegrationSummary() string {
 	}
 	b.WriteString("\n\n")
 
-	for _, g := range groups {
-		fmt.Fprintf(&b, "  %s\n", filepath.Base(g.worktree))
-		for _, s := range g.steps {
-			switch s.ev.Status {
-			case integration.StatusDone:
-				fmt.Fprintf(&b, "    %s %s\n", styleIndicatorDone.Render(indicatorDone), s.step)
-			case integration.StatusFailed:
-				line := fmt.Sprintf("    %s %s", styleIndicatorFailed.Render(indicatorFailed), s.step)
-				if s.ev.Error != nil {
-					line += " " + styleError.Render(s.ev.Error.Error())
-				}
-				b.WriteString(line)
-				b.WriteString("\n")
-			}
-		}
-		b.WriteString("\n")
+	shown := min(len(groups), inlineSummaryPreview)
+	renderIntegrationOutcomes(&b, groups[:shown])
+	if rest := len(groups) - shown; rest > 0 {
+		b.WriteString(styleDim.Render(fmt.Sprintf("  and %d more %s — ? for details",
+			rest, pluralize(rest, "worktree", "worktrees"))))
+		b.WriteString("\n\n")
 	}
 
 	b.WriteString(viewSeparator(m.width))
 	b.WriteString("\n\n")
-	b.WriteString(viewKeyHints(KeyHint{"enter", "integrations"}, KeyHint{"q", "quit"}))
+	hints := []KeyHint{{"enter", "integrations"}}
+	if len(groups) > shown {
+		hints = append(hints, KeyHint{"?", "details"})
+	}
+	hints = append(hints, KeyHint{"q", "quit"})
+	b.WriteString(viewKeyHints(hints...))
 	b.WriteString("\n")
 
 	return b.String()
