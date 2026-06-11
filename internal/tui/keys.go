@@ -107,3 +107,142 @@ var keys = keyMap{
 		key.WithHelp("F1", "help"),
 	),
 }
+
+// keySection is a named group of bindings for the help portal; the same
+// bindings drive footer hints so footer and help can never disagree.
+type keySection struct {
+	name     string
+	bindings []key.Binding
+}
+
+// withDesc derives a presentation binding from a canonical one, overriding
+// only the description: key strings stay defined exactly once above.
+func withDesc(b key.Binding, desc string) key.Binding {
+	b.SetHelp(b.Help().Key, desc)
+	return b
+}
+
+// hintOnly declares a presentation-only entry (e.g. a combined "j/k" pair)
+// rendered in footers and help but never matched against input. The label
+// doubles as the key list because bubbles/help skips keyless bindings as
+// disabled; these bindings are never passed to key.Matches.
+func hintOnly(label, desc string) key.Binding {
+	return key.NewBinding(key.WithKeys(label), key.WithHelp(label, desc))
+}
+
+// Per-view presentation: footer subsets and help sections. Render sites
+// reference these and contain no key or label literals.
+var (
+	navHint = hintOnly("j/k", "navigate")
+
+	helpGlobalSection = keySection{name: "Global", bindings: []key.Binding{
+		withDesc(keys.GlobalHelp, "toggle this help"),
+		hintOnly("q / ctrl+c", "quit"),
+	}}
+	scrollHint = hintOnly("j/k", "scroll")
+
+	menuFooter   = []key.Binding{navHint, withDesc(keys.Confirm, "select"), keys.GlobalHelp, keys.Quit}
+	menuSections = []keySection{{name: "Navigation", bindings: []key.Binding{
+		hintOnly("j/k, ↑/↓", "move between entries"),
+		withDesc(keys.Confirm, "select entry"),
+	}}}
+
+	// Curated to fit the 80-col minimum beside the selection-count prefix;
+	// select-all and sort stay discoverable in the help sections (? opens
+	// them).
+	listFooter = []key.Binding{
+		keys.Toggle, withDesc(keys.Confirm, "delete"),
+		keys.Filter, withDesc(keys.Info, "details"), keys.Quit,
+	}
+	listFilterFooter = []key.Binding{withDesc(keys.Confirm, "apply"), withDesc(keys.Back, "cancel")}
+	listSections     = []keySection{
+		{name: "Navigation", bindings: []key.Binding{
+			hintOnly("j/k, ↑/↓", "move cursor"),
+			hintOnly("pgup/pgdn", "page"),
+		}},
+		{name: "Selection", bindings: []key.Binding{
+			withDesc(keys.Toggle, "toggle worktree"),
+			withDesc(keys.All, "select all"),
+			withDesc(keys.Confirm, "delete selected"),
+		}},
+		{name: "Organize", bindings: []key.Binding{
+			withDesc(keys.Filter, "filter by name"),
+			hintOnly("s / S", "cycle / reverse sort"),
+			withDesc(keys.Info, "details for highlighted worktree"),
+		}},
+	}
+
+	confirmFooter   = []key.Binding{withDesc(keys.Yes, "delete"), withDesc(keys.No, "go back")}
+	confirmSections = []keySection{{name: "Actions", bindings: []key.Binding{
+		withDesc(keys.Yes, "delete the selected worktrees"),
+		withDesc(keys.No, "go back to the list"),
+	}}}
+
+	confirmationFooter = []key.Binding{withDesc(keys.Confirm, "confirm"), keys.Back, keys.Quit}
+
+	createBranchFooter = []key.Binding{
+		withDesc(keys.Confirm, "continue"), keys.QuickCreate, keys.Tab, keys.Back,
+	}
+	cloneInputFooter = []key.Binding{withDesc(keys.Confirm, "clone"), keys.Tab, keys.Back}
+	repoNameFooter   = []key.Binding{withDesc(keys.Confirm, "continue"), keys.Tab, keys.Back}
+	inputSections    = []keySection{{name: "Editing", bindings: []key.Binding{
+		keys.Tab,
+		withDesc(keys.Confirm, "continue"),
+		keys.Back,
+	}}}
+
+	optionsFooter   = []key.Binding{keys.Toggle, withDesc(keys.Confirm, "create"), keys.Back}
+	optionsSections = []keySection{{name: "Actions", bindings: []key.Binding{
+		hintOnly("j/k", "move"),
+		withDesc(keys.Toggle, "toggle option"),
+		withDesc(keys.Confirm, "create"),
+		keys.Back,
+	}}}
+
+	summaryMenuFooter = []key.Binding{withDesc(keys.Confirm, "menu"), keys.Quit}
+	summaryQuitFooter = []key.Binding{withDesc(keys.Confirm, "quit"), withDesc(keys.Back, "quit")}
+	createSummaryQuit = []key.Binding{withDesc(keys.Confirm, "quit"), keys.Quit}
+	repoSummaryFooter = []key.Binding{withDesc(keys.Confirm, "open in sentei"), keys.Quit}
+	quitOnlyFooter    = []key.Binding{keys.Quit}
+	cleanupDoneFooter = []key.Binding{withDesc(keys.Confirm, "quit")}
+	summarySections   = []keySection{{name: "Actions", bindings: []key.Binding{
+		withDesc(keys.Confirm, "continue"),
+		keys.Back,
+	}}}
+
+	cleanupScanFooter      = []key.Binding{keys.Back, keys.Quit}
+	cleanupEmptyFooter     = []key.Binding{withDesc(keys.Confirm, "back"), keys.Quit}
+	aggressiveHint         = withDesc(keys.All, "aggressive")
+	detailsHint            = withDesc(keys.Info, "details")
+	cleanupPreviewSections = []keySection{{name: "Actions", bindings: []key.Binding{
+		withDesc(keys.Confirm, "run safe cleanup"),
+		withDesc(keys.All, "aggressive cleanup (when available)"),
+		withDesc(keys.Info, "full branch details"),
+		keys.Back,
+	}}}
+
+	progressFooter   = []key.Binding{keys.Quit}
+	progressSections = []keySection{{name: "Actions", bindings: []key.Binding{
+		hintOnly("q / ctrl+c", "quit (operation keeps running in git)"),
+	}}}
+
+	integrationSections = []keySection{{name: "Actions", bindings: []key.Binding{
+		hintOnly("j/k", "move"),
+		withDesc(keys.Toggle, "stage/unstage"),
+		withDesc(keys.Info, "integration info"),
+		withDesc(keys.Confirm, "apply changes"),
+		keys.Back,
+	}}}
+
+	confirmationSections = []keySection{{name: "Actions", bindings: []key.Binding{
+		withDesc(keys.Confirm, "confirm"),
+		keys.Back,
+	}}}
+
+	portalFooter = []key.Binding{withDesc(keys.Back, "close"), scrollHint}
+
+	migrateConfirmFooter = []key.Binding{withDesc(keys.Yes, "delete"), withDesc(keys.No, "keep"), keys.Quit}
+	migrateOpenFooter    = []key.Binding{withDesc(keys.Confirm, "open in sentei"), withDesc(keys.Quit, "exit")}
+	cleanupSafeHint      = withDesc(keys.Confirm, "safe cleanup")
+	integrationsOpenHint = withDesc(keys.Confirm, "integrations")
+)

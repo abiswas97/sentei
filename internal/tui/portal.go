@@ -99,8 +99,7 @@ func (p DetailPortal) View(background string) string {
 	b.WriteString(p.viewport.View())
 	b.WriteString("\n")
 
-	hints := []KeyHint{{"esc", "close"}, {"j/k", "scroll"}}
-	hintLine := viewKeyHints(hints...)
+	hintLine := viewFooter(p.contentWidth()+2, portalFooter)
 	if !p.viewport.AtBottom() {
 		hintLine += styleDim.Render("  ↓ more")
 	}

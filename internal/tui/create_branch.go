@@ -224,7 +224,7 @@ func (m Model) viewCreateBranch() string {
 
 	b.WriteString(viewSeparator(m.width))
 	b.WriteString("\n\n")
-	b.WriteString(viewKeyHints(KeyHint{"enter", "continue"}, KeyHint{"ctrl+enter", "quick create"}, KeyHint{"tab", "switch field"}, KeyHint{"esc", "back"}))
+	b.WriteString(viewFooter(m.width, createBranchFooter))
 	b.WriteString("\n")
 
 	return b.String()

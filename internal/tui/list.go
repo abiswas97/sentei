@@ -432,7 +432,7 @@ func (m Model) viewStatusOrFilter() string {
 
 func (m Model) viewBottomLine() string {
 	if m.remove.filterActive {
-		return viewKeyHints(KeyHint{"enter", "apply"}, KeyHint{"esc", "cancel"})
+		return viewFooter(m.width, listFilterFooter)
 	}
 	return m.viewLegend()
 }
@@ -448,9 +448,9 @@ func (m Model) viewStatusBar() string {
 		filterInfo += fmt.Sprintf(" \u00b7 pre-filter: %s", m.remove.filterLabel)
 	}
 
-	return styleStatusBar.Render(
-		fmt.Sprintf("  %d selected%s \u00b7 space toggle \u00b7 a all \u00b7 enter delete \u00b7 / filter \u00b7 s sort \u00b7 q quit", count, filterInfo),
-	)
+	prefix := fmt.Sprintf("  %d selected%s \u00b7 ", count, filterInfo)
+	hints := footerHints(m.width-lipgloss.Width(prefix), listFooter)
+	return styleStatusBar.Render(prefix) + hints
 }
 
 func (m Model) viewLegend() string {

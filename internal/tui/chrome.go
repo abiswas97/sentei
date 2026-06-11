@@ -3,12 +3,20 @@ package tui
 import (
 	"fmt"
 	"strings"
+
+	"charm.land/bubbles/v2/help"
+	"charm.land/bubbles/v2/key"
+	"charm.land/lipgloss/v2"
 )
 
-// KeyHint is one key-action pair rendered in a view's hint footer.
-type KeyHint struct {
-	Key    string
-	Action string
+// footerHelp renders footers from key bindings; its styles are wired to the
+// active palette in applyPalette.
+var footerHelp = newFooterHelp()
+
+func newFooterHelp() help.Model {
+	h := help.New()
+	h.ShortSeparator = " · "
+	return h
 }
 
 // viewTitle renders the standard view title: `  sentei ─ <title>` in bold white.
@@ -29,16 +37,49 @@ func viewSeparator(width int) string {
 	return styleSeparator.Render("  " + strings.Repeat("┄", width-4))
 }
 
-// viewKeyHints renders key-action pairs joined by ` · ` in dim gray.
-func viewKeyHints(hints ...KeyHint) string {
-	if len(hints) == 0 {
+// viewFooter renders a view's hint footer from bindings declared in keys.go:
+// `key action · key action` in dim, 2-space pad. Hints that exceed width are
+// dropped with an ellipsis rather than wrapping.
+func viewFooter(width int, bindings []key.Binding) string {
+	if len(bindings) == 0 {
 		return ""
 	}
-	parts := make([]string, len(hints))
-	for i, h := range hints {
-		parts[i] = h.Key + " " + h.Action
+	return "  " + footerHints(width-2, bindings)
+}
+
+// footerHints renders the hint row itself within budget columns; callers
+// that prepend their own prefix (the list status bar) pass the remaining
+// budget directly.
+func footerHints(budget int, bindings []key.Binding) string {
+	if len(bindings) == 0 {
+		return ""
 	}
-	return styleDim.Render("  " + strings.Join(parts, " · "))
+	h := footerHelp
+	if budget > 0 {
+		h.SetWidth(budget)
+	}
+	out := h.ShortHelpView(bindings)
+	// bubbles/help stops truncating when the boundary item leaves no room
+	// for its ellipsis marker; enforce the budget by dropping trailing
+	// hints until the row fits, then mark the omission ourselves. Exact
+	// fits never drop; once dropping, reserve room for the marker.
+	dropped := false
+	for budget > 0 && len(bindings) > 1 {
+		limit := budget
+		if dropped {
+			limit = budget - 2
+		}
+		if lipgloss.Width(out) <= limit {
+			break
+		}
+		dropped = true
+		bindings = bindings[:len(bindings)-1]
+		out = h.ShortHelpView(bindings)
+	}
+	if dropped {
+		out += styleDim.Render(" …")
+	}
+	return out
 }
 
 // truncateWithEllipsis cuts s to fit width, replacing the overflow with a

@@ -144,7 +144,7 @@ func (m Model) viewRepoName() string {
 	b.WriteString("\n")
 	b.WriteString(viewSeparator(m.width))
 	b.WriteString("\n\n")
-	b.WriteString(viewKeyHints(KeyHint{"enter", "continue"}, KeyHint{"tab", "switch field"}, KeyHint{"esc", "back"}))
+	b.WriteString(viewFooter(m.width, repoNameFooter))
 	b.WriteString("\n")
 
 	return b.String()
