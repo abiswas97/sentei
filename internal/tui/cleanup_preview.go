@@ -120,7 +120,7 @@ func (m Model) startCleanupRun(mode cleanup.Mode) (tea.Model, tea.Cmd) {
 func (m Model) viewCleanupPreview() string {
 	var b strings.Builder
 
-	b.WriteString(viewTitle("Cleanup Preview"))
+	b.WriteString(viewTitle(titleCleanupPreview))
 	b.WriteString("\n\n")
 	b.WriteString(viewSeparator(m.width))
 	b.WriteString("\n\n")
@@ -281,5 +281,5 @@ func (m Model) cleanupDetailContent() (string, string) {
 	if unmerged := m.cleanupScan.UnmergedAggressiveCount(); unmerged > 0 {
 		fmt.Fprintf(&b, "\n  %s\n", styleDim.Render(fmt.Sprintf("%s %d not fully merged: skipped unless --force is used on the CLI", indicatorWarning, unmerged)))
 	}
-	return "Aggressive Cleanup Details", b.String()
+	return portalAggressiveDetails, b.String()
 }

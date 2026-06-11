@@ -37,7 +37,7 @@ func (m Model) viewCleanupResult() string {
 
 	r := m.cleanupResult
 	if r == nil {
-		b.WriteString(viewTitle("Running Cleanup"))
+		b.WriteString(viewTitle(titleRunningCleanup))
 		b.WriteString("\n\n")
 		b.WriteString(viewSeparator(m.width))
 		b.WriteString("\n\n")
@@ -45,7 +45,7 @@ func (m Model) viewCleanupResult() string {
 		return b.String()
 	}
 
-	b.WriteString(viewTitle("Cleanup Complete"))
+	b.WriteString(viewTitle(titleCleanupComplete))
 	b.WriteString("\n\n")
 	b.WriteString(viewSeparator(m.width))
 	b.WriteString("\n\n")

@@ -138,7 +138,7 @@ func (m Model) viewMenu() string {
 	var b strings.Builder
 
 	repoName := filepath.Base(m.repoPath)
-	b.WriteString(viewTitle("Git Worktree Manager"))
+	b.WriteString(viewTitle(titleMenu))
 	b.WriteString("\n\n")
 
 	switch m.context {

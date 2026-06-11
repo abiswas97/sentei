@@ -305,7 +305,7 @@ func TestViewCreateOptions_RendersOptionsAndIntegrations(t *testing.T) {
 	view := stripANSI(m.viewCreateOptions())
 
 	for _, want := range []string{
-		"Create Worktree", "feature/x", "from main", "Setup",
+		"Create worktree", "feature/x", "from main", "Setup",
 		"[x]", "Integrations from main: code-review-graph", "space toggle",
 	} {
 		if !strings.Contains(view, want) {

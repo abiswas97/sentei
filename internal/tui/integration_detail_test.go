@@ -11,8 +11,8 @@ func TestDetailContent_IntegrationList_AllSections(t *testing.T) {
 	m.view = integrationListView
 
 	title, content := m.detailContent()
-	if title != "Integration Details" {
-		t.Errorf("title = %q, want Integration Details", title)
+	if title != "Integration details" {
+		t.Errorf("title = %q, want Integration details", title)
 	}
 	plain := stripAnsi(content)
 	for _, integ := range m.integ.integrations {
@@ -30,7 +30,7 @@ func TestDetailContent_MigrateIntegrations_SamePage(t *testing.T) {
 	m.view = migrateIntegrationsView
 
 	title, content := m.detailContent()
-	if title != "Integration Details" || content == "" {
+	if title != "Integration details" || content == "" {
 		t.Errorf("migrate-integrations view must serve the same portal page, got title %q", title)
 	}
 }

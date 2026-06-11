@@ -37,7 +37,7 @@ func scanWithAggressive(n int) *cleanup.DryRunResult {
 func TestViewCleanupPreview_ScanningState(t *testing.T) {
 	m := previewModel()
 	view := stripANSI(m.viewCleanupPreview())
-	for _, want := range []string{"sentei ─ Cleanup Preview", starFrame(m.motionTick) + " Scanning repository…"} {
+	for _, want := range []string{"sentei ─ Cleanup preview", starFrame(m.motionTick) + " Scanning repository…"} {
 		if !strings.Contains(view, want) {
 			t.Errorf("missing %q:\n%s", want, view)
 		}
@@ -253,7 +253,7 @@ func TestCleanupDetailContent_PortalIntegration(t *testing.T) {
 	m.cleanupScan = scanWithAggressive(4)
 
 	title, content := m.detailContent()
-	if title != "Aggressive Cleanup Details" {
+	if title != "Aggressive cleanup details" {
 		t.Fatalf("title = %q", title)
 	}
 	plain := stripANSI(content)
@@ -266,7 +266,7 @@ func TestCleanupDetailContent_PortalIntegration(t *testing.T) {
 	// The global ? handler opens the portal with this content.
 	updated, _ := m.Update(keyRune('?'))
 	model := updated.(Model)
-	if !model.portal.Visible() || model.portal.title != "Aggressive Cleanup Details" {
+	if !model.portal.Visible() || model.portal.title != "Aggressive cleanup details" {
 		t.Errorf("expected details portal, visible=%v title=%q", model.portal.Visible(), model.portal.title)
 	}
 
@@ -309,7 +309,7 @@ func TestE2E_CleanupPreviewFlow(t *testing.T) {
 	if model.view != cleanupResultView || runCmd == nil {
 		t.Fatalf("enter must start the safe run, view=%d", model.view)
 	}
-	if !strings.Contains(stripANSI(model.viewCleanupResult()), "Running Cleanup") {
+	if !strings.Contains(stripANSI(model.viewCleanupResult()), "Running cleanup") {
 		t.Fatal("result view must show the running state first")
 	}
 
@@ -321,7 +321,7 @@ func TestE2E_CleanupPreviewFlow(t *testing.T) {
 	updated, _ = model.updateCleanupResult(done)
 	model = updated.(Model)
 	final := stripANSI(model.viewCleanupResult())
-	if !strings.Contains(final, "Cleanup Complete") {
+	if !strings.Contains(final, "Cleanup complete") {
 		t.Fatalf("expected completion screen:\n%s", final)
 	}
 	if !strings.Contains(final, "sentei cleanup --mode safe") {

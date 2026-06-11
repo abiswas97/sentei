@@ -19,7 +19,7 @@ func TestViewProgress_NoPurpleBadge_HasChromeAndBar(t *testing.T) {
 	m.view = progressView
 
 	view := stripANSI(m.viewProgress())
-	if !strings.Contains(view, "sentei ─ Removing Worktrees") {
+	if !strings.Contains(view, "sentei ─ Removing worktrees") {
 		t.Errorf("expected standard title, view:\n%s", view)
 	}
 	if !strings.Contains(view, "░") {
@@ -162,10 +162,10 @@ func TestViewCleanupResult_RunningTitleWhileNilResult(t *testing.T) {
 	m.view = cleanupResultView
 
 	view := stripANSI(m.viewCleanupResult())
-	if !strings.Contains(view, "sentei ─ Running Cleanup") {
-		t.Errorf("expected Running Cleanup title while result is nil, view:\n%s", view)
+	if !strings.Contains(view, "sentei ─ Running cleanup") {
+		t.Errorf("expected Running cleanup title while result is nil, view:\n%s", view)
 	}
-	if strings.Contains(view, "Cleanup Complete") {
+	if strings.Contains(view, "Cleanup complete") {
 		t.Errorf("must not claim completion while running, view:\n%s", view)
 	}
 }
@@ -191,7 +191,7 @@ func TestViewConfirm_NoBorderAndDetachedHeadLabel(t *testing.T) {
 
 func TestConfirmationViewModel_NoBorderStandardHints(t *testing.T) {
 	vm := ConfirmationViewModel{
-		Title:      "Confirm Cleanup",
+		Title:      "Confirm cleanup",
 		Items:      []ConfirmationItem{{Label: "Mode:", Value: "safe"}},
 		CLICommand: "sentei cleanup --mode safe",
 	}

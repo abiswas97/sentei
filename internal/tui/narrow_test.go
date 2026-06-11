@@ -69,7 +69,7 @@ func TestList_ColumnPriorityDropsDetail(t *testing.T) {
 func TestPortal_FitsNarrowTerminal(t *testing.T) {
 	m := narrowListModel(60)
 	m.portal = m.portal.SetSize(60, 18)
-	m.portal = m.portal.Open(portalDetails, "Worktree Details", strings.Repeat("x", 200))
+	m.portal = m.portal.Open(portalDetails, "Worktree details", strings.Repeat("x", 200))
 
 	bg := strings.TrimSuffix(strings.Repeat(strings.Repeat(" ", 60)+"\n", 18), "\n")
 	for i, line := range strings.Split(stripAnsi(m.portal.View(bg)), "\n") {
