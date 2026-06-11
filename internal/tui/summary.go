@@ -92,7 +92,7 @@ func (m Model) viewSummary() string {
 			b.WriteString("\n")
 			b.WriteString(styleDim.Render(fmt.Sprintf("  Tip: %d local %s not in any worktree.", cr.NonWtBranchesRemaining, pluralize(cr.NonWtBranchesRemaining, "branch", "branches"))))
 			b.WriteString("\n")
-			b.WriteString(styleDim.Render("       Run `sentei cleanup --mode aggressive` to remove them."))
+			b.WriteString(styleDim.Render("       Run `sentei cleanup --mode aggressive` to remove them (unmerged branches need --force)."))
 			b.WriteString("\n")
 		}
 	}

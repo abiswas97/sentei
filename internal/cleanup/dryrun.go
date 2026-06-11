@@ -165,3 +165,9 @@ func branchMetadata(runner git.CommandRunner, repoPath string) (map[string]Branc
 	}
 	return meta, nil
 }
+
+// DeletableAggressiveCount reports how many aggressive candidates aggressive
+// mode would actually delete without --force.
+func (r DryRunResult) DeletableAggressiveCount() int {
+	return len(r.AggressiveBranches) - r.UnmergedAggressiveCount()
+}
