@@ -1,5 +1,25 @@
 # Changelog
 
+## [1.7.0](https://github.com/abiswas97/sentei/compare/v1.6.0...v1.7.0) (2026-06-11)
+
+
+### Features
+
+* **tui:** scroll integration apply summary via detail portal ([2f34759](https://github.com/abiswas97/sentei/commit/2f34759973181d8a43affa8e8876392ceb39af8f))
+* **tui:** scroll integration apply summary via detail portal ([7d66626](https://github.com/abiswas97/sentei/commit/7d6662632b48dbed8d7c2430ef468bddeb03ae56))
+
+
+### Bug Fixes
+
+* **cleanup:** predict `git branch -d` in the dry-run merged check ([ebac38b](https://github.com/abiswas97/sentei/commit/ebac38b909bcbdc490eadf928e501c5aaa9def13))
+* **cleanup:** predict git branch -d in the dry-run merged check ([86ac737](https://github.com/abiswas97/sentei/commit/86ac7373c28372e3af352d51a39cf40c707ab2de))
+* **state:** resolve git common dir instead of assuming .bare ([65f36c3](https://github.com/abiswas97/sentei/commit/65f36c33a7f9f82c183d8b9fb6ef7d0a732a7105))
+* **state:** resolve git common dir instead of assuming .bare ([10f3afb](https://github.com/abiswas97/sentei/commit/10f3afb55916a300147b5f5821882064478ee75c))
+* **tui:** pluralize confirm/summary copy and unbullet skipped branches ([d71c65f](https://github.com/abiswas97/sentei/commit/d71c65f270a26d2fdbbcf3d62c1864ffc2c0beb1))
+* **tui:** pluralize confirm/summary copy and unbullet skipped branches ([d1764e2](https://github.com/abiswas97/sentei/commit/d1764e20ab83db5bcc799d32bf6802f4071b91ce))
+* **worktree:** detect unpushed commits against all remotes ([c5fa3f5](https://github.com/abiswas97/sentei/commit/c5fa3f55d7290406bd1a39cd688e0a627a0e22db))
+* **worktree:** detect unpushed commits against all remotes ([4070f20](https://github.com/abiswas97/sentei/commit/4070f209706dc9ac4252b0008864fccdfd1d39e4))
+
 ## [1.6.0](https://github.com/abiswas97/sentei/compare/v1.5.0...v1.6.0) (2026-06-10)
 
 
