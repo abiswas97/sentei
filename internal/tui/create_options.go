@@ -5,8 +5,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/charmbracelet/bubbles/key"
-	tea "github.com/charmbracelet/bubbletea"
+	"charm.land/bubbles/v2/key"
+	tea "charm.land/bubbletea/v2"
 
 	"github.com/abiswas97/sentei/internal/config"
 	"github.com/abiswas97/sentei/internal/creator"
@@ -92,12 +92,11 @@ func (m Model) updateCreateOptions(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.height = max(msg.Height-6, 5)
 		return m, nil
 
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		switch {
 		case key.Matches(msg, keys.Back):
 			m.view = createBranchView
-			m.create.branchInput.Focus()
-			return m, m.create.branchInput.Cursor.BlinkCmd()
+			return m, m.create.branchInput.Focus()
 
 		case key.Matches(msg, keys.Down):
 			if m.create.optionsCursor < len(items)-1 {

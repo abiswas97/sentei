@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 
 	"github.com/abiswas97/sentei/internal/config"
 	"github.com/abiswas97/sentei/internal/repo"
@@ -172,7 +172,7 @@ func TestUpdateMigrateConfirm_WindowSizeMsg(t *testing.T) {
 func TestUpdateMigrateConfirm_QuitKey(t *testing.T) {
 	m := makeMigrateConfirmModel(nil)
 
-	_, cmd := m.updateMigrateConfirm(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'q'}})
+	_, cmd := m.updateMigrateConfirm(tea.KeyPressMsg{Code: 'q', Text: "q"})
 	if cmd == nil {
 		t.Fatal("expected quit cmd for q key")
 	}

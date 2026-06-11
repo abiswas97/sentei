@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 
 	"github.com/abiswas97/sentei/internal/config"
 	"github.com/abiswas97/sentei/internal/repo"
@@ -150,7 +150,7 @@ func TestUpdateCloneConfirm_WindowSizeMsg(t *testing.T) {
 func TestUpdateCloneConfirm_QuitKey(t *testing.T) {
 	m := makeCloneConfirmModel(nil)
 
-	_, c := m.updateCloneConfirm(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'q'}})
+	_, c := m.updateCloneConfirm(tea.KeyPressMsg{Code: 'q', Text: "q"})
 	if c == nil {
 		t.Fatal("expected quit cmd for q key")
 	}
@@ -190,7 +190,7 @@ func TestCloneConfirm_UpdateDispatch(t *testing.T) {
 func TestCloneConfirm_ViewDispatch(t *testing.T) {
 	m := makeCloneConfirmModel(&CloneOpts{URL: "git@github.com:user/repo.git"})
 
-	output := m.View()
+	output := m.View().Content
 
 	if !strings.Contains(stripAnsi(output), "Confirm Clone") {
 		t.Error("View() should dispatch to viewCloneConfirm")

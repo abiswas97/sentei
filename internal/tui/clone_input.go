@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/charmbracelet/bubbles/key"
-	tea "github.com/charmbracelet/bubbletea"
+	"charm.land/bubbles/v2/key"
+	tea "charm.land/bubbletea/v2"
 
 	"github.com/abiswas97/sentei/internal/repo"
 )
@@ -20,7 +20,7 @@ func (m Model) updateCloneInput(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.height = max(msg.Height-6, 5)
 		return m, nil
 
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		switch {
 		case key.Matches(msg, keys.Back):
 			m.view = menuView

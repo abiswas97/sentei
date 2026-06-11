@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 
 	"github.com/abiswas97/sentei/internal/creator"
 	"github.com/abiswas97/sentei/internal/pipeline"
@@ -15,7 +15,7 @@ func TestUpdateCreateSummary_EnterReturnsToMenuWhenMenuLaunched(t *testing.T) {
 	m := createOptionsModel()
 	m.view = createSummaryView
 
-	updated, cmd := m.updateCreateSummary(tea.KeyMsg{Type: tea.KeyEnter})
+	updated, cmd := m.updateCreateSummary(tea.KeyPressMsg{Code: tea.KeyEnter})
 
 	if updated.(Model).view != menuView {
 		t.Errorf("view = %d, want menuView", updated.(Model).view)
@@ -30,7 +30,7 @@ func TestUpdateCreateSummary_EnterQuitsWhenDirectLaunch(t *testing.T) {
 	m.view = createSummaryView
 	m.menuItems = nil
 
-	_, cmd := m.updateCreateSummary(tea.KeyMsg{Type: tea.KeyEnter})
+	_, cmd := m.updateCreateSummary(tea.KeyPressMsg{Code: tea.KeyEnter})
 
 	if cmd == nil {
 		t.Fatal("expected a quit command")

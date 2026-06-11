@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 
 	"github.com/abiswas97/sentei/internal/git"
 )
@@ -158,8 +158,9 @@ func TestViewLegend(t *testing.T) {
 	}
 }
 
-func keyMsg(k string) tea.KeyMsg {
-	return tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(k)}
+func keyMsg(k string) tea.KeyPressMsg {
+	r := []rune(k)[0]
+	return tea.KeyPressMsg{Code: r, Text: k}
 }
 
 func TestToggle_SkipsProtectedWorktree(t *testing.T) {

@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 
 	"github.com/abiswas97/sentei/internal/config"
 	"github.com/abiswas97/sentei/internal/git"
@@ -168,7 +168,7 @@ func TestUpdateFilterInput_EscClearsFilter(t *testing.T) {
 	m.remove.filterText = "alpha"
 	m.reindex()
 
-	updated, _ := m.updateFilterInput(tea.KeyMsg{Type: tea.KeyEsc})
+	updated, _ := m.updateFilterInput(tea.KeyPressMsg{Code: tea.KeyEsc})
 	model := updated.(Model)
 
 	if model.remove.filterActive {
@@ -187,7 +187,7 @@ func TestUpdateFilterInput_EnterCommitsFilter(t *testing.T) {
 	m.remove.filterActive = true
 	m.remove.filterInput.SetValue("alpha")
 
-	updated, _ := m.updateFilterInput(tea.KeyMsg{Type: tea.KeyEnter})
+	updated, _ := m.updateFilterInput(tea.KeyPressMsg{Code: tea.KeyEnter})
 	model := updated.(Model)
 
 	if model.remove.filterActive {
@@ -203,7 +203,7 @@ func TestUpdateFilterInput_TypingNarrowsList(t *testing.T) {
 	m.remove.filterActive = true
 	m.remove.filterInput.Focus()
 
-	updated, _ := m.updateFilterInput(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("alpha")})
+	updated, _ := m.updateFilterInput(tea.KeyPressMsg{Text: "alpha"})
 	model := updated.(Model)
 
 	if model.remove.filterText != "alpha" {

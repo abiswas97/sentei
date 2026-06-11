@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 
 	"github.com/abiswas97/sentei/internal/git"
 	"github.com/abiswas97/sentei/internal/repo"
@@ -17,8 +17,8 @@ func portalTestModel() Model {
 	return m
 }
 
-func keyF1() tea.KeyMsg  { return tea.KeyMsg{Type: tea.KeyF1} }
-func keyEsc() tea.KeyMsg { return tea.KeyMsg{Type: tea.KeyEsc} }
+func keyF1() tea.KeyPressMsg  { return tea.KeyPressMsg{Code: tea.KeyF1} }
+func keyEsc() tea.KeyPressMsg { return tea.KeyPressMsg{Code: tea.KeyEsc} }
 
 func TestPortal_OpenCloseLifecycle(t *testing.T) {
 	var p DetailPortal
@@ -31,7 +31,7 @@ func TestPortal_OpenCloseLifecycle(t *testing.T) {
 	if !p.Visible() {
 		t.Fatal("portal must be visible after Open")
 	}
-	if p.viewport.YOffset != 0 {
+	if p.viewport.YOffset() != 0 {
 		t.Error("scroll position must reset on open")
 	}
 
@@ -46,13 +46,13 @@ func TestPortal_ScrollResetsOnReopen(t *testing.T) {
 	p = p.SetSize(80, 12)
 	p = p.Open(portalHelp, "T", strings.Repeat("line\n", 50))
 	p.viewport.ScrollDown(10)
-	if p.viewport.YOffset == 0 {
+	if p.viewport.YOffset() == 0 {
 		t.Fatal("precondition: viewport scrolled")
 	}
 
 	p = p.Open(portalHelp, "T", strings.Repeat("line\n", 50))
-	if p.viewport.YOffset != 0 {
-		t.Errorf("scroll must reset on reopen, got offset %d", p.viewport.YOffset)
+	if p.viewport.YOffset() != 0 {
+		t.Errorf("scroll must reset on reopen, got offset %d", p.viewport.YOffset())
 	}
 }
 
@@ -77,8 +77,8 @@ func TestPortal_ResizeWhileOpen(t *testing.T) {
 
 	updated, _ = m.Update(tea.WindowSizeMsg{Width: 60, Height: 20})
 	m = updated.(Model)
-	if m.portal.viewport.Width != m.portal.contentWidth() {
-		t.Errorf("viewport width %d not refit to %d", m.portal.viewport.Width, m.portal.contentWidth())
+	if m.portal.viewport.Width() != m.portal.contentWidth() {
+		t.Errorf("viewport width %d not refit to %d", m.portal.viewport.Width(), m.portal.contentWidth())
 	}
 }
 
@@ -106,7 +106,7 @@ func TestPortal_CompositesOverBackground(t *testing.T) {
 	updated, _ := m.Update(keyF1())
 	m = updated.(Model)
 
-	view := stripANSI(m.View())
+	view := stripANSI(m.View().Content)
 	if !strings.Contains(view, "Help — Menu") {
 		t.Errorf("expected portal content in composite view:\n%s", view)
 	}
@@ -223,7 +223,7 @@ func TestDetails_QuestionMarkOnListView(t *testing.T) {
 		t.Fatalf("expected details portal, got visible=%v title=%q", m.portal.Visible(), m.portal.title)
 	}
 
-	view := stripANSI(m.View())
+	view := stripANSI(m.View().Content)
 	for _, want := range []string{"feature/a", "/work/feature-a", "Add feature A"} {
 		if !strings.Contains(view, want) {
 			t.Errorf("details missing %q:\n%s", want, view)

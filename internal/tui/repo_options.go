@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/charmbracelet/bubbles/key"
-	tea "github.com/charmbracelet/bubbletea"
+	"charm.land/bubbles/v2/key"
+	tea "charm.land/bubbletea/v2"
 
 	"github.com/abiswas97/sentei/internal/git"
 	"github.com/abiswas97/sentei/internal/repo"
@@ -58,7 +58,7 @@ func (m Model) updateRepoOptions(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.repo.ghStatus = msg.status
 		return m, nil
 
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		// When description is focused, forward all keys except navigation/action to the text input
 		if m.repo.optionsCursor == repoOptDescription && m.repo.publishGitHub {
 			if !key.Matches(msg, keys.Back) && !key.Matches(msg, keys.Confirm) &&
