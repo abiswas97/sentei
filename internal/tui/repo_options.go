@@ -170,7 +170,7 @@ func (m Model) viewRepoOptions() string {
 	// Worktree toggle
 	cursor := "  "
 	if m.repo.optionsCursor == repoOptWorktree {
-		cursor = "> "
+		cursor = "▸ "
 	}
 	var checkbox string
 	if m.repo.createWorktree {
@@ -193,7 +193,7 @@ func (m Model) viewRepoOptions() string {
 	var ghStatusStr string
 	switch m.repo.ghStatus {
 	case "authenticated":
-		ghStatusStr = "  " + styleSuccess.Render("authenticated \u25cf")
+		ghStatusStr = "  " + styleSuccess.Render("authenticated ✦")
 	case "not authenticated":
 		ghStatusStr = "  " + styleError.Render("not authenticated \u2717")
 	case "gh not found":
@@ -207,7 +207,7 @@ func (m Model) viewRepoOptions() string {
 	// Publish toggle
 	cursor = "  "
 	if m.repo.optionsCursor == repoOptPublish {
-		cursor = "> "
+		cursor = "▸ "
 	}
 	if m.repo.publishGitHub {
 		checkbox = styleCheckboxOn.Render("[x]")
@@ -230,7 +230,7 @@ func (m Model) viewRepoOptions() string {
 		// Visibility
 		cursor = "  "
 		if m.repo.optionsCursor == repoOptVisibility {
-			cursor = "> "
+			cursor = "▸ "
 		}
 		visVal := styleDim.Render(m.repo.visibility)
 		if m.repo.optionsCursor == repoOptVisibility {
@@ -243,7 +243,7 @@ func (m Model) viewRepoOptions() string {
 		// Description
 		cursor = "  "
 		if m.repo.optionsCursor == repoOptDescription {
-			cursor = "> "
+			cursor = "▸ "
 		}
 		if m.repo.optionsCursor == repoOptDescription {
 			b.WriteString(styleAccent.Render(cursor) + fmt.Sprintf("      %-15s ", "Description") + m.repo.descInput.View())

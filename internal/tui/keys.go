@@ -184,7 +184,7 @@ var (
 		keys.Back,
 	}}}
 
-	optionsFooter   = []key.Binding{keys.Toggle, withDesc(keys.Confirm, "create"), keys.Back}
+	optionsFooter   = []key.Binding{navHint, keys.Toggle, withDesc(keys.Confirm, "create"), keys.Back}
 	optionsSections = []keySection{{name: "Actions", bindings: []key.Binding{
 		hintOnly("j/k", "move"),
 		withDesc(keys.Toggle, "toggle option"),
@@ -236,6 +236,9 @@ var (
 	}}}
 
 	portalFooter = []key.Binding{withDesc(keys.Back, "close"), scrollHint}
+	// portalFooterStatic is the portal footer when content fits: scroll
+	// hints would be dead keys.
+	portalFooterStatic = []key.Binding{withDesc(keys.Back, "close")}
 
 	migrateConfirmFooter = []key.Binding{withDesc(keys.Yes, "delete"), withDesc(keys.No, "keep"), keys.Quit}
 	migrateOpenFooter    = []key.Binding{withDesc(keys.Confirm, "open in sentei"), withDesc(keys.Quit, "exit")}

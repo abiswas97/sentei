@@ -22,10 +22,12 @@ func (m Model) updateRepoName(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.repo.focusedField == 0 {
 				m.repo.focusedField = 1
 				m.repo.nameInput.Blur()
+				m.repo.locationInput.CursorEnd()
 				return m, m.repo.locationInput.Focus()
 			}
 			m.repo.focusedField = 0
 			m.repo.locationInput.Blur()
+			m.repo.nameInput.CursorEnd()
 			return m, m.repo.nameInput.Focus()
 
 		case key.Matches(msg, keys.Confirm):

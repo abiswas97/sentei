@@ -303,3 +303,18 @@ func TestViewStatusBar_FitsMinimumWidth(t *testing.T) {
 		}
 	}
 }
+
+func TestSortArrow_AgeDescribesDisplayedOrder(t *testing.T) {
+	m := NewModel([]git.Worktree{{Path: "/a", Branch: "refs/heads/a"}}, nil, "/repo")
+	m.width = 100
+	m.view = listView
+
+	// Default: age sort, date-ascending → displayed ages run largest-first.
+	if view := stripAnsi(m.viewList()); !strings.Contains(view, "Age ▼") {
+		t.Errorf("date-ascending shows descending ages; arrow must point down:\n%s", view)
+	}
+	m.remove.sortAscending = false
+	if view := stripAnsi(m.viewList()); !strings.Contains(view, "Age ▲") {
+		t.Errorf("date-descending shows ascending ages; arrow must point up:\n%s", view)
+	}
+}
