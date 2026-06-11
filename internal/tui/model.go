@@ -103,6 +103,7 @@ type removeState struct {
 	worktrees      []git.Worktree
 	defaultBranch  string // repo default branch; always protected from removal
 	selected       map[string]bool
+	milestone      int // power of ten crossed by the last run, 0 if none
 	visibleIndices []int
 	cursor         int
 	offset         int
@@ -489,6 +490,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.bar = newOverallBar()
 			m.bar.SetWidth(overallBarWidth(m.width))
 		}
+		return m, nil
+	}
+
+	if ms, ok := msg.(milestoneMsg); ok {
+		// Handled globally: the hold may have expired and advanced the view
+		// to the summary before the recording command finished.
+		m.remove.milestone = ms.Crossed
 		return m, nil
 	}
 
