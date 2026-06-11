@@ -154,8 +154,8 @@ func TestViewProgress_TeardownRunning_ShowsActivePhase(t *testing.T) {
 	if !strings.Contains(view, "Teardown") {
 		t.Errorf("expected Teardown phase visible while running, view:\n%s", view)
 	}
-	if !strings.Contains(view, "· Teardown") {
-		t.Errorf("expected breath frame on running teardown, view:\n%s", view)
+	if !strings.Contains(view, workFrames[0]+" Teardown") {
+		t.Errorf("expected spinner frame on running teardown, view:\n%s", view)
 	}
 }
 

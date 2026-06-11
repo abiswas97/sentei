@@ -246,13 +246,10 @@ type Model struct {
 	integ  integrationState
 	portal DetailPortal
 
-	// spin animates indeterminate waits (cleanup scan, menu worktree load);
-	// ticks run only while such a wait is visible.
+	// spin is the one working animation (heavy braille dot), shared by
+	// indeterminate waits, active progress rows, and the cleanup running
+	// line; ticks run only while such work is visible (spinnerActive).
 	spin spinner.Model
-
-	// breath animates the active status indicator (the breathing dot);
-	// ticks run only while live work is on screen (breathActive).
-	breath spinner.Model
 
 	// bar springs the overall progress toward each completion target and
 	// watch counts elapsed time; both animate only in determinate progress
@@ -295,8 +292,7 @@ func NewModel(worktrees []git.Worktree, runner git.CommandRunner, repoPath strin
 			filterInput:   ti,
 		},
 		height: 20,
-		spin:   spinner.New(spinner.WithSpinner(spinner.MiniDot)),
-		breath: newBreathSpinner(),
+		spin:   newWorkSpinner(),
 		bar:    newOverallBar(),
 		watch:  stopwatch.New(),
 	}
@@ -369,8 +365,7 @@ func NewMenuModel(runner git.CommandRunner, shell git.ShellRunner, repoPath stri
 		height:             20,
 		menuItems:          items,
 		worktreeGeneration: initGeneration,
-		spin:               spinner.New(spinner.WithSpinner(spinner.MiniDot)),
-		breath:             newBreathSpinner(),
+		spin:               newWorkSpinner(),
 		bar:                newOverallBar(),
 		watch:              stopwatch.New(),
 		remove: removeState{
@@ -542,23 +537,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	if tick, ok := msg.(spinner.TickMsg); ok {
-		switch tick.ID {
-		case m.spin.ID():
-			if !m.indeterminateWaitActive() {
-				return m, nil
-			}
-			var cmd tea.Cmd
-			m.spin, cmd = m.spin.Update(tick)
-			return m, cmd
-		case m.breath.ID():
-			if !m.breathActive() {
-				return m, nil
-			}
-			var cmd tea.Cmd
-			m.breath, cmd = m.breath.Update(tick)
-			return m, cmd
+		if !m.spinnerActive() {
+			return m, nil
 		}
-		return m, nil
+		var cmd tea.Cmd
+		m.spin, cmd = m.spin.Update(tick)
+		return m, cmd
 	}
 
 	if bg, ok := msg.(tea.BackgroundColorMsg); ok {
@@ -596,27 +580,29 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	// Per-view dispatch, wrapped so any flow entering a live-work view
-	// starts the breath tick chain without each entry site knowing about it.
-	wasBreathing := m.breathActive()
+	// starts the spinner tick chain without each entry site knowing about it.
+	wasSpinning := m.spinnerActive()
 	updated, cmd := m.dispatchByView(msg)
-	if model, ok := updated.(Model); ok && !wasBreathing && model.breathActive() {
-		return model, tea.Batch(cmd, model.breath.Tick)
+	if model, ok := updated.(Model); ok && !wasSpinning && model.spinnerActive() {
+		return model, tea.Batch(cmd, model.spin.Tick)
 	}
 	return updated, cmd
 }
 
-// breathActive reports whether the animated active indicator is on screen:
-// any determinate progress view, or the cleanup result's running line.
-func (m Model) breathActive() bool {
-	return m.determinateProgressActive() || (m.view == cleanupResultView && m.cleanupResult == nil)
+// spinnerActive reports whether any working surface is on screen: an
+// indeterminate wait, a determinate progress view, or the cleanup result's
+// running line. The one gate for the one spinner.
+func (m Model) spinnerActive() bool {
+	return m.indeterminateWaitActive() ||
+		m.determinateProgressActive() ||
+		(m.view == cleanupResultView && m.cleanupResult == nil)
 }
 
-// newBreathSpinner builds the active-indicator animation; ~1.3s per cycle
-// keeps it a heartbeat, not a flicker.
-func newBreathSpinner() spinner.Model {
+// newWorkSpinner builds the one working animation: heavy braille at 10fps.
+func newWorkSpinner() spinner.Model {
 	return spinner.New(spinner.WithSpinner(spinner.Spinner{
-		Frames: breathFrames,
-		FPS:    time.Second / 3,
+		Frames: workFrames,
+		FPS:    time.Second / 10,
 	}))
 }
 

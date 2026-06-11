@@ -117,7 +117,7 @@ func truncateWithEllipsis(s string, width int) string {
 
 // viewStatLine renders the windowing legend: per-status counts (zero counts
 // omitted) followed by how many of the total items are visible. activeGlyph
-// is the already-styled active indicator (breath frame or static fallback).
+// is the already-styled active indicator (spinner frame or static fallback).
 func viewStatLine(stats WindowStats, activeGlyph string) string {
 	var parts []string
 	if stats.Done > 0 {

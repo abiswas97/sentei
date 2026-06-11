@@ -33,10 +33,13 @@ func (m Model) startCleanupScan() (Model, tea.Cmd) {
 	m.progressStartedAt = time.Now()
 	m.progressToken++
 	runner, repoPath := m.runner, m.repoPath
-	return m, tea.Batch(m.spin.Tick, func() tea.Msg {
+	// No explicit spinner tick: the dispatch wrapper starts the chain on
+	// the transition into this working state; a second start here would
+	// double the frame rate.
+	return m, func() tea.Msg {
 		result, err := cleanup.DryRun(runner, repoPath)
 		return cleanupScanDoneMsg{result: result, err: err}
-	})
+	}
 }
 
 func (m Model) updateCleanupPreview(msg tea.Msg) (tea.Model, tea.Cmd) {
