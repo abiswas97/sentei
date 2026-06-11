@@ -31,7 +31,7 @@ func (m Model) updateCreateProgress(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m Model) createLayout() ProgressLayout {
 	return ProgressLayout{
-		Title:     "Creating Worktree",
+		Title:     titleCreatingWorktree,
 		Completed: m.create.result != nil,
 		Subtitle:  fmt.Sprintf("%s \u2192 from %s", m.create.branchInput.Value(), m.create.baseInput.Value()),
 		Phases:    withPendingPhases(buildPhaseDisplays(m.create.events), "Setup", "Dependencies", "Integrations"),

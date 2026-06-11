@@ -91,7 +91,7 @@ func (m Model) finalizeIntegrationApply() tea.Cmd {
 func (m Model) integrationLayout() ProgressLayout {
 	done, total := m.integrationOverallProgress()
 	return ProgressLayout{
-		Title:        "Applying Integration Changes",
+		Title:        titleApplyingChanges,
 		Phases:       m.buildIntegrationPhases(),
 		Width:        m.width,
 		Height:       m.height,

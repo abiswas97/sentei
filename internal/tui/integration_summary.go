@@ -156,13 +156,13 @@ func (m Model) integrationSummaryDetailContent() (string, string) {
 	}
 	var b strings.Builder
 	renderIntegrationOutcomes(&b, groups, 0)
-	return "Apply Details", strings.TrimRight(b.String(), "\n")
+	return portalApplyDetails, strings.TrimRight(b.String(), "\n")
 }
 
 func (m Model) viewIntegrationSummary() string {
 	var b strings.Builder
 
-	b.WriteString(viewTitle("Apply Complete"))
+	b.WriteString(viewTitle(titleApplyComplete))
 	b.WriteString("\n\n")
 	b.WriteString(viewSeparator(m.width))
 	b.WriteString("\n\n")

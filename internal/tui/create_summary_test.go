@@ -60,7 +60,7 @@ func TestViewCreateSummary_SuccessShowsReady(t *testing.T) {
 
 	view := stripANSI(m.viewCreateSummary())
 
-	for _, want := range []string{"Worktree Created", "feature/x ready", "Path", "/repo/feature-x", "feature/x (from main)", "cd /repo/feature-x", "enter menu"} {
+	for _, want := range []string{"Worktree created", "feature/x ready", "Path", "/repo/feature-x", "feature/x (from main)", "cd /repo/feature-x", "enter menu"} {
 		if !strings.Contains(view, want) {
 			t.Errorf("view missing %q:\n%s", want, view)
 		}

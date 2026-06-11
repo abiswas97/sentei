@@ -51,8 +51,8 @@ func TestCleanupConfirmationVM_SafeMode(t *testing.T) {
 	m := makeCleanupConfirmModel(nil)
 	vm := m.cleanupConfirmationVM()
 
-	if vm.Title != "Confirm Cleanup" {
-		t.Errorf("expected title 'Confirm Cleanup', got %q", vm.Title)
+	if vm.Title != "Confirm cleanup" {
+		t.Errorf("expected title 'Confirm cleanup', got %q", vm.Title)
 	}
 
 	output := stripAnsi(vm.View())
@@ -189,7 +189,7 @@ func TestViewCleanupConfirm_RendersContent(t *testing.T) {
 
 	output := stripAnsi(m.viewCleanupConfirm())
 
-	if !strings.Contains(output, "Confirm Cleanup") {
+	if !strings.Contains(output, "Confirm cleanup") {
 		t.Error("view should contain title")
 	}
 	if !strings.Contains(output, "Mode:") {

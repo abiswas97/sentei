@@ -134,7 +134,7 @@ func TestViewCloneInput_RendersFieldsAndError(t *testing.T) {
 
 	view := stripANSI(m.viewCloneInput())
 
-	for _, want := range []string{"Clone Repository", "Repository URL", "Clone to", "/repo/myrepo", "repository URL is required", "enter clone"} {
+	for _, want := range []string{"Clone repository", "Repository URL", "Clone to", "/repo/myrepo", "repository URL is required", "enter clone"} {
 		if !strings.Contains(view, want) {
 			t.Errorf("view missing %q:\n%s", want, view)
 		}

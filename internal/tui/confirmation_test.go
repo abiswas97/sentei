@@ -9,12 +9,12 @@ import (
 
 func TestConfirmationView_ContainsTitle(t *testing.T) {
 	vm := ConfirmationViewModel{
-		Title: "Confirm Cleanup",
+		Title: "Confirm cleanup",
 	}
 
 	output := stripAnsi(vm.View())
 
-	if !strings.Contains(output, "Confirm Cleanup") {
+	if !strings.Contains(output, "Confirm cleanup") {
 		t.Error("view should contain the title")
 	}
 }

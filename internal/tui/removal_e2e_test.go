@@ -25,7 +25,7 @@ func TestE2E_RemovalFlowChrome(t *testing.T) {
 	m.view = confirmView
 
 	confirmScreen := stripANSI(m.viewConfirm())
-	if !strings.Contains(confirmScreen, "sentei ─ Confirm Deletion") || strings.Contains(confirmScreen, "╭") {
+	if !strings.Contains(confirmScreen, "sentei ─ Confirm deletion") || strings.Contains(confirmScreen, "╭") {
 		t.Fatalf("confirm screen chrome wrong:\n%s", confirmScreen)
 	}
 
@@ -36,7 +36,7 @@ func TestE2E_RemovalFlowChrome(t *testing.T) {
 	}
 
 	progressScreen := stripANSI(m.viewProgress())
-	for _, want := range []string{"sentei ─ Removing Worktrees", "Removing worktrees", "0/2", "░", "q quit"} {
+	for _, want := range []string{"sentei ─ Removing worktrees", "Removing worktrees", "0/2", "░", "q quit"} {
 		if !strings.Contains(progressScreen, want) {
 			t.Fatalf("progress screen missing %q:\n%s", want, progressScreen)
 		}
@@ -53,7 +53,7 @@ func TestE2E_RemovalFlowChrome(t *testing.T) {
 	}
 
 	summaryScreen := stripANSI(m.viewSummary())
-	if !strings.Contains(summaryScreen, "sentei ─ Removal Complete") || !strings.Contains(summaryScreen, "✦ 2 worktrees removed successfully") {
+	if !strings.Contains(summaryScreen, "sentei ─ Removal complete") || !strings.Contains(summaryScreen, "✦ 2 worktrees removed successfully") {
 		t.Fatalf("summary screen chrome wrong:\n%s", summaryScreen)
 	}
 }

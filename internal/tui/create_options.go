@@ -192,7 +192,7 @@ func (m Model) viewCreateOptions() string {
 	branch := m.create.branchInput.Value()
 	base := m.create.baseInput.Value()
 
-	b.WriteString(viewTitle("Create Worktree"))
+	b.WriteString(viewTitle(titleCreateWorktree))
 	b.WriteString("\n\n")
 	b.WriteString(styleAccent.Render(fmt.Sprintf("  %s \u2192 from %s", branch, base)))
 	b.WriteString("\n\n")

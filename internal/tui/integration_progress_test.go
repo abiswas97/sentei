@@ -203,8 +203,8 @@ func TestViewIntegrationProgress_Loading(t *testing.T) {
 
 	output := stripAnsi(m.viewIntegrationProgress())
 
-	if !strings.Contains(output, "Applying Integration Changes") {
-		t.Errorf("expected title 'Applying Integration Changes', got:\n%s", output)
+	if !strings.Contains(output, "Applying integration changes") {
+		t.Errorf("expected title 'Applying integration changes', got:\n%s", output)
 	}
 }
 
