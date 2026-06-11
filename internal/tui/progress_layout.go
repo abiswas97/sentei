@@ -172,7 +172,9 @@ func newOverallBar() progress.Model {
 	return progress.New(
 		progress.WithWidth(progressBarWidth),
 		progress.WithFillCharacters('█', '░'),
-		progress.WithoutPercentage(),
+		// Snappy spring: the fill must visibly settle within the 1.5s
+		// completion hold.
+		progress.WithSpringOptions(30, 1),
 	)
 }
 
@@ -228,12 +230,9 @@ func (m Model) renderProgressLayout(l ProgressLayout) string {
 	bar := m.bar
 	bar.FullColor = colorAccent
 	bar.EmptyColor = colorDim
-	done, total := l.overall()
-	pct := 0
-	if total > 0 {
-		pct = min((done*100)/total, 100)
-	}
-	l.Bar = fmt.Sprintf("  %s %d%%", bar.View(), pct)
+	// The native percentage follows the displayed fill, so bar and label
+	// never disagree; the phase headers state actual counts.
+	l.Bar = "  " + bar.View()
 	l.Elapsed = styleDim.Render(fmt.Sprintf("elapsed %ds", int(time.Since(m.progressStartedAt).Seconds())))
 	return l.View()
 }
