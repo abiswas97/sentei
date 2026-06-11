@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"charm.land/bubbles/v2/key"
+	"charm.land/bubbles/v2/spinner"
 	"charm.land/bubbles/v2/textinput"
 	tea "charm.land/bubbletea/v2"
 
@@ -115,11 +116,13 @@ type removeState struct {
 	run removalRun
 }
 
-// menuItem represents a selectable menu entry.
+// menuItem represents a selectable menu entry. loading marks entries whose
+// hint reflects an in-flight load and renders with the spinner.
 type menuItem struct {
 	label   string
 	hint    string
 	enabled bool
+	loading bool
 }
 
 // createState holds all state for the worktree creation flow.
@@ -243,6 +246,10 @@ type Model struct {
 	integ  integrationState
 	portal DetailPortal
 
+	// spin animates indeterminate waits (cleanup scan, menu worktree load);
+	// ticks run only while such a wait is visible.
+	spin spinner.Model
+
 	// Progress hold state — used to enforce minimum visible duration for progress views.
 	minProgressDuration time.Duration // 0 = no hold; set via WithMinProgressDuration
 	progressStartedAt   time.Time     // set when entering any progress view
@@ -278,6 +285,7 @@ func NewModel(worktrees []git.Worktree, runner git.CommandRunner, repoPath strin
 			filterInput:   ti,
 		},
 		height: 20,
+		spin:   spinner.New(spinner.WithSpinner(spinner.MiniDot)),
 	}
 	m.reindex()
 	return m
@@ -317,7 +325,7 @@ func NewMenuModel(runner git.CommandRunner, shell git.ShellRunner, repoPath stri
 		items = []menuItem{
 			{label: "Create new worktree", enabled: true},
 			{label: "Manage integrations", enabled: true},
-			{label: "Remove worktrees", hint: "loading\u2026", enabled: false},
+			{label: "Remove worktrees", hint: "loading\u2026", enabled: false, loading: true},
 			{label: "Cleanup & exit", hint: "prune refs, remove gone branches", enabled: true},
 		}
 	case repo.ContextNoRepo:
@@ -348,6 +356,7 @@ func NewMenuModel(runner git.CommandRunner, shell git.ShellRunner, repoPath stri
 		height:             20,
 		menuItems:          items,
 		worktreeGeneration: initGeneration,
+		spin:               spinner.New(spinner.WithSpinner(spinner.MiniDot)),
 		remove: removeState{
 			selected:      make(map[string]bool),
 			sortField:     SortByAge,
@@ -434,9 +443,25 @@ func (m *Model) SetMigrateOpts(opts *MigrateOpts) {
 
 func (m Model) Init() tea.Cmd {
 	if m.view == menuView && m.context == repo.ContextBareRepo {
-		return tea.Batch(tea.RequestBackgroundColor, loadWorktreeContext(m.runner, m.repoPath, m.worktreeGeneration))
+		return tea.Batch(tea.RequestBackgroundColor, m.spin.Tick, loadWorktreeContext(m.runner, m.repoPath, m.worktreeGeneration))
 	}
 	return tea.RequestBackgroundColor
+}
+
+// indeterminateWaitActive reports whether a spinner-bearing wait is visible:
+// the cleanup scan or the menu worktree-context load.
+func (m Model) indeterminateWaitActive() bool {
+	if m.view == cleanupPreviewView && m.cleanupScan == nil {
+		return true
+	}
+	if m.view == menuView {
+		for _, item := range m.menuItems {
+			if item.loading {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -461,6 +486,15 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// The portal tracks the raw terminal size; views keep receiving the
 		// message through their own routing below.
 		m.portal = m.portal.SetSize(size.Width, size.Height)
+	}
+
+	if tick, ok := msg.(spinner.TickMsg); ok {
+		if !m.indeterminateWaitActive() {
+			return m, nil
+		}
+		var cmd tea.Cmd
+		m.spin, cmd = m.spin.Update(tick)
+		return m, cmd
 	}
 
 	if bg, ok := msg.(tea.BackgroundColorMsg); ok {
