@@ -1,6 +1,8 @@
 package tui
 
 import (
+	"fmt"
+	"path/filepath"
 	"sort"
 	"strings"
 	"time"
@@ -642,6 +644,8 @@ func (m Model) View() tea.View {
 	v := tea.NewView(content)
 	v.AltScreen = true
 	v.MouseMode = tea.MouseModeCellMotion
+	v.WindowTitle = m.windowTitle()
+	v.ProgressBar = m.terminalProgress()
 	return v
 }
 
@@ -775,26 +779,78 @@ func (m *Model) reindex() {
 	}
 }
 
-// InterruptedFlow names the operation in flight when the model is still on a
-// progress view, used by main to leave a stderr trace after a mid-flow quit.
-func (m Model) InterruptedFlow() string {
+// flowIdentity names the live operation in its two voices: a sentence form
+// for the quit trace and a compact verb for the terminal tab title.
+func (m Model) flowIdentity() (sentence, verb string) {
 	switch m.view {
 	case progressView:
-		return "worktree removal"
+		return "worktree removal", "removing"
 	case createProgressView:
-		return "worktree creation"
+		return "worktree creation", "creating"
 	case repoProgressView:
 		switch m.repo.opType {
 		case "clone":
-			return "repository clone"
+			return "repository clone", "cloning"
 		case "migrate":
-			return "repository migration"
+			return "repository migration", "migrating"
 		}
-		return "repository creation"
+		return "repository creation", "creating"
 	case migrateProgressView:
-		return "repository migration"
+		return "repository migration", "migrating"
 	case integrationProgressView:
-		return "integration apply"
+		return "integration apply", "applying"
 	}
-	return ""
+	return "", ""
+}
+
+// InterruptedFlow names the operation in flight when the model is still on a
+// progress view, used by main to leave a stderr trace after a mid-flow quit.
+func (m Model) InterruptedFlow() string {
+	sentence, _ := m.flowIdentity()
+	return sentence
+}
+
+// windowTitle names the terminal tab: the repo at rest, the live operation
+// with its counts in flight.
+func (m Model) windowTitle() string {
+	title := "sentei · " + filepath.Base(m.repoPath)
+	if m.view == cleanupPreviewView && m.cleanupScan == nil {
+		return title + " · scanning"
+	}
+	if _, verb := m.flowIdentity(); verb != "" {
+		if l, ok := m.activeProgressLayout(); ok {
+			if done, total := l.overall(); total > 0 {
+				return fmt.Sprintf("%s · %s %d/%d", title, verb, done, total)
+			}
+		}
+		return title + " · " + verb
+	}
+	return title
+}
+
+// terminalProgress mirrors flow progress into the terminal's native (OSC 9;4)
+// indicator, from the same source as the spring target.
+func (m Model) terminalProgress() *tea.ProgressBar {
+	if (m.view == cleanupPreviewView && m.cleanupScan == nil) || m.indeterminateWaitActive() {
+		return &tea.ProgressBar{State: tea.ProgressBarIndeterminate}
+	}
+	l, ok := m.activeProgressLayout()
+	if !ok {
+		return nil
+	}
+	state := tea.ProgressBarDefault
+	for _, p := range l.Phases {
+		if p.failed > 0 {
+			state = tea.ProgressBarError
+		}
+	}
+	pct := 0
+	done, total := l.overall()
+	switch {
+	case total > 0:
+		pct = min((done*100)/total, 100)
+	case l.Completed:
+		pct = 100
+	}
+	return &tea.ProgressBar{State: state, Value: pct}
 }
