@@ -26,6 +26,9 @@ type palette struct {
 	rampAccent shimmerRamp // phase headlines, scans, running lines
 	rampBody   shimmerRamp // working step labels
 	rampDim    shimmerRamp // menu loading hints
+	// Completed-bar gradient: the fill settles green when the flow is done.
+	barDoneStart color.Color
+	barDoneEnd   color.Color
 }
 
 // The two palettes, selected by terminal background detection (model.go).
@@ -49,6 +52,9 @@ var (
 		rampAccent: shimmerRamp{base: "#5f5fd7", peak: "#d3d3ff"},
 		rampBody:   shimmerRamp{base: "#9a9a9a", peak: "#ffffff"},
 		rampDim:    shimmerRamp{base: "#6c6c6c", peak: "#b0b0b0"},
+		// Hex twins of success (42): deep sea green → spring green.
+		barDoneStart: lipgloss.Color("#00875f"),
+		barDoneEnd:   lipgloss.Color("#5fffaf"),
 	}
 
 	lightPalette = palette{
@@ -72,6 +78,9 @@ var (
 		rampAccent: shimmerRamp{base: "#5f00d7", peak: "#8b5fe8"},
 		rampBody:   shimmerRamp{base: "#6c6c6c", peak: "#1a1a1a"},
 		rampDim:    shimmerRamp{base: "#9e9e9e", peak: "#555555"},
+		// Hex twins of success (29).
+		barDoneStart: lipgloss.Color("#00875f"),
+		barDoneEnd:   lipgloss.Color("#00af5f"),
 	}
 )
 
@@ -79,21 +88,23 @@ var (
 // applyPalette: nothing in this package constructs a color or style outside
 // that one path.
 var (
-	colorAccent    color.Color
-	colorSuccess   color.Color
-	colorWarning   color.Color
-	colorError     color.Color
-	colorDim       color.Color
-	colorEmphasis  color.Color
-	colorBody      color.Color
-	colorSelected  color.Color
-	colorProtected color.Color
-	colorMuted     color.Color
-	colorBarStart  color.Color
-	colorBarEnd    color.Color
-	rampAccent     shimmerRamp
-	rampBody       shimmerRamp
-	rampDim        shimmerRamp
+	colorAccent       color.Color
+	colorSuccess      color.Color
+	colorWarning      color.Color
+	colorError        color.Color
+	colorDim          color.Color
+	colorEmphasis     color.Color
+	colorBody         color.Color
+	colorSelected     color.Color
+	colorProtected    color.Color
+	colorMuted        color.Color
+	colorBarStart     color.Color
+	colorBarEnd       color.Color
+	rampAccent        shimmerRamp
+	rampBody          shimmerRamp
+	rampDim           shimmerRamp
+	colorBarDoneStart color.Color
+	colorBarDoneEnd   color.Color
 
 	// UI chrome
 	styleStatusBar lipgloss.Style
@@ -167,6 +178,8 @@ func applyPalette(p palette) {
 	rampAccent = p.rampAccent
 	rampBody = p.rampBody
 	rampDim = p.rampDim
+	colorBarDoneStart = p.barDoneStart
+	colorBarDoneEnd = p.barDoneEnd
 
 	styleStatusBar = lipgloss.NewStyle().Foreground(colorDim).Padding(1, 0, 0, 0)
 	styleDim = lipgloss.NewStyle().Foreground(colorDim)
