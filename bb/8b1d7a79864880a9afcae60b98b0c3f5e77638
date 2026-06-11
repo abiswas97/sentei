@@ -1,0 +1,46 @@
+internal/tui/styles.go
+  s_121ba5aeb12306::t_7ea8bd180c7107 214,218-221
+openspec/changes/progress-motion/specs/tui-design-system/spec.md
+  s_121ba5aeb12306::t_bbdd48e03ddecb 18-19,21,23,25-35,42,51-61
+internal/tui/remove_run_test.go
+  s_121ba5aeb12306::t_02d2b3800296ba 157-158
+internal/tui/motion_test.go
+  s_121ba5aeb12306::t_00bad71d812502 42,47-48,51-52,54-55,59,63-64,68-75,79,89-90,94-96,98,102-104,106,108,110,112,115,120-121,123-129
+.impeccable.md
+  s_121ba5aeb12306::t_31d084812d8301 77-78
+  s_121ba5aeb12306::t_efa2b3abf771c5 84,89-93
+  s_121ba5aeb12306::t_77a1c5f7197d2e 51
+  s_121ba5aeb12306::t_b8ddc05314b7ef 99
+internal/tui/cleanup_preview.go
+  s_121ba5aeb12306::t_e26d23f9b32a4d 36-39,42
+openspec/changes/progress-motion/tasks.md
+  s_121ba5aeb12306::t_e3f5861bb7a7ae 9-12
+internal/tui/model.go
+  s_121ba5aeb12306::t_4e873a9b252be6 368
+  s_121ba5aeb12306::t_1406f7133e1e3c 540-541,543-545
+  s_121ba5aeb12306::t_405e1c5844014f 295
+  s_121ba5aeb12306::t_9ebb7df65b8f10 249-251
+  s_121ba5aeb12306::t_045cef64b1edd5 583-584,586-587,592-598,601-602,604-605
+internal/tui/cleanup_result.go
+  s_121ba5aeb12306::t_00529b40018527 44
+internal/tui/progress_layout.go
+  s_121ba5aeb12306::t_cdfcbdbdf6a361 269
+  s_121ba5aeb12306::t_eb2988a49e0140 201-203
+  s_121ba5aeb12306::t_d221ebfff5a2bb 39
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "bb8b1d7a79864880a9afcae60b98b0c3f5e77638",
+  "prompts": {},
+  "sessions": {
+    "s_121ba5aeb12306": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d1da0b9d-4a5f-4e2f-88ec-4088d9f5ce99",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Test <t@t.com>"
+    }
+  }
+}
