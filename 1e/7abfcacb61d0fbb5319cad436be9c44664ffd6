@@ -1,0 +1,40 @@
+openspec/changes/adaptive-theming/design.md
+  s_e079bea5665c1d::t_428205077a1869 1-37
+openspec/changes/adaptive-theming/tasks.md
+  s_e079bea5665c1d::t_da805d7cc57925 1-4,7-9,12-14,18
+internal/tui/menu_test.go
+  s_e079bea5665c1d::t_e7257c19ee07db 127,133-137
+openspec/changes/adaptive-theming/specs/tui-design-system/spec.md
+  s_e079bea5665c1d::t_e77803206dbae0 1-18
+internal/tui/model.go
+  s_e079bea5665c1d::t_c3b99bdbfff1f7 466-472
+  s_e079bea5665c1d::t_f3d00e92bbb111 437,439
+internal/tui/theme_test.go
+  s_e079bea5665c1d::t_1b776399266062 1-60
+internal/tui/styles.go
+  s_e079bea5665c1d::t_d146e8ca4df5ee 9-12,23-26,28-52,55-57,69-112,119-174,178
+  s_e079bea5665c1d::t_848f95b504125b 13-22
+  s_e079bea5665c1d::t_eb7f80dec5aa83 113-116
+  s_e079bea5665c1d::t_fa47c4dfdbc6df 175-177
+openspec/changes/adaptive-theming/proposal.md
+  s_e079bea5665c1d::t_ec4d0dd961da8d 1-30
+.impeccable.md
+  s_e079bea5665c1d::t_ca5593bc72f7d8 33
+  s_e079bea5665c1d::t_a8b076aeb7c185 13-14,16-29
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "1e7abfcacb61d0fbb5319cad436be9c44664ffd6",
+  "prompts": {},
+  "sessions": {
+    "s_e079bea5665c1d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e853bef1-293d-4109-b048-273e59305a6e",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Test <t@t.com>"
+    }
+  }
+}
