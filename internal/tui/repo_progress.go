@@ -69,7 +69,7 @@ func (m Model) updateRepoProgress(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case repoEventMsg:
 		m.repo.events = append(m.repo.events, pipeline.Event(msg))
-		return m, m.waitForRepoEvent()
+		return m, tea.Batch(m.syncProgressBar(), m.waitForRepoEvent())
 
 	case repoDoneMsg:
 		m.repo.result = msg.result
@@ -82,7 +82,7 @@ func (m Model) updateRepoProgress(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m Model) viewRepoProgress() string {
+func (m Model) repoLayout() ProgressLayout {
 	var title, subject string
 	switch m.repo.opType {
 	case "create":
@@ -103,5 +103,9 @@ func (m Model) viewRepoProgress() string {
 		Width:    m.width,
 		Height:   m.height,
 		Hints:    progressFooter,
-	}.View()
+	}
+}
+
+func (m Model) viewRepoProgress() string {
+	return m.renderProgressLayout(m.repoLayout())
 }

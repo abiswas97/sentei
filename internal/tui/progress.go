@@ -82,7 +82,7 @@ func (m Model) updateProgress(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case worktreeDeleteStartedMsg:
 		m.remove.run.statuses[msg.Path] = statusRemoving
-		return m, waitForDeletionEvent(m.remove.run.progressCh)
+		return m, tea.Batch(m.syncProgressBar(), waitForDeletionEvent(m.remove.run.progressCh))
 
 	case worktreeDeletedMsg:
 		m.remove.run.statuses[msg.Path] = statusRemoved
@@ -91,7 +91,7 @@ func (m Model) updateProgress(msg tea.Msg) (tea.Model, tea.Cmd) {
 			Path:    msg.Path,
 			Success: true,
 		})
-		return m, waitForDeletionEvent(m.remove.run.progressCh)
+		return m, tea.Batch(m.syncProgressBar(), waitForDeletionEvent(m.remove.run.progressCh))
 
 	case worktreeDeleteFailedMsg:
 		m.remove.run.statuses[msg.Path] = statusFailed
@@ -101,7 +101,7 @@ func (m Model) updateProgress(msg tea.Msg) (tea.Model, tea.Cmd) {
 			Success: false,
 			Error:   fmt.Errorf("removing %s: %w", msg.Path, msg.Err),
 		})
-		return m, waitForDeletionEvent(m.remove.run.progressCh)
+		return m, tea.Batch(m.syncProgressBar(), waitForDeletionEvent(m.remove.run.progressCh))
 
 	case allDeletionsCompleteMsg:
 		return m, runPrune(m.runner, m.repoPath)
@@ -121,14 +121,18 @@ func (m Model) updateProgress(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m Model) viewProgress() string {
+func (m Model) removalLayout() ProgressLayout {
 	return ProgressLayout{
 		Title:  "Removing Worktrees",
 		Phases: m.buildRemovalPhases(),
 		Width:  m.width,
 		Height: m.height,
 		Hints:  progressFooter,
-	}.View()
+	}
+}
+
+func (m Model) viewProgress() string {
+	return m.renderProgressLayout(m.removalLayout())
 }
 
 // buildRemovalPhases maps the current removal run onto the shared phase

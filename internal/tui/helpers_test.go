@@ -3,6 +3,11 @@ package tui
 import (
 	"path/filepath"
 
+	"charm.land/bubbles/v2/progress"
+	"charm.land/bubbles/v2/spinner"
+	"charm.land/bubbles/v2/stopwatch"
+	tea "charm.land/bubbletea/v2"
+
 	"github.com/abiswas97/sentei/internal/testutil/mock"
 )
 
@@ -30,4 +35,36 @@ func stripAnsi(s string) string {
 		i++
 	}
 	return string(result)
+}
+
+// pumpCmds drives a model's command chain to quiescence the way the runtime
+// would, expanding batches. Animation messages (spring frames, stopwatch
+// control, spinner ticks) are dropped so the pump never sleeps on a tick.
+func pumpCmds(model tea.Model, cmd tea.Cmd) tea.Model {
+	queue := []tea.Cmd{cmd}
+	for len(queue) > 0 {
+		c := queue[0]
+		queue = queue[1:]
+		if c == nil {
+			continue
+		}
+		msg := c()
+		if msg == nil {
+			continue
+		}
+		if batch, ok := msg.(tea.BatchMsg); ok {
+			queue = append(queue, batch...)
+			continue
+		}
+		switch msg.(type) {
+		case progress.FrameMsg, stopwatch.StartStopMsg, spinner.TickMsg:
+			continue
+		}
+		var next tea.Cmd
+		model, next = model.Update(msg)
+		if next != nil {
+			queue = append(queue, next)
+		}
+	}
+	return model
 }
