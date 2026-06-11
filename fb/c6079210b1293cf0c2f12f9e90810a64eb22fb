@@ -1,0 +1,27 @@
+openspec/changes/progress-bar-coherence/proposal.md
+  s_e079bea5665c1d::t_218894fd81ee53 1-26
+internal/tui/integration_progress_test.go
+  s_e079bea5665c1d::t_3d01d41a95992c 186-195
+internal/tui/progress_test.go
+  s_e079bea5665c1d::t_8e6e7788ab4e0a 60-61,63,65-78
+openspec/changes/progress-bar-coherence/specs/tui-chrome/spec.md
+  s_e079bea5665c1d::t_f0d45e282322c3 1-26
+openspec/changes/progress-bar-coherence/design.md
+  s_e079bea5665c1d::t_a7425f07b0dcb4 1-21
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "fbc6079210b1293cf0c2f12f9e90810a64eb22fb",
+  "prompts": {},
+  "sessions": {
+    "s_e079bea5665c1d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e853bef1-293d-4109-b048-273e59305a6e",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Test <t@t.com>"
+    }
+  }
+}
