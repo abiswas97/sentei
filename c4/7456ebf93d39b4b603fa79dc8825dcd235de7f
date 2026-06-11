@@ -1,0 +1,41 @@
+internal/tui/removal_e2e_test.go
+  s_dd70ced0a890b0::t_c02c7a829b9286 56
+internal/tui/confirm_test.go
+  s_dd70ced0a890b0::t_6195d172713184 32
+  s_dd70ced0a890b0::t_1be4cb2642c7fa 353
+internal/tui/chrome_migration_test.go
+  s_dd70ced0a890b0::t_30e109f499d677 110
+internal/tui/confirm.go
+  s_dd70ced0a890b0::t_83bf786afe7e82 190
+  s_dd70ced0a890b0::t_ba8863f6a7855a 183
+  s_dd70ced0a890b0::t_507e2abfc243e2 202
+  s_dd70ced0a890b0::t_d4f1b8470813ee 140
+  s_dd70ced0a890b0::t_ebbba2a6234f9c 208
+  s_dd70ced0a890b0::t_ff3974d33f3fb5 196
+internal/tui/cleanup_result.go
+  s_dd70ced0a890b0::t_816bf38cc7fd86 131
+internal/tui/cleanup_result_test.go
+  s_dd70ced0a890b0::t_9ef922425210b3 143-164
+internal/tui/summary.go
+  s_dd70ced0a890b0::t_402ac8f4f4a93b 82
+  s_dd70ced0a890b0::t_5764d6e60c0605 44
+  s_dd70ced0a890b0::t_b34fd7db35dfb2 85
+  s_dd70ced0a890b0::t_52aacbe9941924 88
+  s_dd70ced0a890b0::t_aee818566699a3 79
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "c47456ebf93d39b4b603fa79dc8825dcd235de7f",
+  "prompts": {},
+  "sessions": {
+    "s_dd70ced0a890b0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "1d4c7900-8a46-4b76-a13e-5f766c2a5f97",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Test <t@t.com>"
+    }
+  }
+}
