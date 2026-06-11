@@ -1,0 +1,37 @@
+openspec/changes/spinner-indeterminate-waits/design.md
+  s_e079bea5665c1d::t_6ae62fbe7d234a 1-31
+openspec/changes/spinner-indeterminate-waits/tasks.md
+  s_e079bea5665c1d::t_a42f001cbf8093 1-4,9-11,14
+internal/tui/cleanup_preview.go
+  s_e079bea5665c1d::t_fc2f6c72eb1990 39
+  s_e079bea5665c1d::t_c60413f2f79f1d 140
+openspec/changes/spinner-indeterminate-waits/specs/tui-design-system/spec.md
+  s_e079bea5665c1d::t_1de2c48ad64cbd 1-22
+internal/tui/spinner_test.go
+  s_e079bea5665c1d::t_01f24936184490 1-37,39-61,63-68
+openspec/changes/spinner-indeterminate-waits/proposal.md
+  s_e079bea5665c1d::t_054e93b7a2c0ed 1-28
+internal/tui/model.go
+  s_e079bea5665c1d::t_ce656f4078152b 249-252
+  s_e079bea5665c1d::t_8404a106fdf1d9 288
+  s_e079bea5665c1d::t_7d46ce080ec3ac 119-120,125
+  s_e079bea5665c1d::t_e8b31c60987140 328
+internal/tui/cleanup_preview_test.go
+  s_e079bea5665c1d::t_859524798f55df 40
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "f26e105912a9d6b440e36eb88bb9010dc49cdb81",
+  "prompts": {},
+  "sessions": {
+    "s_e079bea5665c1d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e853bef1-293d-4109-b048-273e59305a6e",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Test <t@t.com>"
+    }
+  }
+}
