@@ -20,7 +20,6 @@ const (
 	colStatus   = 2
 	colBranch   = 3
 	colAge      = 4
-	colSubject  = 5
 )
 
 func relativeTime(t time.Time) string {
@@ -311,22 +310,42 @@ func (m Model) viewList() string {
 		hdrAge += arrow
 	}
 
+	// Column priority: structure survives narrow terminals, detail degrades.
+	// Width 0 (untested sizing) counts as wide.
+	showAge := m.width == 0 || m.width >= 56
+	showSubject := m.width == 0 || m.width >= 72
+
+	headers := []string{"", "", "", hdrBranch}
+	if showAge {
+		headers = append(headers, hdrAge)
+	}
+	if showSubject {
+		headers = append(headers, hdrSubject)
+	}
+
 	t := table.New().
 		BorderTop(false).BorderBottom(false).
 		BorderLeft(false).BorderRight(false).
 		BorderColumn(false).BorderHeader(false).BorderRow(false).
-		Headers("", "", "", hdrBranch, hdrAge, hdrSubject).
-		Wrap(true)
+		Headers(headers...).
+		Wrap(false)
 
 	if m.width > 0 {
 		t.Width(m.width)
 	}
 
-	fixedWidth := colWidthCursor + colWidthCheckbox + colWidthStatus + colWidthAge
+	fixedWidth := colWidthCursor + colWidthCheckbox + colWidthStatus
+	if showAge {
+		fixedWidth += colWidthAge
+	}
 	colPadding := 3
 	remaining := max(m.width-fixedWidth-colPadding, 20)
-	branchWidth := remaining / 2
-	subjectWidth := remaining - branchWidth
+	branchWidth := remaining
+	subjectWidth := 0
+	if showSubject {
+		branchWidth = remaining / 2
+		subjectWidth = remaining - branchWidth
+	}
 
 	for i := m.remove.offset; i < end; i++ {
 		wt := m.remove.worktrees[m.remove.visibleIndices[i]]
@@ -367,20 +386,46 @@ func (m Model) viewList() string {
 			subject = wt.EnrichmentError
 		}
 
-		maxSubject := subjectWidth - 2
-		if maxSubject > 3 && lipgloss.Width(subject) > maxSubject {
-			runes := []rune(subject)
-			if len(runes) > maxSubject-3 {
-				subject = string(runes[:maxSubject-3]) + "..."
-			}
+		// One-line rows are law: cells truncate with …, never wrap.
+		branch = truncateWithEllipsis(branch, max(branchWidth-2, 4))
+		row := []string{cursor, checkbox, status, branch}
+		if showAge {
+			row = append(row, age)
 		}
-
-		t.Row(cursor, checkbox, status, branch, age, subject)
+		if showSubject {
+			row = append(row, truncateWithEllipsis(subject, max(subjectWidth-2, 4)))
+		}
+		t.Row(row...)
 	}
 
-	sortedCol := colAge
-	if m.remove.sortField == SortByBranch {
+	sortedCol := -1
+	switch m.remove.sortField {
+	case SortByBranch:
 		sortedCol = colBranch
+	case SortByAge:
+		if showAge {
+			sortedCol = colAge
+		}
+	}
+
+	// Column widths by dynamic position: fixed leading columns, then the
+	// flexible Branch, then whichever detail columns the width allows.
+	styleFor := func(base lipgloss.Style, col int) lipgloss.Style {
+		switch {
+		case col == colCursor:
+			return base.Width(colWidthCursor)
+		case col == colCheckbox:
+			return base.Width(colWidthCheckbox)
+		case col == colStatus:
+			return base.Width(colWidthStatus)
+		case col == colBranch:
+			return base.Width(branchWidth).Padding(0, 1)
+		case showAge && col == colAge:
+			return base.Width(colWidthAge).Padding(0, 1)
+		case showSubject:
+			return base.Width(subjectWidth).Padding(0, 1)
+		}
+		return base
 	}
 
 	t.StyleFunc(func(row, col int) lipgloss.Style {
@@ -389,7 +434,7 @@ func (m Model) viewList() string {
 			if col == sortedCol {
 				base = styleColumnHeaderSorted
 			}
-			return columnStyle(base, col, branchWidth, subjectWidth)
+			return styleFor(base, col)
 		}
 
 		idx := m.remove.offset + row
@@ -404,7 +449,7 @@ func (m Model) viewList() string {
 			base = styleNormalRow
 		}
 
-		return columnStyle(base, col, branchWidth, subjectWidth)
+		return styleFor(base, col)
 	})
 
 	b.WriteString(t.Render())
@@ -449,29 +494,20 @@ func (m Model) viewStatusBar() string {
 }
 
 func (m Model) viewLegend() string {
-	return styleDim.Render("  ") +
+	full := styleDim.Render("  ") +
 		styleStatusClean.Render("[ok]") + styleDim.Render(" clean  ") +
 		styleStatusDirty.Render("[~]") + styleDim.Render(" dirty  ") +
 		styleStatusUntracked.Render("[!]") + styleDim.Render(" untracked  ") +
 		styleStatusLocked.Render("[L]") + styleDim.Render(" locked  ") +
 		styleStatusProtected.Render("[P]") + styleDim.Render(" protected")
-}
-
-func columnStyle(base lipgloss.Style, col, branchWidth, subjectWidth int) lipgloss.Style {
-	switch col {
-	case colCursor:
-		return base.Width(colWidthCursor)
-	case colCheckbox:
-		return base.Width(colWidthCheckbox)
-	case colStatus:
-		return base.Width(colWidthStatus)
-	case colBranch:
-		return base.Width(branchWidth).Padding(0, 1)
-	case colAge:
-		return base.Width(colWidthAge).Padding(0, 1)
-	case colSubject:
-		return base.Width(subjectWidth).Padding(0, 1)
-	default:
-		return base
+	if m.width == 0 || lipgloss.Width(full) <= m.width {
+		return full
 	}
+	// Narrow terminals get the badges alone; F1 help carries the labels.
+	return styleDim.Render("  ") +
+		styleStatusClean.Render("[ok]") + " " +
+		styleStatusDirty.Render("[~]") + " " +
+		styleStatusUntracked.Render("[!]") + " " +
+		styleStatusLocked.Render("[L]") + " " +
+		styleStatusProtected.Render("[P]")
 }
