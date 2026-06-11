@@ -1,0 +1,19 @@
+openspec/specs/tui-chrome/spec.md
+  s_e079bea5665c1d::t_594576bee95619 125,129,135-141
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "1661206fa9c57944dc194c252c6fbde84e370e10",
+  "prompts": {},
+  "sessions": {
+    "s_e079bea5665c1d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e853bef1-293d-4109-b048-273e59305a6e",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Test <t@t.com>"
+    }
+  }
+}
