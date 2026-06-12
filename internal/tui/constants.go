@@ -47,3 +47,8 @@ const progressSettleFloor = time.Second
 // confirmNameWidthCap bounds the confirm screen's name column so one long
 // branch cannot push the risk notes off to the right.
 const confirmNameWidthCap = 28
+
+// formInputWidth is the shared cell width of text-input fields: wide enough
+// for real URLs, and required because the v2 textinput renders only the
+// first placeholder rune when its width is unset.
+const formInputWidth = 48

@@ -133,13 +133,18 @@ func TestViewRepoName_RendersFieldsAndError(t *testing.T) {
 	}
 }
 
-func TestViewRepoName_BlurredEmptyNameShowsPlaceholder(t *testing.T) {
+func TestViewRepoName_BlurredEmptyShowsInputPlaceholder(t *testing.T) {
 	m := repoNameModel("/repo")
 	m.repo.focusedField = 1
+	m.repo.nameInput.Blur()
+	m.repo.locationInput.Focus()
 
 	view := stripANSI(m.viewRepoName())
 
-	if !strings.Contains(view, "(empty)") {
-		t.Errorf("blurred empty name field should show (empty):\n%s", view)
+	if strings.Contains(view, "(empty)") {
+		t.Errorf("fields render persistently now; (empty) is retired:\n%s", view)
+	}
+	if !strings.Contains(view, "my-project") {
+		t.Errorf("blurred empty field should show its placeholder:\n%s", view)
 	}
 }
