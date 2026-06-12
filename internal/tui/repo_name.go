@@ -109,36 +109,12 @@ func (m Model) viewRepoName() string {
 	b.WriteString(viewSeparator(m.width))
 	b.WriteString("\n\n")
 
-	if m.repo.focusedField == 0 {
-		b.WriteString(styleAccent.Render("  Repository name") + "\n")
-	} else {
-		b.WriteString("  Repository name\n")
-	}
-	if m.repo.focusedField == 0 {
-		b.WriteString("  " + m.repo.nameInput.View())
-	} else {
-		val := m.repo.nameInput.Value()
-		if val == "" {
-			val = styleDim.Render("(empty)")
-		}
-		b.WriteString("    " + val)
-	}
+	b.WriteString(inputFieldLabel("Repository name", m.repo.focusedField == 0))
+	b.WriteString("  " + m.repo.nameInput.View())
 	b.WriteString("\n\n")
 
-	if m.repo.focusedField == 1 {
-		b.WriteString(styleAccent.Render("  Location") + "\n")
-	} else {
-		b.WriteString("  Location\n")
-	}
-	if m.repo.focusedField == 1 {
-		b.WriteString("  " + m.repo.locationInput.View())
-	} else {
-		val := m.repo.locationInput.Value()
-		if val == "" {
-			val = styleDim.Render("(empty)")
-		}
-		b.WriteString("    " + val)
-	}
+	b.WriteString(inputFieldLabel("Location", m.repo.focusedField == 1))
+	b.WriteString("  " + m.repo.locationInput.View())
 	b.WriteString("\n")
 
 	if m.repo.validationErr != "" {

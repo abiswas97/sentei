@@ -303,10 +303,12 @@ func NewModel(worktrees []git.Worktree, runner git.CommandRunner, repoPath strin
 func NewMenuModel(runner git.CommandRunner, shell git.ShellRunner, repoPath string, cfg *config.Config, context repo.RepoContext, opts ...ModelOption) Model {
 	branchInput := textinput.New()
 	branchInput.Placeholder = "feature/my-branch"
+	branchInput.SetWidth(formInputWidth)
 	branchInput.Focus()
 
 	baseInput := textinput.New()
 	baseInput.Placeholder = "main"
+	baseInput.SetWidth(formInputWidth)
 	baseInput.SetValue(defaultBaseBranch)
 
 	filterInput := textinput.New()
@@ -314,19 +316,24 @@ func NewMenuModel(runner git.CommandRunner, shell git.ShellRunner, repoPath stri
 
 	nameInput := textinput.New()
 	nameInput.Placeholder = "my-project"
+	nameInput.SetWidth(formInputWidth)
 
 	locationInput := textinput.New()
 	locationInput.SetValue(repoPath)
 	locationInput.Placeholder = repoPath
+	locationInput.SetWidth(formInputWidth)
 
 	descInput := textinput.New()
 	descInput.Placeholder = "optional description"
+	descInput.SetWidth(formInputWidth)
 
 	urlInput := textinput.New()
 	urlInput.Placeholder = "git@github.com:user/repo.git"
+	urlInput.SetWidth(formInputWidth)
 
 	cloneNameInput := textinput.New()
 	cloneNameInput.Placeholder = "repo"
+	cloneNameInput.SetWidth(formInputWidth)
 
 	var items []menuItem
 	switch context {
