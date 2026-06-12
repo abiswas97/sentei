@@ -68,4 +68,17 @@ func (r *PhaseRecorder) Emit(step string, status StepStatus, message string) {
 	r.emit(Event{Phase: r.phase.Name, Step: step, Status: status, Message: message})
 }
 
+// DeclareSteps emits the Pending burst for steps the phase knows it will
+// certainly run, so totals are real before work starts.
+func (r *PhaseRecorder) DeclareSteps(names ...string) {
+	for _, name := range names {
+		r.emit(Event{Phase: r.phase.Name, Step: name, Status: StepPending, Of: 1})
+	}
+}
+
+// Close emits the phase-close marker: the phase's step set is final.
+func (r *PhaseRecorder) Close() {
+	r.emit(Event{Phase: r.phase.Name, Close: true})
+}
+
 func (r *PhaseRecorder) Phase() Phase { return r.phase }

@@ -75,6 +75,7 @@ func CreateWithGh(runner git.CommandRunner, _ git.ShellRunner, gh GhRunner, opts
 
 	setupPhase := runCreateSetup(runner, repoPath, opts, emit)
 	result.Phases = append(result.Phases, setupPhase)
+	progress.ClosePhase(setupPhase.Name, emit)
 	if setupPhase.HasFailures() {
 		return result
 	}
@@ -83,6 +84,7 @@ func CreateWithGh(runner git.CommandRunner, _ git.ShellRunner, gh GhRunner, opts
 	if opts.PublishGitHub {
 		ghPhase := runCreateGitHub(runner, gh, repoPath, opts, emit)
 		result.Phases = append(result.Phases, ghPhase)
+		progress.ClosePhase(ghPhase.Name, emit)
 		if !ghPhase.HasFailures() {
 			// Extract GitHub URL from user lookup
 			for _, step := range ghPhase.Steps {

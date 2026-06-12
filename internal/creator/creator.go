@@ -40,9 +40,11 @@ func Run(runner git.CommandRunner, shell git.ShellRunner, opts Options, emit fun
 
 	depsPhase := runDeps(shell, result.WorktreePath, opts, emit)
 	result.Phases = append(result.Phases, depsPhase)
+	progress.ClosePhase(depsPhase.Name, emit)
 
 	intPhase := runIntegrations(shell, result.WorktreePath, opts, emit)
 	result.Phases = append(result.Phases, intPhase)
+	progress.ClosePhase(intPhase.Name, emit)
 
 	return result
 }

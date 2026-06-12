@@ -34,6 +34,7 @@ func Migrate(runner git.CommandRunner, shell git.ShellRunner, opts MigrateOption
 	// Phase 1: Validate
 	validatePhase, branch, isDirty := runMigrateValidate(runner, opts.RepoPath, emit)
 	result.Phases = append(result.Phases, validatePhase)
+	progress.ClosePhase(validatePhase.Name, emit)
 	result.Branch = branch
 	result.IsDirty = isDirty
 	if validatePhase.HasFailures() {
@@ -43,6 +44,7 @@ func Migrate(runner git.CommandRunner, shell git.ShellRunner, opts MigrateOption
 	// Phase 2: Backup
 	backupPhase, backupPath, backupSize := runMigrateBackup(shell, opts.RepoPath, emit)
 	result.Phases = append(result.Phases, backupPhase)
+	progress.ClosePhase(backupPhase.Name, emit)
 	result.BackupPath = backupPath
 	result.BackupSize = backupSize
 	if backupPhase.HasFailures() {
@@ -52,6 +54,7 @@ func Migrate(runner git.CommandRunner, shell git.ShellRunner, opts MigrateOption
 	// Phase 3: Migrate
 	migratePhase := runMigrateBare(runner, opts.RepoPath, branch, emit)
 	result.Phases = append(result.Phases, migratePhase)
+	progress.ClosePhase(migratePhase.Name, emit)
 	if migratePhase.HasFailures() {
 		return result
 	}
@@ -60,6 +63,7 @@ func Migrate(runner git.CommandRunner, shell git.ShellRunner, opts MigrateOption
 	// Phase 4: Copy (best-effort)
 	copyPhase := runMigrateCopy(backupPath, result.WorktreePath, emit)
 	result.Phases = append(result.Phases, copyPhase)
+	progress.ClosePhase(copyPhase.Name, emit)
 
 	return result
 }

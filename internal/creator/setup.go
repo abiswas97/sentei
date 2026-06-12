@@ -14,6 +14,17 @@ import (
 func runSetup(runner git.CommandRunner, opts Options, emit func(progress.Event)) progress.Phase {
 	phase := progress.Phase{Name: "Setup"}
 
+	// Declare the steps that will certainly emit (all decidable from opts),
+	// then close: the Setup step set is final from the first frame.
+	planned := []progress.PlannedStep{{Name: "Create worktree"}}
+	if opts.MergeBase {
+		planned = append(planned, progress.PlannedStep{Name: "Merge base branch"})
+	}
+	if opts.CopyEnvFiles && setupHasEnvFiles(opts) {
+		planned = append(planned, progress.PlannedStep{Name: "Copy env files"})
+	}
+	progress.Declare(progress.Plan{Phases: []progress.PlannedPhase{{Name: "Setup", Steps: planned}}}, emit)
+
 	wtResult, wtPath := createWorktreeStep(runner, opts.RepoPath, opts.BranchName, opts.BaseBranch, emit)
 	phase.Steps = append(phase.Steps, wtResult)
 
@@ -39,6 +50,17 @@ func runSetup(runner git.CommandRunner, opts Options, emit func(progress.Event))
 	}
 
 	return phase
+}
+
+// setupHasEnvFiles reports whether any detected ecosystem lists env files,
+// the condition under which the copy step will actually emit.
+func setupHasEnvFiles(opts Options) bool {
+	for _, eco := range opts.Ecosystems {
+		if len(eco.EnvFiles) > 0 {
+			return true
+		}
+	}
+	return false
 }
 
 func createWorktreeStep(runner git.CommandRunner, repoPath, branch, baseBranch string, emit func(progress.Event)) (progress.StepResult, string) {

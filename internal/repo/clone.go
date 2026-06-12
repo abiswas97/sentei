@@ -68,6 +68,7 @@ func Clone(runner git.CommandRunner, opts CloneOptions, emit func(progress.Event
 	// a bare repo with a "success" message.
 	if vphase, ok := validateCloneTarget(opts, repoPath); !ok {
 		result.Phases = append(result.Phases, vphase)
+		progress.ClosePhase(vphase.Name, emit)
 		return result
 	}
 
@@ -79,6 +80,7 @@ func Clone(runner git.CommandRunner, opts CloneOptions, emit func(progress.Event
 	// Phase 1: Clone
 	clonePhase := runClonePhase(runner, opts.Location, opts.URL, barePath, emit)
 	result.Phases = append(result.Phases, clonePhase)
+	progress.ClosePhase(clonePhase.Name, emit)
 	if clonePhase.HasFailures() {
 		rollback()
 		return result
@@ -87,6 +89,7 @@ func Clone(runner git.CommandRunner, opts CloneOptions, emit func(progress.Event
 	// Phase 2: Structure
 	structPhase := runCloneStructure(runner, repoPath, barePath, emit)
 	result.Phases = append(result.Phases, structPhase)
+	progress.ClosePhase(structPhase.Name, emit)
 	if structPhase.HasFailures() {
 		rollback()
 		return result
@@ -95,6 +98,7 @@ func Clone(runner git.CommandRunner, opts CloneOptions, emit func(progress.Event
 	// Phase 3: Worktree
 	wtPhase, branch, worktreeCreated := runCloneWorktree(runner, repoPath, barePath, emit)
 	result.Phases = append(result.Phases, wtPhase)
+	progress.ClosePhase(wtPhase.Name, emit)
 	result.DefaultBranch = branch
 	// Only advertise a worktree path when one was actually created. A failed
 	// worktree add must not leave WorktreePath set, or consumers report success
