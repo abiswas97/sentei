@@ -49,13 +49,13 @@ func EnableIntegration(
 		} else {
 			// Tool already installed — skip install and dep steps.
 			for _, dep := range integ.Dependencies {
-				emit(progress.Event{Phase: wtPath, Step: "Install dependency " + dep.Name, Status: progress.StepSkipped})
+				emit(progress.Event{Phase: wtPath, Step: InstallDependencyStepName(dep), Status: progress.StepSkipped})
 			}
-			emit(progress.Event{Phase: wtPath, Step: "Install " + integ.Name, Status: progress.StepSkipped})
+			emit(progress.Event{Phase: wtPath, Step: InstallStepName(integ), Status: progress.StepSkipped})
 		}
 
 		// Step 3: run setup.
-		stepName := "Setup " + integ.Name
+		stepName := SetupStepName(integ)
 		emit(progress.Event{Phase: wtPath, Step: stepName, Status: progress.StepRunning})
 
 		workDir := wtPath
@@ -89,7 +89,7 @@ func DisableIntegration(
 	for _, wtPath := range wtPaths {
 		// Step 1: run teardown command.
 		if integ.Teardown.Command != "" {
-			stepName := "Teardown " + integ.Name
+			stepName := TeardownStepName(integ)
 			emit(progress.Event{Phase: wtPath, Step: stepName, Status: progress.StepRunning})
 			if _, err := shell.RunShell(wtPath, integ.Teardown.Command); err != nil {
 				emit(progress.Event{Phase: wtPath, Step: stepName, Status: progress.StepFailed, Error: err})
@@ -103,7 +103,7 @@ func DisableIntegration(
 		for _, dir := range integ.Teardown.Dirs {
 			dirName := strings.TrimSuffix(dir, "/")
 			fullPath := filepath.Join(wtPath, dirName)
-			stepName := fmt.Sprintf("Remove %s in %s", dirName, filepath.Base(wtPath))
+			stepName := RemoveDirStepName(dir, wtPath)
 			emit(progress.Event{Phase: wtPath, Step: stepName, Status: progress.StepRunning})
 			if err := os.RemoveAll(fullPath); err != nil {
 				emit(progress.Event{Phase: wtPath, Step: stepName, Status: progress.StepFailed, Error: err})
@@ -134,7 +134,7 @@ func detectTool(shell git.ShellRunner, wtPath string, integ Integration) bool {
 func installTool(shell git.ShellRunner, wtPath string, integ Integration, emit func(progress.Event)) error {
 	// Check and install dependencies.
 	for _, dep := range integ.Dependencies {
-		stepName := "Install dependency " + dep.Name
+		stepName := InstallDependencyStepName(dep)
 		_, err := shell.RunShell(wtPath, dep.Detect)
 		if err != nil && dep.Install != "" {
 			emit(progress.Event{Phase: wtPath, Step: stepName, Status: progress.StepRunning})
@@ -149,7 +149,7 @@ func installTool(shell git.ShellRunner, wtPath string, integ Integration, emit f
 	}
 
 	// Install the tool itself.
-	stepName := "Install " + integ.Name
+	stepName := InstallStepName(integ)
 	emit(progress.Event{Phase: wtPath, Step: stepName, Status: progress.StepRunning})
 	if _, err := shell.RunShell(wtPath, integ.Install.Command); err != nil {
 		emit(progress.Event{Phase: wtPath, Step: stepName, Status: progress.StepFailed, Error: err})

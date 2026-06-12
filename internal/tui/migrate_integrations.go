@@ -118,8 +118,12 @@ func (m Model) startMigrateIntegrationApply() (Model, tea.Cmd) {
 
 	go func() {
 		emit := func(e progress.Event) { ch <- e }
-		for _, integ := range toEnable {
-			integration.EnableIntegration(shell, repoPath, wtPath, []string{wtPath}, integ, emit)
+		if len(toEnable) > 0 {
+			progress.Declare(integration.ApplyPlan(toEnable, nil, []string{wtPath}), emit)
+			for _, integ := range toEnable {
+				integration.EnableIntegration(shell, repoPath, wtPath, []string{wtPath}, integ, emit)
+			}
+			progress.ClosePhase(wtPath, emit)
 		}
 		close(ch)
 		doneCh <- struct{}{}

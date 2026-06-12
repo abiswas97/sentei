@@ -114,7 +114,7 @@ func (m Model) buildIntegrationPhases() []progress.PhaseState {
 	seen := make(map[string]bool)
 
 	for _, g := range groupIntegrationEvents(m.integ.events) {
-		pd := progress.PhaseState{Name: filepath.Base(g.worktree)}
+		pd := progress.PhaseState{Name: filepath.Base(g.worktree), Closed: g.closed}
 		seen[g.worktree] = true
 		for _, s := range g.steps {
 			if s.ev.Status == progress.StepSkipped {
@@ -126,19 +126,17 @@ func (m Model) buildIntegrationPhases() []progress.PhaseState {
 				// final line; the summary's peek and portal carry the rest.
 				label += " " + errorPeekLast(s.ev.Error.Error(), max(m.width-10, 20))
 			}
-			var status progress.StepStatus
+			step := progress.StepState{Name: label, Status: s.ev.Status, Declared: 1}
 			switch s.ev.Status {
 			case progress.StepDone:
-				status = progress.StepDone
 				pd.Done++
-			case progress.StepRunning:
-				status = progress.StepRunning
+				step.Reached = 1
 			case progress.StepFailed:
-				status = progress.StepFailed
 				pd.Failed++
 				pd.Done++
+				step.Reached = 1
 			}
-			pd.Steps = append(pd.Steps, progress.StepState{Name: label, Status: status})
+			pd.Steps = append(pd.Steps, step)
 		}
 		pd.Total = len(pd.Steps)
 		phases = append(phases, pd)

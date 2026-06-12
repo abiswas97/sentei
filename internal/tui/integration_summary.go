@@ -19,11 +19,12 @@ type integrationStepOutcome struct {
 type integrationWorktreeOutcomes struct {
 	worktree string
 	steps    []integrationStepOutcome
+	closed   bool
 }
 
 // groupIntegrationEvents folds an apply's event stream into per-worktree step
 // outcomes: groups in first-seen order, one entry per step holding its latest
-// event. Shared by the progress and summary views.
+// event, plus the phase-close marker. Shared by the progress and summary views.
 func groupIntegrationEvents(events []progress.Event) []integrationWorktreeOutcomes {
 	var groups []integrationWorktreeOutcomes
 	groupIndex := make(map[string]int)
@@ -36,6 +37,10 @@ func groupIntegrationEvents(events []progress.Event) []integrationWorktreeOutcom
 			groupIndex[ev.Phase] = gi
 			groups = append(groups, integrationWorktreeOutcomes{worktree: ev.Phase})
 			stepIndex[ev.Phase] = make(map[string]int)
+		}
+		if ev.Close {
+			groups[gi].closed = true
+			continue
 		}
 		if si, exists := stepIndex[ev.Phase][ev.Step]; exists {
 			groups[gi].steps[si].ev = ev

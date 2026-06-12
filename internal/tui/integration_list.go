@@ -137,11 +137,18 @@ func (m Model) startIntegrationApply() (Model, tea.Cmd) {
 
 	go func() {
 		emit := func(e progress.Event) { ch <- e }
-		for _, integ := range toEnable {
-			integration.EnableIntegration(shell, repoPath, mainWT, wtPaths, integ, emit)
-		}
-		for _, integ := range toDisable {
-			integration.DisableIntegration(shell, wtPaths, integ, emit)
+		// Worktree-outer execution: each worktree phase opens once (its plan
+		// declares the certain steps upfront) and closes exactly once when
+		// that worktree's work is done, so a settled phase can never reopen.
+		progress.Declare(integration.ApplyPlan(toEnable, toDisable, wtPaths), emit)
+		for _, wtPath := range wtPaths {
+			for _, integ := range toEnable {
+				integration.EnableIntegration(shell, repoPath, mainWT, []string{wtPath}, integ, emit)
+			}
+			for _, integ := range toDisable {
+				integration.DisableIntegration(shell, []string{wtPath}, integ, emit)
+			}
+			progress.ClosePhase(wtPath, emit)
 		}
 		close(ch)
 		doneCh <- struct{}{}
