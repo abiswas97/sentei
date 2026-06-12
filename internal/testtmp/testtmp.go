@@ -15,6 +15,25 @@ import (
 	"testing"
 )
 
+// HermeticGitEnv returns the process environment hardened so a git child
+// process cannot read or write ANY configuration outside the repository it
+// is pointed at: global and system config are voided, and identity comes
+// from the environment. Tests must never depend on, or be able to mutate,
+// the developer's real git identity or config; a path bug in a test then
+// fails loudly instead of silently poisoning the developer's repositories.
+// The .invalid TLD (RFC 2606) can never be claimed by a forge account, so a
+// leaked identity can never be attributed to a stranger.
+func HermeticGitEnv() []string {
+	return append(os.Environ(),
+		"GIT_CONFIG_GLOBAL=/dev/null",
+		"GIT_CONFIG_SYSTEM=/dev/null",
+		"GIT_AUTHOR_NAME=sentei-test",
+		"GIT_AUTHOR_EMAIL=test@sentei.invalid",
+		"GIT_COMMITTER_NAME=sentei-test",
+		"GIT_COMMITTER_EMAIL=test@sentei.invalid",
+	)
+}
+
 // markNoIndex excludes dir's subtree from macOS Spotlight indexing.
 func markNoIndex(dir string) {
 	_ = os.WriteFile(filepath.Join(dir, ".metadata_never_index"), nil, 0o644)

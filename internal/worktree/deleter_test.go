@@ -13,6 +13,7 @@ import (
 
 	"github.com/abiswas97/sentei/internal/git"
 	"github.com/abiswas97/sentei/internal/progress"
+	"github.com/abiswas97/sentei/internal/testtmp"
 )
 
 func collectEvents(ch <-chan progress.Event) []progress.Event {
@@ -281,6 +282,7 @@ func TestUnlockWorktree_UnlocksLockedWorktree(t *testing.T) {
 		t.Helper()
 		cmd := exec.Command("git", args...)
 		cmd.Dir = dir
+		cmd.Env = testtmp.HermeticGitEnv()
 		out, err := cmd.CombinedOutput()
 		if err != nil {
 			t.Fatalf("git %v: %s", args, out)
@@ -302,7 +304,9 @@ func TestUnlockWorktree_UnlocksLockedWorktree(t *testing.T) {
 	run(repoPath, "worktree", "lock", wtPath)
 
 	// Verify it's locked — check for "locked" as a standalone line in porcelain output
-	out, _ := exec.Command("git", "-C", repoPath, "worktree", "list", "--porcelain").CombinedOutput()
+	lockCheck := exec.Command("git", "-C", repoPath, "worktree", "list", "--porcelain")
+	lockCheck.Env = testtmp.HermeticGitEnv()
+	out, _ := lockCheck.CombinedOutput()
 	if !containsLockedLine(string(out)) {
 		t.Fatal("worktree should be locked")
 	}
@@ -314,7 +318,9 @@ func TestUnlockWorktree_UnlocksLockedWorktree(t *testing.T) {
 	}
 
 	// Verify it's no longer locked
-	out, _ = exec.Command("git", "-C", repoPath, "worktree", "list", "--porcelain").CombinedOutput()
+	lockCheck2 := exec.Command("git", "-C", repoPath, "worktree", "list", "--porcelain")
+	lockCheck2.Env = testtmp.HermeticGitEnv()
+	out, _ = lockCheck2.CombinedOutput()
 	if containsLockedLine(string(out)) {
 		t.Fatal("worktree should no longer be locked after UnlockWorktree")
 	}
@@ -339,6 +345,7 @@ func TestUnlockWorktree_AlreadyUnlocked_NoError(t *testing.T) {
 		t.Helper()
 		cmd := exec.Command("git", args...)
 		cmd.Dir = dir
+		cmd.Env = testtmp.HermeticGitEnv()
 		out, err := cmd.CombinedOutput()
 		if err != nil {
 			t.Fatalf("git %v: %s", args, out)

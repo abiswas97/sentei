@@ -15,6 +15,7 @@ import (
 	"github.com/abiswas97/sentei/internal/config"
 	"github.com/abiswas97/sentei/internal/git"
 	"github.com/abiswas97/sentei/internal/repo"
+	"github.com/abiswas97/sentei/internal/testtmp"
 	"github.com/abiswas97/sentei/internal/worktree"
 )
 
@@ -85,6 +86,7 @@ func runGitCmd(t *testing.T, dir string, args ...string) {
 	t.Helper()
 	cmd := exec.Command("git", args...)
 	cmd.Dir = dir
+	cmd.Env = testtmp.HermeticGitEnv()
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		t.Fatalf("git %v failed in %s: %v\n%s", args, dir, err, out)

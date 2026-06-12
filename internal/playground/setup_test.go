@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/abiswas97/sentei/internal/testtmp"
 )
 
 func TestSetup_CreatesExpectedWorktrees(t *testing.T) {
@@ -15,7 +17,9 @@ func TestSetup_CreatesExpectedWorktrees(t *testing.T) {
 	}
 	defer cleanup()
 
-	out, err := exec.Command("git", "-C", repoPath, "worktree", "list", "--porcelain").Output()
+	wtList := exec.Command("git", "-C", repoPath, "worktree", "list", "--porcelain")
+	wtList.Env = testtmp.HermeticGitEnv()
+	out, err := wtList.Output()
 	if err != nil {
 		t.Fatalf("git worktree list error: %v", err)
 	}
@@ -70,7 +74,9 @@ func TestSetup_ConcurrentSessionsAreIsolated(t *testing.T) {
 
 	// Destroying session B must leave session A fully functional.
 	cleanupB()
-	if _, err := exec.Command("git", "-C", repoA, "worktree", "list", "--porcelain").Output(); err != nil {
+	wtListA := exec.Command("git", "-C", repoA, "worktree", "list", "--porcelain")
+	wtListA.Env = testtmp.HermeticGitEnv()
+	if _, err := wtListA.Output(); err != nil {
 		t.Fatalf("session A broken after session B cleanup: %v", err)
 	}
 }

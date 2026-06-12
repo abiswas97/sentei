@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/abiswas97/sentei/internal/testtmp"
 )
 
 func buildBinary(t *testing.T) string {
@@ -24,6 +26,7 @@ func TestEcosystemsCLI(t *testing.T) {
 	bin := buildBinary(t)
 
 	cmd := exec.Command(bin, "ecosystems")
+	cmd.Env = testtmp.HermeticGitEnv()
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		t.Fatalf("sentei ecosystems failed: %v\n%s", err, out)
@@ -41,6 +44,7 @@ func TestUnknownCommandCLI(t *testing.T) {
 	bin := buildBinary(t)
 
 	cmd := exec.Command(bin, "foobar")
+	cmd.Env = testtmp.HermeticGitEnv()
 	out, err := cmd.CombinedOutput()
 	if err == nil {
 		t.Fatal("expected non-zero exit for unknown command")
@@ -56,6 +60,7 @@ func TestCleanupNonInteractive_MissingMode(t *testing.T) {
 	bin := buildBinary(t)
 
 	cmd := exec.Command(bin, "cleanup", "--non-interactive", "--force")
+	cmd.Env = testtmp.HermeticGitEnv()
 	out, err := cmd.CombinedOutput()
 	if err == nil {
 		t.Fatal("expected non-zero exit for missing --mode")
@@ -71,6 +76,7 @@ func TestCleanupNonInteractive_DestructiveWithoutForce(t *testing.T) {
 	bin := buildBinary(t)
 
 	cmd := exec.Command(bin, "cleanup", "--non-interactive")
+	cmd.Env = testtmp.HermeticGitEnv()
 	out, err := cmd.CombinedOutput()
 	if err == nil {
 		t.Fatal("expected non-zero exit for destructive without --force")
@@ -101,6 +107,7 @@ func TestCleanupNonInteractive_PrunesStaleWorktrees(t *testing.T) {
 
 	// Run cleanup — should prune the stale worktree.
 	cmd := exec.Command(bin, "cleanup", "--mode", "safe", "--non-interactive", "--force", bareRepo)
+	cmd.Env = testtmp.HermeticGitEnv()
 	result, err := cmd.CombinedOutput()
 	if err != nil {
 		t.Fatalf("sentei cleanup failed: %v\n%s", err, result)
@@ -122,6 +129,7 @@ func runGitCmdOutput(t *testing.T, dir string, args ...string) string {
 	t.Helper()
 	c := exec.Command("git", args...)
 	c.Dir = dir
+	c.Env = testtmp.HermeticGitEnv()
 	out, err := c.CombinedOutput()
 	if err != nil {
 		t.Fatalf("git %v failed in %s: %v\n%s", args, dir, err, out)
@@ -137,6 +145,7 @@ func TestCleanupNonInteractive_SafeMode(t *testing.T) {
 	setupGitRepo(t, repoDir)
 
 	cmd := exec.Command(bin, "cleanup", "--mode", "safe", "--non-interactive", "--force", repoDir)
+	cmd.Env = testtmp.HermeticGitEnv()
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		t.Fatalf("sentei cleanup --mode safe --non-interactive --force failed: %v\n%s", err, out)
@@ -151,6 +160,7 @@ func TestCleanupNonInteractive_InvalidMode(t *testing.T) {
 	bin := buildBinary(t)
 
 	cmd := exec.Command(bin, "cleanup", "--mode", "invalid", "--non-interactive", "--force")
+	cmd.Env = testtmp.HermeticGitEnv()
 	out, err := cmd.CombinedOutput()
 	if err == nil {
 		t.Fatal("expected non-zero exit for invalid mode")
@@ -170,6 +180,7 @@ func setupGitRepo(t *testing.T, dir string) {
 		{"-C", dir, "config", "user.name", "Test"},
 	} {
 		c := exec.Command("git", args...)
+		c.Env = testtmp.HermeticGitEnv()
 		if out, err := c.CombinedOutput(); err != nil {
 			t.Fatalf("git %v failed: %v\n%s", args, err, out)
 		}
@@ -180,6 +191,7 @@ func TestCloneNonInteractive_MissingURL(t *testing.T) {
 	bin := buildBinary(t)
 
 	cmd := exec.Command(bin, "clone", "--non-interactive")
+	cmd.Env = testtmp.HermeticGitEnv()
 	out, err := cmd.CombinedOutput()
 	if err == nil {
 		t.Fatal("expected non-zero exit for missing --url")
@@ -217,6 +229,7 @@ func runGitCmd(t *testing.T, dir string, args ...string) {
 	t.Helper()
 	c := exec.Command("git", args...)
 	c.Dir = dir
+	c.Env = testtmp.HermeticGitEnv()
 	if out, err := c.CombinedOutput(); err != nil {
 		t.Fatalf("git %v failed in %s: %v\n%s", args, dir, err, out)
 	}
@@ -227,6 +240,7 @@ func TestCreateNonInteractive_Success(t *testing.T) {
 	bareRepo := setupBareRepo(t)
 
 	cmd := exec.Command(bin, "create", "--branch", "feature/e2e-test", "--base", "main", "--non-interactive", bareRepo)
+	cmd.Env = testtmp.HermeticGitEnv()
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		t.Fatalf("sentei create --non-interactive failed: %v\n%s", err, out)
@@ -248,6 +262,7 @@ func TestCreateNonInteractive_MissingBranch(t *testing.T) {
 	bin := buildBinary(t)
 
 	cmd := exec.Command(bin, "create", "--non-interactive")
+	cmd.Env = testtmp.HermeticGitEnv()
 	out, err := cmd.CombinedOutput()
 	if err == nil {
 		t.Fatal("expected non-zero exit for missing --branch")
@@ -263,6 +278,7 @@ func TestMigrateNonInteractive_DestructiveWithoutForce(t *testing.T) {
 	bin := buildBinary(t)
 
 	cmd := exec.Command(bin, "migrate", "--non-interactive")
+	cmd.Env = testtmp.HermeticGitEnv()
 	out, err := cmd.CombinedOutput()
 	if err == nil {
 		t.Fatal("expected non-zero exit for destructive without --force")
@@ -291,6 +307,7 @@ func TestMigrateNonInteractive_Success(t *testing.T) {
 	runGitCmd(t, repoDir, "commit", "-m", "initial commit")
 
 	cmd := exec.Command(bin, "migrate", "--force", "--non-interactive", repoDir)
+	cmd.Env = testtmp.HermeticGitEnv()
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		t.Fatalf("sentei migrate --force --non-interactive failed: %v\n%s", err, out)
@@ -344,6 +361,7 @@ func TestRemoveNonInteractive_MergedBranch(t *testing.T) {
 	bareRepo := setupBareRepoWithMergedBranch(t)
 
 	cmd := exec.Command(bin, "remove", "--merged", "--force", "--non-interactive", bareRepo)
+	cmd.Env = testtmp.HermeticGitEnv()
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		t.Fatalf("sentei remove --merged --force --non-interactive failed: %v\n%s", err, out)
@@ -359,6 +377,7 @@ func TestRemoveNonInteractive_DestructiveWithoutForce(t *testing.T) {
 	bin := buildBinary(t)
 
 	cmd := exec.Command(bin, "remove", "--merged", "--non-interactive")
+	cmd.Env = testtmp.HermeticGitEnv()
 	out, err := cmd.CombinedOutput()
 	if err == nil {
 		t.Fatal("expected non-zero exit for destructive without --force")
@@ -374,6 +393,7 @@ func TestRemoveNonInteractive_NoFilters(t *testing.T) {
 	bin := buildBinary(t)
 
 	cmd := exec.Command(bin, "remove", "--force", "--non-interactive")
+	cmd.Env = testtmp.HermeticGitEnv()
 	out, err := cmd.CombinedOutput()
 	if err == nil {
 		t.Fatal("expected non-zero exit for no filters")
@@ -390,6 +410,7 @@ func TestRemoveNonInteractive_DryRun(t *testing.T) {
 	bareRepo := setupBareRepoWithMergedBranch(t)
 
 	cmd := exec.Command(bin, "remove", "--merged", "--dry-run", "--force", "--non-interactive", bareRepo)
+	cmd.Env = testtmp.HermeticGitEnv()
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		t.Fatalf("sentei remove --merged --dry-run failed: %v\n%s", err, out)
@@ -414,6 +435,7 @@ func TestIntegrationsCLI(t *testing.T) {
 	bin := buildBinary(t)
 
 	cmd := exec.Command(bin, "integrations")
+	cmd.Env = testtmp.HermeticGitEnv()
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		t.Fatalf("sentei integrations failed: %v\n%s", err, out)

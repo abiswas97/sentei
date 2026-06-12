@@ -100,6 +100,7 @@ func TestConfirmDeletion_UnlocksLockedWorktrees(t *testing.T) {
 	run := func(dir string, args ...string) {
 		t.Helper()
 		cmd := exec.Command("git", args...)
+		cmd.Env = testtmp.HermeticGitEnv()
 		cmd.Dir = dir
 		out, err := cmd.CombinedOutput()
 		if err != nil {
@@ -147,7 +148,9 @@ func TestConfirmDeletion_UnlocksLockedWorktrees(t *testing.T) {
 	}
 
 	// Verify: git worktree list should not show the locked worktree
-	out, _ := exec.Command("git", "-C", repoPath, "worktree", "list", "--porcelain").CombinedOutput()
+	wtList := exec.Command("git", "-C", repoPath, "worktree", "list", "--porcelain")
+	wtList.Env = testtmp.HermeticGitEnv()
+	out, _ := wtList.CombinedOutput()
 	if strings.Contains(string(out), "locked-branch") {
 		t.Error("locked worktree should not appear in git worktree list after deletion and prune")
 	}

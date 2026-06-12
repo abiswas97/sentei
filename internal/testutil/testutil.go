@@ -190,11 +190,12 @@ func projectRoot(t *testing.T) string {
 	}
 }
 
-// runGit executes a git command in the given directory.
+// runGit executes a git command in the given directory, hermetically.
 func runGit(t *testing.T, dir string, args ...string) string {
 	t.Helper()
 	cmd := exec.Command("git", args...)
 	cmd.Dir = dir
+	cmd.Env = testtmp.HermeticGitEnv()
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		t.Fatalf("git %v failed in %s: %v\n%s", args, dir, err, out)
@@ -202,12 +203,13 @@ func runGit(t *testing.T, dir string, args ...string) string {
 	return string(out)
 }
 
-// runGitEnv executes a git command with extra environment variables.
+// runGitEnv executes a git command with extra environment variables on top
+// of the hermetic base.
 func runGitEnv(t *testing.T, dir string, env []string, args ...string) string {
 	t.Helper()
 	cmd := exec.Command("git", args...)
 	cmd.Dir = dir
-	cmd.Env = append(os.Environ(), env...)
+	cmd.Env = append(testtmp.HermeticGitEnv(), env...)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		t.Fatalf("git %v failed in %s: %v\n%s", args, dir, err, out)

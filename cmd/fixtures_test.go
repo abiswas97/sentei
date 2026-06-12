@@ -5,12 +5,16 @@ import (
 	"os/exec"
 	"path/filepath"
 	"testing"
+
+	"github.com/abiswas97/sentei/internal/testtmp"
 )
 
 // mustGit runs a git command in dir, failing the test on error.
 func mustGit(t *testing.T, dir string, args ...string) {
 	t.Helper()
-	out, err := exec.Command("git", append([]string{"-C", dir}, args...)...).CombinedOutput()
+	cmd := exec.Command("git", append([]string{"-C", dir}, args...)...)
+	cmd.Env = testtmp.HermeticGitEnv()
+	out, err := cmd.CombinedOutput()
 	if err != nil {
 		t.Fatalf("git %v failed in %s: %v\n%s", args, dir, err, out)
 	}
