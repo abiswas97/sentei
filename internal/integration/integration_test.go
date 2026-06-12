@@ -99,8 +99,8 @@ func TestDependencyFieldsComplete(t *testing.T) {
 
 func TestCocoindexCode_InstallCarriesEmbeddingsExtra(t *testing.T) {
 	cmd := cocoindexCode().Install.Command
-	if !strings.Contains(cmd, "cocoindex-code[embeddings-local]") {
-		t.Errorf("ccc install must carry the embeddings-local extra (ccc index needs sentence-transformers), got %q", cmd)
+	if !strings.Contains(cmd, "cocoindex-code[full]") {
+		t.Errorf("ccc install must carry the embeddings-local extra (upstream-documented batteries-included extra; ccc index needs sentence-transformers), got %q", cmd)
 	}
 	if !strings.Contains(cmd, "--python 3.11") {
 		t.Errorf("ccc install must pin its python: ambient .python-version files break the >=3.11 resolution, got %q", cmd)
