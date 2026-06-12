@@ -312,10 +312,6 @@ func TestStartIntegrationApply_ComputesPlanAndAppliesChanges(t *testing.T) {
 
 	updated, cmd := m.startIntegrationApply()
 
-	// enable: 1 setup + 1 dep + 1 install; disable: 1 teardown + 2 dir removals.
-	if updated.integ.totalSteps != 6 {
-		t.Errorf("totalSteps = %d, want 6", updated.integ.totalSteps)
-	}
 	if len(updated.integ.targetWorktrees) != 1 || updated.integ.targetWorktrees[0] != wtPath {
 		t.Errorf("targetWorktrees = %v, want [%s]", updated.integ.targetWorktrees, wtPath)
 	}

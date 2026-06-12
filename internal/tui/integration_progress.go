@@ -89,16 +89,13 @@ func (m Model) finalizeIntegrationApply() tea.Cmd {
 }
 
 func (m Model) integrationLayout() ProgressLayout {
-	done, total := m.integrationOverallProgress()
 	return ProgressLayout{
-		Title:        titleApplyingChanges,
-		Phases:       m.buildIntegrationPhases(),
-		Width:        m.width,
-		Height:       m.height,
-		Hints:        progressFooter,
-		OverallDone:  done,
-		OverallTotal: total,
-		Completed:    m.integ.finalized,
+		Title:     titleApplyingChanges,
+		Phases:    m.buildIntegrationPhases(),
+		Width:     m.width,
+		Height:    m.height,
+		Hints:     progressFooter,
+		Completed: m.integ.finalized,
 	}
 }
 
@@ -148,26 +145,4 @@ func (m Model) buildIntegrationPhases() []progress.PhaseState {
 		}
 	}
 	return phases
-}
-
-// integrationOverallProgress counts resolved unique steps against the
-// upfront step total so the bar reflects the whole apply, not just the
-// worktrees that have emitted events.
-func (m Model) integrationOverallProgress() (done, total int) {
-	total = m.integ.totalSteps
-	resolved := make(map[string]bool)
-	for _, ev := range m.integ.events {
-		key := ev.Phase + ":" + ev.Step
-		if resolved[key] {
-			continue
-		}
-		if ev.Status == progress.StepDone || ev.Status == progress.StepFailed || ev.Status == progress.StepSkipped {
-			resolved[key] = true
-			done++
-		}
-	}
-	if total == 0 {
-		total = done
-	}
-	return done, total
 }

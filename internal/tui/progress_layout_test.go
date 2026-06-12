@@ -48,7 +48,7 @@ func TestProgressLayout_CompletedPhaseCollapses(t *testing.T) {
 	l := ProgressLayout{
 		Title: "T", Width: 80, Height: 30,
 		Phases: []progress.PhaseState{
-			{Name: "Setup", Total: 2, Done: 2, Steps: []progress.StepState{
+			{Name: "Setup", Total: 2, Done: 2, Closed: true, Steps: []progress.StepState{
 				{Name: "Create worktree", Status: progress.StepDone},
 				{Name: "Merge base branch", Status: progress.StepDone},
 			}},

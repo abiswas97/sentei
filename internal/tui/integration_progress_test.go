@@ -137,7 +137,6 @@ func TestViewIntegrationProgress_GroupsByWorktree(t *testing.T) {
 func TestViewIntegrationProgress_ShowsProgressBar(t *testing.T) {
 	m := makeIntegrationModel()
 	m.view = integrationProgressView
-	m.integ.totalSteps = 3 // Known upfront.
 	m.integ.events = []progress.Event{
 		{Phase: "/repo/main", Step: "step1", Status: progress.StepRunning},
 		{Phase: "/repo/main", Step: "step1", Status: progress.StepDone},
@@ -157,7 +156,6 @@ func TestViewIntegrationProgress_ShowsProgressBar(t *testing.T) {
 func TestViewIntegrationProgress_ProgressCountsUniqueSteps(t *testing.T) {
 	m := makeIntegrationModel()
 	m.view = integrationProgressView
-	m.integ.totalSteps = 3
 	m.integ.events = []progress.Event{
 		{Phase: "/repo/main", Step: "Setup code-review-graph", Status: progress.StepRunning},
 		{Phase: "/repo/main", Step: "Setup code-review-graph", Status: progress.StepDone},
@@ -178,16 +176,23 @@ func TestViewIntegrationProgress_ProgressCountsUniqueSteps(t *testing.T) {
 func TestViewIntegrationProgress_TotalKnownUpfront(t *testing.T) {
 	m := makeIntegrationModel()
 	m.view = integrationProgressView
-	m.integ.totalSteps = 9
-	m.integ.events = []progress.Event{
-		{Phase: "/repo/main", Step: "Setup crg", Status: progress.StepDone},
-		{Phase: "/repo/main", Step: "Install ccc", Status: progress.StepRunning},
+	// The declared plan establishes the denominator before work starts: nine
+	// pending steps across three worktrees, one resolved so far.
+	m.integ.events = []progress.Event{}
+	for _, wt := range []string{"/repo/main", "/repo/feat-1", "/repo/feat-2"} {
+		for _, step := range []string{"Setup crg", "Setup ccc", "Setup third"} {
+			m.integ.events = append(m.integ.events, progress.Event{Phase: wt, Step: step, Status: progress.StepPending, Of: 1})
+		}
 	}
+	m.integ.events = append(m.integ.events,
+		progress.Event{Phase: "/repo/main", Step: "Setup crg", Status: progress.StepDone},
+		progress.Event{Phase: "/repo/main", Step: "Setup ccc", Status: progress.StepRunning},
+	)
 
-	// 1 done out of 9: the upfront total is the spring target's denominator.
+	// 1 done out of 9: the declared total is the spring target's denominator.
 	done, total := m.integrationLayout().overall()
 	if done != 1 || total != 9 {
-		t.Errorf("overall() = %d/%d, want 1/9 (upfront total)", done, total)
+		t.Errorf("overall() = %d/%d, want 1/9 (declared total)", done, total)
 	}
 	if cmd := m.syncProgressBar(); cmd == nil {
 		t.Error("expected a spring target command from the upfront total")

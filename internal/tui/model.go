@@ -201,7 +201,6 @@ type integrationState struct {
 	// Progress
 	events          []progress.Event    //nolint:unused
 	finalized       bool                // apply result arrived; the hold is showing
-	totalSteps      int                 // known upfront for progress bar
 	targetWorktrees []string            // all apply targets, pre-populated as pending phases
 	eventCh         chan progress.Event //nolint:unused
 	doneCh          chan struct{}       //nolint:unused

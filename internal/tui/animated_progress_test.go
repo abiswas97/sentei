@@ -16,7 +16,6 @@ func TestProgressLayout_Overall(t *testing.T) {
 		layout              ProgressLayout
 		wantDone, wantTotal int
 	}{
-		{"override wins", ProgressLayout{OverallDone: 3, OverallTotal: 10, Phases: []progress.PhaseState{{Done: 1, Total: 1}}}, 3, 10},
 		{"discovered phases summed", ProgressLayout{Phases: []progress.PhaseState{{Done: 2, Total: 4}, {Done: 1, Total: 2}}}, 3, 6},
 		{"undiscovered phase counts as outstanding", ProgressLayout{Phases: []progress.PhaseState{{Done: 2, Total: 2}, {Total: 0}}}, 2, 3},
 	}

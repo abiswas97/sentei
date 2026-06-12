@@ -30,11 +30,6 @@ type ProgressLayout struct {
 	Height   int
 	Hints    []key.Binding
 
-	// OverallTotal overrides the bar's denominator when the flow knows its
-	// full step count upfront and discovered phase totals would undercount.
-	OverallDone  int
-	OverallTotal int
-
 	// Bar, Elapsed, and ActiveGlyph are injected by the model's render path
 	// (animated spring bar, stopwatch readout, spinner frame). Left empty,
 	// View falls back to the static bar, no elapsed line, and the static
@@ -61,17 +56,20 @@ func (l ProgressLayout) activeGlyph() string {
 	return styleIndicatorActive.Render(indicatorActiveFallback)
 }
 
-// overall returns the bar's done/total, honoring the explicit override and
-// counting each undiscovered phase as outstanding work so the bar never
-// reads 100% beside pending phases.
+// overall returns the bar's fill source: checkpoints reached over declared
+// across all phases (headers keep counting steps), falling back to step
+// counts for phases without checkpoint declarations, and counting each
+// undiscovered phase as outstanding work so the bar never reads 100%
+// beside pending phases.
 func (l ProgressLayout) overall() (int, int) {
-	if l.OverallTotal != 0 {
-		return l.OverallDone, l.OverallTotal
-	}
 	done, total := 0, 0
 	for _, p := range l.Phases {
-		done += p.Done
-		total += p.Total
+		reached, declared := progress.CheckpointProgress([]progress.PhaseState{p})
+		if declared == 0 {
+			reached, declared = p.Done, p.Total
+		}
+		done += reached
+		total += declared
 		if p.Total == 0 && !l.Completed {
 			total++
 		}
@@ -141,8 +139,10 @@ func (l ProgressLayout) renderPhase(b *strings.Builder, p progress.PhaseState, s
 			styleDim.Render("pending"))
 		return 0
 
-	case p.Done == p.Total && p.Failed == 0:
-		// Fully complete: collapse to a single line.
+	case p.Settled() && p.Failed == 0:
+		// Settled: the step set is final and fully resolved. Collapse to a
+		// single done line — only now may the phase crystallize, so a
+		// later-discovered step can never reopen a settled phase.
 		fmt.Fprintf(b, "  %s %s  %s\n\n",
 			styleIndicatorDone.Render(indicatorDone),
 			stylePhaseDone.Render(p.Name),
