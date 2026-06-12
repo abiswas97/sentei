@@ -1,5 +1,29 @@
 # Changelog
 
+## [1.11.0](https://github.com/abiswas97/sentei/compare/v1.10.0...v1.11.0) (2026-06-12)
+
+
+### Features
+
+* **tui:** completion settles the bar green ([b896614](https://github.com/abiswas97/sentei/commit/b896614e9c5b01fc28d15b68372edc5c725fdc77))
+* **tui:** completion settles the bar green ([5defccb](https://github.com/abiswas97/sentei/commit/5defccbfc228393b91965ef0e0d3a96b2c9cda22))
+* **tui:** light palette contrast ([deac935](https://github.com/abiswas97/sentei/commit/deac9352d6f7e656994ebb9b75e3ace707271f93))
+* **tui:** light palette contrast ([1c87d1c](https://github.com/abiswas97/sentei/commit/1c87d1c9ce44747ef9d3f0962b72018c2b607e40))
+* **tui:** milestone whisper ([13ba7a4](https://github.com/abiswas97/sentei/commit/13ba7a4657018c89ab048301ea80844654938164))
+* **tui:** milestone whisper ([86abf02](https://github.com/abiswas97/sentei/commit/86abf029613573a4e57a53f49c7e697cb3efff07))
+* **tui:** P3 polish batch ([199621a](https://github.com/abiswas97/sentei/commit/199621ad2a329b52b98af7e7b6e70ca11b7c970d))
+* **tui:** persistent input fields ([b667f45](https://github.com/abiswas97/sentei/commit/b667f4529d0c45bce5eed72836f233a457c2f542))
+* **tui:** persistent input fields ([f71ab5b](https://github.com/abiswas97/sentei/commit/f71ab5b899be92f1108ec3aa0ac54829b47a35f4))
+* **tui:** polish batch for the audit p3 list ([e24578c](https://github.com/abiswas97/sentei/commit/e24578cedbc6e9b49151e6c0695f6c157034ab83))
+* **tui:** voice registry ([dc86c19](https://github.com/abiswas97/sentei/commit/dc86c19c5d594025ee6d94e874957f01613c668f))
+* **tui:** voice registry ([20bb72d](https://github.com/abiswas97/sentei/commit/20bb72dcbe852a4c37c8616bdd87e119c00400fb))
+
+
+### Bug Fixes
+
+* **tui:** sanitize child-process output in error peeks ([d7b7dc7](https://github.com/abiswas97/sentei/commit/d7b7dc7dd972cb3388b297d153a5024888bda23b))
+* **tui:** sanitize child-process output in error peeks ([8d1b0a6](https://github.com/abiswas97/sentei/commit/8d1b0a609e082a53b889f37d506883b82bde30ff))
+
 ## [1.10.0](https://github.com/abiswas97/sentei/compare/v1.9.0...v1.10.0) (2026-06-11)
 
 
