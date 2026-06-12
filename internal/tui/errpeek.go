@@ -2,8 +2,13 @@ package tui
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 )
+
+// ansiSequence matches CSI/OSC escape sequences so child-process output
+// (spinners, colors) cannot leak control codes into the chrome.
+var ansiSequence = regexp.MustCompile(`\x1b\[[0-9;?]*[a-zA-Z]|\x1b\][^\x07]*(\x07|\x1b\\)`)
 
 // errorPeekLines bounds a multi-line command error to a peek the chrome can
 // survive: the first line (the wrapping context or command), the last
@@ -43,9 +48,13 @@ func errorPeekLast(errText string, width int) string {
 }
 
 func nonEmptyLines(s string) []string {
+	// Child-process output embeds carriage returns (spinner rewrites) and
+	// ANSI sequences; both would corrupt the chrome — \r resets the cursor
+	// to column 0. Treat \r as a line break and strip escapes entirely.
+	s = ansiSequence.ReplaceAllString(s, "")
 	var out []string
-	for _, line := range strings.Split(s, "\n") {
-		if t := strings.TrimRight(line, " \t\r"); strings.TrimSpace(t) != "" {
+	for _, line := range strings.FieldsFunc(s, func(r rune) bool { return r == '\n' || r == '\r' }) {
+		if t := strings.TrimRight(line, " \t"); strings.TrimSpace(t) != "" {
 			out = append(out, t)
 		}
 	}
