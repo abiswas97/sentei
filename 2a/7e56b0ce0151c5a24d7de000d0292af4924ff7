@@ -1,0 +1,32 @@
+internal/integration/plan.go
+  s_9734c013a8d1a8::t_11ad78d6992737 1-51,55-58
+  s_9734c013a8d1a8::t_db791782ca6481 52-54
+internal/tui/integration_summary.go
+  s_9734c013a8d1a8::t_b0927835016817 22,27,41-43
+internal/tui/integration_list.go
+  s_9734c013a8d1a8::t_b1ec8bd91d30f0 140-151
+internal/tui/integration_progress.go
+  s_9734c013a8d1a8::t_db59e7be8c6274 117,129,133,137,139
+internal/tui/migrate_integrations.go
+  s_9734c013a8d1a8::t_d90376eb171992 121-126
+internal/tui/integration_plan_test.go
+  s_9734c013a8d1a8::t_9ad2fa6c03f671 72-74
+  s_9734c013a8d1a8::t_b91dbd0aee4c86 54-60,63,68-71,78-79
+  s_9734c013a8d1a8::t_38ba071c1b3231 1-53,61-62,64-67,75-77,80-91
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "2a7e56b0ce0151c5a24d7de000d0292af4924ff7",
+  "prompts": {},
+  "sessions": {
+    "s_9734c013a8d1a8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "67fbc29d-6734-415f-8fb0-d7be5620fff9",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Test <t@t.com>"
+    }
+  }
+}
