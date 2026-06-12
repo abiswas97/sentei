@@ -9,6 +9,7 @@ import (
 
 	"github.com/abiswas97/sentei/internal/config"
 	"github.com/abiswas97/sentei/internal/integration"
+	"github.com/abiswas97/sentei/internal/progress"
 	"github.com/abiswas97/sentei/internal/repo"
 	"github.com/abiswas97/sentei/internal/state"
 )
@@ -50,15 +51,15 @@ func makeIntegrationModel() Model {
 func TestUpdateIntegrationProgress_EventMsg(t *testing.T) {
 	m := makeIntegrationModel()
 	m.view = integrationProgressView
-	ch := make(chan integration.ManagerEvent, 1)
+	ch := make(chan progress.Event, 1)
 	doneCh := make(chan struct{}, 1)
 	m.integ.eventCh = ch
 	m.integ.doneCh = doneCh
 
-	ev := integration.ManagerEvent{
-		Worktree: "/repo/main",
-		Step:     "Install code-review-graph",
-		Status:   integration.StatusRunning,
+	ev := progress.Event{
+		Phase:  "/repo/main",
+		Step:   "Install code-review-graph",
+		Status: progress.StepRunning,
 	}
 	updated, _ := m.updateIntegrationProgress(integrationEventMsg{Event: ev})
 	m = updated.(Model)
@@ -118,9 +119,9 @@ func TestUpdateIntegrationProgress_FinalizedMsg_Migration(t *testing.T) {
 func TestViewIntegrationProgress_GroupsByWorktree(t *testing.T) {
 	m := makeIntegrationModel()
 	m.view = integrationProgressView
-	m.integ.events = []integration.ManagerEvent{
-		{Worktree: "/repo/main", Step: "Install step", Status: integration.StatusDone},
-		{Worktree: "/repo/feature", Step: "Install step", Status: integration.StatusRunning},
+	m.integ.events = []progress.Event{
+		{Phase: "/repo/main", Step: "Install step", Status: progress.StepDone},
+		{Phase: "/repo/feature", Step: "Install step", Status: progress.StepRunning},
 	}
 
 	output := stripAnsi(m.viewIntegrationProgress())
@@ -137,12 +138,12 @@ func TestViewIntegrationProgress_ShowsProgressBar(t *testing.T) {
 	m := makeIntegrationModel()
 	m.view = integrationProgressView
 	m.integ.totalSteps = 3 // Known upfront.
-	m.integ.events = []integration.ManagerEvent{
-		{Worktree: "/repo/main", Step: "step1", Status: integration.StatusRunning},
-		{Worktree: "/repo/main", Step: "step1", Status: integration.StatusDone},
-		{Worktree: "/repo/main", Step: "step2", Status: integration.StatusRunning},
-		{Worktree: "/repo/main", Step: "step2", Status: integration.StatusDone},
-		{Worktree: "/repo/main", Step: "step3", Status: integration.StatusRunning},
+	m.integ.events = []progress.Event{
+		{Phase: "/repo/main", Step: "step1", Status: progress.StepRunning},
+		{Phase: "/repo/main", Step: "step1", Status: progress.StepDone},
+		{Phase: "/repo/main", Step: "step2", Status: progress.StepRunning},
+		{Phase: "/repo/main", Step: "step2", Status: progress.StepDone},
+		{Phase: "/repo/main", Step: "step3", Status: progress.StepRunning},
 	}
 
 	output := stripAnsi(m.viewIntegrationProgress())
@@ -157,13 +158,13 @@ func TestViewIntegrationProgress_ProgressCountsUniqueSteps(t *testing.T) {
 	m := makeIntegrationModel()
 	m.view = integrationProgressView
 	m.integ.totalSteps = 3
-	m.integ.events = []integration.ManagerEvent{
-		{Worktree: "/repo/main", Step: "Setup code-review-graph", Status: integration.StatusRunning},
-		{Worktree: "/repo/main", Step: "Setup code-review-graph", Status: integration.StatusDone},
-		{Worktree: "/repo/main", Step: "Install cocoindex-code", Status: integration.StatusRunning},
-		{Worktree: "/repo/main", Step: "Install cocoindex-code", Status: integration.StatusDone},
-		{Worktree: "/repo/main", Step: "Setup cocoindex-code", Status: integration.StatusRunning},
-		{Worktree: "/repo/main", Step: "Setup cocoindex-code", Status: integration.StatusDone},
+	m.integ.events = []progress.Event{
+		{Phase: "/repo/main", Step: "Setup code-review-graph", Status: progress.StepRunning},
+		{Phase: "/repo/main", Step: "Setup code-review-graph", Status: progress.StepDone},
+		{Phase: "/repo/main", Step: "Install cocoindex-code", Status: progress.StepRunning},
+		{Phase: "/repo/main", Step: "Install cocoindex-code", Status: progress.StepDone},
+		{Phase: "/repo/main", Step: "Setup cocoindex-code", Status: progress.StepRunning},
+		{Phase: "/repo/main", Step: "Setup cocoindex-code", Status: progress.StepDone},
 	}
 
 	output := stripAnsi(m.viewIntegrationProgress())
@@ -178,9 +179,9 @@ func TestViewIntegrationProgress_TotalKnownUpfront(t *testing.T) {
 	m := makeIntegrationModel()
 	m.view = integrationProgressView
 	m.integ.totalSteps = 9
-	m.integ.events = []integration.ManagerEvent{
-		{Worktree: "/repo/main", Step: "Setup crg", Status: integration.StatusDone},
-		{Worktree: "/repo/main", Step: "Install ccc", Status: integration.StatusRunning},
+	m.integ.events = []progress.Event{
+		{Phase: "/repo/main", Step: "Setup crg", Status: progress.StepDone},
+		{Phase: "/repo/main", Step: "Install ccc", Status: progress.StepRunning},
 	}
 
 	// 1 done out of 9: the upfront total is the spring target's denominator.

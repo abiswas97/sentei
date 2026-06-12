@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+
+	"github.com/abiswas97/sentei/internal/progress"
 )
 
 type managerMockShell struct {
@@ -35,22 +37,22 @@ func TestEnableIntegration_RunsSetupOnEachWorktree(t *testing.T) {
 
 	integ := codeReviewGraph()
 	wtPaths := []string{"/repo/main", "/repo/feat"}
-	var events []ManagerEvent
+	var events []progress.Event
 
-	EnableIntegration(shell, "/repo", "/repo/main", wtPaths, integ, func(e ManagerEvent) {
+	EnableIntegration(shell, "/repo", "/repo/main", wtPaths, integ, func(e progress.Event) {
 		events = append(events, e)
 	})
 
 	type wantEvent struct {
 		worktree string
 		step     string
-		status   ManagerStatus
+		status   progress.StepStatus
 	}
 	// Filter to non-skipped events for setup verification.
-	var setupEvents []ManagerEvent
+	var setupEvents []progress.Event
 	var skipCount int
 	for _, ev := range events {
-		if ev.Status == StatusSkipped {
+		if ev.Status == progress.StepSkipped {
 			skipCount++
 		} else {
 			setupEvents = append(setupEvents, ev)
@@ -64,19 +66,19 @@ func TestEnableIntegration_RunsSetupOnEachWorktree(t *testing.T) {
 
 	// Setup events: Running + Done per worktree.
 	want := []wantEvent{
-		{"/repo/main", "Setup code-review-graph", StatusRunning},
-		{"/repo/main", "Setup code-review-graph", StatusDone},
-		{"/repo/feat", "Setup code-review-graph", StatusRunning},
-		{"/repo/feat", "Setup code-review-graph", StatusDone},
+		{"/repo/main", "Setup code-review-graph", progress.StepRunning},
+		{"/repo/main", "Setup code-review-graph", progress.StepDone},
+		{"/repo/feat", "Setup code-review-graph", progress.StepRunning},
+		{"/repo/feat", "Setup code-review-graph", progress.StepDone},
 	}
 	if len(setupEvents) != len(want) {
 		t.Fatalf("setup event count = %d, want %d\nevents: %+v", len(setupEvents), len(want), setupEvents)
 	}
 	for i, w := range want {
 		got := setupEvents[i]
-		if got.Worktree != w.worktree || got.Step != w.step || got.Status != w.status {
+		if got.Phase != w.worktree || got.Step != w.step || got.Status != w.status {
 			t.Errorf("event[%d] = {%s, %s, %d}, want {%s, %s, %d}",
-				i, got.Worktree, got.Step, got.Status, w.worktree, w.step, w.status)
+				i, got.Phase, got.Step, got.Status, w.worktree, w.step, w.status)
 		}
 	}
 }
@@ -89,9 +91,9 @@ func TestDisableIntegration_RemovesArtifacts(t *testing.T) {
 
 	integ := cocoindexCode()
 	wtPaths := []string{"/repo/main", "/repo/feat"}
-	var events []ManagerEvent
+	var events []progress.Event
 
-	DisableIntegration(shell, wtPaths, integ, func(e ManagerEvent) {
+	DisableIntegration(shell, wtPaths, integ, func(e progress.Event) {
 		events = append(events, e)
 	})
 
@@ -124,9 +126,9 @@ func TestEnableIntegration_InstallsWhenNotDetected(t *testing.T) {
 	}}
 
 	integ := codeReviewGraph()
-	var events []ManagerEvent
+	var events []progress.Event
 
-	EnableIntegration(shell, "/repo", "/repo/wt", []string{"/repo/wt"}, integ, func(e ManagerEvent) {
+	EnableIntegration(shell, "/repo", "/repo/wt", []string{"/repo/wt"}, integ, func(e progress.Event) {
 		events = append(events, e)
 	})
 
@@ -135,7 +137,7 @@ func TestEnableIntegration_InstallsWhenNotDetected(t *testing.T) {
 		if strings.Contains(e.Step, "Install") {
 			hasInstall = true
 		}
-		if e.Status == StatusFailed {
+		if e.Status == progress.StepFailed {
 			t.Errorf("unexpected failure event: %+v", e)
 		}
 	}
@@ -151,20 +153,20 @@ func TestEnableIntegration_SetupFailureEmitsFailedEvent(t *testing.T) {
 	}}
 
 	integ := codeReviewGraph()
-	var events []ManagerEvent
+	var events []progress.Event
 
-	EnableIntegration(shell, "/repo", "/repo/wt", []string{"/repo/wt"}, integ, func(e ManagerEvent) {
+	EnableIntegration(shell, "/repo", "/repo/wt", []string{"/repo/wt"}, integ, func(e progress.Event) {
 		events = append(events, e)
 	})
 
 	var failed bool
 	for _, e := range events {
-		if e.Status == StatusFailed && strings.Contains(e.Step, "Setup") {
+		if e.Status == progress.StepFailed && strings.Contains(e.Step, "Setup") {
 			failed = true
 		}
 	}
 	if !failed {
-		t.Errorf("expected StatusFailed for setup, got: %+v", events)
+		t.Errorf("expected progress.StepFailed for setup, got: %+v", events)
 	}
 }
 
@@ -174,20 +176,20 @@ func TestDisableIntegration_TeardownFailureEmitsFailedEvent(t *testing.T) {
 	}}
 
 	integ := cocoindexCode()
-	var events []ManagerEvent
+	var events []progress.Event
 
-	DisableIntegration(shell, []string{"/repo/wt"}, integ, func(e ManagerEvent) {
+	DisableIntegration(shell, []string{"/repo/wt"}, integ, func(e progress.Event) {
 		events = append(events, e)
 	})
 
 	var failed bool
 	for _, e := range events {
-		if e.Status == StatusFailed && strings.Contains(e.Step, "Teardown") {
+		if e.Status == progress.StepFailed && strings.Contains(e.Step, "Teardown") {
 			failed = true
 		}
 	}
 	if !failed {
-		t.Errorf("expected StatusFailed for teardown, got: %+v", events)
+		t.Errorf("expected progress.StepFailed for teardown, got: %+v", events)
 	}
 }
 

@@ -8,16 +8,16 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	"github.com/abiswas97/sentei/internal/integration"
+	"github.com/abiswas97/sentei/internal/progress"
 )
 
-func doneEventsForWorktrees(n int) []integration.ManagerEvent {
-	var events []integration.ManagerEvent
+func doneEventsForWorktrees(n int) []progress.Event {
+	var events []progress.Event
 	for i := 0; i < n; i++ {
-		events = append(events, integration.ManagerEvent{
-			Worktree: fmt.Sprintf("/repo/feature-%d", i),
-			Step:     "Setup code-review-graph",
-			Status:   integration.StatusDone,
+		events = append(events, progress.Event{
+			Phase:  fmt.Sprintf("/repo/feature-%d", i),
+			Step:   "Setup code-review-graph",
+			Status: progress.StepDone,
 		})
 	}
 	return events
@@ -88,10 +88,10 @@ func TestUpdateIntegrationSummary_Enter_ReturnsToListAndReloads(t *testing.T) {
 func TestViewIntegrationSummary_AllSucceeded(t *testing.T) {
 	m := makeIntegrationModel()
 	m.view = integrationSummaryView
-	m.integ.events = []integration.ManagerEvent{
-		{Worktree: "/repo/feature-a", Step: "Setup code-review-graph", Status: integration.StatusRunning},
-		{Worktree: "/repo/feature-a", Step: "Setup code-review-graph", Status: integration.StatusDone},
-		{Worktree: "/repo/feature-b", Step: "Setup code-review-graph", Status: integration.StatusDone},
+	m.integ.events = []progress.Event{
+		{Phase: "/repo/feature-a", Step: "Setup code-review-graph", Status: progress.StepRunning},
+		{Phase: "/repo/feature-a", Step: "Setup code-review-graph", Status: progress.StepDone},
+		{Phase: "/repo/feature-b", Step: "Setup code-review-graph", Status: progress.StepDone},
 	}
 
 	view := stripAnsi(m.viewIntegrationSummary())
@@ -108,9 +108,9 @@ func TestViewIntegrationSummary_AllSucceeded(t *testing.T) {
 func TestViewIntegrationSummary_PartialFailure(t *testing.T) {
 	m := makeIntegrationModel()
 	m.view = integrationSummaryView
-	m.integ.events = []integration.ManagerEvent{
-		{Worktree: "/repo/feature-a", Step: "Setup code-review-graph", Status: integration.StatusDone},
-		{Worktree: "/repo/feature-b", Step: "Install dependency pipx", Status: integration.StatusFailed, Error: errors.New("brew install pipx: exit 1")},
+	m.integ.events = []progress.Event{
+		{Phase: "/repo/feature-a", Step: "Setup code-review-graph", Status: progress.StepDone},
+		{Phase: "/repo/feature-b", Step: "Install dependency pipx", Status: progress.StepFailed, Error: errors.New("brew install pipx: exit 1")},
 	}
 
 	view := m.viewIntegrationSummary()
@@ -124,8 +124,8 @@ func TestViewIntegrationSummary_PartialFailure(t *testing.T) {
 func TestViewIntegrationSummary_SaveError(t *testing.T) {
 	m := makeIntegrationModel()
 	m.view = integrationSummaryView
-	m.integ.events = []integration.ManagerEvent{
-		{Worktree: "/repo/feature-a", Step: "Setup code-review-graph", Status: integration.StatusDone},
+	m.integ.events = []progress.Event{
+		{Phase: "/repo/feature-a", Step: "Setup code-review-graph", Status: progress.StepDone},
 	}
 	m.integ.saveErr = errors.New("disk full")
 

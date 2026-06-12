@@ -7,7 +7,6 @@ import (
 
 	"github.com/abiswas97/sentei/internal/cleanup"
 	"github.com/abiswas97/sentei/internal/git"
-	"github.com/abiswas97/sentei/internal/integration"
 	"github.com/abiswas97/sentei/internal/progress"
 	"github.com/abiswas97/sentei/internal/repo"
 )
@@ -82,8 +81,8 @@ func TestBuildIntegrationPhases_PrePopulatesTargets(t *testing.T) {
 
 func TestBuildIntegrationPhases_ErrorBakedIntoLabel(t *testing.T) {
 	m := NewMenuModel(nil, nil, "/repo", nil, repo.ContextBareRepo)
-	m.integ.events = []integration.ManagerEvent{
-		{Worktree: "/repo/a", Step: "Install pipx", Status: integration.StatusFailed, Error: errors.New("exit 1")},
+	m.integ.events = []progress.Event{
+		{Phase: "/repo/a", Step: "Install pipx", Status: progress.StepFailed, Error: errors.New("exit 1")},
 	}
 
 	phases := m.buildIntegrationPhases()

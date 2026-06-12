@@ -9,6 +9,7 @@ import (
 
 	"github.com/abiswas97/sentei/internal/git"
 	"github.com/abiswas97/sentei/internal/integration"
+	"github.com/abiswas97/sentei/internal/progress"
 	"github.com/abiswas97/sentei/internal/testutil/mock"
 )
 
@@ -325,10 +326,10 @@ func TestStartIntegrationApply_ComputesPlanAndAppliesChanges(t *testing.T) {
 	events := drainIntegrationApply(t, updated)
 	var sawSetup, sawTeardown bool
 	for _, ev := range events {
-		if ev.Step == "Setup enable-me" && ev.Status == integration.StatusDone {
+		if ev.Step == "Setup enable-me" && ev.Status == progress.StepDone {
 			sawSetup = true
 		}
-		if ev.Step == "Teardown disable-me" && ev.Status == integration.StatusDone {
+		if ev.Step == "Teardown disable-me" && ev.Status == progress.StepDone {
 			sawTeardown = true
 		}
 	}

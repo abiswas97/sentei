@@ -9,26 +9,8 @@ import (
 
 	"github.com/abiswas97/sentei/internal/fileutil"
 	"github.com/abiswas97/sentei/internal/git"
+	"github.com/abiswas97/sentei/internal/progress"
 )
-
-// ManagerStatus indicates the outcome of a manager operation step.
-type ManagerStatus int
-
-const (
-	StatusRunning ManagerStatus = iota
-	StatusDone
-	StatusFailed
-	StatusSkipped
-)
-
-// ManagerEvent is emitted by EnableIntegration and DisableIntegration to report
-// progress for each worktree operation step.
-type ManagerEvent struct {
-	Worktree string
-	Step     string
-	Status   ManagerStatus
-	Error    error
-}
 
 // EnableIntegration installs and sets up integ in every worktree listed in
 // wtPaths. For each worktree it:
@@ -44,7 +26,7 @@ func EnableIntegration(
 	mainWTPath string,
 	wtPaths []string,
 	integ Integration,
-	emit func(ManagerEvent),
+	emit func(progress.Event),
 ) {
 	for _, wtPath := range wtPaths {
 		// Step 1: seed index from main worktree when applicable.
@@ -67,14 +49,14 @@ func EnableIntegration(
 		} else {
 			// Tool already installed — skip install and dep steps.
 			for _, dep := range integ.Dependencies {
-				emit(ManagerEvent{Worktree: wtPath, Step: "Install dependency " + dep.Name, Status: StatusSkipped})
+				emit(progress.Event{Phase: wtPath, Step: "Install dependency " + dep.Name, Status: progress.StepSkipped})
 			}
-			emit(ManagerEvent{Worktree: wtPath, Step: "Install " + integ.Name, Status: StatusSkipped})
+			emit(progress.Event{Phase: wtPath, Step: "Install " + integ.Name, Status: progress.StepSkipped})
 		}
 
 		// Step 3: run setup.
 		stepName := "Setup " + integ.Name
-		emit(ManagerEvent{Worktree: wtPath, Step: stepName, Status: StatusRunning})
+		emit(progress.Event{Phase: wtPath, Step: stepName, Status: progress.StepRunning})
 
 		workDir := wtPath
 		if integ.Setup.WorkingDir == "repo" {
@@ -85,10 +67,10 @@ func EnableIntegration(
 		cmd := strings.ReplaceAll(integ.Setup.Command, "{path}", git.ShellQuote(wtPath))
 
 		if _, err := shell.RunShell(workDir, cmd); err != nil {
-			emit(ManagerEvent{Worktree: wtPath, Step: stepName, Status: StatusFailed, Error: err})
+			emit(progress.Event{Phase: wtPath, Step: stepName, Status: progress.StepFailed, Error: err})
 			continue
 		}
-		emit(ManagerEvent{Worktree: wtPath, Step: stepName, Status: StatusDone})
+		emit(progress.Event{Phase: wtPath, Step: stepName, Status: progress.StepDone})
 
 		// Step 4: append gitignore entries (best-effort; non-fatal).
 		_ = appendGitignoreEntries(wtPath, integ.GitignoreEntries)
@@ -102,18 +84,18 @@ func DisableIntegration(
 	shell git.ShellRunner,
 	wtPaths []string,
 	integ Integration,
-	emit func(ManagerEvent),
+	emit func(progress.Event),
 ) {
 	for _, wtPath := range wtPaths {
 		// Step 1: run teardown command.
 		if integ.Teardown.Command != "" {
 			stepName := "Teardown " + integ.Name
-			emit(ManagerEvent{Worktree: wtPath, Step: stepName, Status: StatusRunning})
+			emit(progress.Event{Phase: wtPath, Step: stepName, Status: progress.StepRunning})
 			if _, err := shell.RunShell(wtPath, integ.Teardown.Command); err != nil {
-				emit(ManagerEvent{Worktree: wtPath, Step: stepName, Status: StatusFailed, Error: err})
+				emit(progress.Event{Phase: wtPath, Step: stepName, Status: progress.StepFailed, Error: err})
 				// Continue to directory removal even if command fails.
 			} else {
-				emit(ManagerEvent{Worktree: wtPath, Step: stepName, Status: StatusDone})
+				emit(progress.Event{Phase: wtPath, Step: stepName, Status: progress.StepDone})
 			}
 		}
 
@@ -122,11 +104,11 @@ func DisableIntegration(
 			dirName := strings.TrimSuffix(dir, "/")
 			fullPath := filepath.Join(wtPath, dirName)
 			stepName := fmt.Sprintf("Remove %s in %s", dirName, filepath.Base(wtPath))
-			emit(ManagerEvent{Worktree: wtPath, Step: stepName, Status: StatusRunning})
+			emit(progress.Event{Phase: wtPath, Step: stepName, Status: progress.StepRunning})
 			if err := os.RemoveAll(fullPath); err != nil {
-				emit(ManagerEvent{Worktree: wtPath, Step: stepName, Status: StatusFailed, Error: err})
+				emit(progress.Event{Phase: wtPath, Step: stepName, Status: progress.StepFailed, Error: err})
 			} else {
-				emit(ManagerEvent{Worktree: wtPath, Step: stepName, Status: StatusDone})
+				emit(progress.Event{Phase: wtPath, Step: stepName, Status: progress.StepDone})
 			}
 		}
 	}
@@ -149,31 +131,31 @@ func detectTool(shell git.ShellRunner, wtPath string, integ Integration) bool {
 
 // installTool checks dependencies and installs the integration tool.
 // It emits events and returns an error on failure.
-func installTool(shell git.ShellRunner, wtPath string, integ Integration, emit func(ManagerEvent)) error {
+func installTool(shell git.ShellRunner, wtPath string, integ Integration, emit func(progress.Event)) error {
 	// Check and install dependencies.
 	for _, dep := range integ.Dependencies {
 		stepName := "Install dependency " + dep.Name
 		_, err := shell.RunShell(wtPath, dep.Detect)
 		if err != nil && dep.Install != "" {
-			emit(ManagerEvent{Worktree: wtPath, Step: stepName, Status: StatusRunning})
+			emit(progress.Event{Phase: wtPath, Step: stepName, Status: progress.StepRunning})
 			if _, err2 := shell.RunShell(wtPath, dep.Install); err2 != nil {
-				emit(ManagerEvent{Worktree: wtPath, Step: stepName, Status: StatusFailed, Error: err2})
+				emit(progress.Event{Phase: wtPath, Step: stepName, Status: progress.StepFailed, Error: err2})
 				return err2
 			}
-			emit(ManagerEvent{Worktree: wtPath, Step: stepName, Status: StatusDone})
+			emit(progress.Event{Phase: wtPath, Step: stepName, Status: progress.StepDone})
 		} else {
-			emit(ManagerEvent{Worktree: wtPath, Step: stepName, Status: StatusSkipped})
+			emit(progress.Event{Phase: wtPath, Step: stepName, Status: progress.StepSkipped})
 		}
 	}
 
 	// Install the tool itself.
 	stepName := "Install " + integ.Name
-	emit(ManagerEvent{Worktree: wtPath, Step: stepName, Status: StatusRunning})
+	emit(progress.Event{Phase: wtPath, Step: stepName, Status: progress.StepRunning})
 	if _, err := shell.RunShell(wtPath, integ.Install.Command); err != nil {
-		emit(ManagerEvent{Worktree: wtPath, Step: stepName, Status: StatusFailed, Error: err})
+		emit(progress.Event{Phase: wtPath, Step: stepName, Status: progress.StepFailed, Error: err})
 		return err
 	}
-	emit(ManagerEvent{Worktree: wtPath, Step: stepName, Status: StatusDone})
+	emit(progress.Event{Phase: wtPath, Step: stepName, Status: progress.StepDone})
 	return nil
 }
 

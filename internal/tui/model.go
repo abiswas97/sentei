@@ -199,12 +199,12 @@ type integrationState struct {
 	colCursor    int                       // 0-based column index for future expansion //nolint:unused
 
 	// Progress
-	events          []integration.ManagerEvent    //nolint:unused
-	finalized       bool                          // apply result arrived; the hold is showing
-	totalSteps      int                           // known upfront for progress bar
-	targetWorktrees []string                      // all apply targets, pre-populated as pending phases
-	eventCh         chan integration.ManagerEvent //nolint:unused
-	doneCh          chan struct{}                 //nolint:unused
+	events          []progress.Event    //nolint:unused
+	finalized       bool                // apply result arrived; the hold is showing
+	totalSteps      int                 // known upfront for progress bar
+	targetWorktrees []string            // all apply targets, pre-populated as pending phases
+	eventCh         chan progress.Event //nolint:unused
+	doneCh          chan struct{}       //nolint:unused
 
 	// Context: where to return after progress completes
 	returnView viewState //nolint:unused

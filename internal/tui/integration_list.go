@@ -11,6 +11,7 @@ import (
 	"charm.land/lipgloss/v2"
 
 	"github.com/abiswas97/sentei/internal/integration"
+	"github.com/abiswas97/sentei/internal/progress"
 )
 
 type integrationStateLoadedMsg struct {
@@ -22,7 +23,7 @@ type integrationStateLoadedMsg struct {
 }
 
 type integrationEventMsg struct {
-	Event integration.ManagerEvent
+	Event progress.Event
 }
 
 type integrationApplyDoneMsg struct{}
@@ -57,7 +58,7 @@ func (m Model) loadIntegrationState() tea.Cmd {
 	}
 }
 
-func waitForIntegrationEvent(ch <-chan integration.ManagerEvent, doneCh <-chan struct{}) tea.Cmd {
+func waitForIntegrationEvent(ch <-chan progress.Event, doneCh <-chan struct{}) tea.Cmd {
 	return func() tea.Msg {
 		ev, ok := <-ch
 		if !ok {
@@ -125,7 +126,7 @@ func (m Model) startIntegrationApply() (Model, tea.Cmd) {
 	m.integ.totalSteps = totalSteps
 	m.integ.targetWorktrees = wtPaths
 
-	ch := make(chan integration.ManagerEvent, 50)
+	ch := make(chan progress.Event, 50)
 	doneCh := make(chan struct{}, 1)
 	m.integ.eventCh = ch
 	m.integ.doneCh = doneCh
@@ -135,7 +136,7 @@ func (m Model) startIntegrationApply() (Model, tea.Cmd) {
 	mainWT := m.findSourceWorktree()
 
 	go func() {
-		emit := func(e integration.ManagerEvent) { ch <- e }
+		emit := func(e progress.Event) { ch <- e }
 		for _, integ := range toEnable {
 			integration.EnableIntegration(shell, repoPath, mainWT, wtPaths, integ, emit)
 		}

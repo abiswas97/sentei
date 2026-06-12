@@ -8,7 +8,6 @@ import (
 	tea "charm.land/bubbletea/v2"
 
 	"github.com/abiswas97/sentei/internal/git"
-	"github.com/abiswas97/sentei/internal/integration"
 	"github.com/abiswas97/sentei/internal/progress"
 	"github.com/abiswas97/sentei/internal/repo"
 	"github.com/abiswas97/sentei/internal/state"
@@ -118,7 +117,7 @@ func (m Model) buildIntegrationPhases() []progress.PhaseState {
 		pd := progress.PhaseState{Name: filepath.Base(g.worktree)}
 		seen[g.worktree] = true
 		for _, s := range g.steps {
-			if s.ev.Status == integration.StatusSkipped {
+			if s.ev.Status == progress.StepSkipped {
 				continue // skipped steps stay hidden, as before
 			}
 			label := s.step
@@ -129,12 +128,12 @@ func (m Model) buildIntegrationPhases() []progress.PhaseState {
 			}
 			var status progress.StepStatus
 			switch s.ev.Status {
-			case integration.StatusDone:
+			case progress.StepDone:
 				status = progress.StepDone
 				pd.Done++
-			case integration.StatusRunning:
+			case progress.StepRunning:
 				status = progress.StepRunning
-			case integration.StatusFailed:
+			case progress.StepFailed:
 				status = progress.StepFailed
 				pd.Failed++
 				pd.Done++
@@ -160,11 +159,11 @@ func (m Model) integrationOverallProgress() (done, total int) {
 	total = m.integ.totalSteps
 	resolved := make(map[string]bool)
 	for _, ev := range m.integ.events {
-		key := ev.Worktree + ":" + ev.Step
+		key := ev.Phase + ":" + ev.Step
 		if resolved[key] {
 			continue
 		}
-		if ev.Status == integration.StatusDone || ev.Status == integration.StatusFailed || ev.Status == integration.StatusSkipped {
+		if ev.Status == progress.StepDone || ev.Status == progress.StepFailed || ev.Status == progress.StepSkipped {
 			resolved[key] = true
 			done++
 		}

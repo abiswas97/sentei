@@ -8,12 +8,12 @@ import (
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
 
-	"github.com/abiswas97/sentei/internal/integration"
+	"github.com/abiswas97/sentei/internal/progress"
 )
 
 type integrationStepOutcome struct {
 	step string
-	ev   integration.ManagerEvent
+	ev   progress.Event
 }
 
 type integrationWorktreeOutcomes struct {
@@ -24,23 +24,23 @@ type integrationWorktreeOutcomes struct {
 // groupIntegrationEvents folds an apply's event stream into per-worktree step
 // outcomes: groups in first-seen order, one entry per step holding its latest
 // event. Shared by the progress and summary views.
-func groupIntegrationEvents(events []integration.ManagerEvent) []integrationWorktreeOutcomes {
+func groupIntegrationEvents(events []progress.Event) []integrationWorktreeOutcomes {
 	var groups []integrationWorktreeOutcomes
 	groupIndex := make(map[string]int)
 	stepIndex := make(map[string]map[string]int)
 
 	for _, ev := range events {
-		gi, exists := groupIndex[ev.Worktree]
+		gi, exists := groupIndex[ev.Phase]
 		if !exists {
 			gi = len(groups)
-			groupIndex[ev.Worktree] = gi
-			groups = append(groups, integrationWorktreeOutcomes{worktree: ev.Worktree})
-			stepIndex[ev.Worktree] = make(map[string]int)
+			groupIndex[ev.Phase] = gi
+			groups = append(groups, integrationWorktreeOutcomes{worktree: ev.Phase})
+			stepIndex[ev.Phase] = make(map[string]int)
 		}
-		if si, exists := stepIndex[ev.Worktree][ev.Step]; exists {
+		if si, exists := stepIndex[ev.Phase][ev.Step]; exists {
 			groups[gi].steps[si].ev = ev
 		} else {
-			stepIndex[ev.Worktree][ev.Step] = len(groups[gi].steps)
+			stepIndex[ev.Phase][ev.Step] = len(groups[gi].steps)
 			groups[gi].steps = append(groups[gi].steps, integrationStepOutcome{step: ev.Step, ev: ev})
 		}
 	}
@@ -72,9 +72,9 @@ func countIntegrationOutcomes(groups []integrationWorktreeOutcomes) (applied, fa
 	for _, g := range groups {
 		for _, s := range g.steps {
 			switch s.ev.Status {
-			case integration.StatusDone:
+			case progress.StepDone:
 				applied++
-			case integration.StatusFailed:
+			case progress.StepFailed:
 				failed++
 			}
 		}
@@ -84,7 +84,7 @@ func countIntegrationOutcomes(groups []integrationWorktreeOutcomes) (applied, fa
 
 func groupHasFailure(g integrationWorktreeOutcomes) bool {
 	for _, s := range g.steps {
-		if s.ev.Status == integration.StatusFailed {
+		if s.ev.Status == progress.StepFailed {
 			return true
 		}
 	}
@@ -119,9 +119,9 @@ func renderIntegrationOutcomes(b *strings.Builder, groups []integrationWorktreeO
 		fmt.Fprintf(b, "  %s\n", filepath.Base(g.worktree))
 		for _, s := range g.steps {
 			switch s.ev.Status {
-			case integration.StatusDone:
+			case progress.StepDone:
 				fmt.Fprintf(b, "    %s %s\n", styleIndicatorDone.Render(indicatorDone), s.step)
-			case integration.StatusFailed:
+			case progress.StepFailed:
 				fmt.Fprintf(b, "    %s %s\n", styleIndicatorFailed.Render(indicatorFailed), s.step)
 				if s.ev.Error == nil {
 					continue
@@ -216,7 +216,7 @@ func (m Model) viewIntegrationSummary() string {
 func outcomesHaveErrorOutput(groups []integrationWorktreeOutcomes) bool {
 	for _, g := range groups {
 		for _, s := range g.steps {
-			if s.ev.Status == integration.StatusFailed && s.ev.Error != nil {
+			if s.ev.Status == progress.StepFailed && s.ev.Error != nil {
 				return true
 			}
 		}

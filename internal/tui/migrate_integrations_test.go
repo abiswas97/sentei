@@ -9,6 +9,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 
 	"github.com/abiswas97/sentei/internal/integration"
+	"github.com/abiswas97/sentei/internal/progress"
 	"github.com/abiswas97/sentei/internal/repo"
 	"github.com/abiswas97/sentei/internal/testutil/mock"
 )
@@ -114,9 +115,9 @@ func TestViewMigrateIntegrations_ShowsIntroText(t *testing.T) {
 
 // drainIntegrationApply executes wait commands until the apply goroutine
 // reports completion, returning the events seen.
-func drainIntegrationApply(t *testing.T, m Model) []integration.ManagerEvent {
+func drainIntegrationApply(t *testing.T, m Model) []progress.Event {
 	t.Helper()
-	var events []integration.ManagerEvent
+	var events []progress.Event
 	for range 100 {
 		msg := waitForIntegrationEvent(m.integ.eventCh, m.integ.doneCh)()
 		switch msg := msg.(type) {
@@ -233,7 +234,7 @@ func TestStartMigrateIntegrationApply_EnablesStagedIntegrations(t *testing.T) {
 
 	var sawSetupDone bool
 	for _, ev := range events {
-		if ev.Step == "Setup fake-tool" && ev.Status == integration.StatusDone {
+		if ev.Step == "Setup fake-tool" && ev.Status == progress.StepDone {
 			sawSetupDone = true
 		}
 	}

@@ -10,6 +10,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 
 	"github.com/abiswas97/sentei/internal/integration"
+	"github.com/abiswas97/sentei/internal/progress"
 	"github.com/abiswas97/sentei/internal/repo"
 )
 
@@ -107,7 +108,7 @@ func (m Model) startMigrateIntegrationApply() (Model, tea.Cmd) {
 	}
 	m.integ.targetWorktrees = []string{wtPath}
 
-	ch := make(chan integration.ManagerEvent, 50)
+	ch := make(chan progress.Event, 50)
 	doneCh := make(chan struct{}, 1)
 	m.integ.eventCh = ch
 	m.integ.doneCh = doneCh
@@ -116,7 +117,7 @@ func (m Model) startMigrateIntegrationApply() (Model, tea.Cmd) {
 	shell := m.shell
 
 	go func() {
-		emit := func(e integration.ManagerEvent) { ch <- e }
+		emit := func(e progress.Event) { ch <- e }
 		for _, integ := range toEnable {
 			integration.EnableIntegration(shell, repoPath, wtPath, []string{wtPath}, integ, emit)
 		}
