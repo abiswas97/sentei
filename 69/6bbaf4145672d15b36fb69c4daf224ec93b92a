@@ -1,0 +1,21 @@
+internal/tui/clone_input_test.go
+  s_121ba5aeb12306::t_fd3941ad3642ff 15-18,23-27,31-38,40-42,45,48-49,51-53,56,58-59,63-64,66-69,71-72,76-77,81,84-85,87-91,95-97,100-101,108-109,113-114,117-119,123-126,128
+internal/tui/clone_input_huh.go
+  s_121ba5aeb12306::t_aa33a32747045e 1-21,26-82,84-105
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "696bbaf4145672d15b36fb69c4daf224ec93b92a",
+  "prompts": {},
+  "sessions": {
+    "s_121ba5aeb12306": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d1da0b9d-4a5f-4e2f-88ec-4088d9f5ce99",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Test <t@t.com>"
+    }
+  }
+}
