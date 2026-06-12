@@ -99,3 +99,17 @@ func TestApplySummary_FailureUnlocksDetailPortal(t *testing.T) {
 		t.Error("footer must offer ? when a failure has output")
 	}
 }
+
+func TestErrorPeek_SanitizesChildProcessOutput(t *testing.T) {
+	raw := "ccc init && ccc index: \x1b[?25l\x1b[36m⠋\x1b[0m Indexing...\r\x1b[2K⠙ Indexing...\r\nIndexing failed: No module named 'sentence_transformers'"
+	lines := errorPeekLines(raw, 100)
+	for _, l := range lines {
+		if strings.ContainsAny(l, "\r\x1b") {
+			t.Errorf("peek line carries control codes: %q", l)
+		}
+	}
+	// Peek shape: first line, last content line, elision marker.
+	if lines[1] != "Indexing failed: No module named 'sentence_transformers'" {
+		t.Errorf("content line = %q", lines[1])
+	}
+}
