@@ -1,0 +1,28 @@
+internal/progress/plan.go
+  s_9734c013a8d1a8::t_768fb543c762a4 1-44
+internal/progress/snapshot.go
+  s_9734c013a8d1a8::t_1dff0d69ddf3ad 4-5,12,15-18,20-44,51-53,58-59,61-63,65-66,68-75,78,82-94
+internal/progress/plan_test.go
+  s_9734c013a8d1a8::t_83f042079ce0d7 1-193
+internal/progress/validate.go
+  s_9734c013a8d1a8::t_f89a8496f0b6b0 6-10,13,21-24
+  s_9734c013a8d1a8::t_1e7817abd8d3ba 1-5,11-12,14-20,25-33
+internal/progress/progress.go
+  s_9734c013a8d1a8::t_7929075c10f858 33-37,39-46
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "5d96d912ae4aeb9cfd435db819bef01d4c9b5388",
+  "prompts": {},
+  "sessions": {
+    "s_9734c013a8d1a8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "67fbc29d-6734-415f-8fb0-d7be5620fff9",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Test <t@t.com>"
+    }
+  }
+}
