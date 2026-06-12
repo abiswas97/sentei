@@ -1,0 +1,29 @@
+internal/progress/progress_test.go
+  s_9734c013a8d1a8::t_9f374180f4fcb7 1-44
+internal/progress/runner_test.go
+  s_9734c013a8d1a8::t_bdb7a45339dd74 1-92
+internal/progress/runner.go
+  s_9734c013a8d1a8::t_671e0e0d1fc6dd 1-71
+internal/progress/snapshot.go
+  s_9734c013a8d1a8::t_f3af297973b839 1-91
+internal/progress/snapshot_test.go
+  s_9734c013a8d1a8::t_cdafa9a9446f95 1-117
+internal/progress/progress.go
+  s_9734c013a8d1a8::t_9b9a9a2f2d416d 1-72
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "39719ccf5748cdc89ff61b624ace087e31f98691",
+  "prompts": {},
+  "sessions": {
+    "s_9734c013a8d1a8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "67fbc29d-6734-415f-8fb0-d7be5620fff9",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Test <t@t.com>"
+    }
+  }
+}
