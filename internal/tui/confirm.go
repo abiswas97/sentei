@@ -86,10 +86,10 @@ func worktreeAtRisk(wt git.Worktree) bool {
 // worktree snapshot and begins consuming its events.
 func (m Model) startDeletions() (tea.Model, tea.Cmd) {
 	selected := m.remove.run.worktrees
-	ch := make(chan worktree.DeletionEvent, len(selected)*2)
+	ch := make(chan progress.Event, len(selected)*2)
 	m.remove.run.progressCh = ch
 	go worktree.DeleteWorktrees(os.RemoveAll, selected, 5, ch)
-	return m, waitForDeletionEvent(ch)
+	return m, waitForRemovalEvent(ch)
 }
 
 const maxTeardownConcurrency = 5

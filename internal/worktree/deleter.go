@@ -6,21 +6,12 @@ import (
 	"sync"
 
 	"github.com/abiswas97/sentei/internal/git"
+	"github.com/abiswas97/sentei/internal/progress"
 )
 
-type DeletionEventType int
-
-const (
-	DeletionStarted DeletionEventType = iota
-	DeletionCompleted
-	DeletionFailed
-)
-
-type DeletionEvent struct {
-	Type  DeletionEventType
-	Path  string
-	Error error
-}
+// RemovalPhaseName is the canonical phase under which worktree deletions
+// report progress; the TUI renders the same phase name.
+const RemovalPhaseName = "Removing worktrees"
 
 type WorktreeOutcome struct {
 	Path    string
@@ -47,8 +38,8 @@ func UnlockWorktree(runner git.CommandRunner, repoPath, wtPath string) error {
 	return err
 }
 
-func DeleteWorktrees(remover func(string) error, worktrees []git.Worktree, maxConcurrency int, progress chan<- DeletionEvent) DeletionResult {
-	defer close(progress)
+func DeleteWorktrees(remover func(string) error, worktrees []git.Worktree, maxConcurrency int, events chan<- progress.Event) DeletionResult {
+	defer close(events)
 
 	if len(worktrees) == 0 {
 		return DeletionResult{}
@@ -74,7 +65,7 @@ func DeleteWorktrees(remover func(string) error, worktrees []git.Worktree, maxCo
 			defer wg.Done()
 			defer func() { <-sem }()
 
-			progress <- DeletionEvent{Type: DeletionStarted, Path: w.Path}
+			events <- progress.Event{Phase: RemovalPhaseName, Step: w.Path, Status: progress.StepRunning}
 
 			err := remover(w.Path)
 
@@ -88,14 +79,14 @@ func DeleteWorktrees(remover func(string) error, worktrees []git.Worktree, maxCo
 					Success: false,
 					Error:   fmt.Errorf("removing %s: %w", w.Path, err),
 				}
-				progress <- DeletionEvent{Type: DeletionFailed, Path: w.Path, Error: err}
+				events <- progress.Event{Phase: RemovalPhaseName, Step: w.Path, Status: progress.StepFailed, Error: err}
 			} else {
 				result.SuccessCount++
 				result.Outcomes[idx] = WorktreeOutcome{
 					Path:    w.Path,
 					Success: true,
 				}
-				progress <- DeletionEvent{Type: DeletionCompleted, Path: w.Path}
+				events <- progress.Event{Phase: RemovalPhaseName, Step: w.Path, Status: progress.StepDone}
 			}
 		}(i, wt)
 	}

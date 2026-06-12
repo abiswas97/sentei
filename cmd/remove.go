@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/abiswas97/sentei/internal/git"
+	"github.com/abiswas97/sentei/internal/progress"
 	"github.com/abiswas97/sentei/internal/repo"
 	"github.com/abiswas97/sentei/internal/worktree"
 )
@@ -127,8 +128,8 @@ func RunRemove(args []string) error {
 		return err
 	}
 
-	progress := make(chan worktree.DeletionEvent, 2*len(filtered))
-	result := worktree.DeleteWorktrees(remover, filtered, 5, progress)
+	events := make(chan progress.Event, 2*len(filtered))
+	result := worktree.DeleteWorktrees(remover, filtered, 5, events)
 
 	if err := worktree.PruneWorktrees(runner, repoPath); err != nil {
 		fmt.Fprintf(os.Stderr, "Warning: failed to prune worktrees: %v\n", err)

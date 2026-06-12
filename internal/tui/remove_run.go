@@ -16,7 +16,7 @@ type removalRun struct {
 	worktrees  []git.Worktree
 	statuses   map[string]string
 	result     worktree.DeletionResult
-	progressCh <-chan worktree.DeletionEvent
+	progressCh <-chan progress.Event
 
 	teardownRunning bool
 	teardownResults []progress.StepResult

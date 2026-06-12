@@ -98,7 +98,7 @@ func TestViewProgress_SecondRunCompletesAtHundredPercent(t *testing.T) {
 	m.remove.run = newRemovalRun([]git.Worktree{{Path: "/work/c", Branch: "refs/heads/c"}})
 	m.view = progressView
 
-	updated, _ := m.updateProgress(worktreeDeletedMsg{Path: "/work/c"})
+	updated, _ := m.updateProgress(removalEventMsg{event: progress.Event{Phase: worktree.RemovalPhaseName, Step: "/work/c", Status: progress.StepDone}})
 	model := updated.(Model)
 
 	view := model.viewProgress()

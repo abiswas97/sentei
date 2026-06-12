@@ -7,6 +7,8 @@ import (
 	tea "charm.land/bubbletea/v2"
 
 	"github.com/abiswas97/sentei/internal/git"
+	"github.com/abiswas97/sentei/internal/progress"
+	"github.com/abiswas97/sentei/internal/worktree"
 )
 
 // TestE2E_RemovalFlowChrome drives select -> confirm -> progress -> summary
@@ -43,7 +45,7 @@ func TestE2E_RemovalFlowChrome(t *testing.T) {
 	}
 
 	for _, path := range []string{"/work/a", "/work/b"} {
-		updated, _ = m.updateProgress(worktreeDeletedMsg{Path: path})
+		updated, _ = m.updateProgress(removalEventMsg{event: progress.Event{Phase: worktree.RemovalPhaseName, Step: path, Status: progress.StepDone}})
 		m = updated.(Model)
 	}
 	updated, _ = m.updateProgress(cleanupCompleteMsg{})

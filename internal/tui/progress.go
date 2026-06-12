@@ -23,31 +23,17 @@ type cleanupCompleteMsg struct {
 	Result cleanup.Result
 }
 
-type worktreeDeleteStartedMsg struct{ Path string }
-type worktreeDeletedMsg struct{ Path string }
-type worktreeDeleteFailedMsg struct {
-	Path string
-	Err  error
-}
+type removalEventMsg struct{ event progress.Event }
 type allDeletionsCompleteMsg struct{}
 type pruneCompleteMsg struct{ Err error }
 
-func waitForDeletionEvent(ch <-chan worktree.DeletionEvent) tea.Cmd {
+func waitForRemovalEvent(ch <-chan progress.Event) tea.Cmd {
 	return func() tea.Msg {
 		ev, ok := <-ch
 		if !ok {
 			return allDeletionsCompleteMsg{}
 		}
-		switch ev.Type {
-		case worktree.DeletionStarted:
-			return worktreeDeleteStartedMsg{Path: ev.Path}
-		case worktree.DeletionCompleted:
-			return worktreeDeletedMsg{Path: ev.Path}
-		case worktree.DeletionFailed:
-			return worktreeDeleteFailedMsg{Path: ev.Path, Err: ev.Error}
-		default:
-			return waitForDeletionEvent(ch)()
-		}
+		return removalEventMsg{event: ev}
 	}
 }
 
@@ -80,28 +66,28 @@ func (m Model) updateProgress(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.remove.run.teardownResults = msg.results
 		return m.startDeletions()
 
-	case worktreeDeleteStartedMsg:
-		m.remove.run.statuses[msg.Path] = statusRemoving
-		return m, tea.Batch(m.syncProgressBar(), waitForDeletionEvent(m.remove.run.progressCh))
-
-	case worktreeDeletedMsg:
-		m.remove.run.statuses[msg.Path] = statusRemoved
-		m.remove.run.result.SuccessCount++
-		m.remove.run.result.Outcomes = append(m.remove.run.result.Outcomes, worktree.WorktreeOutcome{
-			Path:    msg.Path,
-			Success: true,
-		})
-		return m, tea.Batch(m.syncProgressBar(), waitForDeletionEvent(m.remove.run.progressCh))
-
-	case worktreeDeleteFailedMsg:
-		m.remove.run.statuses[msg.Path] = statusFailed
-		m.remove.run.result.FailureCount++
-		m.remove.run.result.Outcomes = append(m.remove.run.result.Outcomes, worktree.WorktreeOutcome{
-			Path:    msg.Path,
-			Success: false,
-			Error:   fmt.Errorf("removing %s: %w", msg.Path, msg.Err),
-		})
-		return m, tea.Batch(m.syncProgressBar(), waitForDeletionEvent(m.remove.run.progressCh))
+	case removalEventMsg:
+		path := msg.event.Step
+		switch msg.event.Status {
+		case progress.StepRunning:
+			m.remove.run.statuses[path] = statusRemoving
+		case progress.StepDone:
+			m.remove.run.statuses[path] = statusRemoved
+			m.remove.run.result.SuccessCount++
+			m.remove.run.result.Outcomes = append(m.remove.run.result.Outcomes, worktree.WorktreeOutcome{
+				Path:    path,
+				Success: true,
+			})
+		case progress.StepFailed:
+			m.remove.run.statuses[path] = statusFailed
+			m.remove.run.result.FailureCount++
+			m.remove.run.result.Outcomes = append(m.remove.run.result.Outcomes, worktree.WorktreeOutcome{
+				Path:    path,
+				Success: false,
+				Error:   fmt.Errorf("removing %s: %w", path, msg.event.Error),
+			})
+		}
+		return m, tea.Batch(m.syncProgressBar(), waitForRemovalEvent(m.remove.run.progressCh))
 
 	case allDeletionsCompleteMsg:
 		return m, tea.Batch(m.syncProgressBar(), runPrune(m.runner, m.repoPath))
@@ -170,7 +156,7 @@ func (m Model) buildRemovalPhases() []progress.PhaseState {
 		phases = append(phases, td)
 	}
 
-	removing := progress.PhaseState{Name: "Removing worktrees", Total: run.total()}
+	removing := progress.PhaseState{Name: worktree.RemovalPhaseName, Total: run.total()}
 	for _, wt := range run.worktrees {
 		label := worktreeLabel(wt)
 		var status progress.StepStatus

@@ -12,10 +12,11 @@ import (
 	"github.com/abiswas97/sentei/internal/testutil/mock"
 
 	"github.com/abiswas97/sentei/internal/git"
+	"github.com/abiswas97/sentei/internal/progress"
 )
 
-func collectEvents(ch <-chan DeletionEvent) []DeletionEvent {
-	var events []DeletionEvent
+func collectEvents(ch <-chan progress.Event) []progress.Event {
+	var events []progress.Event
 	for e := range ch {
 		events = append(events, e)
 	}
@@ -31,9 +32,9 @@ func TestDeleteWorktrees_DeletesRealDirectories(t *testing.T) {
 		{Path: dirB, Branch: "refs/heads/b"},
 	}
 
-	progress := make(chan DeletionEvent, 20)
-	result := DeleteWorktrees(os.RemoveAll, worktrees, 5, progress)
-	events := collectEvents(progress)
+	ch := make(chan progress.Event, 20)
+	result := DeleteWorktrees(os.RemoveAll, worktrees, 5, ch)
+	events := collectEvents(ch)
 
 	if result.SuccessCount != 2 {
 		t.Errorf("SuccessCount = %d, want 2", result.SuccessCount)
@@ -50,12 +51,12 @@ func TestDeleteWorktrees_DeletesRealDirectories(t *testing.T) {
 
 	var started, completed int
 	for _, e := range events {
-		switch e.Type {
-		case DeletionStarted:
+		switch e.Status {
+		case progress.StepRunning:
 			started++
-		case DeletionCompleted:
+		case progress.StepDone:
 			completed++
-		case DeletionFailed:
+		case progress.StepFailed:
 			t.Error("unexpected failure event")
 		}
 	}
@@ -72,9 +73,9 @@ func TestDeleteWorktrees_DirectoryAlreadyMissing_Succeeds(t *testing.T) {
 		{Path: "/nonexistent/path/worktree"},
 	}
 
-	progress := make(chan DeletionEvent, 10)
-	result := DeleteWorktrees(os.RemoveAll, worktrees, 5, progress)
-	collectEvents(progress)
+	ch := make(chan progress.Event, 10)
+	result := DeleteWorktrees(os.RemoveAll, worktrees, 5, ch)
+	collectEvents(ch)
 
 	if result.SuccessCount != 1 {
 		t.Errorf("SuccessCount = %d, want 1 (missing directory should be a no-op success)", result.SuccessCount)
@@ -95,9 +96,9 @@ func TestDeleteWorktrees_RemovalFailure_ReportsFailure(t *testing.T) {
 		{Path: "/work/b"},
 	}
 
-	progress := make(chan DeletionEvent, 20)
-	result := DeleteWorktrees(failingRemover, worktrees, 5, progress)
-	collectEvents(progress)
+	ch := make(chan progress.Event, 20)
+	result := DeleteWorktrees(failingRemover, worktrees, 5, ch)
+	collectEvents(ch)
 
 	if result.SuccessCount != 0 {
 		t.Errorf("SuccessCount = %d, want 0", result.SuccessCount)
@@ -132,9 +133,9 @@ func TestDeleteWorktrees_MixedOutcomes(t *testing.T) {
 		{Path: badPath},
 	}
 
-	progress := make(chan DeletionEvent, 20)
-	result := DeleteWorktrees(remover, worktrees, 5, progress)
-	events := collectEvents(progress)
+	ch := make(chan progress.Event, 20)
+	result := DeleteWorktrees(remover, worktrees, 5, ch)
+	events := collectEvents(ch)
 
 	if result.SuccessCount != 1 {
 		t.Errorf("SuccessCount = %d, want 1", result.SuccessCount)
@@ -151,7 +152,7 @@ func TestDeleteWorktrees_MixedOutcomes(t *testing.T) {
 
 	var failed int
 	for _, e := range events {
-		if e.Type == DeletionFailed {
+		if e.Status == progress.StepFailed {
 			failed++
 		}
 	}
@@ -161,9 +162,9 @@ func TestDeleteWorktrees_MixedOutcomes(t *testing.T) {
 }
 
 func TestDeleteWorktrees_EmptyInput(t *testing.T) {
-	progress := make(chan DeletionEvent, 20)
-	result := DeleteWorktrees(os.RemoveAll, nil, 5, progress)
-	events := collectEvents(progress)
+	ch := make(chan progress.Event, 20)
+	result := DeleteWorktrees(os.RemoveAll, nil, 5, ch)
+	events := collectEvents(ch)
 
 	if result.SuccessCount != 0 || result.FailureCount != 0 {
 		t.Errorf("expected zero counts, got success=%d failure=%d", result.SuccessCount, result.FailureCount)
@@ -201,9 +202,9 @@ func TestDeleteWorktrees_ConcurrencyBound(t *testing.T) {
 		worktrees[i] = git.Worktree{Path: fmt.Sprintf("/work/%d", i+1)}
 	}
 
-	progress := make(chan DeletionEvent, 50)
+	ch := make(chan progress.Event, 50)
 	go func() {
-		DeleteWorktrees(remover, worktrees, maxConcurrency, progress)
+		DeleteWorktrees(remover, worktrees, maxConcurrency, ch)
 	}()
 
 	// Wait for maxConcurrency workers to arrive (proves they're running concurrently).
@@ -214,7 +215,7 @@ func TestDeleteWorktrees_ConcurrencyBound(t *testing.T) {
 	// Release all workers.
 	close(gate)
 
-	collectEvents(progress)
+	collectEvents(ch)
 
 	if maxConcurrent.Load() > int32(maxConcurrency) {
 		t.Errorf("max concurrent = %d, want <= %d", maxConcurrent.Load(), maxConcurrency)
