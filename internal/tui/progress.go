@@ -136,15 +136,17 @@ func (m Model) buildRemovalPhases() []progress.PhaseState {
 
 	switch {
 	case run.teardownRunning:
-		phases = append(phases, progress.PhaseState{
-			Name:  "Teardown",
-			Total: 1,
-			Steps: []progress.StepState{{Name: "Removing integration artifacts", Status: progress.StepRunning}},
-		})
+		// The plan was scanned at confirm time: the phase shows its real
+		// total from its first frame; steps resolve when results land.
+		td := progress.PhaseState{Name: "Teardown", Total: len(run.teardownPlanned), Closed: true}
+		for _, name := range run.teardownPlanned {
+			td.Steps = append(td.Steps, progress.StepState{Name: name, Status: progress.StepPending, Declared: 1})
+		}
+		phases = append(phases, td)
 	case len(run.teardownResults) > 0:
-		td := progress.PhaseState{Name: "Teardown", Total: len(run.teardownResults)}
+		td := progress.PhaseState{Name: "Teardown", Total: len(run.teardownResults), Closed: true}
 		for _, r := range run.teardownResults {
-			td.Steps = append(td.Steps, progress.StepState{Name: r.Name, Status: r.Status})
+			td.Steps = append(td.Steps, progress.StepState{Name: r.Name, Status: r.Status, Reached: 1, Declared: 1})
 			switch r.Status {
 			case progress.StepDone, progress.StepSkipped:
 				td.Done++
@@ -156,33 +158,39 @@ func (m Model) buildRemovalPhases() []progress.PhaseState {
 		phases = append(phases, td)
 	}
 
-	removing := progress.PhaseState{Name: worktree.RemovalPhaseName, Total: run.total()}
+	// Each removal step declares two checkpoints (started, removed): the
+	// deleter observes nothing finer inside `git worktree remove`, and the
+	// start checkpoint is what moves the bar during parallel work.
+	removing := progress.PhaseState{Name: worktree.RemovalPhaseName, Total: run.total(), Closed: true}
 	for _, wt := range run.worktrees {
 		label := worktreeLabel(wt)
-		var status progress.StepStatus
+		step := progress.StepState{Name: label, Declared: 2}
 		switch run.statuses[wt.Path] {
 		case statusRemoving:
-			status = progress.StepRunning
+			step.Status = progress.StepRunning
+			step.Reached = 1
 		case statusRemoved:
-			status = progress.StepDone
+			step.Status = progress.StepDone
+			step.Reached = 2
 			removing.Done++
 		case statusFailed:
-			status = progress.StepFailed
+			step.Status = progress.StepFailed
+			step.Reached = 2
 			removing.Failed++
 			removing.Done++
 		default:
-			status = progress.StepPending
+			step.Status = progress.StepPending
 		}
-		removing.Steps = append(removing.Steps, progress.StepState{Name: label, Status: status})
+		removing.Steps = append(removing.Steps, step)
 	}
 	phases = append(phases, removing)
 
-	cleanupPhase := progress.PhaseState{Name: "Prune & cleanup"}
+	cleanupPhase := progress.PhaseState{Name: "Prune & cleanup", Closed: true}
 	if removing.Total > 0 && removing.Done == removing.Total {
 		cleanupPhase.Total = 2
 		cleanupPhase.Steps = []progress.StepState{
-			{Name: "Prune worktree metadata", Status: progress.StepRunning},
-			{Name: "Repository cleanup", Status: progress.StepPending},
+			{Name: "Prune worktree metadata", Status: progress.StepRunning, Declared: 1},
+			{Name: "Repository cleanup", Status: progress.StepPending, Declared: 1},
 		}
 		if run.pruneErr != nil {
 			if *run.pruneErr != nil {
@@ -191,11 +199,13 @@ func (m Model) buildRemovalPhases() []progress.PhaseState {
 			} else {
 				cleanupPhase.Steps[0].Status = progress.StepDone
 			}
+			cleanupPhase.Steps[0].Reached = 1
 			cleanupPhase.Done++
 			cleanupPhase.Steps[1].Status = progress.StepRunning
 		}
 		if run.cleanupResult != nil {
 			cleanupPhase.Steps[1].Status = progress.StepDone
+			cleanupPhase.Steps[1].Reached = 1
 			cleanupPhase.Done++
 		}
 	}

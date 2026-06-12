@@ -57,18 +57,20 @@ func (m Model) beginRemoval() (tea.Model, tea.Cmd) {
 	m.remove.run = newRemovalRun(selected)
 
 	integrations := integration.All()
-	hasTeardown := false
+	var planned []string
 	for _, wt := range selected {
-		if len(creator.ScanArtifacts(wt.Path, integrations)) > 0 {
-			hasTeardown = true
-			break
+		for _, artifact := range creator.ScanArtifacts(wt.Path, integrations) {
+			if integ := findIntegrationByName(integrations, artifact.IntegrationName); integ != nil {
+				planned = append(planned, integration.TeardownStepName(*integ))
+			}
 		}
 	}
 
 	unlockLockedWorktrees(m.runner, m.repoPath, selected)
 
-	if hasTeardown {
+	if len(planned) > 0 {
 		m.remove.run.teardownRunning = true
+		m.remove.run.teardownPlanned = planned
 		return m, m.runTeardownPhase(selected, integrations)
 	}
 
@@ -90,6 +92,15 @@ func (m Model) startDeletions() (tea.Model, tea.Cmd) {
 	m.remove.run.progressCh = ch
 	go worktree.DeleteWorktrees(os.RemoveAll, selected, 5, ch)
 	return m, waitForRemovalEvent(ch)
+}
+
+func findIntegrationByName(integrations []integration.Integration, name string) *integration.Integration {
+	for i := range integrations {
+		if integrations[i].Name == name {
+			return &integrations[i]
+		}
+	}
+	return nil
 }
 
 const maxTeardownConcurrency = 5

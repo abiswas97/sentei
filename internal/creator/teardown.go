@@ -58,7 +58,7 @@ func Teardown(shell git.ShellRunner, wtPath string, integrations []integration.I
 			continue
 		}
 
-		stepName := fmt.Sprintf("Teardown %s", integ.Name)
+		stepName := integration.TeardownStepName(*integ)
 		result := progress.RunStep("Teardown", stepName, emit, func() (string, error) {
 			if integ.Teardown.Command != "" {
 				if _, err := shell.RunShell(wtPath, integ.Teardown.Command); err == nil {

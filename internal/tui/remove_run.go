@@ -19,6 +19,10 @@ type removalRun struct {
 	progressCh <-chan progress.Event
 
 	teardownRunning bool
+	// teardownPlanned is the step list scanned at confirm time (one step per
+	// worktree-integration with artifacts present), so the Teardown phase
+	// displays its real total from its first frame.
+	teardownPlanned []string
 	teardownResults []progress.StepResult
 
 	pruneErr      *error
