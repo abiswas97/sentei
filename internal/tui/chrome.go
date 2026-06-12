@@ -159,3 +159,13 @@ func renderProgressBar(done, total, width int) string {
 	track := styleDim.Render(strings.Repeat("░", width-filled))
 	return fmt.Sprintf("  %s%s %d%%", fill, track, pct)
 }
+
+// inputFieldLabel renders a form field's label line: accent while the
+// field has focus, plain otherwise. Fields render persistently — focus
+// moves the accent, never the geometry.
+func inputFieldLabel(label string, focused bool) string {
+	if focused {
+		return styleAccent.Render("  "+label) + "\n"
+	}
+	return "  " + label + "\n"
+}
