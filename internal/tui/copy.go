@@ -28,6 +28,7 @@ const (
 	titleSetUpIntegrations = "Set up integrations"
 	titleApplyingChanges   = "Applying integration changes"
 	titleApplyComplete     = "Apply complete"
+	titleApplyErrors       = "Apply finished with errors"
 	titleCleanupPreview    = "Cleanup preview"
 	titleConfirmCleanup    = "Confirm cleanup"
 	titleRunningCleanup    = "Running cleanup"

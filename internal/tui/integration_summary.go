@@ -126,6 +126,12 @@ func renderIntegrationOutcomes(b *strings.Builder, groups []integrationWorktreeO
 			switch s.ev.Status {
 			case progress.StepDone:
 				fmt.Fprintf(b, "    %s %s\n", styleIndicatorDone.Render(indicatorDone), s.step)
+			case progress.StepSkipped:
+				reason := ""
+				if s.ev.Message != "" {
+					reason = " (" + s.ev.Message + ")"
+				}
+				fmt.Fprintf(b, "    %s\n", styleDim.Render("– "+s.step+" – skipped"+reason))
 			case progress.StepFailed:
 				fmt.Fprintf(b, "    %s %s\n", styleIndicatorFailed.Render(indicatorFailed), s.step)
 				if s.ev.Error == nil {
@@ -167,13 +173,19 @@ func (m Model) integrationSummaryDetailContent() (string, string) {
 func (m Model) viewIntegrationSummary() string {
 	var b strings.Builder
 
-	b.WriteString(viewTitle(titleApplyComplete))
+	groups := orderOutcomesFailuresFirst(groupIntegrationEvents(m.integ.events))
+	applied, failed := countIntegrationOutcomes(groups)
+
+	// "Complete" would oversell a run with failures: the title states the
+	// outcome, and the headline leads with the count that matters.
+	title := titleApplyComplete
+	if failed > 0 {
+		title = titleApplyErrors
+	}
+	b.WriteString(viewTitle(title))
 	b.WriteString("\n\n")
 	b.WriteString(viewSeparator(m.width))
 	b.WriteString("\n\n")
-
-	groups := orderOutcomesFailuresFirst(groupIntegrationEvents(m.integ.events))
-	applied, failed := countIntegrationOutcomes(groups)
 
 	if m.integ.saveErr != nil {
 		b.WriteString(styleError.Render(truncateWithEllipsis(
@@ -189,8 +201,8 @@ func (m Model) viewIntegrationSummary() string {
 		b.WriteString(styleSuccess.Render(fmt.Sprintf("  %s %d %s applied", indicatorDone, applied, pluralize(applied, "step", "steps"))))
 	default:
 		fmt.Fprintf(&b, "  %s, %s",
+			styleError.Render(fmt.Sprintf("%s %d failed", indicatorFailed, failed)),
 			styleSuccess.Render(fmt.Sprintf("%d %s applied", applied, pluralize(applied, "step", "steps"))),
-			styleError.Render(fmt.Sprintf("%d failed", failed)),
 		)
 	}
 	b.WriteString("\n\n")

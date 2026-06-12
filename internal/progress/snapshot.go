@@ -19,6 +19,7 @@ type PhaseState struct {
 type StepState struct {
 	Name     string
 	Status   StepStatus
+	Message  string
 	Reached  int
 	Declared int
 }
@@ -86,6 +87,9 @@ func Snapshot(events []Event) []PhaseState {
 		step := &ps.Steps[idx]
 
 		step.Status = ev.Status
+		if ev.Message != "" {
+			step.Message = ev.Message
+		}
 		step.Declared = max(step.Declared, ev.Of)
 		switch ev.Status {
 		case StepRunning:

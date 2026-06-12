@@ -49,9 +49,9 @@ func EnableIntegration(
 		} else {
 			// Tool already installed — skip install and dep steps.
 			for _, dep := range integ.Dependencies {
-				emit(progress.Event{Phase: wtPath, Step: InstallDependencyStepName(dep), Status: progress.StepSkipped})
+				emit(progress.Event{Phase: wtPath, Step: InstallDependencyStepName(dep), Status: progress.StepSkipped, Message: "already installed"})
 			}
-			emit(progress.Event{Phase: wtPath, Step: InstallStepName(integ), Status: progress.StepSkipped})
+			emit(progress.Event{Phase: wtPath, Step: InstallStepName(integ), Status: progress.StepSkipped, Message: "already installed"})
 		}
 
 		// Step 3: run setup.

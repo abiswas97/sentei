@@ -114,18 +114,15 @@ func (m Model) buildIntegrationPhases() []progress.PhaseState {
 		pd := progress.PhaseState{Name: filepath.Base(g.worktree), Closed: g.closed}
 		seen[g.worktree] = true
 		for _, s := range g.steps {
-			if s.ev.Status == progress.StepSkipped {
-				continue // skipped steps stay hidden, as before
-			}
 			label := s.step
 			if s.ev.Error != nil {
 				// One-line rows law: live progress shows only the error's
 				// final line; the summary's peek and portal carry the rest.
 				label += " " + errorPeekLast(s.ev.Error.Error(), max(m.width-10, 20))
 			}
-			step := progress.StepState{Name: label, Status: s.ev.Status, Declared: 1}
+			step := progress.StepState{Name: label, Status: s.ev.Status, Message: s.ev.Message, Declared: 1}
 			switch s.ev.Status {
-			case progress.StepDone:
+			case progress.StepDone, progress.StepSkipped:
 				pd.Done++
 				step.Reached = 1
 			case progress.StepFailed:

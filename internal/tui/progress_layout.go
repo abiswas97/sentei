@@ -155,6 +155,11 @@ func (l ProgressLayout) renderPhase(b *strings.Builder, p progress.PhaseState, s
 		pct = 100
 	}
 	counts := styleDim.Render(fmt.Sprintf("%d/%d  %d%%", min(p.Done, p.Total), p.Total, pct))
+	if p.Failed > 0 {
+		// A failed phase advertises attempted counts, never the success
+		// vocabulary's percentage.
+		counts = styleDim.Render(fmt.Sprintf("%d/%d", min(p.Done, p.Total), p.Total))
+	}
 	switch {
 	case p.Failed > 0:
 		nameStyle := stylePhaseActive
@@ -179,9 +184,19 @@ func (l ProgressLayout) renderPhase(b *strings.Builder, p progress.PhaseState, s
 			fmt.Fprintf(b, "    %s\n", l.Motion.Body(l.Motion.Frame+" "+label))
 			continue
 		}
+		if s.Status == progress.StepSkipped {
+			// Detection decided not to act: auditable as a dim trace, in the
+			// same vocabulary as skipped phases.
+			reason := ""
+			if s.Message != "" {
+				reason = " (" + s.Message + ")"
+			}
+			fmt.Fprintf(b, "    %s\n", styleDim.Render("– "+label+" – skipped"+reason))
+			continue
+		}
 		var stepInd string
 		switch s.Status {
-		case progress.StepDone, progress.StepSkipped:
+		case progress.StepDone:
 			stepInd = styleIndicatorDone.Render(indicatorDone)
 		case progress.StepRunning:
 			stepInd = l.activeGlyph()
@@ -294,7 +309,12 @@ func (m Model) renderProgressLayout(l ProgressLayout) string {
 	// The native percentage follows the displayed fill, so bar and label
 	// never disagree; the phase headers state actual counts.
 	l.Bar = "  " + bar.View()
-	l.Elapsed = styleDim.Render(fmt.Sprintf("elapsed %ds", int(time.Since(m.progressStartedAt).Seconds())))
+	// Sub-2s elapsed is noise that implies precision the 1Hz ticker does
+	// not have; the layout reserve keeps the bar from reflowing when the
+	// readout appears.
+	if elapsed := time.Since(m.progressStartedAt); elapsed >= 2*time.Second {
+		l.Elapsed = styleDim.Render(fmt.Sprintf("elapsed %ds", int(elapsed.Seconds())))
+	}
 	l.ActiveGlyph = starGlyph(rampAccent, m.motionTick)
 	l.Motion = m.motion()
 	return l.View()
