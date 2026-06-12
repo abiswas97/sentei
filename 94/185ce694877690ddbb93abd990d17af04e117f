@@ -1,0 +1,24 @@
+internal/tui/progress_layout.go
+  s_9734c013a8d1a8::t_c1081054cb446b 142-145
+  s_9734c013a8d1a8::t_3eb31a2cbb16e7 59-63,67-72
+internal/tui/integration_progress.go
+  s_9734c013a8d1a8::t_bb44b9483706b2 93-98
+internal/tui/integration_progress_test.go
+  s_9734c013a8d1a8::t_191f0dfaa29ec3 179-192,195
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "94185ce694877690ddbb93abd990d17af04e117f",
+  "prompts": {},
+  "sessions": {
+    "s_9734c013a8d1a8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "67fbc29d-6734-415f-8fb0-d7be5620fff9",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Test <t@t.com>"
+    }
+  }
+}
