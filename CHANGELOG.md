@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.11.1](https://github.com/abiswas97/sentei/compare/v1.11.0...v1.11.1) (2026-06-12)
+
+
+### Bug Fixes
+
+* **integration:** align ccc install with upstream docs ([3904038](https://github.com/abiswas97/sentei/commit/390403882e42f88e28ca10792ed52a55aa0b9021))
+* **integration:** align ccc install with upstream docs ([7183448](https://github.com/abiswas97/sentei/commit/7183448aa0dc1ab52afcc5466475ada03fcf66dc))
+
 ## [1.11.0](https://github.com/abiswas97/sentei/compare/v1.10.0...v1.11.0) (2026-06-12)
 
 
