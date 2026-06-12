@@ -1,0 +1,135 @@
+internal/tui/chrome_migration_test.go
+  s_45cfee6c7ab135::t_10a31fd1353ab8 1-9,13-32,34-38,40-42,44-45,59-61,63-69,72-83,87-89,91-92,95,98-109,111-123,159-187
+  s_45cfee6c7ab135::t_03c30c5097c159 12,62,84
+  s_45cfee6c7ab135::t_92a6b53610bf14 33,43,46,48-55,57-58
+  s_dd70ced0a890b0::t_30e109f499d677 110
+  s_dd70ced0a890b0::t_b5f4e62c8c4084 124-158
+internal/tui/integration_progress.go
+  836686c23c36f641 1-6,8-9,13-16,18,21-26,31-34,47,49-60,62-69,71-72,74-75,83-86,106-107,110-111,119-120,125,129,131,143
+  s_45cfee6c7ab135::t_5ebfdafe9e4054 7,27-30
+  s_36547067c807ec::t_9367db7733eeca 10
+  s_45cfee6c7ab135::t_ebc4a579028b70 17
+  s_45cfee6c7ab135::t_56f24b098a4ef0 35-43,45,48
+  s_36547067c807ec::t_678946a655d12e 61,70,73,77-79,87
+  s_dd70ced0a890b0::t_41a6bc4a73a2ab 76
+  s_45cfee6c7ab135::t_850c0b7aaf0035 88-92,94,103-105,108-109,112,115-117,124,126-128,141,145-149,152-153
+  4a3693f6355ed8c0 151,176
+internal/tui/progress.go
+  764a16f68cca6469 10,102
+  f64c7206849682a4 32,59-61,69,9,24,63-65
+  s_45cfee6c7ab135::t_759536e74127a8 93,97-98
+  s_45cfee6c7ab135::t_1b92a67bcc8d76 105-106
+  s_45cfee6c7ab135::t_ab131b81591424 107-109,111,119-120,134,136,140,142,25-26,66-68,101
+internal/tui/motion_test.go
+  s_e079bea5665c1d::t_1dee62220e9f70 1-7,9,11,13-16,22-26,80,83,86-88,91-92,97,111,114,116,119,130-131,134-136,138-146,148-151,153,155-158,161-163,165-170,172-175,178-180,198-201
+  s_e079bea5665c1d::t_95b22ea798846f 8,12
+  s_121ba5aeb12306::t_47da136c6c0def 27-70,73-79,81-82,84-85,89,93-96,99-109,113,117-118,122-127,132-133,137,147,152,154,159-160,164,171,176-177,181-197,202-207,209-211,215-219
+  s_121ba5aeb12306::t_00bad71d812502 71-72,90,98,110,112,115,120-121,128-129
+internal/tui/repo_progress.go
+  764a16f68cca6469 1-3,6,12,15-16,18,20-21,23-24,26-29,31-32,34-35,37-38,40-41,43-44,46-47,49-66,68-69,81-86,89,95,99,102,108-109,118,180
+  s_8e2c58024a52e1::t_84afc0ec1b39bc 13
+  s_8e2c58024a52e1::t_6d560de25da41e 17,25,48,87
+  4a3693f6355ed8c0 70,76-78,90
+  s_e079bea5665c1d::t_da6de6aadca3c7 91,115
+  8a68b1169cb405a2 98
+internal/tui/progress_layout.go
+  s_45cfee6c7ab135::t_e95ca351e26b8b 1-8,10-11,13-21,23-26,32,67,71-72,76-84,92-96,98-102,105-125,127,129-132,134-139,141-142
+  s_45cfee6c7ab135::t_2a691273e1940c 27,29-31
+  s_e079bea5665c1d::t_489ae352df5758 38,40-44
+  s_121ba5aeb12306::t_d221ebfff5a2bb 39
+  s_e079bea5665c1d::t_99b9c26fd864b2 45-50,60
+  s_e079bea5665c1d::t_12ab4ac00c0612 51-59
+  s_45cfee6c7ab135::t_e68f9465cbdaf4 61-63,97
+  s_e079bea5665c1d::t_4e353a81d13103 85-91
+  s_e079bea5665c1d::t_10951993849c5e 103-104
+  s_e079bea5665c1d::t_c1ed95e844a247 173
+  s_e079bea5665c1d::t_fd1efc4948c1c8 192-194,197,199-200
+  s_121ba5aeb12306::t_eb2988a49e0140 201-203
+  s_e079bea5665c1d::t_876ffe34fd11c7 228-229,231-233
+  s_e079bea5665c1d::t_bf364d16106c2d 261-263
+  s_121ba5aeb12306::t_cdfcbdbdf6a361 269
+internal/tui/window.go
+  s_45cfee6c7ab135::t_a8e54e009c0f0c 1-2,4-16,18-26,28-29,32,34,36-48,50-58,60-67,69-73,75-82
+internal/tui/model.go
+  8a68b1169cb405a2 4,13-14
+  764a16f68cca6469 9,20,22,31,33-37,40,42-45,49,61,76
+  s_8e2c58024a52e1::t_84afc0ec1b39bc 10
+  4a3693f6355ed8c0 23-30,50-51,78
+  s_45cfee6c7ab135::t_f462788f1a4395 41
+  s_8e2c58024a52e1::t_6d560de25da41e 46
+  836686c23c36f641 47
+  s_45cfee6c7ab135::t_3c6eb0731bb7de 52
+  s_e079bea5665c1d::t_0d798fb1ca45a2 77
+  s_e079bea5665c1d::t_c3b99bdbfff1f7 79-81
+  s_e079bea5665c1d::t_d4245d727b12a9 86-89
+internal/tui/window_test.go
+  s_45cfee6c7ab135::t_4f93f152ad04ff 1-5,7-8,11,13-20,22-23,25-31,33-42,44,46,48,50-73,75,77,79-80,82-86,88,90-91,93-95,97-101,103-111,114-118,128-132,134-145,147,149,151,153-174
+internal/tui/animated_progress_test.go
+  s_e079bea5665c1d::t_c391efbd314596 36,38-40
+internal/tui/create_progress.go
+  764a16f68cca6469 1-4,6,13-14,16,18-19,31-35,104,127
+  s_8e2c58024a52e1::t_84afc0ec1b39bc 15
+  4a3693f6355ed8c0 20-22,28-29
+  s_45cfee6c7ab135::t_b4bed05c4fbf8a 108-109,8
+internal/tui/progress_layout_test.go
+  s_45cfee6c7ab135::t_ff2fd21810fcff 1-6,8-15,20,23-49,54-58,60-69,74-89,95-99,101-102,104-112,116-131,135-138,141-148,151-163,165,167,169-170,172-189
+  s_45cfee6c7ab135::t_27a798051c8b5c 59
+  s_e079bea5665c1d::t_f83e0a42beb786 100,103
+  s_e079bea5665c1d::t_c7b6638f32cdce 139-140
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "1b13e8d847ad6555b2f4933b9f1b5f5c038d0368",
+  "prompts": {},
+  "sessions": {
+    "s_121ba5aeb12306": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d1da0b9d-4a5f-4e2f-88ec-4088d9f5ce99",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Test <t@t.com>"
+    },
+    "s_36547067c807ec": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9aefc94a-03e7-43a7-a824-17732e8394d2",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Test <t@t.com>"
+    },
+    "s_45cfee6c7ab135": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "362b0459-633f-41b0-be4d-ef5a2d23fce8",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Test <t@t.com>"
+    },
+    "s_8e2c58024a52e1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ce6ce258-0f38-4b1c-9b68-41415998356e",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Test <t@t.com>"
+    },
+    "s_dd70ced0a890b0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "1d4c7900-8a46-4b76-a13e-5f766c2a5f97",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Test <t@t.com>"
+    },
+    "s_e079bea5665c1d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e853bef1-293d-4109-b048-273e59305a6e",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Test <t@t.com>"
+    }
+  }
+}

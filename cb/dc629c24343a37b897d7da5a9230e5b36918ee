@@ -1,0 +1,121 @@
+internal/tui/summary.go
+  s_45cfee6c7ab135::t_0e425da5476f92 26,58,60,80-81
+  f64c7206849682a4 44,47-48,51
+  s_45cfee6c7ab135::t_297c4d1cfe8200 45-46
+  s_45cfee6c7ab135::t_9ab53bc627ef50 52-53
+  764a16f68cca6469 63,66,69,72,79
+  836686c23c36f641 74,76,78
+internal/tui/model.go
+  8a68b1169cb405a2 4,13-14
+  764a16f68cca6469 9,19-21,30,32-36,39,41-44,48,60,75
+  s_8e2c58024a52e1::t_84afc0ec1b39bc 10
+  4a3693f6355ed8c0 22-29,49-50,77
+  s_45cfee6c7ab135::t_f462788f1a4395 40
+  s_8e2c58024a52e1::t_6d560de25da41e 45
+  836686c23c36f641 46
+  s_45cfee6c7ab135::t_3c6eb0731bb7de 51
+  s_e079bea5665c1d::t_0d798fb1ca45a2 76
+  s_e079bea5665c1d::t_c3b99bdbfff1f7 78-80
+  s_e079bea5665c1d::t_d4245d727b12a9 85-88
+internal/tui/progress_test.go
+  764a16f68cca6469 63,66,81,100,103,111,120,135,143
+  s_45cfee6c7ab135::t_3f1deb3f5c04f1 67,70-71,85,104,107,115,124,139,147
+  f64c7206849682a4 75,86,91,94-96,98
+  8a68b1169cb405a2 156-158,160-167
+cmd/cleanup.go
+  f64c7206849682a4 1-3,5,7-19,28,34,48-52,55-63,65-78
+  4a3693f6355ed8c0 53,64
+main.go
+  764a16f68cca6469 6
+  4a3693f6355ed8c0 10,23,29-30,34-35,62
+  f64c7206849682a4 24
+  8a68b1169cb405a2 77,79
+internal/tui/progress.go
+  764a16f68cca6469 10,102
+  s_8e2c58024a52e1::t_84afc0ec1b39bc 11
+  f64c7206849682a4 32,59-61,69,9,24,63-65
+  s_45cfee6c7ab135::t_759536e74127a8 93,97-98
+  s_45cfee6c7ab135::t_1b92a67bcc8d76 105-106
+  s_45cfee6c7ab135::t_ab131b81591424 107-109,111,119-120,134,136,140,142,25-26,66-68,101
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "cbdc629c24343a37b897d7da5a9230e5b36918ee",
+  "prompts": {
+    "4a3693f6355ed8c0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a9b374a7-9e9c-4fd6-8010-99b0fee4726d",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>",
+      "total_additions": 43,
+      "total_deletions": 2,
+      "accepted_lines": 4,
+      "overriden_lines": 0
+    },
+    "764a16f68cca6469": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ac54152b-b011-4656-a2ab-f030775dff6b",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>",
+      "total_additions": 18,
+      "total_deletions": 21,
+      "accepted_lines": 10,
+      "overriden_lines": 0
+    },
+    "836686c23c36f641": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "3900c7b6-8b79-42a7-b749-c875614dd86f",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>",
+      "total_additions": 14,
+      "total_deletions": 24,
+      "accepted_lines": 3,
+      "overriden_lines": 0
+    },
+    "f64c7206849682a4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c18abcdb-2bd1-40bf-8756-e09d97169a96",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>",
+      "total_additions": 158,
+      "total_deletions": 9,
+      "accepted_lines": 55,
+      "overriden_lines": 0
+    }
+  },
+  "sessions": {
+    "s_45cfee6c7ab135": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "362b0459-633f-41b0-be4d-ef5a2d23fce8",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Test <t@t.com>"
+    },
+    "s_8e2c58024a52e1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ce6ce258-0f38-4b1c-9b68-41415998356e",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Test <t@t.com>"
+    },
+    "s_e079bea5665c1d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e853bef1-293d-4109-b048-273e59305a6e",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Test <t@t.com>"
+    }
+  }
+}

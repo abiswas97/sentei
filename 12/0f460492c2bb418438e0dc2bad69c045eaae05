@@ -1,0 +1,91 @@
+internal/tui/remove_run_test.go
+  s_45cfee6c7ab135::t_e745af93e1f6a2 1-11,13-36,38-100,102-152,154-156,159-182
+  s_e079bea5665c1d::t_7ef9f2f1faa10b 153
+  s_121ba5aeb12306::t_02d2b3800296ba 157-158
+  s_45cfee6c7ab135::t_1753def9a5f8f1 183-195,197-212
+internal/tui/removal_e2e_test.go
+  s_45cfee6c7ab135::t_4f36e4cd5b63d3 1-9,12-47,49-57,59-68,70-109
+  s_dd70ced0a890b0::t_c02c7a829b9286 58
+  s_e079bea5665c1d::t_181ecd2c3e3e58 69
+internal/worktree/deleter.go
+  f2534d24a032860f 29-31
+internal/worktree/deleter_test.go
+  4a3693f6355ed8c0 173-176,180,184-185,189-193,195
+  s_8e2c58024a52e1::t_284c01e7b48a50 12,226-228,239-241,252-254,265-267
+  f2534d24a032860f 13
+internal/tui/confirm.go
+  764a16f68cca6469 10,13-14,16,18-19,30-31,34-35,38-40
+  s_45cfee6c7ab135::t_7dbc5f47976282 33
+  s_dd70ced0a890b0::t_ba8863f6a7855a 67
+internal/tui/remove_run.go
+  s_45cfee6c7ab135::t_4a7e3db7b6d976 1-5,7-18,20-21,23-36
+internal/tui/progress.go
+  764a16f68cca6469 10
+  f64c7206849682a4 27,45-47,55,9,24,49-51
+  s_45cfee6c7ab135::t_1b92a67bcc8d76 91-92
+  s_45cfee6c7ab135::t_ab131b81591424 93-95,97,105-106,120,122,126,128,25,52-54,89
+cmd/remove.go
+  4a3693f6355ed8c0 1-6,8-10,12-39,45,50-54,57,63,70-87,102-104
+  s_157240fea52147::t_d6783ab5bae9ab 7
+  s_157240fea52147::t_32df8f97722cf6 40-44
+  s_157240fea52147::t_45fab4d86a5987 46-49,55,62
+  f2534d24a032860f 56,65-66,68-69
+  s_157240fea52147::t_fd6d5e999c9ce9 58-61,64,67
+  s_157240fea52147::t_822036758ac24d 88,90-98
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "120f460492c2bb418438e0dc2bad69c045eaae05",
+  "prompts": {},
+  "sessions": {
+    "s_121ba5aeb12306": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d1da0b9d-4a5f-4e2f-88ec-4088d9f5ce99",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Test <t@t.com>"
+    },
+    "s_157240fea52147": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "42f7cf1c-c025-449a-89c8-fab9aa10c61e",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Test <t@t.com>"
+    },
+    "s_45cfee6c7ab135": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "362b0459-633f-41b0-be4d-ef5a2d23fce8",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Test <t@t.com>"
+    },
+    "s_8e2c58024a52e1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ce6ce258-0f38-4b1c-9b68-41415998356e",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Test <t@t.com>"
+    },
+    "s_dd70ced0a890b0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "1d4c7900-8a46-4b76-a13e-5f766c2a5f97",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Test <t@t.com>"
+    },
+    "s_e079bea5665c1d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e853bef1-293d-4109-b048-273e59305a6e",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Test <t@t.com>"
+    }
+  }
+}

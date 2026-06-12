@@ -1,0 +1,30 @@
+.impeccable.md
+  764a16f68cca6469 1-12
+  s_e079bea5665c1d::t_db93fbb2348763 15
+  s_45cfee6c7ab135::t_16e0da2eaaa217 16
+  s_45cfee6c7ab135::t_e5b28cd908b261 17-23
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "da34bf55c41bc0d6a02c90248fc5e0d605f99006",
+  "prompts": {},
+  "sessions": {
+    "s_45cfee6c7ab135": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "362b0459-633f-41b0-be4d-ef5a2d23fce8",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Test <t@t.com>"
+    },
+    "s_e079bea5665c1d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e853bef1-293d-4109-b048-273e59305a6e",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Test <t@t.com>"
+    }
+  }
+}

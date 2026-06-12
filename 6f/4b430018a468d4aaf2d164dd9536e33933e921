@@ -1,0 +1,141 @@
+internal/tui/integration_list_test.go
+  836686c23c36f641 1-9,11,14-314,319-328,330-331,333-341
+  s_45cfee6c7ab135::t_1ffc6af613d9c7 10,13
+internal/tui/integration_summary_test.go
+  s_45cfee6c7ab135::t_9d4829c44fe42b 1-4,6-10,12-13,25-90,95-110,114-126
+  s_dd70ced0a890b0::t_a154ad2ad207b0 5,16,21-24
+  s_dd70ced0a890b0::t_3e759f85d644f8 140-201
+internal/tui/integration_list.go
+  836686c23c36f641 1-6,8-13,15-17,25,27-46,48,50-60,62-95,97-101,103-107,153-156,158-175,177,179-184,204-208,210,214-219,225-256,258,260-263,298-304,306,308-313,321,346-348,353,355-358,361,363
+  8a68b1169cb405a2 7,211
+  s_45cfee6c7ab135::t_56978c05dcfc75 18-20,22-24
+  s_e079bea5665c1d::t_7711f52f206cc6 21
+  s_36547067c807ec::t_e765ea33936334 49
+  4a3693f6355ed8c0 127-128
+  s_45cfee6c7ab135::t_46f4b610ebc060 136
+  s_e079bea5665c1d::t_6a87c310e8059b 176,178
+  s_e079bea5665c1d::t_3b3436efec3855 185-202,209,212
+  s_e079bea5665c1d::t_7e871410fd7133 257,259,264-297
+  s_e079bea5665c1d::t_6192695aea0a57 305,307,314-315,318,322-326,328,330-345,349,351-352,354
+  s_e079bea5665c1d::t_45fc45694596e3 316-317,319-320,327,329
+  s_e079bea5665c1d::t_b86d20873ff9cd 350
+internal/tui/integration_progress_test.go
+  836686c23c36f641 1-3,7-11,13,37-53,55-58,63-71,73-76,78-79,82,87,90-103,105-118,120,125-129
+  s_157240fea52147::t_f1d2cf3b166841 4,15-19,22-36
+  s_45cfee6c7ab135::t_a187fe7e0ab640 5-6,14
+  s_45cfee6c7ab135::t_91ec2eb17facf5 20-21
+  s_45cfee6c7ab135::t_a454df7aa9adb5 72,77,80-81,83-86,88-89
+  s_45cfee6c7ab135::t_be620ecbe2d180 104
+  4a3693f6355ed8c0 119,121,130-139,147-153,158-159,168-172
+  s_e079bea5665c1d::t_3d01d41a95992c 188-189,191-196
+  s_dd70ced0a890b0::t_56017d21e1e8e0 214
+  s_dd70ced0a890b0::t_5be5306c9a3c2f 244
+  s_dd70ced0a890b0::t_dd44005fa798d7 264,266-267
+internal/integration/manager_test.go
+  836686c23c36f641 1-6,9-31,36-39,41,43-48,50,68,73,76-77,80,82-93,95,97-124,126-128,130,132-139,141-150,153-155,157,159-163,165-168,170-177
+  s_157240fea52147::t_0a671aaa0bc282 32,34,151
+  s_157240fea52147::t_902c58c88149d6 33,35,125,152
+  4a3693f6355ed8c0 51,53-54,56-67,74-75,78
+internal/tui/integration_summary.go
+  s_45cfee6c7ab135::t_6f80f821cd5e89 1-10,12-15,17-25,28-32,34-35,39,41-42,44-70,78-86
+  s_dd70ced0a890b0::t_28f7b27e6d5d8e 71-73,76,88-121,123,125-147,149-160,182-187,192-197
+  s_45cfee6c7ab135::t_6c684b4449ec06 74
+  s_dd70ced0a890b0::t_0329ca1741715b 148
+internal/tui/migrate_integrations_test.go
+  836686c23c36f641 1-3,6-11,15-110
+  s_45cfee6c7ab135::t_b8c5852349a633 4-5,13-14
+internal/tui/chrome_migration_test.go
+  s_45cfee6c7ab135::t_10a31fd1353ab8 1-9,12-31,33-37,39-41,43-44,58-60,62-68,71-82,86-88,90-91,94,97-108,110-122,158-186
+  s_45cfee6c7ab135::t_03c30c5097c159 11,61,83
+  s_45cfee6c7ab135::t_92a6b53610bf14 32,42,45,47-54,56-57
+  s_dd70ced0a890b0::t_30e109f499d677 109
+  s_dd70ced0a890b0::t_b5f4e62c8c4084 123-157
+internal/tui/integration_progress.go
+  836686c23c36f641 1-6,8-9,12-15,17,20-25,30-33,46,48-59,61-68,70-71,73-74,82-85,105-106,109-110,118-119,124,128,130,142
+  s_45cfee6c7ab135::t_5ebfdafe9e4054 7,26-29
+  s_36547067c807ec::t_9367db7733eeca 10
+  s_45cfee6c7ab135::t_ebc4a579028b70 16
+  s_45cfee6c7ab135::t_56f24b098a4ef0 34-42,44,47
+  s_36547067c807ec::t_678946a655d12e 60,69,72,76-78,86
+  s_dd70ced0a890b0::t_41a6bc4a73a2ab 75
+  s_45cfee6c7ab135::t_850c0b7aaf0035 87-91,93,102-104,107-108,111,114-116,123,125-127,140,144-148,151-152
+  4a3693f6355ed8c0 150,175
+internal/tui/model.go
+  8a68b1169cb405a2 4,13-14
+  764a16f68cca6469 9,20,22,31,33-37,40,42-45,49,61,76
+  s_8e2c58024a52e1::t_84afc0ec1b39bc 10
+  4a3693f6355ed8c0 23-30,50-51,78
+  s_45cfee6c7ab135::t_f462788f1a4395 41
+  s_8e2c58024a52e1::t_6d560de25da41e 46
+  836686c23c36f641 47
+  s_45cfee6c7ab135::t_3c6eb0731bb7de 52
+  s_e079bea5665c1d::t_0d798fb1ca45a2 77
+  s_e079bea5665c1d::t_c3b99bdbfff1f7 79-81
+  s_e079bea5665c1d::t_d4245d727b12a9 86-89
+internal/tui/migrate_integrations.go
+  836686c23c36f641 1-6,8-12,14-31,34-89,92-100,104-110,112-119,123,125-139,143-148,150-153,155-191,193-198
+  8a68b1169cb405a2 7,90-91
+  s_45cfee6c7ab135::t_ee86226ba269ca 124
+  s_45cfee6c7ab135::t_6c684b4449ec06 149
+  s_45cfee6c7ab135::t_d6ec5b041d6d17 154,192
+internal/integration/manager.go
+  836686c23c36f641 1-11,13-28,30-48,55-57,60-64,68-69,71-72,74-86,88-91,94,96-97,99-105,108,110,112-132,135-136,138-139,141,144,146,148-151,154,156-157,159-217
+  4a3693f6355ed8c0 49-51,53,133,143
+  s_157240fea52147::t_69d75a1757ff00 65-67
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "6f4b430018a468d4aaf2d164dd9536e33933e921",
+  "prompts": {},
+  "sessions": {
+    "s_157240fea52147": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "42f7cf1c-c025-449a-89c8-fab9aa10c61e",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Test <t@t.com>"
+    },
+    "s_36547067c807ec": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9aefc94a-03e7-43a7-a824-17732e8394d2",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Test <t@t.com>"
+    },
+    "s_45cfee6c7ab135": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "362b0459-633f-41b0-be4d-ef5a2d23fce8",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Test <t@t.com>"
+    },
+    "s_8e2c58024a52e1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ce6ce258-0f38-4b1c-9b68-41415998356e",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Test <t@t.com>"
+    },
+    "s_dd70ced0a890b0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "1d4c7900-8a46-4b76-a13e-5f766c2a5f97",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Test <t@t.com>"
+    },
+    "s_e079bea5665c1d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e853bef1-293d-4109-b048-273e59305a6e",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Test <t@t.com>"
+    }
+  }
+}

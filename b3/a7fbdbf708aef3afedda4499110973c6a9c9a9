@@ -1,0 +1,38 @@
+internal/cleanup/refs.go
+  f64c7206849682a4 1-27
+  f2534d24a032860f 36
+internal/cleanup/refs_test.go
+  f64c7206849682a4 1-33,37-40,42-46
+  f2534d24a032860f 47-51
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "b3a7fbdbf708aef3afedda4499110973c6a9c9a9",
+  "prompts": {
+    "f2534d24a032860f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "cb8591af-0f5b-4e2c-ba06-4bf22a795b19",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>",
+      "total_additions": 31,
+      "total_deletions": 12,
+      "accepted_lines": 6,
+      "overriden_lines": 0
+    },
+    "f64c7206849682a4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c18abcdb-2bd1-40bf-8756-e09d97169a96",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>",
+      "total_additions": 105,
+      "total_deletions": 0,
+      "accepted_lines": 69,
+      "overriden_lines": 0
+    }
+  }
+}

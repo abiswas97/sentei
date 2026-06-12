@@ -1,0 +1,92 @@
+internal/worktree/deleter_test.go
+  4a3693f6355ed8c0 174-177,181,185-186,190-194,196
+  s_8e2c58024a52e1::t_284c01e7b48a50 12,227-229,240-242,253-255,266-268
+  f2534d24a032860f 13
+cmd/remove_protection_test.go
+  s_157240fea52147::t_cf08d4235e36bf 1-10,12-24,28-85
+internal/tui/confirm_test.go
+  f2534d24a032860f 4-6,10-11,88-91,93-102,104-107,110-150,154-156,158-221
+  s_45cfee6c7ab135::t_5eddc45fe75f43 13,17
+  764a16f68cca6469 14,16,39,56,73
+  s_dd70ced0a890b0::t_6195d172713184 32
+  s_157240fea52147::t_dc1903aef33a47 92
+  c0c5d5001d9a038b 108-109
+  s_dd70ced0a890b0::t_1be4cb2642c7fa 356
+internal/playground/setup_test.go
+  4a3693f6355ed8c0 6,13-19,23,25,86
+  s_45cfee6c7ab135::t_4e606366d182a0 58-59,63,65,69-76,80-81,85,90-91,97
+cmd/fixtures_test.go
+  s_45cfee6c7ab135::t_1947f065da64c2 1-7,10-14,18-93
+internal/testtmp/testtmp.go
+  s_157240fea52147::t_c90d166fe235d1 1,3-9,14,37-54,61-62,65-79
+  s_157240fea52147::t_33eb45c5064f4f 2,10-13,15-17
+  s_157240fea52147::t_2170cb74240bc7 80-93
+  s_157240fea52147::t_07b5b44c6e6e33 94
+internal/tui/cleanup_e2e_test.go
+  4a3693f6355ed8c0 1-17,19-88,90-226,228,233,235,238-241
+  s_e079bea5665c1d::t_ebbeefc6f516d7 229-231
+  s_45cfee6c7ab135::t_2bf9c2d17aea19 234
+internal/testutil/testutil.go
+  4a3693f6355ed8c0 1-50,52-192,194-197,199-205,208-211,213-229
+  s_157240fea52147::t_06bc900fc9c953 51
+  s_9734c013a8d1a8::t_05c424f8a720e5 193,206-207
+cmd/cli_e2e_test.go
+  764a16f68cca6469 1-3,5,7-8,11-28,30-40
+  4a3693f6355ed8c0 4,6,41-46,48-62,64-78,80-109,111-131,133-147,149-162,164-182,184-193,195-231,233-242,244-264,266-280,282-309,311-363,365-379,381-384
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "aca8cb8ff5d5990b049f4c092a179c24f723017e",
+  "prompts": {},
+  "sessions": {
+    "s_157240fea52147": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "42f7cf1c-c025-449a-89c8-fab9aa10c61e",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Test <t@t.com>"
+    },
+    "s_45cfee6c7ab135": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "362b0459-633f-41b0-be4d-ef5a2d23fce8",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Test <t@t.com>"
+    },
+    "s_8e2c58024a52e1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ce6ce258-0f38-4b1c-9b68-41415998356e",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Test <t@t.com>"
+    },
+    "s_9734c013a8d1a8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "67fbc29d-6734-415f-8fb0-d7be5620fff9",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>"
+    },
+    "s_dd70ced0a890b0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "1d4c7900-8a46-4b76-a13e-5f766c2a5f97",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Test <t@t.com>"
+    },
+    "s_e079bea5665c1d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e853bef1-293d-4109-b048-273e59305a6e",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Test <t@t.com>"
+    }
+  }
+}

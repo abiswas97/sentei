@@ -1,0 +1,44 @@
+internal/tui/styles.go
+  764a16f68cca6469 3,5
+  s_e079bea5665c1d::t_91c30d9564b45e 7-8
+  s_e079bea5665c1d::t_d146e8ca4df5ee 29,31,48-49,51,54,57
+  s_e079bea5665c1d::t_808bee5c68726e 35
+internal/repo/create.go
+  764a16f68cca6469 1-41,47-50,52-53,64-65,67-69,71-79,81-87,89-97,208,210,243
+  s_157240fea52147::t_d7b943cb4802d6 42-46,54-58,60-63
+  s_8e2c58024a52e1::t_e91ed8a15cc130 80
+  s_8e2c58024a52e1::t_e3f6f08dfb59b1 125
+  s_157240fea52147::t_373cc60a87c767 211,224
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "8b14913a2a091bd250ab77c771463df89c6dfd70",
+  "prompts": {},
+  "sessions": {
+    "s_157240fea52147": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "42f7cf1c-c025-449a-89c8-fab9aa10c61e",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Test <t@t.com>"
+    },
+    "s_8e2c58024a52e1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ce6ce258-0f38-4b1c-9b68-41415998356e",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Test <t@t.com>"
+    },
+    "s_e079bea5665c1d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e853bef1-293d-4109-b048-273e59305a6e",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Test <t@t.com>"
+    }
+  }
+}

@@ -1,0 +1,92 @@
+internal/tui/progress_layout.go
+  s_45cfee6c7ab135::t_e95ca351e26b8b 1-8,10-11,13-21,23-26,32,64-66,74-82,90-94,96-100,103-123,125,127-130,132-137,139-140,297
+  s_45cfee6c7ab135::t_2a691273e1940c 27,29-31
+  s_e079bea5665c1d::t_489ae352df5758 33,35-39
+  s_121ba5aeb12306::t_d221ebfff5a2bb 34
+  s_e079bea5665c1d::t_99b9c26fd864b2 40-45,55
+  s_e079bea5665c1d::t_12ab4ac00c0612 46-54
+  s_45cfee6c7ab135::t_e68f9465cbdaf4 56-58,95
+  s_e079bea5665c1d::t_4e353a81d13103 83-89
+  s_e079bea5665c1d::t_10951993849c5e 101-102
+  s_e079bea5665c1d::t_c1ed95e844a247 178
+  s_e079bea5665c1d::t_fd1efc4948c1c8 207-209,212,214-215,70,301,196
+  s_121ba5aeb12306::t_eb2988a49e0140 216-218
+  s_e079bea5665c1d::t_876ffe34fd11c7 243-244,246-248
+  s_e079bea5665c1d::t_bf364d16106c2d 276-278,302,317
+  s_121ba5aeb12306::t_cdfcbdbdf6a361 284
+internal/integration/manager.go
+  836686c23c36f641 1-11,13-28,30-48,55-57,60-64,68-69,71-72,74-86,88-91,94,96-97,99-105,108,110,112-132,135-136,138-139,141,144,146,148-151,154,156-157,159-217
+  4a3693f6355ed8c0 49-51,53,133,143
+  s_157240fea52147::t_69d75a1757ff00 65-67
+internal/tui/integration_progress.go
+  836686c23c36f641 1-6,8-9,12-15,17,20-25,30-33,46,48-59,61-68,70-71,73-74,82-85,102-103,106-107,115-116,118,122,124,134
+  s_45cfee6c7ab135::t_5ebfdafe9e4054 7,26-29
+  s_36547067c807ec::t_9367db7733eeca 10
+  s_45cfee6c7ab135::t_ebc4a579028b70 16
+  s_45cfee6c7ab135::t_56f24b098a4ef0 34-42,44,47
+  s_36547067c807ec::t_678946a655d12e 60,69,72,76-78,86
+  s_dd70ced0a890b0::t_41a6bc4a73a2ab 75
+  s_45cfee6c7ab135::t_850c0b7aaf0035 87-92,99-101,104-105,108,111-113,117,119-121,132,136-140,143-144
+  4a3693f6355ed8c0 142
+internal/tui/integration_summary.go
+  s_45cfee6c7ab135::t_6f80f821cd5e89 1-10,12-15,17-21,23-26,29-33,35-36,40,46-47,49-75,83-91
+  s_dd70ced0a890b0::t_28f7b27e6d5d8e 76-78,81,93-126,128,136-158,160-171,199-203,205,209-214
+  s_45cfee6c7ab135::t_6c684b4449ec06 79
+  s_dd70ced0a890b0::t_0329ca1741715b 159
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "120c31449818b0a6e90305b48883dfb80d4bcda7",
+  "prompts": {},
+  "sessions": {
+    "s_121ba5aeb12306": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d1da0b9d-4a5f-4e2f-88ec-4088d9f5ce99",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Test <t@t.com>"
+    },
+    "s_157240fea52147": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "42f7cf1c-c025-449a-89c8-fab9aa10c61e",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Test <t@t.com>"
+    },
+    "s_36547067c807ec": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9aefc94a-03e7-43a7-a824-17732e8394d2",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Test <t@t.com>"
+    },
+    "s_45cfee6c7ab135": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "362b0459-633f-41b0-be4d-ef5a2d23fce8",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Test <t@t.com>"
+    },
+    "s_dd70ced0a890b0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "1d4c7900-8a46-4b76-a13e-5f766c2a5f97",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Test <t@t.com>"
+    },
+    "s_e079bea5665c1d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e853bef1-293d-4109-b048-273e59305a6e",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Test <t@t.com>"
+    }
+  }
+}

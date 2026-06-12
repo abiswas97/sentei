@@ -1,0 +1,54 @@
+openspec/specs/tui-list-view/spec.md
+  4a3693f6355ed8c0 1-4,97-134
+  s_e079bea5665c1d::t_04ea3994272493 135-138
+openspec/specs/cli-tui-handoff/spec.md
+  4a3693f6355ed8c0 1-2,4,6-90
+openspec/specs/tui-confirmation/spec.md
+  4a3693f6355ed8c0 1-4,7,12,43-49
+openspec/specs/dry-run/spec.md
+  4a3693f6355ed8c0 1-4,7,21-27
+openspec/specs/worktree-deletion/spec.md
+  4a3693f6355ed8c0 1-4,53-79
+openspec/specs/confirmation-view/spec.md
+  4a3693f6355ed8c0 1-2,4,6,8-9,12-14,16-17,19,23,27,31-32,34-35,38-39,42-45
+  s_45cfee6c7ab135::t_26870f4433da68 36-37,46-49
+openspec/specs/filter-flags/spec.md
+  4a3693f6355ed8c0 1-71
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "55e3c887f47fdbd297c31dd745e3c746fcbd5eff",
+  "prompts": {
+    "4a3693f6355ed8c0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a9b374a7-9e9c-4fd6-8010-99b0fee4726d",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>",
+      "total_additions": 293,
+      "total_deletions": 2,
+      "accepted_lines": 261,
+      "overriden_lines": 0
+    }
+  },
+  "sessions": {
+    "s_45cfee6c7ab135": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "362b0459-633f-41b0-be4d-ef5a2d23fce8",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Test <t@t.com>"
+    },
+    "s_e079bea5665c1d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e853bef1-293d-4109-b048-273e59305a6e",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Test <t@t.com>"
+    }
+  }
+}

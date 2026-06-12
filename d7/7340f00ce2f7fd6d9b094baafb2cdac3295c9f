@@ -1,0 +1,61 @@
+internal/repo/clone.go
+  764a16f68cca6469 1-3,5-9,11-24,26-31,41-58,60-63,78-80,82-88,90-101,108-111,151-152,171,186,188-189
+  s_157240fea52147::t_1e407566e9e53d 4
+  s_157240fea52147::t_079a7049695b34 10
+  s_157240fea52147::t_172472491ac46a 32-40
+  s_157240fea52147::t_c5f9ee259eeab5 64-75,81,89,103-107,112-114,119-131
+  s_157240fea52147::t_93c4a2f2598396 76
+  s_157240fea52147::t_057ea23c1a7af3 77
+  s_e876f08b56ae05::t_a294e7e3a40292 132-134
+  s_8e2c58024a52e1::t_b1a5f550bda6a1 204
+  s_157240fea52147::t_2fb8d1a32ef2af 219
+  s_157240fea52147::t_7798c66bdf643e 222-224
+internal/git/commands_test.go
+  s_157240fea52147::t_05a44338b5198c 4
+  s_157240fea52147::t_01407e41726664 6,10-29,46,48
+  s_157240fea52147::t_571f25e91a622c 111-122,126-128
+  s_157240fea52147::t_6b785b23e482b9 141-153
+  s_8e2c58024a52e1::t_d2a2d3cfdcfdc7 166-179,182-189
+internal/git/protection.go
+  s_157240fea52147::t_e13e67e8fdb39e 12-15,17,20-47,49-53
+  s_8e2c58024a52e1::t_3578e7b86d7b2a 48
+internal/git/commands.go
+  s_157240fea52147::t_fe5032c12c93ae 25-31
+  764a16f68cca6469 32-36,43-50
+  s_157240fea52147::t_1efabce2c2c139 37-42
+  s_157240fea52147::t_345bb42fac2d61 51-54
+  s_157240fea52147::t_eec047eb1e36de 60-63
+  s_8e2c58024a52e1::t_fba1058be5d726 74-79
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "d77340f00ce2f7fd6d9b094baafb2cdac3295c9f",
+  "prompts": {},
+  "sessions": {
+    "s_157240fea52147": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "42f7cf1c-c025-449a-89c8-fab9aa10c61e",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Test <t@t.com>"
+    },
+    "s_8e2c58024a52e1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ce6ce258-0f38-4b1c-9b68-41415998356e",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Test <t@t.com>"
+    },
+    "s_e876f08b56ae05": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4b4aa2bd-a2be-49ad-8b12-1ae7f7ad175b",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>"
+    }
+  }
+}

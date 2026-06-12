@@ -1,0 +1,101 @@
+internal/tui/migrate_integrations.go
+  836686c23c36f641 1-6,8-12,14-31,34-89,92-100,104-110,112-119,127,129-143,147-152,154-157,159-195,197-202
+  8a68b1169cb405a2 7,90-91
+  s_45cfee6c7ab135::t_ee86226ba269ca 128
+  s_45cfee6c7ab135::t_6c684b4449ec06 153
+  s_45cfee6c7ab135::t_d6ec5b041d6d17 158,196
+internal/tui/integration_list.go
+  836686c23c36f641 1-6,8-13,15-17,25,27-46,48,50-60,62-95,97-101,103-107,160-163,165-182,184,186-191,211-215,217,221-226,232-263,265,267-270,305-311,313,315-320,328,353-355,360,362-365,368,370
+  8a68b1169cb405a2 7,218
+  s_45cfee6c7ab135::t_56978c05dcfc75 18-20,22-24
+  s_e079bea5665c1d::t_7711f52f206cc6 21
+  s_36547067c807ec::t_e765ea33936334 49
+  4a3693f6355ed8c0 127-128
+  s_45cfee6c7ab135::t_46f4b610ebc060 136
+  s_e079bea5665c1d::t_6a87c310e8059b 183,185
+  s_e079bea5665c1d::t_3b3436efec3855 192-209,216,219
+  s_e079bea5665c1d::t_7e871410fd7133 264,266,271-304
+  s_e079bea5665c1d::t_6192695aea0a57 312,314,321-322,325,329-333,335,337-352,356,358-359,361
+  s_e079bea5665c1d::t_45fc45694596e3 323-324,326-327,334,336
+  s_e079bea5665c1d::t_b86d20873ff9cd 357,147,150
+internal/integration/manager.go
+  836686c23c36f641 1-11,13-28,30-48,55-57,60-64,68-69,71-72,74-86,88-91,94,96-97,99-105,108,110,112-132,135-136,138-139,141,144,146,148-151,154,156-157,159-217
+  4a3693f6355ed8c0 49-51,53,133,143
+  s_157240fea52147::t_69d75a1757ff00 65-67
+internal/tui/integration_summary.go
+  s_45cfee6c7ab135::t_6f80f821cd5e89 1-10,12-15,17-21,23-26,29-33,35-36,40,46-47,49-75,83-91
+  s_dd70ced0a890b0::t_28f7b27e6d5d8e 76-78,81,93-126,128,130-152,154-165,187-192,197-202
+  s_45cfee6c7ab135::t_6c684b4449ec06 79
+  s_dd70ced0a890b0::t_0329ca1741715b 153
+internal/tui/integration_progress.go
+  836686c23c36f641 1-6,8-9,12-15,17,20-25,30-33,46,48-59,61-68,70-71,73-74,82-85,105-106,109-110,118-119,124,128,130,140
+  s_45cfee6c7ab135::t_5ebfdafe9e4054 7,26-29
+  s_36547067c807ec::t_9367db7733eeca 10
+  s_45cfee6c7ab135::t_ebc4a579028b70 16
+  s_45cfee6c7ab135::t_56f24b098a4ef0 34-42,44,47
+  s_36547067c807ec::t_678946a655d12e 60,69,72,76-78,86
+  s_dd70ced0a890b0::t_41a6bc4a73a2ab 75
+  s_45cfee6c7ab135::t_850c0b7aaf0035 87-91,93,102-104,107-108,111,114-116,123,125-127,138,142-146,149-150
+  4a3693f6355ed8c0 148,173
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "b2dfdb2c2a387119a438d38d76d94c7948f4fb43",
+  "prompts": {
+    "836686c23c36f641": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "3900c7b6-8b79-42a7-b749-c875614dd86f",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>",
+      "total_additions": 14,
+      "total_deletions": 24,
+      "accepted_lines": 1,
+      "overriden_lines": 0
+    }
+  },
+  "sessions": {
+    "s_157240fea52147": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "42f7cf1c-c025-449a-89c8-fab9aa10c61e",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Test <t@t.com>"
+    },
+    "s_36547067c807ec": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9aefc94a-03e7-43a7-a824-17732e8394d2",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Test <t@t.com>"
+    },
+    "s_45cfee6c7ab135": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "362b0459-633f-41b0-be4d-ef5a2d23fce8",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Test <t@t.com>"
+    },
+    "s_dd70ced0a890b0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "1d4c7900-8a46-4b76-a13e-5f766c2a5f97",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Test <t@t.com>"
+    },
+    "s_e079bea5665c1d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e853bef1-293d-4109-b048-273e59305a6e",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Test <t@t.com>"
+    }
+  }
+}

@@ -1,0 +1,47 @@
+docs/superpowers/specs/2026-03-29-config-ecosystem-integration-design.md
+  764a16f68cca6469 1-418
+CLAUDE.md
+  764a16f68cca6469 146-149
+.impeccable.md
+  764a16f68cca6469 1-12
+  s_e079bea5665c1d::t_db93fbb2348763 15
+  s_45cfee6c7ab135::t_16e0da2eaaa217 16
+  s_45cfee6c7ab135::t_e5b28cd908b261 17-23
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "8cd241ff42454b5d88fdc8a6c118565faf6a32ae",
+  "prompts": {
+    "764a16f68cca6469": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ac54152b-b011-4656-a2ab-f030775dff6b",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>",
+      "total_additions": 451,
+      "total_deletions": 5,
+      "accepted_lines": 432,
+      "overriden_lines": 0
+    }
+  },
+  "sessions": {
+    "s_45cfee6c7ab135": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "362b0459-633f-41b0-be4d-ef5a2d23fce8",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Test <t@t.com>"
+    },
+    "s_e079bea5665c1d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e853bef1-293d-4109-b048-273e59305a6e",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Test <t@t.com>"
+    }
+  }
+}

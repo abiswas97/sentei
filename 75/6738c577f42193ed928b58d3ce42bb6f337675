@@ -1,0 +1,46 @@
+internal/worktree/deleter.go
+  f2534d24a032860f 38-40
+internal/tui/confirm.go
+  764a16f68cca6469 10,13-15,17-18,29-30,33-34,37-39
+  s_45cfee6c7ab135::t_7dbc5f47976282 32
+  s_dd70ced0a890b0::t_ba8863f6a7855a 66
+internal/worktree/deleter_test.go
+  4a3693f6355ed8c0 170-173,177,181-182,186-190,192
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "756738c577f42193ed928b58d3ce42bb6f337675",
+  "prompts": {
+    "4a3693f6355ed8c0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a9b374a7-9e9c-4fd6-8010-99b0fee4726d",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>",
+      "total_additions": 43,
+      "total_deletions": 2,
+      "accepted_lines": 4,
+      "overriden_lines": 0
+    }
+  },
+  "sessions": {
+    "s_45cfee6c7ab135": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "362b0459-633f-41b0-be4d-ef5a2d23fce8",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Test <t@t.com>"
+    },
+    "s_dd70ced0a890b0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "1d4c7900-8a46-4b76-a13e-5f766c2a5f97",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Test <t@t.com>"
+    }
+  }
+}

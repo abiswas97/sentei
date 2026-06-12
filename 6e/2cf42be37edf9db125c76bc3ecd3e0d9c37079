@@ -1,0 +1,63 @@
+internal/tui/remove_run.go
+  s_45cfee6c7ab135::t_4a7e3db7b6d976 1-5,7-18,20-21,27-40
+internal/tui/confirm.go
+  764a16f68cca6469 10,13-14,16,18-19,30-31,34-35,38-40,105
+  s_45cfee6c7ab135::t_7dbc5f47976282 33
+  s_dd70ced0a890b0::t_ba8863f6a7855a 68,102
+  s_45cfee6c7ab135::t_d60b8307fe3c92 65
+  s_dd70ced0a890b0::t_507e2abfc243e2 101
+  s_45cfee6c7ab135::t_bbe793ed194d22 104
+internal/tui/progress.go
+  764a16f68cca6469 10
+  f64c7206849682a4 27,45-47,55,9,24,49-51
+  s_45cfee6c7ab135::t_1b92a67bcc8d76 91-92
+  s_45cfee6c7ab135::t_ab131b81591424 93-95,97,105-106,120,122,126,128,25,52-54,89,144-145
+internal/creator/teardown.go
+  764a16f68cca6469 1-10,12-46,48-52,54-60,67-68,84-96
+  s_8e2c58024a52e1::t_323965ac2cd2e5 77,63-66,69-76,78-83
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "6e2cf42be37edf9db125c76bc3ecd3e0d9c37079",
+  "prompts": {
+    "764a16f68cca6469": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ac54152b-b011-4656-a2ab-f030775dff6b",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>",
+      "total_additions": 18,
+      "total_deletions": 21,
+      "accepted_lines": 1,
+      "overriden_lines": 0
+    }
+  },
+  "sessions": {
+    "s_45cfee6c7ab135": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "362b0459-633f-41b0-be4d-ef5a2d23fce8",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Test <t@t.com>"
+    },
+    "s_8e2c58024a52e1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ce6ce258-0f38-4b1c-9b68-41415998356e",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Test <t@t.com>"
+    },
+    "s_dd70ced0a890b0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "1d4c7900-8a46-4b76-a13e-5f766c2a5f97",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Test <t@t.com>"
+    }
+  }
+}
