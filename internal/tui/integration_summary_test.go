@@ -32,6 +32,7 @@ func TestUpdateIntegrationProgress_Finalized_TransitionsToSummary(t *testing.T) 
 	updated, cmd := m.updateIntegrationProgress(integrationFinalizedMsg{err: nil})
 	m = updated.(Model)
 
+	m = settleNow(t, m)
 	if m.view != integrationSummaryView {
 		t.Errorf("expected integrationSummaryView, got %d", m.view)
 	}
@@ -56,6 +57,7 @@ func TestUpdateIntegrationProgress_Finalized_SaveError_TransitionsToSummary(t *t
 	updated, _ := m.updateIntegrationProgress(integrationFinalizedMsg{err: saveErr})
 	m = updated.(Model)
 
+	m = settleNow(t, m)
 	if m.view != integrationSummaryView {
 		t.Errorf("expected integrationSummaryView on save failure, got %d", m.view)
 	}

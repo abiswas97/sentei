@@ -22,9 +22,11 @@ import (
 	"github.com/abiswas97/sentei/internal/repo"
 )
 
-// progressHoldExpiredMsg fires when the minimum progress view duration has elapsed.
+// progressSettleProbeMsg is the completion settle's hard-timeout wake-up:
+// settle progress is normally observed on motion ticks and spring frames,
+// and this probe guarantees the check runs even if both go quiet.
 // The token must match model.progressToken to guard against stale messages.
-type progressHoldExpiredMsg struct{ token int }
+type progressSettleProbeMsg struct{ token int }
 
 type viewState int
 
@@ -258,10 +260,18 @@ type Model struct {
 	watch stopwatch.Model
 
 	// Progress hold state — used to enforce minimum visible duration for progress views.
-	minProgressDuration time.Duration // 0 = no hold; set via WithMinProgressDuration
+	minProgressDuration time.Duration // 0 = no entry hold; set via WithMinProgressDuration
 	progressStartedAt   time.Time     // set when entering any progress view
 	progressToken       int           // bumped on each entry; guards stale timers
-	progressTargetView  viewState     // where to transition when hold expires
+	progressTargetView  viewState     // where to transition once settled
+
+	// Completion settle state: after a flow's final event the view holds
+	// until the displayed bar fill reaches its target and stays there for
+	// progressSettleBeat, bounded by progressSettleTimeout. Checked on the
+	// motion clock and spring frames; applies in every run mode.
+	progressSettling      bool
+	progressSettlingSince time.Time // when the final event arrived
+	progressSettledAt     time.Time // when the displayed fill first arrived; zero while gliding
 }
 
 // ModelOption configures a Model at construction time.
@@ -408,27 +418,57 @@ func NewMenuModel(runner git.CommandRunner, shell git.ShellRunner, repoPath stri
 	return m
 }
 
-// holdOrAdvance either transitions to targetView immediately (if minProgressDuration
-// is zero or has already elapsed) or schedules a tea.Tick for the remaining time.
-// The caller must store all result state into the model before calling.
+// holdOrAdvance begins the completion settle: the view may not transition to
+// targetView until the displayed bar fill has reached its target and stayed
+// there for progressSettleBeat (plus, in playground mode, until the entry
+// hold has elapsed), hard-bounded by progressSettleTimeout. The caller must
+// store all result state into the model before calling. Settle progress is
+// observed on the motion clock and spring frames; a timeout tick guarantees
+// a wake-up even if both go quiet.
 func (m Model) holdOrAdvance(targetView viewState) (tea.Model, tea.Cmd) {
 	m.progressTargetView = targetView
-	if m.minProgressDuration == 0 {
-		m.view = targetView
-		// Leaving the progress view: discard the spring state so the next
-		// flow starts from zero, not easing down from 100%.
-		m.bar = newOverallBar()
-		m.bar.SetWidth(overallBarWidth(m.width))
-		return m, nil
-	}
-	// The hold is measured from view entry, so a flow that outlives it
-	// would otherwise cut away mid-glide; the settle floor guarantees the
-	// spring a beat to visibly finish at 100%.
-	remaining := max(m.minProgressDuration-time.Since(m.progressStartedAt), progressSettleFloor)
+	m.progressSettling = true
+	m.progressSettlingSince = time.Now()
+	m.progressSettledAt = time.Time{}
 	token := m.progressToken
-	return m, tea.Tick(remaining, func(time.Time) tea.Msg {
-		return progressHoldExpiredMsg{token: token}
+	return m, tea.Tick(progressSettleTimeout, func(time.Time) tea.Msg {
+		return progressSettleProbeMsg{token: token}
 	})
+}
+
+// settleAdvanceReady reports whether the settled view may advance: the entry
+// hold (if any) has elapsed AND the displayed fill has been settled for the
+// beat, or the hard timeout has expired.
+func (m Model) settleAdvanceReady(now time.Time) bool {
+	holdDone := m.minProgressDuration == 0 || now.Sub(m.progressStartedAt) >= m.minProgressDuration
+	beatDone := !m.progressSettledAt.IsZero() && now.Sub(m.progressSettledAt) >= progressSettleBeat
+	timedOut := now.Sub(m.progressSettlingSince) >= progressSettleTimeout
+	return (holdDone && beatDone) || timedOut
+}
+
+// observeSettle records settle state transitions and advances the view once
+// settleAdvanceReady holds. Called from the motion clock, spring frames, and
+// the timeout probe so settling can never stall for lack of a wake-up.
+func (m Model) observeSettle(now time.Time) (Model, bool) {
+	if !m.progressSettling {
+		return m, false
+	}
+	if m.bar.IsAnimating() {
+		// Still gliding (or a new spring target arrived): not settled.
+		m.progressSettledAt = time.Time{}
+	} else if m.progressSettledAt.IsZero() {
+		m.progressSettledAt = now
+	}
+	if !m.settleAdvanceReady(now) {
+		return m, false
+	}
+	m.progressSettling = false
+	m.view = m.progressTargetView
+	// Leaving the progress view: discard the spring state so the next
+	// flow starts from zero, not easing down from 100%.
+	m.bar = newOverallBar()
+	m.bar.SetWidth(overallBarWidth(m.width))
+	return m, true
 }
 
 // SetCleanupOpts sets the cleanup options and starts at the cleanup confirmation view.
@@ -488,13 +528,9 @@ func (m Model) indeterminateWaitActive() bool {
 }
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	if holdMsg, ok := msg.(progressHoldExpiredMsg); ok {
-		if holdMsg.token == m.progressToken {
-			m.view = m.progressTargetView
-			// Leaving the progress view: discard the spring state so the
-			// next flow starts from zero, not easing down from 100%.
-			m.bar = newOverallBar()
-			m.bar.SetWidth(overallBarWidth(m.width))
+	if probeMsg, ok := msg.(progressSettleProbeMsg); ok {
+		if probeMsg.token == m.progressToken {
+			m, _ = m.observeSettle(time.Now())
 		}
 		return m, nil
 	}
@@ -532,6 +568,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		var cmd tea.Cmd
 		m.bar, cmd = m.bar.Update(frame)
+		m, _ = m.observeSettle(time.Now())
 		return m, cmd
 	}
 
@@ -557,6 +594,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		m.motionTick++
+		m, _ = m.observeSettle(time.Now())
 		return m, motionTickCmd()
 	}
 

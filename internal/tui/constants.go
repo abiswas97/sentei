@@ -38,11 +38,16 @@ func overallBarWidth(viewWidth int) int {
 // the footer area.
 const viewChromeRows = 6
 
-// progressSettleFloor is the minimum time a held progress view stays up
-// after its final event, so the bar's spring visibly finishes at 100%
-// instead of cutting away mid-glide. Part of the hold mechanism, applied
-// only when holds are enabled (minProgressDuration > 0).
-const progressSettleFloor = time.Second
+// progressSettleBeat is how long a flow's final progress frame stays visibly
+// settled (displayed fill at its spring target) before advancing to the
+// summary. State-relative: the beat starts when the spring arrives, not when
+// the final event fires, so endings show the truth in every run mode.
+const progressSettleBeat = 600 * time.Millisecond
+
+// progressSettleTimeout hard-bounds the settle wait from the final event
+// (covering the ~1.2s spring glide plus the beat, with margin) so the view
+// can never wedge if the displayed fill cannot reach its target.
+const progressSettleTimeout = 3 * time.Second
 
 // confirmNameWidthCap bounds the confirm screen's name column so one long
 // branch cannot push the risk notes off to the right.

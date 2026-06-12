@@ -275,8 +275,17 @@ func (m Model) renderProgressLayout(l ProgressLayout) string {
 	bar := m.bar
 	// Colors re-read the live palette tokens each render: the adaptive
 	// palette can arrive after the bar is constructed. A completed flow
-	// settles the fill green for its hold — the bar joins the ✦ moment.
-	if l.Completed {
+	// settles the fill green for its hold — the bar joins the ✦ moment —
+	// but a flow that finished with failures keeps the standard gradient:
+	// the truth-hold applies to every ending, the celebration does not.
+	hasFailures := false
+	for _, p := range l.Phases {
+		if p.Failed > 0 {
+			hasFailures = true
+			break
+		}
+	}
+	if l.Completed && !hasFailures {
 		progressbar.WithColors(colorBarDoneStart, colorBarDoneEnd)(&bar)
 	} else {
 		progressbar.WithColors(colorBarStart, colorBarEnd)(&bar)

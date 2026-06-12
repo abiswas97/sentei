@@ -75,6 +75,7 @@ func TestUpdateCreateProgress_CompleteAdvancesToSummary(t *testing.T) {
 	updated, cmd := m.updateCreateProgress(createCompleteMsg{Result: result})
 	model := updated.(Model)
 
+	model = settleNow(t, model)
 	if model.view != createSummaryView {
 		t.Errorf("view = %d, want createSummaryView", model.view)
 	}

@@ -80,6 +80,7 @@ func TestUpdateIntegrationProgress_FinalizedMsg_DoesNotMutateInMemory(t *testing
 	updated, _ := m.updateIntegrationProgress(integrationFinalizedMsg{err: nil})
 	m = updated.(Model)
 
+	m = settleNow(t, m)
 	if m.view != integrationSummaryView {
 		t.Errorf("expected integrationSummaryView, got %d", m.view)
 	}
@@ -107,6 +108,7 @@ func TestUpdateIntegrationProgress_FinalizedMsg_Migration(t *testing.T) {
 	updated, _ := m.updateIntegrationProgress(integrationFinalizedMsg{err: nil})
 	m = updated.(Model)
 
+	m = settleNow(t, m)
 	if m.view != migrateNextView {
 		t.Errorf("expected migrateNextView, got %d", m.view)
 	}

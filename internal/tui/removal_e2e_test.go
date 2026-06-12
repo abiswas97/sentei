@@ -50,6 +50,7 @@ func TestE2E_RemovalFlowChrome(t *testing.T) {
 	}
 	updated, _ = m.updateProgress(cleanupCompleteMsg{})
 	m = updated.(Model)
+	m = settleNow(t, m)
 	if m.view != summaryView {
 		t.Fatalf("expected summaryView, got %d", m.view)
 	}
