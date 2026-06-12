@@ -1,0 +1,24 @@
+internal/creator/creator.go
+  s_9734c013a8d1a8::t_b116dd78f822c4 43,47
+internal/progress/runner.go
+  s_9734c013a8d1a8::t_4c44165a9ed9c9 71-83
+internal/creator/setup.go
+  s_9734c013a8d1a8::t_6378f42900039c 17-27
+  s_9734c013a8d1a8::t_e9114f9cf1eee2 55-65
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "e201ce9b40f61c000ac8834d1b983b4eee907c5f",
+  "prompts": {},
+  "sessions": {
+    "s_9734c013a8d1a8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "67fbc29d-6734-415f-8fb0-d7be5620fff9",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Test <t@t.com>"
+    }
+  }
+}
