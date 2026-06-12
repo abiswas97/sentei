@@ -1,0 +1,26 @@
+internal/tui/removal_plan_test.go
+  s_9734c013a8d1a8::t_3000d26f9a63d8 1-55
+internal/tui/progress.go
+  s_9734c013a8d1a8::t_d4497cfb31d1a3 139-145,147,149,161-164,167,170-171,173-174,177-178,182,184,188,192-193,202,208
+internal/tui/remove_run.go
+  s_9734c013a8d1a8::t_524f9f86042bbc 22-25
+internal/tui/confirm.go
+  s_9734c013a8d1a8::t_8f8c8bd681d80e 97-105
+  s_9734c013a8d1a8::t_f0b899791a6d27 60,62-65,71,73
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "da298aa2d675e79cf848a8b6d17a80b11e007af4",
+  "prompts": {},
+  "sessions": {
+    "s_9734c013a8d1a8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "67fbc29d-6734-415f-8fb0-d7be5620fff9",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Test <t@t.com>"
+    }
+  }
+}
