@@ -1,0 +1,19 @@
+internal/tui/create_progress.go
+  s_9734c013a8d1a8::t_c92279ffda8d5a 8-9
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "826a6a0fff19be67f521e5aadbfe0f3a0d90664d",
+  "prompts": {},
+  "sessions": {
+    "s_9734c013a8d1a8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "67fbc29d-6734-415f-8fb0-d7be5620fff9",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Test <t@t.com>"
+    }
+  }
+}
