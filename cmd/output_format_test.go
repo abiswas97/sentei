@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/abiswas97/sentei/internal/cleanup"
-	"github.com/abiswas97/sentei/internal/pipeline"
+	"github.com/abiswas97/sentei/internal/progress"
 )
 
 func TestPrintEvent(t *testing.T) {
@@ -35,15 +35,15 @@ func TestPrintEvent(t *testing.T) {
 func TestPrintCloneEvent(t *testing.T) {
 	tests := []struct {
 		name  string
-		event pipeline.Event
+		event progress.Event
 		want  []string
 	}{
-		{"running", pipeline.Event{Phase: "clone", Step: "fetch", Status: pipeline.StepRunning}, []string{"→", "[clone]", "fetch"}},
-		{"done", pipeline.Event{Phase: "clone", Step: "fetch", Status: pipeline.StepDone}, []string{"✓", "[clone]", "fetch"}},
-		{"done with message", pipeline.Event{Phase: "clone", Step: "fetch", Status: pipeline.StepDone, Message: "fast"}, []string{"✓", "(fast)"}},
-		{"failed", pipeline.Event{Phase: "clone", Step: "fetch", Status: pipeline.StepFailed, Error: errors.New("boom")}, []string{"✗", "boom"}},
-		{"skipped", pipeline.Event{Phase: "clone", Step: "fetch", Status: pipeline.StepSkipped}, []string{"⊘", "fetch"}},
-		{"skipped with message", pipeline.Event{Phase: "clone", Step: "fetch", Status: pipeline.StepSkipped, Message: "no-op"}, []string{"⊘", "(no-op)"}},
+		{"running", progress.Event{Phase: "clone", Step: "fetch", Status: progress.StepRunning}, []string{"→", "[clone]", "fetch"}},
+		{"done", progress.Event{Phase: "clone", Step: "fetch", Status: progress.StepDone}, []string{"✓", "[clone]", "fetch"}},
+		{"done with message", progress.Event{Phase: "clone", Step: "fetch", Status: progress.StepDone, Message: "fast"}, []string{"✓", "(fast)"}},
+		{"failed", progress.Event{Phase: "clone", Step: "fetch", Status: progress.StepFailed, Error: errors.New("boom")}, []string{"✗", "boom"}},
+		{"skipped", progress.Event{Phase: "clone", Step: "fetch", Status: progress.StepSkipped}, []string{"⊘", "fetch"}},
+		{"skipped with message", progress.Event{Phase: "clone", Step: "fetch", Status: progress.StepSkipped, Message: "no-op"}, []string{"⊘", "(no-op)"}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -60,15 +60,15 @@ func TestPrintCloneEvent(t *testing.T) {
 func TestPrintCreateEvent(t *testing.T) {
 	tests := []struct {
 		name  string
-		event pipeline.Event
+		event progress.Event
 		want  []string
 	}{
-		{"running", pipeline.Event{Phase: "create", Step: "branch", Status: pipeline.StepRunning}, []string{"→", "create", "branch"}},
-		{"done", pipeline.Event{Step: "branch", Status: pipeline.StepDone}, []string{"✓", "branch"}},
-		{"done with message", pipeline.Event{Step: "branch", Status: pipeline.StepDone, Message: "created"}, []string{"✓", "— created"}},
-		{"failed", pipeline.Event{Step: "branch", Status: pipeline.StepFailed, Error: errors.New("boom")}, []string{"✗", "— boom"}},
-		{"failed without error", pipeline.Event{Step: "branch", Status: pipeline.StepFailed}, []string{"✗", "branch"}},
-		{"skipped", pipeline.Event{Step: "branch", Status: pipeline.StepSkipped}, []string{"branch (skipped)"}},
+		{"running", progress.Event{Phase: "create", Step: "branch", Status: progress.StepRunning}, []string{"→", "create", "branch"}},
+		{"done", progress.Event{Step: "branch", Status: progress.StepDone}, []string{"✓", "branch"}},
+		{"done with message", progress.Event{Step: "branch", Status: progress.StepDone, Message: "created"}, []string{"✓", "— created"}},
+		{"failed", progress.Event{Step: "branch", Status: progress.StepFailed, Error: errors.New("boom")}, []string{"✗", "— boom"}},
+		{"failed without error", progress.Event{Step: "branch", Status: progress.StepFailed}, []string{"✗", "branch"}},
+		{"skipped", progress.Event{Step: "branch", Status: progress.StepSkipped}, []string{"branch (skipped)"}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -85,14 +85,14 @@ func TestPrintCreateEvent(t *testing.T) {
 func TestPrintMigrateEvent(t *testing.T) {
 	tests := []struct {
 		name  string
-		event pipeline.Event
+		event progress.Event
 		want  []string
 	}{
-		{"running", pipeline.Event{Phase: "backup", Step: "copy", Status: pipeline.StepRunning}, []string{"→", "[backup]", "copy"}},
-		{"running with message", pipeline.Event{Phase: "backup", Step: "copy", Status: pipeline.StepRunning, Message: "1.2MB"}, []string{"→", "— 1.2MB"}},
-		{"done", pipeline.Event{Phase: "backup", Step: "copy", Status: pipeline.StepDone}, []string{"✓", "[backup]", "copy"}},
-		{"done with message", pipeline.Event{Phase: "backup", Step: "copy", Status: pipeline.StepDone, Message: "ok"}, []string{"✓", "(ok)"}},
-		{"failed", pipeline.Event{Phase: "backup", Step: "copy", Status: pipeline.StepFailed, Error: errors.New("boom")}, []string{"✗", "boom"}},
+		{"running", progress.Event{Phase: "backup", Step: "copy", Status: progress.StepRunning}, []string{"→", "[backup]", "copy"}},
+		{"running with message", progress.Event{Phase: "backup", Step: "copy", Status: progress.StepRunning, Message: "1.2MB"}, []string{"→", "— 1.2MB"}},
+		{"done", progress.Event{Phase: "backup", Step: "copy", Status: progress.StepDone}, []string{"✓", "[backup]", "copy"}},
+		{"done with message", progress.Event{Phase: "backup", Step: "copy", Status: progress.StepDone, Message: "ok"}, []string{"✓", "(ok)"}},
+		{"failed", progress.Event{Phase: "backup", Step: "copy", Status: progress.StepFailed, Error: errors.New("boom")}, []string{"✗", "boom"}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

@@ -12,12 +12,12 @@ import (
 	"github.com/abiswas97/sentei/internal/creator"
 	"github.com/abiswas97/sentei/internal/git"
 	"github.com/abiswas97/sentei/internal/integration"
-	"github.com/abiswas97/sentei/internal/pipeline"
+	"github.com/abiswas97/sentei/internal/progress"
 	"github.com/abiswas97/sentei/internal/worktree"
 )
 
 type teardownCompleteMsg struct {
-	results []pipeline.StepResult
+	results []progress.StepResult
 }
 
 func unlockLockedWorktrees(runner git.CommandRunner, repoPath string, worktrees []git.Worktree) {
@@ -47,7 +47,7 @@ func (m Model) updateConfirm(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 // beginRemoval starts the deletion of the current selection: fresh run
 // state, teardown of integration artifacts when present, then the deletion
-// pipeline. Entered from the at-risk confirmation gate, or directly from
+// progress. Entered from the at-risk confirmation gate, or directly from
 // the list when every selected worktree is clean and pushed.
 func (m Model) beginRemoval() (tea.Model, tea.Cmd) {
 	m.progressStartedAt = time.Now()
@@ -99,7 +99,7 @@ func (m Model) runTeardownPhase(worktrees []git.Worktree, integrations []integra
 		shell := m.shell
 		type indexedResults struct {
 			index   int
-			results []pipeline.StepResult
+			results []progress.StepResult
 		}
 
 		resultsCh := make(chan indexedResults, len(worktrees))
@@ -109,18 +109,18 @@ func (m Model) runTeardownPhase(worktrees []git.Worktree, integrations []integra
 			sem <- struct{}{}
 			go func(idx int, wtPath string) {
 				defer func() { <-sem }()
-				results := creator.Teardown(shell, wtPath, integrations, func(pipeline.Event) {})
+				results := creator.Teardown(shell, wtPath, integrations, func(progress.Event) {})
 				resultsCh <- indexedResults{index: idx, results: results}
 			}(i, wt.Path)
 		}
 
-		collected := make([][]pipeline.StepResult, len(worktrees))
+		collected := make([][]progress.StepResult, len(worktrees))
 		for range worktrees {
 			ir := <-resultsCh
 			collected[ir.index] = ir.results
 		}
 
-		var allResults []pipeline.StepResult
+		var allResults []progress.StepResult
 		for _, r := range collected {
 			allResults = append(allResults, r...)
 		}

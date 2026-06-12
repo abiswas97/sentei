@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/abiswas97/sentei/internal/pipeline"
+	"github.com/abiswas97/sentei/internal/progress"
 )
 
 func TestProgressLayout_WithSubtitle(t *testing.T) {
@@ -15,8 +15,8 @@ func TestProgressLayout_WithSubtitle(t *testing.T) {
 		Height:   30,
 		Phases: []phaseDisplay{
 			{name: "Setup", total: 2, done: 1, steps: []stepDisplay{
-				{name: "Create worktree", status: pipeline.StepDone},
-				{name: "Merge base branch", status: pipeline.StepRunning},
+				{name: "Create worktree", status: progress.StepDone},
+				{name: "Merge base branch", status: progress.StepRunning},
 			}},
 			{name: "Dependencies"},
 			{name: "Integrations"},
@@ -49,8 +49,8 @@ func TestProgressLayout_CompletedPhaseCollapses(t *testing.T) {
 		Title: "T", Width: 80, Height: 30,
 		Phases: []phaseDisplay{
 			{name: "Setup", total: 2, done: 2, steps: []stepDisplay{
-				{name: "Create worktree", status: pipeline.StepDone},
-				{name: "Merge base branch", status: pipeline.StepDone},
+				{name: "Create worktree", status: progress.StepDone},
+				{name: "Merge base branch", status: progress.StepDone},
 			}},
 		},
 	}
@@ -69,8 +69,8 @@ func TestProgressLayout_CompletedPhaseWithFailuresKeepsSteps(t *testing.T) {
 		Title: "T", Width: 80, Height: 30,
 		Phases: []phaseDisplay{
 			{name: "Setup", total: 2, done: 2, failed: 1, steps: []stepDisplay{
-				{name: "Create worktree", status: pipeline.StepDone},
-				{name: "Install hooks", status: pipeline.StepFailed},
+				{name: "Create worktree", status: progress.StepDone},
+				{name: "Install hooks", status: progress.StepFailed},
 			}},
 		},
 	}
@@ -89,9 +89,9 @@ func TestProgressLayout_ActivePhaseShowsSteps(t *testing.T) {
 		Title: "T", Width: 80, Height: 30,
 		Phases: []phaseDisplay{
 			{name: "Removing worktrees", total: 30, done: 12, steps: []stepDisplay{
-				{name: "done-step", status: pipeline.StepDone},
-				{name: "active-step", status: pipeline.StepRunning},
-				{name: "pending-step", status: pipeline.StepPending},
+				{name: "done-step", status: progress.StepDone},
+				{name: "active-step", status: progress.StepRunning},
+				{name: "pending-step", status: progress.StepPending},
 			}},
 		},
 	}
@@ -112,7 +112,7 @@ func TestProgressLayout_ZeroTotalPhaseIsPending(t *testing.T) {
 		Title: "T", Width: 80, Height: 30,
 		Phases: []phaseDisplay{
 			{name: "Integrations", total: 0, done: 0, steps: []stepDisplay{
-				{name: "queued work", status: pipeline.StepPending},
+				{name: "queued work", status: progress.StepPending},
 			}},
 		},
 	}
@@ -163,9 +163,9 @@ func TestProgressLayout_DoneExceedsTotal_NoPanic(t *testing.T) {
 func TestProgressLayout_WindowsStepsOnShortTerminal(t *testing.T) {
 	steps := make([]stepDisplay, 30)
 	for i := range steps {
-		steps[i] = stepDisplay{name: stepName(i), status: pipeline.StepPending}
+		steps[i] = stepDisplay{name: stepName(i), status: progress.StepPending}
 	}
-	steps[0].status = pipeline.StepRunning
+	steps[0].status = progress.StepRunning
 	l := ProgressLayout{
 		Title: "T", Width: 80, Height: 15,
 		Phases: []phaseDisplay{{name: "Removing", total: 30, done: 0, steps: steps}},

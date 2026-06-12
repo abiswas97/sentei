@@ -9,7 +9,7 @@ import (
 
 	"github.com/abiswas97/sentei/internal/cleanup"
 	"github.com/abiswas97/sentei/internal/git"
-	"github.com/abiswas97/sentei/internal/pipeline"
+	"github.com/abiswas97/sentei/internal/progress"
 	"github.com/abiswas97/sentei/internal/worktree"
 )
 
@@ -34,7 +34,7 @@ func pollutedRun() removalRun {
 				{Path: "/work/b", Success: true},
 			},
 		},
-		teardownResults: []pipeline.StepResult{{Name: "old", Status: pipeline.StepDone}},
+		teardownResults: []progress.StepResult{{Name: "old", Status: progress.StepDone}},
 		pruneErr:        &pruneErr,
 		cleanupResult:   &cleanup.Result{},
 	}
@@ -193,7 +193,7 @@ func TestUpdateProgress_TeardownComplete_StartsDeletions(t *testing.T) {
 	m.view = progressView
 
 	updated, cmd := m.updateProgress(teardownCompleteMsg{
-		results: []pipeline.StepResult{{Name: "Teardown code-review-graph", Status: pipeline.StepDone}},
+		results: []progress.StepResult{{Name: "Teardown code-review-graph", Status: progress.StepDone}},
 	})
 	model := updated.(Model)
 

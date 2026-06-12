@@ -4,7 +4,7 @@ import (
 	"path/filepath"
 
 	"github.com/abiswas97/sentei/internal/git"
-	"github.com/abiswas97/sentei/internal/pipeline"
+	"github.com/abiswas97/sentei/internal/progress"
 )
 
 type RepoContext int
@@ -54,6 +54,6 @@ func ResolveBareRoot(runner git.CommandRunner, path string) string {
 	return filepath.Dir(commonDir)
 }
 
-func (r CloneResult) HasFailures() bool   { return pipeline.PhasesHaveFailures(r.Phases) }
-func (r CreateResult) HasFailures() bool  { return pipeline.PhasesHaveFailures(r.Phases) }
-func (r MigrateResult) HasFailures() bool { return pipeline.PhasesHaveFailures(r.Phases) }
+func (r CloneResult) HasFailures() bool   { return progress.PhasesHaveFailures(r.Phases) }
+func (r CreateResult) HasFailures() bool  { return progress.PhasesHaveFailures(r.Phases) }
+func (r MigrateResult) HasFailures() bool { return progress.PhasesHaveFailures(r.Phases) }

@@ -6,10 +6,10 @@ import (
 	"time"
 
 	"charm.land/bubbles/v2/key"
-	"charm.land/bubbles/v2/progress"
+	progressbar "charm.land/bubbles/v2/progress"
 	tea "charm.land/bubbletea/v2"
 
-	"github.com/abiswas97/sentei/internal/pipeline"
+	"github.com/abiswas97/sentei/internal/progress"
 )
 
 // progressChromeLines is the fixed line budget the layout spends outside
@@ -174,18 +174,18 @@ func (l ProgressLayout) renderPhase(b *strings.Builder, p phaseDisplay, stepBudg
 	window := WindowSteps(p.steps, stepBudget)
 	for _, s := range window.Steps {
 		label := truncateWithEllipsis(s.name, max(l.Width-6, 10))
-		if s.status == pipeline.StepRunning && l.Motion != nil {
+		if s.status == progress.StepRunning && l.Motion != nil {
 			// Working steps shimmer in the body ramp, star in the band.
 			fmt.Fprintf(b, "    %s\n", l.Motion.Body(l.Motion.Frame+" "+label))
 			continue
 		}
 		var stepInd string
 		switch s.status {
-		case pipeline.StepDone, pipeline.StepSkipped:
+		case progress.StepDone, progress.StepSkipped:
 			stepInd = styleIndicatorDone.Render(indicatorDone)
-		case pipeline.StepRunning:
+		case progress.StepRunning:
 			stepInd = l.activeGlyph()
-		case pipeline.StepFailed:
+		case progress.StepFailed:
 			stepInd = styleIndicatorFailed.Render(indicatorFailed)
 		default:
 			stepInd = styleIndicatorPending.Render(indicatorPending)
@@ -205,17 +205,17 @@ func (l ProgressLayout) renderPhase(b *strings.Builder, p phaseDisplay, stepBudg
 // newOverallBar constructs the spring-animated overall bar: block fill
 // characters, gradient scaled to the filled portion, sized responsively
 // from WindowSizeMsg (the construction width is only the pre-frame floor).
-func newOverallBar() progress.Model {
-	return progress.New(
-		progress.WithWidth(minProgressBarWidth),
-		progress.WithFillCharacters('█', '░'),
-		progress.WithColors(colorBarStart, colorBarEnd),
-		progress.WithScaled(true),
+func newOverallBar() progressbar.Model {
+	return progressbar.New(
+		progressbar.WithWidth(minProgressBarWidth),
+		progressbar.WithFillCharacters('█', '░'),
+		progressbar.WithColors(colorBarStart, colorBarEnd),
+		progressbar.WithScaled(true),
 		// Luxurious spring: a full sweep takes ~1.2s (bar visually full at
 		// ~1.0s), inside the hold plus settle floor. Critically damped:
 		// the component clamps at 100%, so any overshoot would render as
 		// the bar retreating.
-		progress.WithSpringOptions(6, 1),
+		progressbar.WithSpringOptions(6, 1),
 	)
 }
 
@@ -277,9 +277,9 @@ func (m Model) renderProgressLayout(l ProgressLayout) string {
 	// palette can arrive after the bar is constructed. A completed flow
 	// settles the fill green for its hold — the bar joins the ✦ moment.
 	if l.Completed {
-		progress.WithColors(colorBarDoneStart, colorBarDoneEnd)(&bar)
+		progressbar.WithColors(colorBarDoneStart, colorBarDoneEnd)(&bar)
 	} else {
-		progress.WithColors(colorBarStart, colorBarEnd)(&bar)
+		progressbar.WithColors(colorBarStart, colorBarEnd)(&bar)
 	}
 	bar.EmptyColor = colorDim
 	// The native percentage follows the displayed fill, so bar and label

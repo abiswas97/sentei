@@ -8,13 +8,13 @@ import (
 	"github.com/abiswas97/sentei/internal/config"
 	"github.com/abiswas97/sentei/internal/ecosystem"
 	"github.com/abiswas97/sentei/internal/git"
-	"github.com/abiswas97/sentei/internal/pipeline"
+	"github.com/abiswas97/sentei/internal/progress"
 )
 
 const maxDepsConcurrency = 5
 
-func runDeps(shell git.ShellRunner, wtPath string, opts Options, emit func(pipeline.Event)) pipeline.Phase {
-	phase := pipeline.Phase{Name: "Dependencies"}
+func runDeps(shell git.ShellRunner, wtPath string, opts Options, emit func(progress.Event)) progress.Phase {
+	phase := progress.Phase{Name: "Dependencies"}
 
 	if len(opts.Ecosystems) == 0 {
 		return phase
@@ -28,19 +28,19 @@ func runDeps(shell git.ShellRunner, wtPath string, opts Options, emit func(pipel
 	return phase
 }
 
-func installEcosystem(shell git.ShellRunner, wtPath string, eco config.EcosystemConfig, emit func(pipeline.Event)) []pipeline.StepResult {
+func installEcosystem(shell git.ShellRunner, wtPath string, eco config.EcosystemConfig, emit func(progress.Event)) []progress.StepResult {
 	if eco.Install.WorkspaceDetect == "" || eco.Install.WorkspaceInstall == "" {
 		rootStep := runInstallCommand(shell, wtPath, eco.Name, eco.Install.Command, emit)
-		return []pipeline.StepResult{rootStep}
+		return []progress.StepResult{rootStep}
 	}
 
 	workspaces, err := ecosystem.DetectWorkspaces(wtPath, eco.Install.WorkspaceDetect)
 	if err != nil || len(workspaces) == 0 {
 		rootStep := runInstallCommand(shell, wtPath, eco.Name, eco.Install.Command, emit)
-		return []pipeline.StepResult{rootStep}
+		return []progress.StepResult{rootStep}
 	}
 
-	var steps []pipeline.StepResult
+	var steps []progress.StepResult
 
 	if eco.Install.IsParallel() {
 		wsSteps := installWorkspacesParallel(shell, wtPath, eco, workspaces, emit)
@@ -56,12 +56,12 @@ func installEcosystem(shell git.ShellRunner, wtPath string, eco config.Ecosystem
 	return steps
 }
 
-func installWorkspacesParallel(shell git.ShellRunner, wtPath string, eco config.EcosystemConfig, workspaces []string, emit func(pipeline.Event)) []pipeline.StepResult {
-	results := make([]pipeline.StepResult, len(workspaces))
+func installWorkspacesParallel(shell git.ShellRunner, wtPath string, eco config.EcosystemConfig, workspaces []string, emit func(progress.Event)) []progress.StepResult {
+	results := make([]progress.StepResult, len(workspaces))
 	sem := make(chan struct{}, maxDepsConcurrency)
 	var wg sync.WaitGroup
 	var mu sync.Mutex
-	safeEmit := func(e pipeline.Event) {
+	safeEmit := func(e progress.Event) {
 		mu.Lock()
 		defer mu.Unlock()
 		emit(e)
@@ -85,8 +85,8 @@ func installWorkspacesParallel(shell git.ShellRunner, wtPath string, eco config.
 	return results
 }
 
-func runInstallCommand(shell git.ShellRunner, wtPath, stepName, command string, emit func(pipeline.Event)) pipeline.StepResult {
-	return pipeline.RunStep("Dependencies", stepName, emit, func() (string, error) {
+func runInstallCommand(shell git.ShellRunner, wtPath, stepName, command string, emit func(progress.Event)) progress.StepResult {
+	return progress.RunStep("Dependencies", stepName, emit, func() (string, error) {
 		if command == "" {
 			return "", fmt.Errorf("empty install command for %s", stepName)
 		}

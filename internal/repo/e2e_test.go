@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/abiswas97/sentei/internal/git"
-	"github.com/abiswas97/sentei/internal/pipeline"
+	"github.com/abiswas97/sentei/internal/progress"
 	"github.com/abiswas97/sentei/internal/testtmp"
 	"github.com/abiswas97/sentei/internal/testutil/mock"
 )
@@ -18,7 +18,7 @@ func TestE2E_CreateRepo(t *testing.T) {
 	runner := &git.GitRunner{}
 	shell := &git.DefaultShellRunner{}
 
-	ec := &mock.EventCollector[pipeline.Event]{}
+	ec := &mock.EventCollector[progress.Event]{}
 	opts := CreateOptions{
 		Name:          "test-repo",
 		Location:      dir,
@@ -55,7 +55,7 @@ func TestE2E_CreateRepo(t *testing.T) {
 	// No failures
 	for _, phase := range result.Phases {
 		for _, step := range phase.Steps {
-			if step.Status == pipeline.StepFailed {
+			if step.Status == progress.StepFailed {
 				t.Errorf("step %q failed: %v", step.Name, step.Error)
 			}
 		}
@@ -76,7 +76,7 @@ func TestE2E_CloneRepo(t *testing.T) {
 
 	// Clone it
 	cloneDir := testtmp.RobustTempDir(t)
-	ec := &mock.EventCollector[pipeline.Event]{}
+	ec := &mock.EventCollector[progress.Event]{}
 	opts := CloneOptions{
 		URL:      sourceDir, // local path works as URL for git clone
 		Location: cloneDir,
@@ -122,13 +122,13 @@ func TestE2E_CloneNonMainDefaultSetsUpstream(t *testing.T) {
 	runner.Run(sourceDir, "-c", "user.email=test@test.com", "-c", "user.name=Test", "commit", "-m", "init")
 
 	cloneDir := testtmp.RobustTempDir(t)
-	ec := &mock.EventCollector[pipeline.Event]{}
+	ec := &mock.EventCollector[progress.Event]{}
 	opts := CloneOptions{URL: sourceDir, Location: cloneDir, Name: "cloned"}
 	result := Clone(runner, opts, ec.Emit)
 
 	for _, phase := range result.Phases {
 		for _, step := range phase.Steps {
-			if step.Status == pipeline.StepFailed {
+			if step.Status == progress.StepFailed {
 				t.Errorf("step %q failed: %v", step.Name, step.Error)
 			}
 		}
@@ -164,7 +164,7 @@ func TestE2E_MigrateRepo(t *testing.T) {
 	runner.Run(repoPath, "add", "file.txt")
 	runner.Run(repoPath, "-c", "user.email=test@test.com", "-c", "user.name=Test", "commit", "-m", "init")
 
-	ec := &mock.EventCollector[pipeline.Event]{}
+	ec := &mock.EventCollector[progress.Event]{}
 	opts := MigrateOptions{RepoPath: repoPath}
 	result := Migrate(runner, shell, opts, ec.Emit)
 

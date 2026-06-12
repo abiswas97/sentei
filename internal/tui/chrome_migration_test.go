@@ -8,7 +8,7 @@ import (
 	"github.com/abiswas97/sentei/internal/cleanup"
 	"github.com/abiswas97/sentei/internal/git"
 	"github.com/abiswas97/sentei/internal/integration"
-	"github.com/abiswas97/sentei/internal/pipeline"
+	"github.com/abiswas97/sentei/internal/progress"
 	"github.com/abiswas97/sentei/internal/repo"
 )
 
@@ -90,7 +90,7 @@ func TestBuildIntegrationPhases_ErrorBakedIntoLabel(t *testing.T) {
 	if len(phases) != 1 || len(phases[0].steps) != 1 {
 		t.Fatalf("unexpected phases: %+v", phases)
 	}
-	if phases[0].steps[0].status != pipeline.StepFailed {
+	if phases[0].steps[0].status != progress.StepFailed {
 		t.Errorf("expected failed step, got %v", phases[0].steps[0].status)
 	}
 	if !strings.Contains(phases[0].steps[0].name, "exit 1") {

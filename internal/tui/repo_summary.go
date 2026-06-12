@@ -9,7 +9,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 
 	"github.com/abiswas97/sentei/internal/git"
-	"github.com/abiswas97/sentei/internal/pipeline"
+	"github.com/abiswas97/sentei/internal/progress"
 	"github.com/abiswas97/sentei/internal/repo"
 )
 
@@ -19,7 +19,7 @@ func cloneFailed(result repo.CloneResult) (bool, error) {
 	if !result.HasFailures() {
 		return false, nil
 	}
-	_, step, _ := pipeline.FirstFailure(result.Phases)
+	_, step, _ := progress.FirstFailure(result.Phases)
 	return true, step.Error
 }
 

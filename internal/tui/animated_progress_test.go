@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"charm.land/bubbles/v2/progress"
+	progressbar "charm.land/bubbles/v2/progress"
 
 	"github.com/abiswas97/sentei/internal/git"
 )
@@ -33,7 +33,7 @@ func TestProgressFrame_GatedToProgressViews(t *testing.T) {
 	m := NewModel([]git.Worktree{}, nil, "/repo")
 
 	cmd := m.bar.SetPercent(0.5)
-	frame, ok := cmd().(progress.FrameMsg)
+	frame, ok := cmd().(progressbar.FrameMsg)
 	if !ok {
 		t.Fatal("SetPercent must yield a FrameMsg")
 	}

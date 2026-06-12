@@ -8,7 +8,7 @@ import (
 
 	"github.com/abiswas97/sentei/internal/config"
 	"github.com/abiswas97/sentei/internal/integration"
-	"github.com/abiswas97/sentei/internal/pipeline"
+	"github.com/abiswas97/sentei/internal/progress"
 	"github.com/abiswas97/sentei/internal/testutil/mock"
 )
 
@@ -49,7 +49,7 @@ func TestRun_FullPipeline(t *testing.T) {
 		},
 	}
 
-	ec := &mock.EventCollector[pipeline.Event]{}
+	ec := &mock.EventCollector[progress.Event]{}
 	result := Run(runner, runner, opts, ec.Emit)
 
 	if result.WorktreePath != "/repo/feature-auth" {
@@ -95,7 +95,7 @@ func TestRun_CreateWorktreeFails_AbortsEarly(t *testing.T) {
 		},
 	}
 
-	ec := &mock.EventCollector[pipeline.Event]{}
+	ec := &mock.EventCollector[progress.Event]{}
 	result := Run(runner, runner, opts, ec.Emit)
 
 	if len(result.Phases) != 1 {
@@ -122,7 +122,7 @@ func TestRun_MergeFailsContinues(t *testing.T) {
 		CopyEnvFiles:   false,
 	}
 
-	ec := &mock.EventCollector[pipeline.Event]{}
+	ec := &mock.EventCollector[progress.Event]{}
 	result := Run(runner, runner, opts, ec.Emit)
 
 	if len(result.Phases) != 3 {
@@ -167,7 +167,7 @@ func TestRun_CopyEnvFiles(t *testing.T) {
 		},
 	}
 
-	ec := &mock.EventCollector[pipeline.Event]{}
+	ec := &mock.EventCollector[progress.Event]{}
 	result := Run(runner, runner, opts, ec.Emit)
 
 	// Verify env file was copied
@@ -192,8 +192,8 @@ func TestResult_HasFailures(t *testing.T) {
 		{
 			name: "no failures",
 			result: Result{
-				Phases: []pipeline.Phase{
-					{Steps: []pipeline.StepResult{{Status: pipeline.StepDone}, {Status: pipeline.StepSkipped}}},
+				Phases: []progress.Phase{
+					{Steps: []progress.StepResult{{Status: progress.StepDone}, {Status: progress.StepSkipped}}},
 				},
 			},
 			want: false,
@@ -201,8 +201,8 @@ func TestResult_HasFailures(t *testing.T) {
 		{
 			name: "has failure",
 			result: Result{
-				Phases: []pipeline.Phase{
-					{Steps: []pipeline.StepResult{{Status: pipeline.StepDone}, {Status: pipeline.StepFailed}}},
+				Phases: []progress.Phase{
+					{Steps: []progress.StepResult{{Status: progress.StepDone}, {Status: progress.StepFailed}}},
 				},
 			},
 			want: true,

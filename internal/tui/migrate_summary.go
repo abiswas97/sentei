@@ -9,7 +9,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 
 	"github.com/abiswas97/sentei/internal/git"
-	"github.com/abiswas97/sentei/internal/pipeline"
+	"github.com/abiswas97/sentei/internal/progress"
 	"github.com/abiswas97/sentei/internal/repo"
 )
 
@@ -66,7 +66,7 @@ func (m Model) viewMigrateSummary() string {
 	hasCriticalFailure := result.HasFailures()
 	var failErr error
 	if hasCriticalFailure {
-		if _, step, ok := pipeline.FirstFailure(result.Phases); ok {
+		if _, step, ok := progress.FirstFailure(result.Phases); ok {
 			failErr = step.Error
 		}
 	}

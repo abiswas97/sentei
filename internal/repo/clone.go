@@ -9,7 +9,7 @@ import (
 
 	"github.com/abiswas97/sentei/internal/fileutil"
 	"github.com/abiswas97/sentei/internal/git"
-	"github.com/abiswas97/sentei/internal/pipeline"
+	"github.com/abiswas97/sentei/internal/progress"
 )
 
 type CloneOptions struct {
@@ -23,7 +23,7 @@ type CloneResult struct {
 	WorktreePath  string
 	DefaultBranch string
 	OriginURL     string
-	Phases        []pipeline.Phase
+	Phases        []progress.Phase
 }
 
 // DeriveRepoName extracts a repository name from a git URL.
@@ -57,7 +57,7 @@ func DeriveRepoName(url string) string {
 	return name
 }
 
-func Clone(runner git.CommandRunner, opts CloneOptions, emit func(pipeline.Event)) CloneResult {
+func Clone(runner git.CommandRunner, opts CloneOptions, emit func(progress.Event)) CloneResult {
 	result := CloneResult{OriginURL: opts.URL}
 	repoPath := filepath.Join(opts.Location, opts.Name)
 	result.RepoPath = repoPath
@@ -113,10 +113,10 @@ func Clone(runner git.CommandRunner, opts CloneOptions, emit func(pipeline.Event
 
 // validateCloneTarget rejects inputs that would corrupt an unintended directory.
 // The returned phase is only meaningful (and only surfaced) when ok is false.
-func validateCloneTarget(opts CloneOptions, repoPath string) (pipeline.Phase, bool) {
-	phase := pipeline.Phase{Name: "Validate"}
-	fail := func(err error) (pipeline.Phase, bool) {
-		phase.Steps = append(phase.Steps, pipeline.StepResult{Name: "Validate target", Status: pipeline.StepFailed, Error: err})
+func validateCloneTarget(opts CloneOptions, repoPath string) (progress.Phase, bool) {
+	phase := progress.Phase{Name: "Validate"}
+	fail := func(err error) (progress.Phase, bool) {
+		phase.Steps = append(phase.Steps, progress.StepResult{Name: "Validate target", Status: progress.StepFailed, Error: err})
 		return phase, false
 	}
 
@@ -133,8 +133,8 @@ func validateCloneTarget(opts CloneOptions, repoPath string) (pipeline.Phase, bo
 	return phase, true
 }
 
-func runClonePhase(runner git.CommandRunner, location, url, barePath string, emit func(pipeline.Event)) pipeline.Phase {
-	rec := pipeline.NewPhaseRecorder("Clone", emit)
+func runClonePhase(runner git.CommandRunner, location, url, barePath string, emit func(progress.Event)) progress.Phase {
+	rec := progress.NewPhaseRecorder("Clone", emit)
 	rec.Step("Clone bare repository", func() (string, error) {
 		_, err := runner.Run(location, "clone", "--bare", url, barePath)
 		return "", err
@@ -142,8 +142,8 @@ func runClonePhase(runner git.CommandRunner, location, url, barePath string, emi
 	return rec.Phase()
 }
 
-func runCloneStructure(runner git.CommandRunner, repoPath, barePath string, emit func(pipeline.Event)) pipeline.Phase {
-	rec := pipeline.NewPhaseRecorder("Structure", emit)
+func runCloneStructure(runner git.CommandRunner, repoPath, barePath string, emit func(progress.Event)) progress.Phase {
+	rec := progress.NewPhaseRecorder("Structure", emit)
 
 	// Ensure repoPath exists — bare clone creates .bare but not necessarily the parent.
 	ok := rec.Step("Create .git pointer", func() (string, error) {
@@ -163,8 +163,8 @@ func runCloneStructure(runner git.CommandRunner, repoPath, barePath string, emit
 	return rec.Phase()
 }
 
-func runCloneWorktree(runner git.CommandRunner, repoPath, barePath string, emit func(pipeline.Event)) (pipeline.Phase, string, bool) {
-	rec := pipeline.NewPhaseRecorder("Worktree", emit)
+func runCloneWorktree(runner git.CommandRunner, repoPath, barePath string, emit func(progress.Event)) (progress.Phase, string, bool) {
+	rec := progress.NewPhaseRecorder("Worktree", emit)
 
 	var branch string
 	rec.Step("Detect default branch", func() (string, error) {
@@ -193,9 +193,9 @@ func runCloneWorktree(runner git.CommandRunner, repoPath, barePath string, emit 
 
 	// Tracking is best-effort: the checkout above is already usable. Populating
 	// refs/remotes/origin/* (fetch) and setting upstream both need the remote; a
-	// network/auth failure here must NOT fail the clone. pipeline.StepSkipped keeps
+	// network/auth failure here must NOT fail the clone. progress.StepSkipped keeps
 	// HasFailures() false so the clone still reports success, just without tracking.
-	rec.Emit("Set upstream tracking", pipeline.StepRunning, "")
+	rec.Emit("Set upstream tracking", progress.StepRunning, "")
 	trackErr := func() error {
 		if _, err := runner.Run(barePath, "fetch", "origin"); err != nil {
 			return err

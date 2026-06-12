@@ -9,14 +9,14 @@ import (
 
 	"github.com/abiswas97/sentei/internal/git"
 	"github.com/abiswas97/sentei/internal/integration"
-	"github.com/abiswas97/sentei/internal/pipeline"
+	"github.com/abiswas97/sentei/internal/progress"
 	"github.com/abiswas97/sentei/internal/testutil/mock"
 )
 
 func TestRunIntegrations_NoIntegrations(t *testing.T) {
 	runner := &mock.Runner{Responses: map[string]mock.Response{}}
 	opts := Options{Integrations: nil}
-	ec := &mock.EventCollector[pipeline.Event]{}
+	ec := &mock.EventCollector[progress.Event]{}
 
 	phase := runIntegrations(runner, "/wt", opts, ec.Emit)
 
@@ -48,7 +48,7 @@ func TestRunIntegrations_AlreadyInstalled(t *testing.T) {
 		},
 	}
 
-	ec := &mock.EventCollector[pipeline.Event]{}
+	ec := &mock.EventCollector[progress.Event]{}
 
 	phase := runIntegrations(runner, "/wt", opts, ec.Emit)
 
@@ -107,13 +107,13 @@ func TestRunIntegrations_InstallRequired(t *testing.T) {
 		},
 	}
 
-	ec := &mock.EventCollector[pipeline.Event]{}
+	ec := &mock.EventCollector[progress.Event]{}
 
 	phase := runIntegrations(runner, "/wt", opts, ec.Emit)
 
 	hasFailed := false
 	for _, s := range phase.Steps {
-		if s.Status == pipeline.StepFailed {
+		if s.Status == progress.StepFailed {
 			hasFailed = true
 		}
 	}
@@ -144,12 +144,12 @@ func TestRunIntegrations_SetupFailure(t *testing.T) {
 		},
 	}
 
-	ec := &mock.EventCollector[pipeline.Event]{}
+	ec := &mock.EventCollector[progress.Event]{}
 	phase := runIntegrations(runner, "/wt", opts, ec.Emit)
 
 	hasFailed := false
 	for _, s := range phase.Steps {
-		if s.Status == pipeline.StepFailed {
+		if s.Status == progress.StepFailed {
 			hasFailed = true
 		}
 	}
@@ -244,16 +244,16 @@ func TestRunSetupCommand_QuotesInjectingPath(t *testing.T) {
 		Name:  "crg",
 		Setup: integration.SetupSpec{Command: "crg build {path}", WorkingDir: "repo"},
 	}
-	ec := &mock.EventCollector[pipeline.Event]{}
+	ec := &mock.EventCollector[progress.Event]{}
 	step := runSetupCommand(runner, wtPath, "/repo", integ, ec.Emit)
-	if step.Status == pipeline.StepFailed {
+	if step.Status == progress.StepFailed {
 		t.Errorf("quoted setup command should have matched the mock, got failure: %v", step.Error)
 	}
 }
 
 func TestRunIntegrations_GitignoreFailure_IsRecorded(t *testing.T) {
 	// wtPath does not exist, so appendGitignore fails. The failure must be
-	// recorded as a pipeline.StepResult (not just emitted), so HasFailures sees it.
+	// recorded as a progress.StepResult (not just emitted), so HasFailures sees it.
 	wtPath := "/nonexistent/wt"
 	runner := &mock.Runner{Responses: map[string]mock.Response{
 		"/nonexistent/wt:shell[crg --version]":                           {Output: "1.0"},
@@ -268,16 +268,16 @@ func TestRunIntegrations_GitignoreFailure_IsRecorded(t *testing.T) {
 			GitignoreEntries: []string{".crg/"},
 		}},
 	}
-	ec := &mock.EventCollector[pipeline.Event]{}
+	ec := &mock.EventCollector[progress.Event]{}
 	phase := runIntegrations(runner, wtPath, opts, ec.Emit)
 
 	gitignoreFailed := false
 	for _, s := range phase.Steps {
-		if strings.Contains(s.Name, "Gitignore") && s.Status == pipeline.StepFailed {
+		if strings.Contains(s.Name, "Gitignore") && s.Status == progress.StepFailed {
 			gitignoreFailed = true
 		}
 	}
 	if !gitignoreFailed {
-		t.Error("a gitignore append failure must be recorded as a pipeline.StepFailed result")
+		t.Error("a gitignore append failure must be recorded as a progress.StepFailed result")
 	}
 }

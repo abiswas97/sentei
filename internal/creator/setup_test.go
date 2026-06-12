@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/abiswas97/sentei/internal/git"
-	"github.com/abiswas97/sentei/internal/pipeline"
+	"github.com/abiswas97/sentei/internal/progress"
 	"github.com/abiswas97/sentei/internal/testutil/mock"
 )
 
@@ -19,7 +19,7 @@ func TestCreateWorktreeStep(t *testing.T) {
 		repoPath     string
 		branchExists bool
 		runnerErr    error
-		wantStatus   pipeline.StepStatus
+		wantStatus   progress.StepStatus
 		wantPath     string
 	}{
 		{
@@ -27,7 +27,7 @@ func TestCreateWorktreeStep(t *testing.T) {
 			branch:     "feature/auth",
 			baseBranch: "main",
 			repoPath:   "/repo",
-			wantStatus: pipeline.StepDone,
+			wantStatus: progress.StepDone,
 			wantPath:   "/repo/feature-auth",
 		},
 		{
@@ -36,7 +36,7 @@ func TestCreateWorktreeStep(t *testing.T) {
 			baseBranch:   "main",
 			repoPath:     "/repo",
 			branchExists: true,
-			wantStatus:   pipeline.StepDone,
+			wantStatus:   progress.StepDone,
 			wantPath:     "/repo/feature-dup",
 		},
 		{
@@ -45,7 +45,7 @@ func TestCreateWorktreeStep(t *testing.T) {
 			baseBranch: "main",
 			repoPath:   "/repo",
 			runnerErr:  fmt.Errorf("fatal: something went wrong"),
-			wantStatus: pipeline.StepFailed,
+			wantStatus: progress.StepFailed,
 		},
 	}
 
@@ -70,13 +70,13 @@ func TestCreateWorktreeStep(t *testing.T) {
 			}
 			runner := &mock.Runner{Responses: responses}
 
-			ec := &mock.EventCollector[pipeline.Event]{}
+			ec := &mock.EventCollector[progress.Event]{}
 			result, path := createWorktreeStep(runner, tt.repoPath, tt.branch, tt.baseBranch, ec.Emit)
 
 			if result.Status != tt.wantStatus {
 				t.Errorf("status = %v, want %v", result.Status, tt.wantStatus)
 			}
-			if tt.wantStatus == pipeline.StepDone && path != tt.wantPath {
+			if tt.wantStatus == progress.StepDone && path != tt.wantPath {
 				t.Errorf("path = %q, want %q", path, tt.wantPath)
 			}
 			if len(ec.Events) == 0 {
@@ -92,26 +92,26 @@ func TestMergeBaseStep(t *testing.T) {
 		mergeBase  bool
 		baseBranch string
 		runnerErr  error
-		wantStatus pipeline.StepStatus
+		wantStatus progress.StepStatus
 	}{
 		{
 			name:       "successful merge",
 			mergeBase:  true,
 			baseBranch: "main",
-			wantStatus: pipeline.StepDone,
+			wantStatus: progress.StepDone,
 		},
 		{
 			name:       "merge conflict continues",
 			mergeBase:  true,
 			baseBranch: "main",
 			runnerErr:  fmt.Errorf("merge conflict"),
-			wantStatus: pipeline.StepFailed,
+			wantStatus: progress.StepFailed,
 		},
 		{
 			name:       "merge disabled",
 			mergeBase:  false,
 			baseBranch: "main",
-			wantStatus: pipeline.StepSkipped,
+			wantStatus: progress.StepSkipped,
 		},
 	}
 
@@ -124,7 +124,7 @@ func TestMergeBaseStep(t *testing.T) {
 				},
 			}}
 
-			ec := &mock.EventCollector[pipeline.Event]{}
+			ec := &mock.EventCollector[progress.Event]{}
 			result := mergeBaseStep(runner, "/repo/feature-auth", tt.baseBranch, tt.mergeBase, ec.Emit)
 
 			if result.Status != tt.wantStatus {
@@ -139,24 +139,24 @@ func TestCopyEnvFilesStep(t *testing.T) {
 		name       string
 		envFiles   []string
 		srcFiles   []string
-		wantStatus pipeline.StepStatus
+		wantStatus progress.StepStatus
 	}{
 		{
 			name:       "copies existing files",
 			envFiles:   []string{".env", ".env.local"},
 			srcFiles:   []string{".env"},
-			wantStatus: pipeline.StepDone,
+			wantStatus: progress.StepDone,
 		},
 		{
 			name:       "no env files configured",
 			envFiles:   nil,
-			wantStatus: pipeline.StepSkipped,
+			wantStatus: progress.StepSkipped,
 		},
 		{
 			name:       "no source files exist",
 			envFiles:   []string{".env"},
 			srcFiles:   nil,
-			wantStatus: pipeline.StepDone,
+			wantStatus: progress.StepDone,
 		},
 	}
 
@@ -169,7 +169,7 @@ func TestCopyEnvFilesStep(t *testing.T) {
 				os.WriteFile(filepath.Join(srcDir, f), []byte("SECRET=val"), 0644)
 			}
 
-			ec := &mock.EventCollector[pipeline.Event]{}
+			ec := &mock.EventCollector[progress.Event]{}
 			result := copyEnvFilesStep(srcDir, dstDir, tt.envFiles, ec.Emit)
 
 			if result.Status != tt.wantStatus {

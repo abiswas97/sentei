@@ -6,7 +6,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 
 	"github.com/abiswas97/sentei/internal/creator"
-	"github.com/abiswas97/sentei/internal/pipeline"
+	"github.com/abiswas97/sentei/internal/progress"
 	"github.com/abiswas97/sentei/internal/repo"
 )
 
@@ -24,7 +24,7 @@ func TestMenuEntry_CreateWorktree_ResetsFlowState(t *testing.T) {
 	m.create.mergeBase = false
 	m.create.copyEnvFiles = false
 	m.create.optionsCursor = 3
-	m.create.events = []pipeline.Event{{Phase: "Setup", Step: "old"}}
+	m.create.events = []progress.Event{{Phase: "Setup", Step: "old"}}
 	m.create.result = &creator.Result{}
 
 	updated, _ := m.updateMenu(tea.KeyPressMsg{Code: tea.KeyEnter})

@@ -1,6 +1,6 @@
 package tui
 
-import "github.com/abiswas97/sentei/internal/pipeline"
+import "github.com/abiswas97/sentei/internal/progress"
 
 // WindowStats summarizes a windowed step list for the stat line.
 type WindowStats struct {
@@ -28,11 +28,11 @@ func WindowSteps(steps []stepDisplay, availableLines int) WindowResult {
 	stats := WindowStats{Total: len(steps)}
 	for _, s := range steps {
 		switch s.status {
-		case pipeline.StepDone, pipeline.StepSkipped:
+		case progress.StepDone, progress.StepSkipped:
 			stats.Done++
-		case pipeline.StepRunning:
+		case progress.StepRunning:
 			stats.Active++
-		case pipeline.StepFailed:
+		case progress.StepFailed:
 			stats.Failed++
 		default:
 			stats.Pending++
@@ -46,7 +46,7 @@ func WindowSteps(steps []stepDisplay, availableLines int) WindowResult {
 
 	visible := make([]bool, len(steps))
 	for i, s := range steps {
-		if s.status == pipeline.StepFailed || s.status == pipeline.StepRunning {
+		if s.status == progress.StepFailed || s.status == progress.StepRunning {
 			visible[i] = true
 		}
 	}
@@ -56,7 +56,7 @@ func WindowSteps(steps []stepDisplay, availableLines int) WindowResult {
 
 	completedTrail := min(WindowCompletedTrail, max(remaining, 0))
 	for i := len(steps) - 1; i >= 0 && completedTrail > 0; i-- {
-		if steps[i].status == pipeline.StepDone || steps[i].status == pipeline.StepSkipped {
+		if steps[i].status == progress.StepDone || steps[i].status == progress.StepSkipped {
 			visible[i] = true
 			completedTrail--
 			remaining--
@@ -65,7 +65,7 @@ func WindowSteps(steps []stepDisplay, availableLines int) WindowResult {
 
 	pendingLead := min(WindowPendingLead, max(remaining, 0))
 	for i := 0; i < len(steps) && pendingLead > 0; i++ {
-		if steps[i].status == pipeline.StepPending {
+		if steps[i].status == progress.StepPending {
 			visible[i] = true
 			pendingLead--
 		}

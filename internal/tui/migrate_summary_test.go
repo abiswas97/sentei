@@ -8,7 +8,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 
 	"github.com/abiswas97/sentei/internal/config"
-	"github.com/abiswas97/sentei/internal/pipeline"
+	"github.com/abiswas97/sentei/internal/progress"
 	"github.com/abiswas97/sentei/internal/repo"
 )
 
@@ -25,9 +25,9 @@ func TestViewMigrateSummary_BackupFailure_NoDestructiveRestore(t *testing.T) {
 	// restore command must NOT render against the still-intact repo.
 	result := repo.MigrateResult{
 		BareRoot: "/repo/proj",
-		Phases: []pipeline.Phase{
-			{Name: "Validate", Steps: []pipeline.StepResult{{Name: "Detect current branch", Status: pipeline.StepDone}}},
-			{Name: "Backup", Steps: []pipeline.StepResult{{Name: "Copy repository to backup", Status: pipeline.StepFailed, Error: errors.New("no space left")}}},
+		Phases: []progress.Phase{
+			{Name: "Validate", Steps: []progress.StepResult{{Name: "Detect current branch", Status: progress.StepDone}}},
+			{Name: "Backup", Steps: []progress.StepResult{{Name: "Copy repository to backup", Status: progress.StepFailed, Error: errors.New("no space left")}}},
 		},
 		// BackupPath intentionally empty
 	}
@@ -44,9 +44,9 @@ func TestViewMigrateSummary_MigrateFailure_ShowsRestore(t *testing.T) {
 	result := repo.MigrateResult{
 		BareRoot:   "/repo/proj",
 		BackupPath: "/repo/proj_backup_1",
-		Phases: []pipeline.Phase{
-			{Name: "Backup", Steps: []pipeline.StepResult{{Name: "Copy repository to backup", Status: pipeline.StepDone}}},
-			{Name: "Migrate", Steps: []pipeline.StepResult{{Name: "Create bare repository", Status: pipeline.StepFailed, Error: errors.New("boom")}}},
+		Phases: []progress.Phase{
+			{Name: "Backup", Steps: []progress.StepResult{{Name: "Copy repository to backup", Status: progress.StepDone}}},
+			{Name: "Migrate", Steps: []progress.StepResult{{Name: "Create bare repository", Status: progress.StepFailed, Error: errors.New("boom")}}},
 		},
 	}
 	out := stripAnsi(makeMigrateSummaryModel(result).viewMigrateSummary())
@@ -63,8 +63,8 @@ func TestViewMigrateSummary_Success_OffersDeleteBackup(t *testing.T) {
 		BareRoot:   "/repo/proj",
 		BackupPath: "/repo/proj_backup_1",
 		Branch:     "main",
-		Phases: []pipeline.Phase{
-			{Name: "Migrate", Steps: []pipeline.StepResult{{Name: "Create worktree", Status: pipeline.StepDone}}},
+		Phases: []progress.Phase{
+			{Name: "Migrate", Steps: []progress.StepResult{{Name: "Create worktree", Status: progress.StepDone}}},
 		},
 	}
 	out := stripAnsi(makeMigrateSummaryModel(result).viewMigrateSummary())
@@ -79,8 +79,8 @@ func TestViewMigrateSummary_Success_OffersDeleteBackup(t *testing.T) {
 func TestUpdateMigrateSummary_Failure_YIsInert(t *testing.T) {
 	result := repo.MigrateResult{
 		BareRoot: "/repo/proj",
-		Phases: []pipeline.Phase{
-			{Name: "Backup", Steps: []pipeline.StepResult{{Name: "x", Status: pipeline.StepFailed, Error: errors.New("no space")}}},
+		Phases: []progress.Phase{
+			{Name: "Backup", Steps: []progress.StepResult{{Name: "x", Status: progress.StepFailed, Error: errors.New("no space")}}},
 		},
 	}
 	m := makeMigrateSummaryModel(result)

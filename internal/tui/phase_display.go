@@ -1,6 +1,6 @@
 package tui
 
-import "github.com/abiswas97/sentei/internal/pipeline"
+import "github.com/abiswas97/sentei/internal/progress"
 
 type phaseDisplay struct {
 	name   string
@@ -12,12 +12,12 @@ type phaseDisplay struct {
 
 type stepDisplay struct {
 	name   string
-	status pipeline.StepStatus
+	status progress.StepStatus
 }
 
 // buildPhaseDisplays folds a pipeline event stream into per-phase display
 // state, preserving the order phases first appeared in.
-func buildPhaseDisplays(events []pipeline.Event) []phaseDisplay {
+func buildPhaseDisplays(events []progress.Event) []phaseDisplay {
 	phases := map[string]*phaseDisplay{}
 	var order []string
 
@@ -48,11 +48,11 @@ func buildPhaseDisplays(events []pipeline.Event) []phaseDisplay {
 		pd.total = len(pd.steps)
 		for _, s := range pd.steps {
 			switch s.status {
-			case pipeline.StepDone, pipeline.StepSkipped:
+			case progress.StepDone, progress.StepSkipped:
 				// A skipped step is resolved (non-failing); count it as done so a
 				// phase with a best-effort skip still reaches 100%.
 				pd.done++
-			case pipeline.StepFailed:
+			case progress.StepFailed:
 				pd.failed++
 				pd.done++
 			}

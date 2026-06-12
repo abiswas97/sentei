@@ -4,7 +4,7 @@ import (
 	"github.com/abiswas97/sentei/internal/config"
 	"github.com/abiswas97/sentei/internal/git"
 	"github.com/abiswas97/sentei/internal/integration"
-	"github.com/abiswas97/sentei/internal/pipeline"
+	"github.com/abiswas97/sentei/internal/progress"
 )
 
 type Options struct {
@@ -20,20 +20,20 @@ type Options struct {
 
 type Result struct {
 	WorktreePath string
-	Phases       []pipeline.Phase
+	Phases       []progress.Phase
 }
 
 func (r *Result) HasFailures() bool {
-	return pipeline.PhasesHaveFailures(r.Phases)
+	return progress.PhasesHaveFailures(r.Phases)
 }
 
-func Run(runner git.CommandRunner, shell git.ShellRunner, opts Options, emit func(pipeline.Event)) Result {
+func Run(runner git.CommandRunner, shell git.ShellRunner, opts Options, emit func(progress.Event)) Result {
 	result := Result{}
 
 	setupPhase := runSetup(runner, opts, emit)
 	result.Phases = append(result.Phases, setupPhase)
 
-	if setupPhase.Steps[0].Status == pipeline.StepFailed {
+	if setupPhase.Steps[0].Status == progress.StepFailed {
 		return result
 	}
 	result.WorktreePath = git.WorktreePath(opts.RepoPath, opts.BranchName)

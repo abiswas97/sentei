@@ -9,7 +9,7 @@ import (
 
 	"github.com/abiswas97/sentei/internal/git"
 	"github.com/abiswas97/sentei/internal/integration"
-	"github.com/abiswas97/sentei/internal/pipeline"
+	"github.com/abiswas97/sentei/internal/progress"
 	"github.com/abiswas97/sentei/internal/repo"
 	"github.com/abiswas97/sentei/internal/state"
 )
@@ -127,15 +127,15 @@ func (m Model) buildIntegrationPhases() []phaseDisplay {
 				// final line; the summary's peek and portal carry the rest.
 				label += " " + errorPeekLast(s.ev.Error.Error(), max(m.width-10, 20))
 			}
-			var status pipeline.StepStatus
+			var status progress.StepStatus
 			switch s.ev.Status {
 			case integration.StatusDone:
-				status = pipeline.StepDone
+				status = progress.StepDone
 				pd.done++
 			case integration.StatusRunning:
-				status = pipeline.StepRunning
+				status = progress.StepRunning
 			case integration.StatusFailed:
-				status = pipeline.StepFailed
+				status = progress.StepFailed
 				pd.failed++
 				pd.done++
 			}

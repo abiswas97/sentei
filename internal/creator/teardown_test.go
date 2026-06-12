@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/abiswas97/sentei/internal/integration"
-	"github.com/abiswas97/sentei/internal/pipeline"
+	"github.com/abiswas97/sentei/internal/progress"
 	"github.com/abiswas97/sentei/internal/testutil/mock"
 )
 
@@ -94,14 +94,14 @@ func TestTeardown_WithCommand(t *testing.T) {
 		},
 	}
 
-	ec := &mock.EventCollector[pipeline.Event]{}
+	ec := &mock.EventCollector[progress.Event]{}
 	results := Teardown(runner, wtDir, integs, ec.Emit)
 
 	if len(results) != 1 {
 		t.Fatalf("result count = %d, want 1", len(results))
 	}
-	if results[0].Status != pipeline.StepDone {
-		t.Errorf("status = %v, want pipeline.StepDone", results[0].Status)
+	if results[0].Status != progress.StepDone {
+		t.Errorf("status = %v, want progress.StepDone", results[0].Status)
 	}
 }
 
@@ -125,14 +125,14 @@ func TestTeardown_CommandFailsFallsBackToDirDelete(t *testing.T) {
 		},
 	}
 
-	ec := &mock.EventCollector[pipeline.Event]{}
+	ec := &mock.EventCollector[progress.Event]{}
 	results := Teardown(runner, wtDir, integs, ec.Emit)
 
 	if len(results) != 1 {
 		t.Fatalf("result count = %d, want 1", len(results))
 	}
-	if results[0].Status != pipeline.StepDone {
-		t.Errorf("status = %v, want pipeline.StepDone (fallback should succeed)", results[0].Status)
+	if results[0].Status != progress.StepDone {
+		t.Errorf("status = %v, want progress.StepDone (fallback should succeed)", results[0].Status)
 	}
 
 	if _, err := os.Stat(artifactDir); !os.IsNotExist(err) {
@@ -151,7 +151,7 @@ func TestTeardown_NoArtifacts(t *testing.T) {
 		},
 	}
 
-	ec := &mock.EventCollector[pipeline.Event]{}
+	ec := &mock.EventCollector[progress.Event]{}
 	results := Teardown(runner, wtDir, integs, ec.Emit)
 
 	if len(results) != 0 {
@@ -176,14 +176,14 @@ func TestTeardown_DirOnlyNoCommand(t *testing.T) {
 		},
 	}
 
-	ec := &mock.EventCollector[pipeline.Event]{}
+	ec := &mock.EventCollector[progress.Event]{}
 	results := Teardown(runner, wtDir, integs, ec.Emit)
 
 	if len(results) != 1 {
 		t.Fatalf("result count = %d, want 1", len(results))
 	}
-	if results[0].Status != pipeline.StepDone {
-		t.Errorf("status = %v, want pipeline.StepDone", results[0].Status)
+	if results[0].Status != progress.StepDone {
+		t.Errorf("status = %v, want progress.StepDone", results[0].Status)
 	}
 
 	if _, err := os.Stat(artifactDir); !os.IsNotExist(err) {

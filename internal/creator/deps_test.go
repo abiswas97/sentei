@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/abiswas97/sentei/internal/config"
-	"github.com/abiswas97/sentei/internal/pipeline"
+	"github.com/abiswas97/sentei/internal/progress"
 	"github.com/abiswas97/sentei/internal/testutil/mock"
 )
 
@@ -30,7 +30,7 @@ func TestRunDeps_SingleEcosystem(t *testing.T) {
 		},
 	}
 
-	ec := &mock.EventCollector[pipeline.Event]{}
+	ec := &mock.EventCollector[progress.Event]{}
 	phase := runDeps(runner, "/repo/feature-auth", opts, ec.Emit)
 
 	if phase.Name != "Dependencies" {
@@ -39,8 +39,8 @@ func TestRunDeps_SingleEcosystem(t *testing.T) {
 	if len(phase.Steps) != 1 {
 		t.Fatalf("step count = %d, want 1", len(phase.Steps))
 	}
-	if phase.Steps[0].Status != pipeline.StepDone {
-		t.Errorf("step status = %v, want pipeline.StepDone", phase.Steps[0].Status)
+	if phase.Steps[0].Status != progress.StepDone {
+		t.Errorf("step status = %v, want progress.StepDone", phase.Steps[0].Status)
 	}
 }
 
@@ -48,7 +48,7 @@ func TestRunDeps_NoEcosystems(t *testing.T) {
 	runner := &mock.Runner{Responses: map[string]mock.Response{}}
 
 	opts := Options{Ecosystems: nil}
-	ec := &mock.EventCollector[pipeline.Event]{}
+	ec := &mock.EventCollector[progress.Event]{}
 	phase := runDeps(runner, "/repo/feature-auth", opts, ec.Emit)
 
 	if len(phase.Steps) != 0 {
@@ -70,11 +70,11 @@ func TestRunDeps_InstallFailure(t *testing.T) {
 		},
 	}
 
-	ec := &mock.EventCollector[pipeline.Event]{}
+	ec := &mock.EventCollector[progress.Event]{}
 	phase := runDeps(runner, "/repo/feature-auth", opts, ec.Emit)
 
-	if phase.Steps[0].Status != pipeline.StepFailed {
-		t.Errorf("step status = %v, want pipeline.StepFailed", phase.Steps[0].Status)
+	if phase.Steps[0].Status != progress.StepFailed {
+		t.Errorf("step status = %v, want progress.StepFailed", phase.Steps[0].Status)
 	}
 }
 
@@ -110,7 +110,7 @@ func TestRunDeps_ParallelWorkspaces(t *testing.T) {
 		},
 	}
 
-	ec := &mock.EventCollector[pipeline.Event]{}
+	ec := &mock.EventCollector[progress.Event]{}
 	phase := runDeps(runner, wtPath, opts, ec.Emit)
 
 	// 2 workspace installs (root install skipped when workspaces detected)
@@ -120,15 +120,15 @@ func TestRunDeps_ParallelWorkspaces(t *testing.T) {
 
 	// Verify all steps completed
 	for i, step := range phase.Steps {
-		if step.Status != pipeline.StepDone {
-			t.Errorf("step[%d] %q status = %v, want pipeline.StepDone", i, step.Name, step.Status)
+		if step.Status != progress.StepDone {
+			t.Errorf("step[%d] %q status = %v, want progress.StepDone", i, step.Name, step.Status)
 		}
 	}
 
 	// Verify events contain "running" and "done" for each
 	runningCount := 0
 	for _, e := range ec.Events {
-		if e.Status == pipeline.StepRunning {
+		if e.Status == progress.StepRunning {
 			runningCount++
 		}
 	}
@@ -151,7 +151,7 @@ func TestRunDeps_CommandParsing(t *testing.T) {
 		},
 	}
 
-	ec := &mock.EventCollector[pipeline.Event]{}
+	ec := &mock.EventCollector[progress.Event]{}
 	runDeps(runner, "/wt", opts, ec.Emit)
 
 	if len(runner.Calls) != 1 {

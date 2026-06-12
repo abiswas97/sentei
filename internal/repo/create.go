@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/abiswas97/sentei/internal/git"
-	"github.com/abiswas97/sentei/internal/pipeline"
+	"github.com/abiswas97/sentei/internal/progress"
 )
 
 // GhRunner executes gh CLI commands directly without a shell, preventing shell injection.
@@ -49,7 +49,7 @@ type CreateResult struct {
 	RepoPath     string
 	WorktreePath string
 	GitHubURL    string
-	Phases       []pipeline.Phase
+	Phases       []progress.Phase
 }
 
 // SetupFailed reports whether a non-GitHub phase failed (the local repo itself is
@@ -57,18 +57,18 @@ type CreateResult struct {
 func (r CreateResult) SetupFailed() (bool, error) {
 	for _, p := range r.Phases {
 		if p.Name != PhaseGitHub && p.HasFailures() {
-			_, step, _ := pipeline.FirstFailure([]pipeline.Phase{p})
+			_, step, _ := progress.FirstFailure([]progress.Phase{p})
 			return true, step.Error
 		}
 	}
 	return false, nil
 }
 
-func Create(runner git.CommandRunner, shell git.ShellRunner, opts CreateOptions, emit func(pipeline.Event)) CreateResult {
+func Create(runner git.CommandRunner, shell git.ShellRunner, opts CreateOptions, emit func(progress.Event)) CreateResult {
 	return CreateWithGh(runner, shell, &DefaultGhRunner{}, opts, emit)
 }
 
-func CreateWithGh(runner git.CommandRunner, _ git.ShellRunner, gh GhRunner, opts CreateOptions, emit func(pipeline.Event)) CreateResult {
+func CreateWithGh(runner git.CommandRunner, _ git.ShellRunner, gh GhRunner, opts CreateOptions, emit func(progress.Event)) CreateResult {
 	result := CreateResult{}
 	repoPath := filepath.Join(opts.Location, opts.Name)
 	result.RepoPath = repoPath
@@ -86,7 +86,7 @@ func CreateWithGh(runner git.CommandRunner, _ git.ShellRunner, gh GhRunner, opts
 		if !ghPhase.HasFailures() {
 			// Extract GitHub URL from user lookup
 			for _, step := range ghPhase.Steps {
-				if step.Name == "Look up GitHub user" && step.Status == pipeline.StepDone {
+				if step.Name == "Look up GitHub user" && step.Status == progress.StepDone {
 					result.GitHubURL = fmt.Sprintf("github.com/%s/%s", step.Message, opts.Name)
 				}
 			}
@@ -96,8 +96,8 @@ func CreateWithGh(runner git.CommandRunner, _ git.ShellRunner, gh GhRunner, opts
 	return result
 }
 
-func runCreateSetup(runner git.CommandRunner, repoPath string, opts CreateOptions, emit func(pipeline.Event)) pipeline.Phase {
-	rec := pipeline.NewPhaseRecorder("Setup", emit)
+func runCreateSetup(runner git.CommandRunner, repoPath string, opts CreateOptions, emit func(progress.Event)) progress.Phase {
+	rec := progress.NewPhaseRecorder("Setup", emit)
 	barePath := filepath.Join(repoPath, ".bare")
 
 	ok := rec.Step("Create directory", func() (string, error) {
@@ -167,8 +167,8 @@ func runCreateSetup(runner git.CommandRunner, repoPath string, opts CreateOption
 	return rec.Phase()
 }
 
-func runCreateGitHub(runner git.CommandRunner, gh GhRunner, repoPath string, opts CreateOptions, emit func(pipeline.Event)) pipeline.Phase {
-	rec := pipeline.NewPhaseRecorder(PhaseGitHub, emit)
+func runCreateGitHub(runner git.CommandRunner, gh GhRunner, repoPath string, opts CreateOptions, emit func(progress.Event)) progress.Phase {
+	rec := progress.NewPhaseRecorder(PhaseGitHub, emit)
 	barePath := filepath.Join(repoPath, ".bare")
 
 	var ghUser string

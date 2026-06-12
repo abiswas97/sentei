@@ -3,7 +3,7 @@ package tui
 import (
 	"testing"
 
-	"github.com/abiswas97/sentei/internal/pipeline"
+	"github.com/abiswas97/sentei/internal/progress"
 )
 
 func TestBuildPhaseDisplays_EmptyEvents(t *testing.T) {
@@ -13,12 +13,12 @@ func TestBuildPhaseDisplays_EmptyEvents(t *testing.T) {
 }
 
 func TestBuildPhaseDisplays_FoldsEventsIntoPhases(t *testing.T) {
-	events := []pipeline.Event{
-		{Phase: "Setup", Step: "Create worktree", Status: pipeline.StepRunning},
-		{Phase: "Setup", Step: "Create worktree", Status: pipeline.StepDone},
-		{Phase: "Setup", Step: "Merge base", Status: pipeline.StepSkipped},
-		{Phase: "Deps", Step: "npm install", Status: pipeline.StepRunning},
-		{Phase: "Deps", Step: "npm install", Status: pipeline.StepFailed},
+	events := []progress.Event{
+		{Phase: "Setup", Step: "Create worktree", Status: progress.StepRunning},
+		{Phase: "Setup", Step: "Create worktree", Status: progress.StepDone},
+		{Phase: "Setup", Step: "Merge base", Status: progress.StepSkipped},
+		{Phase: "Deps", Step: "npm install", Status: progress.StepRunning},
+		{Phase: "Deps", Step: "npm install", Status: progress.StepFailed},
 	}
 
 	got := buildPhaseDisplays(events)
@@ -35,7 +35,7 @@ func TestBuildPhaseDisplays_FoldsEventsIntoPhases(t *testing.T) {
 		t.Errorf("Setup counts = total %d done %d failed %d, want 2/2/0 (skipped counts as done)",
 			setup.total, setup.done, setup.failed)
 	}
-	if setup.steps[0].status != pipeline.StepDone {
+	if setup.steps[0].status != progress.StepDone {
 		t.Error("a later event for the same step must overwrite its status")
 	}
 
@@ -47,8 +47,8 @@ func TestBuildPhaseDisplays_FoldsEventsIntoPhases(t *testing.T) {
 }
 
 func TestBuildPhaseDisplays_RunningStepNotCounted(t *testing.T) {
-	got := buildPhaseDisplays([]pipeline.Event{
-		{Phase: "Setup", Step: "Create worktree", Status: pipeline.StepRunning},
+	got := buildPhaseDisplays([]progress.Event{
+		{Phase: "Setup", Step: "Create worktree", Status: progress.StepRunning},
 	})
 
 	if got[0].done != 0 || got[0].failed != 0 || got[0].total != 1 {

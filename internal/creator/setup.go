@@ -8,16 +8,16 @@ import (
 
 	"github.com/abiswas97/sentei/internal/fileutil"
 	"github.com/abiswas97/sentei/internal/git"
-	"github.com/abiswas97/sentei/internal/pipeline"
+	"github.com/abiswas97/sentei/internal/progress"
 )
 
-func runSetup(runner git.CommandRunner, opts Options, emit func(pipeline.Event)) pipeline.Phase {
-	phase := pipeline.Phase{Name: "Setup"}
+func runSetup(runner git.CommandRunner, opts Options, emit func(progress.Event)) progress.Phase {
+	phase := progress.Phase{Name: "Setup"}
 
 	wtResult, wtPath := createWorktreeStep(runner, opts.RepoPath, opts.BranchName, opts.BaseBranch, emit)
 	phase.Steps = append(phase.Steps, wtResult)
 
-	if wtResult.Status == pipeline.StepFailed {
+	if wtResult.Status == progress.StepFailed {
 		return phase
 	}
 
@@ -32,19 +32,19 @@ func runSetup(runner git.CommandRunner, opts Options, emit func(pipeline.Event))
 		envResult := copyEnvFilesStep(opts.SourceWorktree, wtPath, envFiles, emit)
 		phase.Steps = append(phase.Steps, envResult)
 	} else {
-		phase.Steps = append(phase.Steps, pipeline.StepResult{
+		phase.Steps = append(phase.Steps, progress.StepResult{
 			Name:   "Copy env files",
-			Status: pipeline.StepSkipped,
+			Status: progress.StepSkipped,
 		})
 	}
 
 	return phase
 }
 
-func createWorktreeStep(runner git.CommandRunner, repoPath, branch, baseBranch string, emit func(pipeline.Event)) (pipeline.StepResult, string) {
+func createWorktreeStep(runner git.CommandRunner, repoPath, branch, baseBranch string, emit func(progress.Event)) (progress.StepResult, string) {
 	wtPath := git.WorktreePath(repoPath, branch)
 
-	result := pipeline.RunStep("Setup", "Create worktree", emit, func() (string, error) {
+	result := progress.RunStep("Setup", "Create worktree", emit, func() (string, error) {
 		var err error
 		if git.BranchExists(runner, repoPath, branch) {
 			_, err = runner.Run(repoPath, "worktree", "add", wtPath, branch)
@@ -56,44 +56,44 @@ func createWorktreeStep(runner git.CommandRunner, repoPath, branch, baseBranch s
 		}
 		return wtPath, nil
 	})
-	if result.Status == pipeline.StepFailed {
+	if result.Status == progress.StepFailed {
 		return result, ""
 	}
 	return result, wtPath
 }
 
-func mergeBaseStep(runner git.CommandRunner, wtPath, baseBranch string, enabled bool, emit func(pipeline.Event)) pipeline.StepResult {
+func mergeBaseStep(runner git.CommandRunner, wtPath, baseBranch string, enabled bool, emit func(progress.Event)) progress.StepResult {
 	stepName := "Merge base branch"
 
 	if !enabled {
-		return pipeline.StepResult{Name: stepName, Status: pipeline.StepSkipped}
+		return progress.StepResult{Name: stepName, Status: progress.StepSkipped}
 	}
 
-	emit(pipeline.Event{Phase: "Setup", Step: stepName, Status: pipeline.StepRunning})
+	emit(progress.Event{Phase: "Setup", Step: stepName, Status: progress.StepRunning})
 
 	_, err := runner.Run(wtPath, "merge", baseBranch, "--no-edit")
 	if err != nil {
-		emit(pipeline.Event{Phase: "Setup", Step: stepName, Status: pipeline.StepFailed, Error: err, Message: "merge conflict — resolve manually"})
-		return pipeline.StepResult{
+		emit(progress.Event{Phase: "Setup", Step: stepName, Status: progress.StepFailed, Error: err, Message: "merge conflict — resolve manually"})
+		return progress.StepResult{
 			Name:    stepName,
-			Status:  pipeline.StepFailed,
+			Status:  progress.StepFailed,
 			Message: "merge conflict — resolve manually",
 			Error:   err,
 		}
 	}
 
-	emit(pipeline.Event{Phase: "Setup", Step: stepName, Status: pipeline.StepDone})
-	return pipeline.StepResult{Name: stepName, Status: pipeline.StepDone}
+	emit(progress.Event{Phase: "Setup", Step: stepName, Status: progress.StepDone})
+	return progress.StepResult{Name: stepName, Status: progress.StepDone}
 }
 
-func copyEnvFilesStep(srcDir, dstDir string, envFiles []string, emit func(pipeline.Event)) pipeline.StepResult {
+func copyEnvFilesStep(srcDir, dstDir string, envFiles []string, emit func(progress.Event)) progress.StepResult {
 	stepName := "Copy env files"
 
 	if len(envFiles) == 0 {
-		return pipeline.StepResult{Name: stepName, Status: pipeline.StepSkipped}
+		return progress.StepResult{Name: stepName, Status: progress.StepSkipped}
 	}
 
-	return pipeline.RunStep("Setup", stepName, emit, func() (string, error) {
+	return progress.RunStep("Setup", stepName, emit, func() (string, error) {
 		var copied []string
 		for _, name := range envFiles {
 			src := filepath.Join(srcDir, name)

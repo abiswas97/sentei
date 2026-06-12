@@ -7,7 +7,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 
 	"github.com/abiswas97/sentei/internal/git"
-	"github.com/abiswas97/sentei/internal/pipeline"
+	"github.com/abiswas97/sentei/internal/progress"
 	"github.com/abiswas97/sentei/internal/testutil/mock"
 )
 
@@ -16,9 +16,9 @@ func runningLayout() ProgressLayout {
 		Title: "T", Width: 80, Height: 30,
 		Phases: []phaseDisplay{
 			{name: "Removing worktrees", total: 3, done: 1, steps: []stepDisplay{
-				{name: "done-step", status: pipeline.StepDone},
-				{name: "active-step", status: pipeline.StepRunning},
-				{name: "pending-step", status: pipeline.StepPending},
+				{name: "done-step", status: progress.StepDone},
+				{name: "active-step", status: progress.StepRunning},
+				{name: "pending-step", status: progress.StepPending},
 			}},
 		},
 	}

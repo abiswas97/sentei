@@ -4,11 +4,11 @@ import (
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
 
-	"github.com/abiswas97/sentei/internal/pipeline"
+	"github.com/abiswas97/sentei/internal/progress"
 	"github.com/abiswas97/sentei/internal/repo"
 )
 
-type repoEventMsg pipeline.Event
+type repoEventMsg progress.Event
 
 type repoDoneMsg struct {
 	result interface{} // CreateResult, CloneResult, or MigrateResult
@@ -16,7 +16,7 @@ type repoDoneMsg struct {
 
 // startRepoPipeline launches the appropriate pipeline based on opts type.
 func (m *Model) startRepoPipeline(opts interface{}) tea.Cmd {
-	ch := make(chan pipeline.Event, 50)
+	ch := make(chan progress.Event, 50)
 	resultCh := make(chan interface{}, 1)
 	m.repo.eventCh = ch
 	m.repo.resultCh = resultCh
@@ -27,19 +27,19 @@ func (m *Model) startRepoPipeline(opts interface{}) tea.Cmd {
 	switch o := opts.(type) {
 	case repo.CreateOptions:
 		go func() {
-			result := repo.Create(runner, shell, o, func(e pipeline.Event) { ch <- e })
+			result := repo.Create(runner, shell, o, func(e progress.Event) { ch <- e })
 			close(ch)
 			resultCh <- result
 		}()
 	case repo.CloneOptions:
 		go func() {
-			result := repo.Clone(runner, o, func(e pipeline.Event) { ch <- e })
+			result := repo.Clone(runner, o, func(e progress.Event) { ch <- e })
 			close(ch)
 			resultCh <- result
 		}()
 	case repo.MigrateOptions:
 		go func() {
-			result := repo.Migrate(runner, shell, o, func(e pipeline.Event) { ch <- e })
+			result := repo.Migrate(runner, shell, o, func(e progress.Event) { ch <- e })
 			close(ch)
 			resultCh <- result
 		}()
@@ -68,7 +68,7 @@ func (m Model) updateRepoProgress(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case repoEventMsg:
-		m.repo.events = append(m.repo.events, pipeline.Event(msg))
+		m.repo.events = append(m.repo.events, progress.Event(msg))
 		return m, tea.Batch(m.syncProgressBar(), m.waitForRepoEvent())
 
 	case repoDoneMsg:

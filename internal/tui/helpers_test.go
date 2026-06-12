@@ -3,7 +3,7 @@ package tui
 import (
 	"path/filepath"
 
-	"charm.land/bubbles/v2/progress"
+	progressbar "charm.land/bubbles/v2/progress"
 	"charm.land/bubbles/v2/spinner"
 	"charm.land/bubbles/v2/stopwatch"
 	tea "charm.land/bubbletea/v2"
@@ -57,7 +57,7 @@ func pumpCmds(model tea.Model, cmd tea.Cmd) tea.Model {
 			continue
 		}
 		switch msg.(type) {
-		case progress.FrameMsg, stopwatch.StartStopMsg, spinner.TickMsg, motionTickMsg:
+		case progressbar.FrameMsg, stopwatch.StartStopMsg, spinner.TickMsg, motionTickMsg:
 			continue
 		}
 		var next tea.Cmd

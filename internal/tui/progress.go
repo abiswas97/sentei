@@ -8,7 +8,7 @@ import (
 
 	"github.com/abiswas97/sentei/internal/cleanup"
 	"github.com/abiswas97/sentei/internal/git"
-	"github.com/abiswas97/sentei/internal/pipeline"
+	"github.com/abiswas97/sentei/internal/progress"
 	"github.com/abiswas97/sentei/internal/worktree"
 )
 
@@ -153,16 +153,16 @@ func (m Model) buildRemovalPhases() []phaseDisplay {
 		phases = append(phases, phaseDisplay{
 			name:  "Teardown",
 			total: 1,
-			steps: []stepDisplay{{name: "Removing integration artifacts", status: pipeline.StepRunning}},
+			steps: []stepDisplay{{name: "Removing integration artifacts", status: progress.StepRunning}},
 		})
 	case len(run.teardownResults) > 0:
 		td := phaseDisplay{name: "Teardown", total: len(run.teardownResults)}
 		for _, r := range run.teardownResults {
 			td.steps = append(td.steps, stepDisplay{name: r.Name, status: r.Status})
 			switch r.Status {
-			case pipeline.StepDone, pipeline.StepSkipped:
+			case progress.StepDone, progress.StepSkipped:
 				td.done++
-			case pipeline.StepFailed:
+			case progress.StepFailed:
 				td.failed++
 				td.done++
 			}
@@ -173,19 +173,19 @@ func (m Model) buildRemovalPhases() []phaseDisplay {
 	removing := phaseDisplay{name: "Removing worktrees", total: run.total()}
 	for _, wt := range run.worktrees {
 		label := worktreeLabel(wt)
-		var status pipeline.StepStatus
+		var status progress.StepStatus
 		switch run.statuses[wt.Path] {
 		case statusRemoving:
-			status = pipeline.StepRunning
+			status = progress.StepRunning
 		case statusRemoved:
-			status = pipeline.StepDone
+			status = progress.StepDone
 			removing.done++
 		case statusFailed:
-			status = pipeline.StepFailed
+			status = progress.StepFailed
 			removing.failed++
 			removing.done++
 		default:
-			status = pipeline.StepPending
+			status = progress.StepPending
 		}
 		removing.steps = append(removing.steps, stepDisplay{name: label, status: status})
 	}
@@ -195,21 +195,21 @@ func (m Model) buildRemovalPhases() []phaseDisplay {
 	if removing.total > 0 && removing.done == removing.total {
 		cleanupPhase.total = 2
 		cleanupPhase.steps = []stepDisplay{
-			{name: "Prune worktree metadata", status: pipeline.StepRunning},
-			{name: "Repository cleanup", status: pipeline.StepPending},
+			{name: "Prune worktree metadata", status: progress.StepRunning},
+			{name: "Repository cleanup", status: progress.StepPending},
 		}
 		if run.pruneErr != nil {
 			if *run.pruneErr != nil {
-				cleanupPhase.steps[0].status = pipeline.StepFailed
+				cleanupPhase.steps[0].status = progress.StepFailed
 				cleanupPhase.failed++
 			} else {
-				cleanupPhase.steps[0].status = pipeline.StepDone
+				cleanupPhase.steps[0].status = progress.StepDone
 			}
 			cleanupPhase.done++
-			cleanupPhase.steps[1].status = pipeline.StepRunning
+			cleanupPhase.steps[1].status = progress.StepRunning
 		}
 		if run.cleanupResult != nil {
-			cleanupPhase.steps[1].status = pipeline.StepDone
+			cleanupPhase.steps[1].status = progress.StepDone
 			cleanupPhase.done++
 		}
 	}

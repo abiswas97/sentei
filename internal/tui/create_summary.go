@@ -10,7 +10,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 
 	"github.com/abiswas97/sentei/internal/git"
-	"github.com/abiswas97/sentei/internal/pipeline"
+	"github.com/abiswas97/sentei/internal/progress"
 )
 
 func (m Model) updateCreateSummary(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -73,11 +73,11 @@ func (m Model) viewCreateSummary() string {
 			}
 			for _, step := range phase.Steps {
 				status := styleIndicatorDone.Render(indicatorDone)
-				if step.Status == pipeline.StepFailed {
+				if step.Status == progress.StepFailed {
 					status = styleIndicatorFailed.Render(indicatorFailed)
 				}
 				fmt.Fprintf(&b, "    %-10s %s %s\n", styleDim.Render(label), step.Name, status)
-				if step.Status == pipeline.StepFailed && step.Error != nil {
+				if step.Status == progress.StepFailed && step.Error != nil {
 					peek := errorPeekLines(step.Error.Error(), max(m.width-8, 20))
 					for i, line := range peek {
 						style := styleDim

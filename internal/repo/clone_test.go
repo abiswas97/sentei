@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/abiswas97/sentei/internal/pipeline"
+	"github.com/abiswas97/sentei/internal/progress"
 	"github.com/abiswas97/sentei/internal/testutil/mock"
 )
 
@@ -55,7 +55,7 @@ func TestClone_Successful(t *testing.T) {
 		fmt.Sprintf("%s/main:[branch --set-upstream-to=origin/main]", repoPath): {Output: ""},
 	}}
 
-	ec := &mock.EventCollector[pipeline.Event]{}
+	ec := &mock.EventCollector[progress.Event]{}
 	opts := CloneOptions{
 		URL:      "git@github.com:user/repo.git",
 		Location: dir,
@@ -71,7 +71,7 @@ func TestClone_Successful(t *testing.T) {
 	}
 	for _, phase := range result.Phases {
 		for _, step := range phase.Steps {
-			if step.Status == pipeline.StepFailed {
+			if step.Status == progress.StepFailed {
 				t.Errorf("step %q failed: %v", step.Name, step.Error)
 			}
 		}
@@ -95,7 +95,7 @@ func TestClone_DefaultBranchFallback(t *testing.T) {
 		fmt.Sprintf("%s/main:[branch --set-upstream-to=origin/main]", repoPath): {Output: ""},
 	}}
 
-	ec := &mock.EventCollector[pipeline.Event]{}
+	ec := &mock.EventCollector[progress.Event]{}
 	opts := CloneOptions{URL: "git@github.com:user/repo.git", Location: dir, Name: repoName}
 	result := Clone(runner, opts, ec.Emit)
 
@@ -121,7 +121,7 @@ func TestClone_NonStandardDefaultBranch(t *testing.T) {
 		fmt.Sprintf("%s/production:[branch --set-upstream-to=origin/production]", repoPath): {Output: ""},
 	}}
 
-	ec := &mock.EventCollector[pipeline.Event]{}
+	ec := &mock.EventCollector[progress.Event]{}
 	opts := CloneOptions{URL: "git@github.com:user/repo.git", Location: dir, Name: repoName}
 	result := Clone(runner, opts, ec.Emit)
 
@@ -130,7 +130,7 @@ func TestClone_NonStandardDefaultBranch(t *testing.T) {
 	}
 	for _, phase := range result.Phases {
 		for _, step := range phase.Steps {
-			if step.Status == pipeline.StepFailed {
+			if step.Status == progress.StepFailed {
 				t.Errorf("step %q failed: %v", step.Name, step.Error)
 			}
 		}
@@ -147,7 +147,7 @@ func TestClone_NetworkError(t *testing.T) {
 		},
 	}}
 
-	ec := &mock.EventCollector[pipeline.Event]{}
+	ec := &mock.EventCollector[progress.Event]{}
 	opts := CloneOptions{URL: "git@github.com:user/repo.git", Location: dir, Name: "repo"}
 	result := Clone(runner, opts, ec.Emit)
 
@@ -172,7 +172,7 @@ func TestClone_FetchFailure_StillSucceedsWithoutTracking(t *testing.T) {
 		fmt.Sprintf("%s:[fetch origin]", barePath):                                                   {Output: "", Err: fmt.Errorf("could not read from remote")},
 	}}
 
-	ec := &mock.EventCollector[pipeline.Event]{}
+	ec := &mock.EventCollector[progress.Event]{}
 	result := Clone(runner, CloneOptions{URL: "git@h:u/repo.git", Location: dir, Name: "repo"}, ec.Emit)
 
 	if result.HasFailures() {
@@ -188,7 +188,7 @@ func TestClone_EmptyName_RejectedBeforeAnyGitCall(t *testing.T) {
 	// Empty Responses: any git call would return an error, proving none happens.
 	runner := &mock.Runner{Responses: map[string]mock.Response{}}
 
-	ec := &mock.EventCollector[pipeline.Event]{}
+	ec := &mock.EventCollector[progress.Event]{}
 	opts := CloneOptions{URL: "https://host/user/repo/", Location: dir, Name: ""}
 	result := Clone(runner, opts, ec.Emit)
 
@@ -206,7 +206,7 @@ func TestClone_EmptyName_RejectedBeforeAnyGitCall(t *testing.T) {
 func TestClone_PathLikeName_Rejected(t *testing.T) {
 	dir := t.TempDir()
 	runner := &mock.Runner{Responses: map[string]mock.Response{}}
-	ec := &mock.EventCollector[pipeline.Event]{}
+	ec := &mock.EventCollector[progress.Event]{}
 
 	for _, name := range []string{"/abs/target", "../escaped", "nested/name", ".."} {
 		result := Clone(runner, CloneOptions{URL: "u", Location: dir, Name: name}, ec.Emit)
@@ -228,7 +228,7 @@ func TestClone_ExistingTarget_RejectedAndPreserved(t *testing.T) {
 	}
 
 	runner := &mock.Runner{Responses: map[string]mock.Response{}}
-	ec := &mock.EventCollector[pipeline.Event]{}
+	ec := &mock.EventCollector[progress.Event]{}
 	result := Clone(runner, CloneOptions{URL: "u", Location: dir, Name: "repo"}, ec.Emit)
 
 	if len(result.Phases) != 1 || !result.Phases[0].HasFailures() {
@@ -262,7 +262,7 @@ func TestClone_WorktreeFailure_RollsBackPartialDir(t *testing.T) {
 		},
 	}
 
-	ec := &mock.EventCollector[pipeline.Event]{}
+	ec := &mock.EventCollector[progress.Event]{}
 	result := Clone(runner, CloneOptions{URL: "u", Location: dir, Name: "repo"}, ec.Emit)
 
 	if !result.HasFailures() {
@@ -282,7 +282,7 @@ func TestClone_TrackingSkip_PreservesRepoDir(t *testing.T) {
 	barePath := filepath.Join(repoPath, ".bare")
 
 	// Worktree add succeeds; the best-effort fetch fails. The clone must still
-	// succeed (tracking is pipeline.StepSkipped) and must NOT roll back the repo dir.
+	// succeed (tracking is progress.StepSkipped) and must NOT roll back the repo dir.
 	runner := &mock.Runner{
 		Responses: map[string]mock.Response{
 			fmt.Sprintf("%s:[clone --bare u %s]", dir, barePath):                                         {Output: ""},
@@ -299,7 +299,7 @@ func TestClone_TrackingSkip_PreservesRepoDir(t *testing.T) {
 		},
 	}
 
-	ec := &mock.EventCollector[pipeline.Event]{}
+	ec := &mock.EventCollector[progress.Event]{}
 	result := Clone(runner, CloneOptions{URL: "u", Location: dir, Name: "repo"}, ec.Emit)
 
 	if result.HasFailures() {

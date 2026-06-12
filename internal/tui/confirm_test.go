@@ -11,8 +11,8 @@ import (
 
 	"github.com/abiswas97/sentei/internal/git"
 	"github.com/abiswas97/sentei/internal/integration"
-	"github.com/abiswas97/sentei/internal/pipeline"
 	"github.com/abiswas97/sentei/internal/playground"
+	"github.com/abiswas97/sentei/internal/progress"
 	"github.com/abiswas97/sentei/internal/testtmp"
 	"github.com/abiswas97/sentei/internal/testutil/mock"
 	"github.com/abiswas97/sentei/internal/worktree"
@@ -237,7 +237,7 @@ func TestRunTeardownPhase_FallsBackToRemovingArtifactDirs(t *testing.T) {
 	if len(done.results) != 1 {
 		t.Fatalf("results = %d, want 1 (only the worktree with artifacts)", len(done.results))
 	}
-	if done.results[0].Status != pipeline.StepDone {
+	if done.results[0].Status != progress.StepDone {
 		t.Errorf("teardown status = %v, want StepDone", done.results[0].Status)
 	}
 	if _, err := os.Stat(artifactDir); !os.IsNotExist(err) {
@@ -264,7 +264,7 @@ func TestRunTeardownPhase_TeardownCommandHandlesRemoval(t *testing.T) {
 	msg := m.runTeardownPhase([]git.Worktree{{Path: wtPath}}, integrations)()
 
 	done := msg.(teardownCompleteMsg)
-	if len(done.results) != 1 || done.results[0].Status != pipeline.StepDone {
+	if len(done.results) != 1 || done.results[0].Status != progress.StepDone {
 		t.Fatalf("results = %+v, want one successful teardown", done.results)
 	}
 	if _, err := os.Stat(artifactDir); err != nil {

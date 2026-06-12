@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"charm.land/bubbles/v2/key"
-	"charm.land/bubbles/v2/progress"
+	progressbar "charm.land/bubbles/v2/progress"
 	"charm.land/bubbles/v2/stopwatch"
 	"charm.land/bubbles/v2/textinput"
 	tea "charm.land/bubbletea/v2"
@@ -18,7 +18,7 @@ import (
 	"github.com/abiswas97/sentei/internal/creator"
 	"github.com/abiswas97/sentei/internal/git"
 	"github.com/abiswas97/sentei/internal/integration"
-	"github.com/abiswas97/sentei/internal/pipeline"
+	"github.com/abiswas97/sentei/internal/progress"
 	"github.com/abiswas97/sentei/internal/repo"
 )
 
@@ -143,9 +143,9 @@ type createState struct {
 	copyEnvFiles           bool
 	optionsCursor          int
 
-	eventCh  chan pipeline.Event
+	eventCh  chan progress.Event
 	resultCh chan creator.Result
-	events   []pipeline.Event
+	events   []progress.Event
 	result   *creator.Result
 }
 
@@ -181,9 +181,9 @@ type repoState struct {
 	migrateInfo MigrateInfo
 
 	// Shared progress/summary
-	eventCh  chan pipeline.Event
+	eventCh  chan progress.Event
 	resultCh chan interface{} // receives CreateResult, CloneResult, or MigrateResult
-	events   []pipeline.Event
+	events   []progress.Event
 	result   interface{}
 	opType   string // "create", "clone", "migrate"
 }
@@ -255,7 +255,7 @@ type Model struct {
 	// bar springs the overall progress toward each completion target and
 	// watch counts elapsed time; both animate only in determinate progress
 	// views and reset between flows in holdOrAdvance.
-	bar   progress.Model
+	bar   progressbar.Model
 	watch stopwatch.Model
 
 	// Progress hold state — used to enforce minimum visible duration for progress views.
@@ -527,7 +527,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 
-	if frame, ok := msg.(progress.FrameMsg); ok {
+	if frame, ok := msg.(progressbar.FrameMsg); ok {
 		if !m.determinateProgressActive() {
 			return m, nil
 		}

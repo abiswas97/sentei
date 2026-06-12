@@ -8,7 +8,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 
 	"github.com/abiswas97/sentei/internal/config"
-	"github.com/abiswas97/sentei/internal/pipeline"
+	"github.com/abiswas97/sentei/internal/progress"
 	"github.com/abiswas97/sentei/internal/repo"
 )
 
@@ -25,10 +25,10 @@ func cloneFailureResult() repo.CloneResult {
 		RepoPath:      "/tmp/myrepo",
 		DefaultBranch: "main",
 		// WorktreePath intentionally empty: the worktree was never created.
-		Phases: []pipeline.Phase{
-			{Name: "Clone", Steps: []pipeline.StepResult{{Name: "Clone bare repository", Status: pipeline.StepDone}}},
-			{Name: "Worktree", Steps: []pipeline.StepResult{
-				{Name: "Create worktree", Status: pipeline.StepFailed, Error: errors.New("fatal: invalid reference: main")},
+		Phases: []progress.Phase{
+			{Name: "Clone", Steps: []progress.StepResult{{Name: "Clone bare repository", Status: progress.StepDone}}},
+			{Name: "Worktree", Steps: []progress.StepResult{
+				{Name: "Create worktree", Status: progress.StepFailed, Error: errors.New("fatal: invalid reference: main")},
 			}},
 		},
 	}
@@ -40,8 +40,8 @@ func cloneSuccessResult() repo.CloneResult {
 		DefaultBranch: "main",
 		WorktreePath:  "/tmp/myrepo/main",
 		OriginURL:     "git@github.com:user/myrepo.git",
-		Phases: []pipeline.Phase{
-			{Name: "Worktree", Steps: []pipeline.StepResult{{Name: "Create worktree", Status: pipeline.StepDone}}},
+		Phases: []progress.Phase{
+			{Name: "Worktree", Steps: []progress.StepResult{{Name: "Create worktree", Status: progress.StepDone}}},
 		},
 	}
 }
@@ -85,9 +85,9 @@ func TestViewCloneRepoSummary_Success_ShowsReady(t *testing.T) {
 func TestViewCreateRepoSummary_SetupFailure_ShowsFailed(t *testing.T) {
 	result := repo.CreateResult{
 		RepoPath: "/tmp/my-project",
-		Phases: []pipeline.Phase{
-			{Name: "Setup", Steps: []pipeline.StepResult{
-				{Name: "Initial commit", Status: pipeline.StepFailed, Error: errors.New("git commit: exit status 128")},
+		Phases: []progress.Phase{
+			{Name: "Setup", Steps: []progress.StepResult{
+				{Name: "Initial commit", Status: progress.StepFailed, Error: errors.New("git commit: exit status 128")},
 			}},
 		},
 	}
@@ -112,10 +112,10 @@ func TestViewCreateRepoSummary_GitHubFailure_ShowsLocalOnly(t *testing.T) {
 	result := repo.CreateResult{
 		RepoPath:     "/tmp/my-project",
 		WorktreePath: "/tmp/my-project/main",
-		Phases: []pipeline.Phase{
-			{Name: "Setup", Steps: []pipeline.StepResult{{Name: "Create main worktree", Status: pipeline.StepDone}}},
-			{Name: "GitHub", Steps: []pipeline.StepResult{
-				{Name: "Push to GitHub", Status: pipeline.StepFailed, Error: errors.New("permission denied (publickey)")},
+		Phases: []progress.Phase{
+			{Name: "Setup", Steps: []progress.StepResult{{Name: "Create main worktree", Status: progress.StepDone}}},
+			{Name: "GitHub", Steps: []progress.StepResult{
+				{Name: "Push to GitHub", Status: progress.StepFailed, Error: errors.New("permission denied (publickey)")},
 			}},
 		},
 	}

@@ -3,7 +3,7 @@ package tui
 import (
 	"github.com/abiswas97/sentei/internal/cleanup"
 	"github.com/abiswas97/sentei/internal/git"
-	"github.com/abiswas97/sentei/internal/pipeline"
+	"github.com/abiswas97/sentei/internal/progress"
 	"github.com/abiswas97/sentei/internal/worktree"
 )
 
@@ -19,7 +19,7 @@ type removalRun struct {
 	progressCh <-chan worktree.DeletionEvent
 
 	teardownRunning bool
-	teardownResults []pipeline.StepResult
+	teardownResults []progress.StepResult
 
 	pruneErr      *error
 	cleanupResult *cleanup.Result

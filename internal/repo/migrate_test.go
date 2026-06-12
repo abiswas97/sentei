@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/abiswas97/sentei/internal/pipeline"
+	"github.com/abiswas97/sentei/internal/progress"
 	"github.com/abiswas97/sentei/internal/testutil/mock"
 )
 
@@ -35,7 +35,7 @@ func TestMigrate_Successful(t *testing.T) {
 		fmt.Sprintf("%s:[worktree add %s/main main]", repoPath, repoPath):                            {Output: ""},
 	}}
 
-	ec := &mock.EventCollector[pipeline.Event]{}
+	ec := &mock.EventCollector[progress.Event]{}
 	opts := MigrateOptions{RepoPath: repoPath}
 	result := Migrate(runner, &alwaysOkShell{}, opts, ec.Emit)
 
@@ -55,7 +55,7 @@ func TestMigrate_Successful(t *testing.T) {
 	// No phase failures
 	for _, phase := range result.Phases {
 		for _, step := range phase.Steps {
-			if step.Status == pipeline.StepFailed {
+			if step.Status == progress.StepFailed {
 				t.Errorf("step %q failed: %v", step.Name, step.Error)
 			}
 		}
@@ -76,14 +76,14 @@ func TestMigrate_DirtyRepo_WarningContinues(t *testing.T) {
 		fmt.Sprintf("%s:[worktree add %s/develop develop]", repoPath, repoPath):                      {Output: ""},
 	}}
 
-	ec := &mock.EventCollector[pipeline.Event]{}
+	ec := &mock.EventCollector[progress.Event]{}
 	opts := MigrateOptions{RepoPath: repoPath}
 	result := Migrate(runner, &alwaysOkShell{}, opts, ec.Emit)
 
 	// Should still succeed — dirty is a warning, not a failure
 	for _, phase := range result.Phases {
 		for _, step := range phase.Steps {
-			if step.Status == pipeline.StepFailed {
+			if step.Status == progress.StepFailed {
 				t.Errorf("step %q failed: %v", step.Name, step.Error)
 			}
 		}
@@ -116,7 +116,7 @@ func TestMigrate_CloneFailure_ShowsRollbackInfo(t *testing.T) {
 		},
 	}}
 
-	ec := &mock.EventCollector[pipeline.Event]{}
+	ec := &mock.EventCollector[progress.Event]{}
 	opts := MigrateOptions{RepoPath: repoPath}
 	result := Migrate(runner, &alwaysOkShell{}, opts, ec.Emit)
 
@@ -158,7 +158,7 @@ func TestMigrate_DetachedHead_RejectedBeforeDestruction(t *testing.T) {
 		fmt.Sprintf("%s:[branch --show-current]", repoPath): {Output: ""}, // detached HEAD
 	}}
 
-	ec := &mock.EventCollector[pipeline.Event]{}
+	ec := &mock.EventCollector[progress.Event]{}
 	result := Migrate(runner, &alwaysOkShell{}, MigrateOptions{RepoPath: repoPath}, ec.Emit)
 
 	validate := findPhase(result.Phases, "Validate")
@@ -192,12 +192,12 @@ func TestMigrate_PreservesOriginURL(t *testing.T) {
 		fmt.Sprintf("%s:[worktree add %s/main main]", repoPath, repoPath):                            {Output: ""},
 	}}
 
-	ec := &mock.EventCollector[pipeline.Event]{}
+	ec := &mock.EventCollector[progress.Event]{}
 	result := Migrate(runner, &alwaysOkShell{}, MigrateOptions{RepoPath: repoPath}, ec.Emit)
 
 	for _, phase := range result.Phases {
 		for _, step := range phase.Steps {
-			if step.Status == pipeline.StepFailed {
+			if step.Status == progress.StepFailed {
 				t.Errorf("step %q failed: %v", step.Name, step.Error)
 			}
 		}
@@ -227,12 +227,12 @@ func TestMigrate_SlashBranch_ChecksOutExistingBranch(t *testing.T) {
 		fmt.Sprintf("%s:[worktree add %s/feature-foo feature/foo]", repoPath, repoPath):              {Output: ""},
 	}}
 
-	ec := &mock.EventCollector[pipeline.Event]{}
+	ec := &mock.EventCollector[progress.Event]{}
 	result := Migrate(runner, &alwaysOkShell{}, MigrateOptions{RepoPath: repoPath}, ec.Emit)
 
 	for _, phase := range result.Phases {
 		for _, step := range phase.Steps {
-			if step.Status == pipeline.StepFailed {
+			if step.Status == progress.StepFailed {
 				t.Errorf("step %q failed: %v", step.Name, step.Error)
 			}
 		}
@@ -254,7 +254,7 @@ func TestMigrate_SlashBranch_ChecksOutExistingBranch(t *testing.T) {
 	}
 }
 
-func findPhase(phases []pipeline.Phase, name string) *pipeline.Phase {
+func findPhase(phases []progress.Phase, name string) *progress.Phase {
 	for i := range phases {
 		if phases[i].Name == name {
 			return &phases[i]
@@ -280,7 +280,7 @@ func TestMigrate_BackupFailure_LeavesNoDestructiveRestore(t *testing.T) {
 		fmt.Sprintf("%s:[branch --show-current]", repoPath): {Output: "main"},
 	}}
 
-	ec := &mock.EventCollector[pipeline.Event]{}
+	ec := &mock.EventCollector[progress.Event]{}
 	result := Migrate(runner, &failingShell{}, MigrateOptions{RepoPath: repoPath}, ec.Emit)
 
 	backup := findPhase(result.Phases, "Backup")

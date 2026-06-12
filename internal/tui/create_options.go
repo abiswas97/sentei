@@ -11,7 +11,7 @@ import (
 	"github.com/abiswas97/sentei/internal/config"
 	"github.com/abiswas97/sentei/internal/creator"
 	"github.com/abiswas97/sentei/internal/integration"
-	"github.com/abiswas97/sentei/internal/pipeline"
+	"github.com/abiswas97/sentei/internal/progress"
 	"github.com/abiswas97/sentei/internal/state"
 )
 
@@ -153,13 +153,13 @@ func (m *Model) startCreation() {
 		Integrations:   enabledInts,
 	}
 
-	ch := make(chan pipeline.Event, 50)
+	ch := make(chan progress.Event, 50)
 	resultCh := make(chan creator.Result, 1)
 	m.create.eventCh = ch
 	m.create.resultCh = resultCh
 
 	go func() {
-		result := creator.Run(m.runner, m.shell, opts, func(e pipeline.Event) {
+		result := creator.Run(m.runner, m.shell, opts, func(e progress.Event) {
 			ch <- e
 		})
 		close(ch)
@@ -179,7 +179,7 @@ func (m Model) waitForCreateEvent() tea.Cmd {
 }
 
 type createEventMsg struct {
-	Event pipeline.Event
+	Event progress.Event
 }
 type createCompleteMsg struct {
 	Result creator.Result

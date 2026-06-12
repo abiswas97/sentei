@@ -8,7 +8,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 
 	"github.com/abiswas97/sentei/internal/creator"
-	"github.com/abiswas97/sentei/internal/pipeline"
+	"github.com/abiswas97/sentei/internal/progress"
 )
 
 func TestUpdateCreateSummary_EnterReturnsToMenuWhenMenuLaunched(t *testing.T) {
@@ -84,13 +84,13 @@ func TestViewCreateSummary_FailuresShowDepsAndIndexSteps(t *testing.T) {
 	m := createOptionsModel()
 	m.create.result = &creator.Result{
 		WorktreePath: "/repo/feature-x",
-		Phases: []pipeline.Phase{
-			{Name: "Setup", Steps: []pipeline.StepResult{{Name: "Create worktree", Status: pipeline.StepDone}}},
-			{Name: "Dependencies", Steps: []pipeline.StepResult{
-				{Name: "npm install", Status: pipeline.StepFailed, Error: errors.New("npm exploded")},
+		Phases: []progress.Phase{
+			{Name: "Setup", Steps: []progress.StepResult{{Name: "Create worktree", Status: progress.StepDone}}},
+			{Name: "Dependencies", Steps: []progress.StepResult{
+				{Name: "npm install", Status: progress.StepFailed, Error: errors.New("npm exploded")},
 			}},
-			{Name: "Integrations", Steps: []pipeline.StepResult{
-				{Name: "Index code-review-graph", Status: pipeline.StepDone},
+			{Name: "Integrations", Steps: []progress.StepResult{
+				{Name: "Index code-review-graph", Status: progress.StepDone},
 			}},
 		},
 	}

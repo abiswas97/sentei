@@ -11,7 +11,7 @@ import (
 
 	"github.com/abiswas97/sentei/internal/fileutil"
 	"github.com/abiswas97/sentei/internal/git"
-	"github.com/abiswas97/sentei/internal/pipeline"
+	"github.com/abiswas97/sentei/internal/progress"
 )
 
 type MigrateOptions struct {
@@ -25,10 +25,10 @@ type MigrateResult struct {
 	BackupSize   string
 	Branch       string
 	IsDirty      bool
-	Phases       []pipeline.Phase
+	Phases       []progress.Phase
 }
 
-func Migrate(runner git.CommandRunner, shell git.ShellRunner, opts MigrateOptions, emit func(pipeline.Event)) MigrateResult {
+func Migrate(runner git.CommandRunner, shell git.ShellRunner, opts MigrateOptions, emit func(progress.Event)) MigrateResult {
 	result := MigrateResult{BareRoot: opts.RepoPath}
 
 	// Phase 1: Validate
@@ -64,8 +64,8 @@ func Migrate(runner git.CommandRunner, shell git.ShellRunner, opts MigrateOption
 	return result
 }
 
-func runMigrateValidate(runner git.CommandRunner, repoPath string, emit func(pipeline.Event)) (pipeline.Phase, string, bool) {
-	rec := pipeline.NewPhaseRecorder("Validate", emit)
+func runMigrateValidate(runner git.CommandRunner, repoPath string, emit func(progress.Event)) (progress.Phase, string, bool) {
+	rec := progress.NewPhaseRecorder("Validate", emit)
 
 	isDirty := false
 	ok := rec.Step("Check repository status", func() (string, error) {
@@ -102,8 +102,8 @@ func runMigrateValidate(runner git.CommandRunner, repoPath string, emit func(pip
 	return rec.Phase(), branch, isDirty
 }
 
-func runMigrateBackup(shell git.ShellRunner, repoPath string, emit func(pipeline.Event)) (pipeline.Phase, string, string) {
-	rec := pipeline.NewPhaseRecorder("Backup", emit)
+func runMigrateBackup(shell git.ShellRunner, repoPath string, emit func(progress.Event)) (progress.Phase, string, string) {
+	rec := progress.NewPhaseRecorder("Backup", emit)
 
 	timestamp := time.Now().Format("20060102_150405")
 	backupPath := fmt.Sprintf("%s_backup_%s", repoPath, timestamp)
@@ -134,8 +134,8 @@ func runMigrateBackup(shell git.ShellRunner, repoPath string, emit func(pipeline
 	return rec.Phase(), backupPath, size
 }
 
-func runMigrateBare(runner git.CommandRunner, repoPath, branch string, emit func(pipeline.Event)) pipeline.Phase {
-	rec := pipeline.NewPhaseRecorder("Migrate", emit)
+func runMigrateBare(runner git.CommandRunner, repoPath, branch string, emit func(progress.Event)) progress.Phase {
+	rec := progress.NewPhaseRecorder("Migrate", emit)
 	barePath := filepath.Join(repoPath, ".bare")
 
 	// Capture the real origin URL before cloning. `git clone --bare .git .bare`
@@ -203,7 +203,7 @@ func runMigrateBare(runner git.CommandRunner, repoPath, branch string, emit func
 				continue
 			}
 			if err := os.RemoveAll(filepath.Join(repoPath, name)); err != nil {
-				rec.Emit("Clean root directory", pipeline.StepRunning,
+				rec.Emit("Clean root directory", progress.StepRunning,
 					fmt.Sprintf("warning: could not remove %s: %v", name, err))
 			}
 		}
@@ -224,8 +224,8 @@ func runMigrateBare(runner git.CommandRunner, repoPath, branch string, emit func
 	return rec.Phase()
 }
 
-func runMigrateCopy(backupPath, worktreePath string, emit func(pipeline.Event)) pipeline.Phase {
-	rec := pipeline.NewPhaseRecorder("Copy", emit)
+func runMigrateCopy(backupPath, worktreePath string, emit func(progress.Event)) progress.Phase {
+	rec := progress.NewPhaseRecorder("Copy", emit)
 
 	// Copy EVERYTHING from the backup working tree (untracked, ignored, and
 	// uncommitted-modified files) into the new worktree, which otherwise holds
@@ -245,7 +245,7 @@ func runMigrateCopy(backupPath, worktreePath string, emit func(pipeline.Event)) 
 				continue
 			}
 			if copyErr := copyTree(filepath.Join(backupPath, name), filepath.Join(worktreePath, name)); copyErr != nil {
-				rec.Emit("Restore working files", pipeline.StepRunning,
+				rec.Emit("Restore working files", progress.StepRunning,
 					fmt.Sprintf("warning: could not copy %s: %v", name, copyErr))
 				continue
 			}
