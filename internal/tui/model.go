@@ -879,7 +879,7 @@ func (m Model) terminalProgress() *tea.ProgressBar {
 	}
 	state := tea.ProgressBarDefault
 	for _, p := range l.Phases {
-		if p.failed > 0 {
+		if p.Failed > 0 {
 			state = tea.ProgressBarError
 		}
 	}

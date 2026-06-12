@@ -19,13 +19,13 @@ const progressChromeLines = 9
 // ProgressLayout renders the standard progress view shared by every
 // long-running flow: title, optional subtitle, separator, phases with
 // indented steps (windowed to the terminal height), separator, overall
-// progress bar, and key hints. Phase data is the phaseDisplay shape that
+// progress bar, and key hints. Phase data is the progress.PhaseState shape that
 // buildPhaseDisplays produces from pipeline events; views with bespoke
 // event types construct the same shape themselves.
 type ProgressLayout struct {
 	Title    string
 	Subtitle string
-	Phases   []phaseDisplay
+	Phases   []progress.PhaseState
 	Width    int
 	Height   int
 	Hints    []key.Binding
@@ -70,9 +70,9 @@ func (l ProgressLayout) overall() (int, int) {
 	}
 	done, total := 0, 0
 	for _, p := range l.Phases {
-		done += p.done
-		total += p.total
-		if p.total == 0 && !l.Completed {
+		done += p.Done
+		total += p.Total
+		if p.Total == 0 && !l.Completed {
 			total++
 		}
 	}
@@ -123,64 +123,64 @@ func (l ProgressLayout) View() string {
 
 // renderPhase writes one phase section and returns how many step lines it
 // consumed from the windowing budget.
-func (l ProgressLayout) renderPhase(b *strings.Builder, p phaseDisplay, stepBudget int) int {
+func (l ProgressLayout) renderPhase(b *strings.Builder, p progress.PhaseState, stepBudget int) int {
 	switch {
-	case p.total == 0:
+	case p.Total == 0:
 		if l.Completed {
 			// The flow finished and this phase never had work: skipped.
 			fmt.Fprintf(b, "  %s %s  %s\n\n",
 				styleDim.Render("–"),
-				stylePhasePending.Render(p.name),
+				stylePhasePending.Render(p.Name),
 				styleDim.Render("skipped"))
 			return 0
 		}
 		// No work discovered yet: pending, never "100% done".
 		fmt.Fprintf(b, "  %s %s  %s\n\n",
 			styleIndicatorPending.Render(indicatorPending),
-			stylePhasePending.Render(p.name),
+			stylePhasePending.Render(p.Name),
 			styleDim.Render("pending"))
 		return 0
 
-	case p.done == p.total && p.failed == 0:
+	case p.Done == p.Total && p.Failed == 0:
 		// Fully complete: collapse to a single line.
 		fmt.Fprintf(b, "  %s %s  %s\n\n",
 			styleIndicatorDone.Render(indicatorDone),
-			stylePhaseDone.Render(p.name),
-			styleDim.Render(fmt.Sprintf("%d/%d  100%%", p.total, p.total)))
+			stylePhaseDone.Render(p.Name),
+			styleDim.Render(fmt.Sprintf("%d/%d  100%%", p.Total, p.Total)))
 		return 0
 	}
 
-	pct := (p.done * 100) / p.total
+	pct := (p.Done * 100) / p.Total
 	if pct > 100 {
 		pct = 100
 	}
-	counts := styleDim.Render(fmt.Sprintf("%d/%d  %d%%", min(p.done, p.total), p.total, pct))
+	counts := styleDim.Render(fmt.Sprintf("%d/%d  %d%%", min(p.Done, p.Total), p.Total, pct))
 	switch {
-	case p.failed > 0:
+	case p.Failed > 0:
 		nameStyle := stylePhaseActive
-		if p.done == p.total {
+		if p.Done == p.Total {
 			nameStyle = stylePhaseDone
 		}
 		fmt.Fprintf(b, "  %s %s  %s\n",
-			styleIndicatorFailed.Render(indicatorFailed), nameStyle.Render(p.name), counts)
+			styleIndicatorFailed.Render(indicatorFailed), nameStyle.Render(p.Name), counts)
 	case l.Motion != nil:
 		// The star rides inside the headline's accent shimmer band.
-		fmt.Fprintf(b, "  %s  %s\n", l.Motion.Accent(l.Motion.Frame+" "+p.name), counts)
+		fmt.Fprintf(b, "  %s  %s\n", l.Motion.Accent(l.Motion.Frame+" "+p.Name), counts)
 	default:
 		fmt.Fprintf(b, "  %s %s  %s\n",
-			l.activeGlyph(), stylePhaseActive.Render(p.name), counts)
+			l.activeGlyph(), stylePhaseActive.Render(p.Name), counts)
 	}
 
-	window := WindowSteps(p.steps, stepBudget)
+	window := WindowSteps(p.Steps, stepBudget)
 	for _, s := range window.Steps {
-		label := truncateWithEllipsis(s.name, max(l.Width-6, 10))
-		if s.status == progress.StepRunning && l.Motion != nil {
+		label := truncateWithEllipsis(s.Name, max(l.Width-6, 10))
+		if s.Status == progress.StepRunning && l.Motion != nil {
 			// Working steps shimmer in the body ramp, star in the band.
 			fmt.Fprintf(b, "    %s\n", l.Motion.Body(l.Motion.Frame+" "+label))
 			continue
 		}
 		var stepInd string
-		switch s.status {
+		switch s.Status {
 		case progress.StepDone, progress.StepSkipped:
 			stepInd = styleIndicatorDone.Render(indicatorDone)
 		case progress.StepRunning:

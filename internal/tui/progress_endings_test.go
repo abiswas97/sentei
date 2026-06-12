@@ -8,6 +8,7 @@ import (
 	"github.com/abiswas97/sentei/internal/config"
 	"github.com/abiswas97/sentei/internal/creator"
 	"github.com/abiswas97/sentei/internal/git"
+	"github.com/abiswas97/sentei/internal/progress"
 	"github.com/abiswas97/sentei/internal/repo"
 )
 
@@ -16,9 +17,9 @@ func TestProgressLayout_SkippedPhasesAtCompletion(t *testing.T) {
 		Completed: true,
 		Width:     80,
 		Height:    20,
-		Phases: []phaseDisplay{
-			{name: "Setup", done: 1, total: 1},
-			{name: "Dependencies", total: 0},
+		Phases: []progress.PhaseState{
+			{Name: "Setup", Done: 1, Total: 1},
+			{Name: "Dependencies", Total: 0},
 		},
 	}
 
@@ -39,9 +40,9 @@ func TestProgressLayout_PendingMidRunUnchanged(t *testing.T) {
 	l := ProgressLayout{
 		Width:  80,
 		Height: 20,
-		Phases: []phaseDisplay{
-			{name: "Setup", done: 1, total: 1},
-			{name: "Dependencies", total: 0},
+		Phases: []progress.PhaseState{
+			{Name: "Setup", Done: 1, Total: 1},
+			{Name: "Dependencies", Total: 0},
 		},
 	}
 

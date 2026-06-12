@@ -6,10 +6,10 @@ import (
 	"github.com/abiswas97/sentei/internal/progress"
 )
 
-func makeSteps(statuses ...progress.StepStatus) []stepDisplay {
-	steps := make([]stepDisplay, len(statuses))
+func makeSteps(statuses ...progress.StepStatus) []progress.StepState {
+	steps := make([]progress.StepState, len(statuses))
 	for i, st := range statuses {
-		steps[i] = stepDisplay{name: stepName(i), status: st}
+		steps[i] = progress.StepState{Name: stepName(i), Status: st}
 	}
 	return steps
 }
@@ -18,10 +18,10 @@ func stepName(i int) string {
 	return string(rune('a' + i%26))
 }
 
-func countByStatus(steps []stepDisplay, status progress.StepStatus) int {
+func countByStatus(steps []progress.StepState, status progress.StepStatus) int {
 	n := 0
 	for _, s := range steps {
-		if s.status == status {
+		if s.Status == status {
 			n++
 		}
 	}
@@ -109,28 +109,28 @@ func TestWindowSteps_BudgetZero_MinimumViable(t *testing.T) {
 		t.Fatalf("expected only failed+active at zero budget, got %d steps", len(r.Steps))
 	}
 	for _, s := range r.Steps {
-		if s.status != progress.StepFailed && s.status != progress.StepRunning {
-			t.Errorf("unexpected status %v in minimum viable display", s.status)
+		if s.Status != progress.StepFailed && s.Status != progress.StepRunning {
+			t.Errorf("unexpected status %v in minimum viable display", s.Status)
 		}
 	}
 }
 
 func TestWindowSteps_RecentCompletedShown(t *testing.T) {
-	steps := []stepDisplay{
-		{name: "old-done", status: progress.StepDone},
-		{name: "mid-done", status: progress.StepDone},
-		{name: "new-done", status: progress.StepDone},
-		{name: "running", status: progress.StepRunning},
-		{name: "next-pending", status: progress.StepPending},
-		{name: "far-pending-1", status: progress.StepPending},
-		{name: "far-pending-2", status: progress.StepPending},
-		{name: "far-pending-3", status: progress.StepPending},
+	steps := []progress.StepState{
+		{Name: "old-done", Status: progress.StepDone},
+		{Name: "mid-done", Status: progress.StepDone},
+		{Name: "new-done", Status: progress.StepDone},
+		{Name: "running", Status: progress.StepRunning},
+		{Name: "next-pending", Status: progress.StepPending},
+		{Name: "far-pending-1", Status: progress.StepPending},
+		{Name: "far-pending-2", Status: progress.StepPending},
+		{Name: "far-pending-3", Status: progress.StepPending},
 	}
 	r := WindowSteps(steps, 5) // 8 items in 5 lines -> windowed
 
 	names := make(map[string]bool)
 	for _, s := range r.Steps {
-		names[s.name] = true
+		names[s.Name] = true
 	}
 	for _, want := range []string{"running", "new-done", "mid-done", "next-pending"} {
 		if !names[want] {

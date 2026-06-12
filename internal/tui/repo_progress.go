@@ -102,7 +102,7 @@ func (m Model) repoLayout() ProgressLayout {
 		Title:     title,
 		Subtitle:  subject,
 		Completed: m.repo.result != nil,
-		Phases:    buildPhaseDisplays(m.repo.events),
+		Phases:    progress.Snapshot(m.repo.events),
 		Width:     m.width,
 		Height:    m.height,
 		Hints:     progressFooter,

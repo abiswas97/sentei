@@ -36,7 +36,7 @@ func TestBuildRemovalPhases_PruneStaging(t *testing.T) {
 
 	phases := m.buildRemovalPhases()
 	last := phases[len(phases)-1]
-	if last.name != "Prune & cleanup" || last.total != 0 {
+	if last.Name != "Prune & cleanup" || last.Total != 0 {
 		t.Errorf("expected pending prune phase before removal completes, got %+v", last)
 	}
 
@@ -44,7 +44,7 @@ func TestBuildRemovalPhases_PruneStaging(t *testing.T) {
 	m.remove.run.statuses["/work/a"] = statusRemoved
 	phases = m.buildRemovalPhases()
 	last = phases[len(phases)-1]
-	if last.total != 2 || last.done != 0 {
+	if last.Total != 2 || last.Done != 0 {
 		t.Errorf("expected active 0/2 prune phase after removal completes, got %+v", last)
 	}
 
@@ -53,7 +53,7 @@ func TestBuildRemovalPhases_PruneStaging(t *testing.T) {
 	m.remove.run.cleanupResult = &cleanup.Result{}
 	phases = m.buildRemovalPhases()
 	last = phases[len(phases)-1]
-	if last.done != 2 || last.failed != 0 {
+	if last.Done != 2 || last.Failed != 0 {
 		t.Errorf("expected completed prune phase, got %+v", last)
 	}
 }
@@ -67,8 +67,8 @@ func TestBuildIntegrationPhases_PrePopulatesTargets(t *testing.T) {
 		t.Fatalf("expected 2 pre-populated phases, got %d", len(phases))
 	}
 	for _, p := range phases {
-		if p.total != 0 {
-			t.Errorf("pre-populated target %q must be pending (total 0), got %d", p.name, p.total)
+		if p.Total != 0 {
+			t.Errorf("pre-populated target %q must be pending (total 0), got %d", p.Name, p.Total)
 		}
 	}
 
@@ -87,14 +87,14 @@ func TestBuildIntegrationPhases_ErrorBakedIntoLabel(t *testing.T) {
 	}
 
 	phases := m.buildIntegrationPhases()
-	if len(phases) != 1 || len(phases[0].steps) != 1 {
+	if len(phases) != 1 || len(phases[0].Steps) != 1 {
 		t.Fatalf("unexpected phases: %+v", phases)
 	}
-	if phases[0].steps[0].status != progress.StepFailed {
-		t.Errorf("expected failed step, got %v", phases[0].steps[0].status)
+	if phases[0].Steps[0].Status != progress.StepFailed {
+		t.Errorf("expected failed step, got %v", phases[0].Steps[0].Status)
 	}
-	if !strings.Contains(phases[0].steps[0].name, "exit 1") {
-		t.Errorf("expected error in step label, got %q", phases[0].steps[0].name)
+	if !strings.Contains(phases[0].Steps[0].Name, "exit 1") {
+		t.Errorf("expected error in step label, got %q", phases[0].Steps[0].Name)
 	}
 }
 

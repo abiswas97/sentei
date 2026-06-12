@@ -144,33 +144,33 @@ func (m Model) viewProgress() string {
 
 // buildRemovalPhases maps the current removal run onto the shared phase
 // shape consumed by ProgressLayout.
-func (m Model) buildRemovalPhases() []phaseDisplay {
+func (m Model) buildRemovalPhases() []progress.PhaseState {
 	run := m.remove.run
-	var phases []phaseDisplay
+	var phases []progress.PhaseState
 
 	switch {
 	case run.teardownRunning:
-		phases = append(phases, phaseDisplay{
-			name:  "Teardown",
-			total: 1,
-			steps: []stepDisplay{{name: "Removing integration artifacts", status: progress.StepRunning}},
+		phases = append(phases, progress.PhaseState{
+			Name:  "Teardown",
+			Total: 1,
+			Steps: []progress.StepState{{Name: "Removing integration artifacts", Status: progress.StepRunning}},
 		})
 	case len(run.teardownResults) > 0:
-		td := phaseDisplay{name: "Teardown", total: len(run.teardownResults)}
+		td := progress.PhaseState{Name: "Teardown", Total: len(run.teardownResults)}
 		for _, r := range run.teardownResults {
-			td.steps = append(td.steps, stepDisplay{name: r.Name, status: r.Status})
+			td.Steps = append(td.Steps, progress.StepState{Name: r.Name, Status: r.Status})
 			switch r.Status {
 			case progress.StepDone, progress.StepSkipped:
-				td.done++
+				td.Done++
 			case progress.StepFailed:
-				td.failed++
-				td.done++
+				td.Failed++
+				td.Done++
 			}
 		}
 		phases = append(phases, td)
 	}
 
-	removing := phaseDisplay{name: "Removing worktrees", total: run.total()}
+	removing := progress.PhaseState{Name: "Removing worktrees", Total: run.total()}
 	for _, wt := range run.worktrees {
 		label := worktreeLabel(wt)
 		var status progress.StepStatus
@@ -179,38 +179,38 @@ func (m Model) buildRemovalPhases() []phaseDisplay {
 			status = progress.StepRunning
 		case statusRemoved:
 			status = progress.StepDone
-			removing.done++
+			removing.Done++
 		case statusFailed:
 			status = progress.StepFailed
-			removing.failed++
-			removing.done++
+			removing.Failed++
+			removing.Done++
 		default:
 			status = progress.StepPending
 		}
-		removing.steps = append(removing.steps, stepDisplay{name: label, status: status})
+		removing.Steps = append(removing.Steps, progress.StepState{Name: label, Status: status})
 	}
 	phases = append(phases, removing)
 
-	cleanupPhase := phaseDisplay{name: "Prune & cleanup"}
-	if removing.total > 0 && removing.done == removing.total {
-		cleanupPhase.total = 2
-		cleanupPhase.steps = []stepDisplay{
-			{name: "Prune worktree metadata", status: progress.StepRunning},
-			{name: "Repository cleanup", status: progress.StepPending},
+	cleanupPhase := progress.PhaseState{Name: "Prune & cleanup"}
+	if removing.Total > 0 && removing.Done == removing.Total {
+		cleanupPhase.Total = 2
+		cleanupPhase.Steps = []progress.StepState{
+			{Name: "Prune worktree metadata", Status: progress.StepRunning},
+			{Name: "Repository cleanup", Status: progress.StepPending},
 		}
 		if run.pruneErr != nil {
 			if *run.pruneErr != nil {
-				cleanupPhase.steps[0].status = progress.StepFailed
-				cleanupPhase.failed++
+				cleanupPhase.Steps[0].Status = progress.StepFailed
+				cleanupPhase.Failed++
 			} else {
-				cleanupPhase.steps[0].status = progress.StepDone
+				cleanupPhase.Steps[0].Status = progress.StepDone
 			}
-			cleanupPhase.done++
-			cleanupPhase.steps[1].status = progress.StepRunning
+			cleanupPhase.Done++
+			cleanupPhase.Steps[1].Status = progress.StepRunning
 		}
 		if run.cleanupResult != nil {
-			cleanupPhase.steps[1].status = progress.StepDone
-			cleanupPhase.done++
+			cleanupPhase.Steps[1].Status = progress.StepDone
+			cleanupPhase.Done++
 		}
 	}
 	phases = append(phases, cleanupPhase)

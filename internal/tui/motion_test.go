@@ -14,11 +14,11 @@ import (
 func runningLayout() ProgressLayout {
 	return ProgressLayout{
 		Title: "T", Width: 80, Height: 30,
-		Phases: []phaseDisplay{
-			{name: "Removing worktrees", total: 3, done: 1, steps: []stepDisplay{
-				{name: "done-step", status: progress.StepDone},
-				{name: "active-step", status: progress.StepRunning},
-				{name: "pending-step", status: progress.StepPending},
+		Phases: []progress.PhaseState{
+			{Name: "Removing worktrees", Total: 3, Done: 1, Steps: []progress.StepState{
+				{Name: "done-step", Status: progress.StepDone},
+				{Name: "active-step", Status: progress.StepRunning},
+				{Name: "pending-step", Status: progress.StepPending},
 			}},
 		},
 	}
@@ -238,8 +238,8 @@ func TestCompletedBar_SettlesGreen(t *testing.T) {
 
 	working := runningLayout()
 	done := runningLayout()
-	done.Phases[0].done = done.Phases[0].total
-	done.Phases[0].steps = nil
+	done.Phases[0].Done = done.Phases[0].Total
+	done.Phases[0].Steps = nil
 	done.Completed = true
 
 	wOut := m.renderProgressLayout(working)

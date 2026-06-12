@@ -5,6 +5,8 @@ import (
 
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
+
+	"github.com/abiswas97/sentei/internal/progress"
 )
 
 func (m Model) updateCreateProgress(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -34,7 +36,7 @@ func (m Model) createLayout() ProgressLayout {
 		Title:     titleCreatingWorktree,
 		Completed: m.create.result != nil,
 		Subtitle:  fmt.Sprintf("%s \u2192 from %s", m.create.branchInput.Value(), m.create.baseInput.Value()),
-		Phases:    withPendingPhases(buildPhaseDisplays(m.create.events), "Setup", "Dependencies", "Integrations"),
+		Phases:    progress.WithPendingPhases(progress.Snapshot(m.create.events), "Setup", "Dependencies", "Integrations"),
 		Width:     m.width,
 		Height:    m.height,
 		Hints:     progressFooter,

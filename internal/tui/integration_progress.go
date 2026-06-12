@@ -110,12 +110,12 @@ func (m Model) viewIntegrationProgress() string {
 // buildIntegrationPhases maps apply events onto the shared phase shape, one
 // phase per worktree, with every target worktree visible as pending before
 // its events arrive. Failed step errors are baked into the step label.
-func (m Model) buildIntegrationPhases() []phaseDisplay {
-	var phases []phaseDisplay
+func (m Model) buildIntegrationPhases() []progress.PhaseState {
+	var phases []progress.PhaseState
 	seen := make(map[string]bool)
 
 	for _, g := range groupIntegrationEvents(m.integ.events) {
-		pd := phaseDisplay{name: filepath.Base(g.worktree)}
+		pd := progress.PhaseState{Name: filepath.Base(g.worktree)}
 		seen[g.worktree] = true
 		for _, s := range g.steps {
 			if s.ev.Status == integration.StatusSkipped {
@@ -131,23 +131,23 @@ func (m Model) buildIntegrationPhases() []phaseDisplay {
 			switch s.ev.Status {
 			case integration.StatusDone:
 				status = progress.StepDone
-				pd.done++
+				pd.Done++
 			case integration.StatusRunning:
 				status = progress.StepRunning
 			case integration.StatusFailed:
 				status = progress.StepFailed
-				pd.failed++
-				pd.done++
+				pd.Failed++
+				pd.Done++
 			}
-			pd.steps = append(pd.steps, stepDisplay{name: label, status: status})
+			pd.Steps = append(pd.Steps, progress.StepState{Name: label, Status: status})
 		}
-		pd.total = len(pd.steps)
+		pd.Total = len(pd.Steps)
 		phases = append(phases, pd)
 	}
 
 	for _, path := range m.integ.targetWorktrees {
 		if !seen[path] {
-			phases = append(phases, phaseDisplay{name: filepath.Base(path)})
+			phases = append(phases, progress.PhaseState{Name: filepath.Base(path)})
 		}
 	}
 	return phases
