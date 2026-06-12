@@ -105,20 +105,10 @@ func (m Model) viewCloneInput() string {
 	b.WriteString(viewSeparator(m.width))
 	b.WriteString("\n\n")
 
-	if m.repo.cloneFocusedField == 0 {
-		b.WriteString(styleAccent.Render("  Repository URL") + "\n")
-	} else {
-		b.WriteString("  Repository URL\n")
-	}
-	if m.repo.cloneFocusedField == 0 {
-		b.WriteString("  " + m.repo.urlInput.View())
-	} else {
-		val := m.repo.urlInput.Value()
-		if val == "" {
-			val = styleDim.Render("(empty)")
-		}
-		b.WriteString("    " + val)
-	}
+	// Both fields render persistently (the huh spike's layout win,
+	// without the library): focus moves the accent, never the geometry.
+	b.WriteString(inputFieldLabel("Repository URL", m.repo.cloneFocusedField == 0))
+	b.WriteString("  " + m.repo.urlInput.View())
 	b.WriteString("\n\n")
 
 	// Derive clone location for display
@@ -134,17 +124,12 @@ func (m Model) viewCloneInput() string {
 	}
 	cloneDest := filepath.Join(location, name)
 
-	if m.repo.cloneFocusedField == 1 {
-		b.WriteString(styleAccent.Render("  Clone to") + "\n")
-	} else {
-		b.WriteString("  Clone to\n")
-	}
-	if m.repo.cloneFocusedField == 1 {
-		b.WriteString("  " + m.repo.cloneNameInput.View())
-		b.WriteString(styleDim.Render(fmt.Sprintf("  → %s", cloneDest)))
-	} else {
-		b.WriteString("    " + styleDim.Render(cloneDest))
-	}
+	b.WriteString(inputFieldLabel("Clone to", m.repo.cloneFocusedField == 1))
+	b.WriteString("  " + m.repo.cloneNameInput.View())
+	b.WriteString("\n")
+	// The destination preview lives with the field and tracks the URL live
+	// (the huh spike's other win).
+	b.WriteString(styleDim.Render(fmt.Sprintf("    → %s", cloneDest)))
 	b.WriteString("\n")
 
 	if m.repo.validationErr != "" {

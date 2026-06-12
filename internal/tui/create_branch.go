@@ -190,20 +190,8 @@ func (m Model) viewCreateBranch() string {
 	b.WriteString(viewSeparator(m.width))
 	b.WriteString("\n\n")
 
-	if m.create.focusedField == 0 {
-		b.WriteString(styleAccent.Render("  Branch name") + "\n")
-	} else {
-		b.WriteString("  Branch name\n")
-	}
-	if m.create.focusedField == 0 {
-		b.WriteString("  " + m.create.branchInput.View())
-	} else {
-		val := m.create.branchInput.Value()
-		if val == "" {
-			val = styleDim.Render("(empty)")
-		}
-		b.WriteString("    " + val)
-	}
+	b.WriteString(inputFieldLabel("Branch name", m.create.focusedField == 0))
+	b.WriteString("  " + m.create.branchInput.View())
 	b.WriteString("\n")
 	if m.create.validationErr != "" {
 		b.WriteString("  " + styleError.Render(m.create.validationErr))
@@ -211,20 +199,8 @@ func (m Model) viewCreateBranch() string {
 	}
 	b.WriteString("\n")
 
-	if m.create.focusedField == 1 {
-		b.WriteString(styleAccent.Render("  Base branch") + "\n")
-	} else {
-		b.WriteString("  Base branch\n")
-	}
-	if m.create.focusedField == 1 {
-		b.WriteString("  " + m.create.baseInput.View())
-	} else {
-		val := m.create.baseInput.Value()
-		if val == "" {
-			val = "main"
-		}
-		b.WriteString("    " + val)
-	}
+	b.WriteString(inputFieldLabel("Base branch", m.create.focusedField == 1))
+	b.WriteString("  " + m.create.baseInput.View())
 	b.WriteString("\n\n")
 
 	b.WriteString(viewSeparator(m.width))
