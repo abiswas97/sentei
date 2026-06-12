@@ -1,47 +1,97 @@
 package progress
 
 // PhaseState is the folded display state of one phase: its steps in
-// first-appearance order and the derived counts.
+// first-appearance order, the derived counts, and whether the phase's step
+// set is final (Closed).
 type PhaseState struct {
 	Name   string
 	Steps  []StepState
 	Total  int
 	Done   int
 	Failed int
+	Closed bool
 }
 
-// StepState is the folded display state of one step.
+// StepState is the folded display state of one step. Declared is the step's
+// checkpoint count (1 for atomic steps); Reached is how many checkpoints
+// have been crossed, monotonic and clamped to Declared. Resolution (Done,
+// Failed, Skipped) reaches the final checkpoint.
 type StepState struct {
-	Name   string
-	Status StepStatus
+	Name     string
+	Status   StepStatus
+	Reached  int
+	Declared int
+}
+
+// Settled reports whether the phase may render done treatment: its step set
+// is final and every declared step is resolved. A phase with no steps is
+// never settled (it renders pending or skipped, not done).
+func (p PhaseState) Settled() bool {
+	return p.Closed && p.Total > 0 && p.Done == p.Total
+}
+
+// CheckpointProgress sums reached and declared checkpoints across phases,
+// the overall bar's fill source. Undeclared steps count as one checkpoint
+// reached on resolution, so streams without declarations yield the same
+// ratio as step counting.
+func CheckpointProgress(states []PhaseState) (reached, declared int) {
+	for _, p := range states {
+		for _, s := range p.Steps {
+			reached += s.Reached
+			declared += s.Declared
+		}
+	}
+	return reached, declared
 }
 
 // Snapshot folds an event stream into per-phase display state, preserving
 // the order phases and steps first appeared in. Done, Skipped, and Failed
 // steps all count as resolved (a phase with a best-effort skip still
 // reaches completion); a later event for a step supersedes its status.
+// Declaration events (Pending bursts, close markers) establish totals,
+// checkpoint counts, and the Closed flag; the fold is forgiving toward
+// undeclared streams, which keep discovery semantics.
 func Snapshot(events []Event) []PhaseState {
 	phases := map[string]*PhaseState{}
 	var order []string
 
-	for _, ev := range events {
-		ps, exists := phases[ev.Phase]
+	phaseFor := func(name string) *PhaseState {
+		ps, exists := phases[name]
 		if !exists {
-			ps = &PhaseState{Name: ev.Phase}
-			phases[ev.Phase] = ps
-			order = append(order, ev.Phase)
+			ps = &PhaseState{Name: name}
+			phases[name] = ps
+			order = append(order, name)
+		}
+		return ps
+	}
+
+	for _, ev := range events {
+		ps := phaseFor(ev.Phase)
+		if ev.Close {
+			ps.Closed = true
+			continue
 		}
 
-		found := false
+		idx := -1
 		for i := range ps.Steps {
 			if ps.Steps[i].Name == ev.Step {
-				ps.Steps[i].Status = ev.Status
-				found = true
+				idx = i
 				break
 			}
 		}
-		if !found {
-			ps.Steps = append(ps.Steps, StepState{Name: ev.Step, Status: ev.Status})
+		if idx == -1 {
+			ps.Steps = append(ps.Steps, StepState{Name: ev.Step, Declared: 1})
+			idx = len(ps.Steps) - 1
+		}
+		step := &ps.Steps[idx]
+
+		step.Status = ev.Status
+		step.Declared = max(step.Declared, ev.Of)
+		switch ev.Status {
+		case StepRunning:
+			step.Reached = max(step.Reached, min(ev.Checkpoint, step.Declared))
+		case StepDone, StepFailed, StepSkipped:
+			step.Reached = step.Declared
 		}
 	}
 

@@ -23,14 +23,14 @@ A Running event MAY carry `Checkpoint k of n` meaning the step has reached sub-s
 - **THEN** the folded reached count remains 2
 
 ### Requirement: Honesty invariants
-The fold SHALL enforce: a phase's total never decreases; done never exceeds total; an undeclared phase with no resolved steps never reports completion; and in test builds, a step event following its phase's close marker is flagged as an invariant violation.
+The fold SHALL enforce: a phase's total never decreases; done never exceeds total; an undeclared phase with no resolved steps never reports completion; and in test builds, an event introducing a previously unseen step after its phase's close marker is flagged as an invariant violation (work events for already declared steps legitimately follow the close).
 
 #### Scenario: Totals are monotonic
 - **WHEN** any valid or invalid event interleaving is folded
 - **THEN** the sequence of per-phase totals observed across successive folds of growing prefixes is non-decreasing
 
 #### Scenario: Event after close is flagged in tests
-- **WHEN** a test folds a stream containing a step event after that phase's close marker
+- **WHEN** a test folds a stream containing an event that introduces a new step after that phase's close marker
 - **THEN** the invariant check reports the violation
 
 ### Requirement: Settled is a single predicate

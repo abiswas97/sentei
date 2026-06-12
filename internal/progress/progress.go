@@ -30,12 +30,20 @@ type Phase struct {
 }
 
 // Event is a progress notification emitted while a flow runs.
+//
+// Declaration rides the same stream: a Pending event with Of set declares a
+// step and its checkpoint count upfront; an event with Close set marks the
+// phase as complete-in-plan (no more steps will be added). A Running event
+// with Checkpoint set reports intra-step progress ("reached k of Of").
 type Event struct {
-	Phase   string
-	Step    string
-	Status  StepStatus
-	Message string
-	Error   error
+	Phase      string
+	Step       string
+	Status     StepStatus
+	Checkpoint int  // reached checkpoint (1-based) within the step, on Running events
+	Of         int  // the step's declared checkpoint count (>= 1 when set)
+	Close      bool // phase-close marker: the phase's step set is final
+	Message    string
+	Error      error
 }
 
 // HasFailures reports whether any step in the phase failed.
