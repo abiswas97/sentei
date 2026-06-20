@@ -74,7 +74,7 @@ jobs:
             if [ "$c" != "200" ]; then echo "-- PATCH body:"; cat /tmp/probe; echo "-- /installation/repositories body:"; head -c 300 /tmp/i; echo; fi
           done
           jq -e '.total_count >= 1' /tmp/i >/dev/null || exit 1
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
           ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.sha }}
