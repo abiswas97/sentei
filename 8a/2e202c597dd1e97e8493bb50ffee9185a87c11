@@ -1,0 +1,22 @@
+docs/superpowers/specs/2026-07-14-progress-arc-correctness-and-live-region-design.md
+  s_47b5c057f8c030::t_71af7fecb2207c 213-214,218,222-223,232-234,248-253,262-264
+  s_47b5c057f8c030::t_476713a29a8a22 145-146,155-161,169-174,193-195
+  s_47b5c057f8c030::t_80884bb0d9ee09 1-80,92-100,108-123,127-130,133-144,147-154,162-168,175-192,196-212,215-217,219-221,224-231,235-247,254-261,265-275
+  s_47b5c057f8c030::t_054a16d958f85e 81-91,101-107,124-126,131-132
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.13",
+  "base_commit_sha": "8a2e202c597dd1e97e8493bb50ffee9185a87c11",
+  "prompts": {},
+  "sessions": {
+    "s_47b5c057f8c030": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f5f62-a0bd-7f92-96e2-b1de98524420",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>"
+    }
+  }
+}
