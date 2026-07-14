@@ -3,7 +3,9 @@ package progress
 import (
 	"errors"
 	"sync"
+	"sync/atomic"
 	"testing"
+	"time"
 )
 
 func TestExecution_FinishSettlesDistinctStepsWithEqualLabels(t *testing.T) {
@@ -119,6 +121,24 @@ func TestExecution_StartRejectsInvalidIDs(t *testing.T) {
 	}
 }
 
+func TestExecution_StartRejectsMixedStableAndLegacyPlanFields(t *testing.T) {
+	tests := []struct {
+		name string
+		plan Plan
+	}{
+		{"phase name", Plan{Phases: []PlannedPhase{{ID: "p", Label: "Phase", Name: "legacy"}}}},
+		{"phase open", Plan{Phases: []PlannedPhase{{ID: "p", Label: "Phase", Open: true}}}},
+		{"step name", Plan{Phases: []PlannedPhase{{ID: "p", Steps: []PlannedStep{{ID: "s", Label: "Step", Name: "legacy"}}}}}},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			if _, err := Start(tc.plan, func(Event) {}); err == nil {
+				t.Fatal("mixed stable and legacy plan fields accepted")
+			}
+		})
+	}
+}
+
 func TestExecution_StartEmitsCompleteNormalizedDeclarationPrefix(t *testing.T) {
 	var events []Event
 	_, err := Start(Plan{Phases: []PlannedPhase{
@@ -203,6 +223,88 @@ func TestExecution_RunDoesNotHoldLockWhileFunctionRuns(t *testing.T) {
 	}
 	close(release)
 	if err := <-done; err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestExecution_EmitCallbackCanSynchronouslyTransitionAnotherStep(t *testing.T) {
+	var x *Execution
+	var events []Event
+	var callbackErr error
+	x, startErr := Start(Plan{Phases: []PlannedPhase{{ID: "p", Steps: []PlannedStep{{ID: "a"}, {ID: "b"}}}}}, func(ev Event) {
+		events = append(events, ev)
+		if ev.Step == "a" && ev.Status == StepDone {
+			callbackErr = x.Running("p", "b", 0, "triggered by a")
+			if callbackErr == nil {
+				_, callbackErr = x.Skip("p", "b", "triggered by a")
+			}
+		}
+	})
+	if startErr != nil {
+		t.Fatal(startErr)
+	}
+
+	done := make(chan error, 1)
+	go func() {
+		_, err := x.Done("p", "a", "complete")
+		done <- err
+	}()
+	select {
+	case err := <-done:
+		if err != nil {
+			t.Fatal(err)
+		}
+	case <-time.After(500 * time.Millisecond):
+		t.Fatal("emit callback deadlocked while transitioning another step")
+	}
+	if callbackErr != nil {
+		t.Fatalf("callback transition: %v", callbackErr)
+	}
+	if err := ValidateStream(events); err != nil {
+		t.Fatalf("reentrant emission order invalid: %v", err)
+	}
+	statuses := []StepStatus{events[len(events)-3].Status, events[len(events)-2].Status, events[len(events)-1].Status}
+	if statuses[0] != StepDone || statuses[1] != StepRunning || statuses[2] != StepSkipped {
+		t.Fatalf("reentrant event order = %v, want done/running/skipped", statuses)
+	}
+	states := Snapshot(events)
+	if states[0].Steps[0].Status != StepDone || states[0].Steps[1].Status != StepSkipped {
+		t.Fatalf("states = %#v", states)
+	}
+}
+
+func TestExecution_RunClaimsPendingStepOnce(t *testing.T) {
+	x, err := Start(Plan{Phases: []PlannedPhase{{ID: "p", Steps: []PlannedStep{{ID: "s"}}}}}, func(Event) {})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var invocations atomic.Int32
+	entered := make(chan struct{})
+	release := make(chan struct{})
+	firstDone := make(chan error, 1)
+	go func() {
+		_, err := x.Run("p", "s", func() (string, error) {
+			invocations.Add(1)
+			close(entered)
+			<-release
+			return "first", nil
+		})
+		firstDone <- err
+	}()
+	<-entered
+
+	_, secondErr := x.Run("p", "s", func() (string, error) {
+		invocations.Add(1)
+		return "second", nil
+	})
+	if secondErr == nil {
+		t.Fatal("second Run claimed an already-running step")
+	}
+	if got := invocations.Load(); got != 1 {
+		t.Fatalf("step body invoked %d times, want 1", got)
+	}
+	close(release)
+	if err := <-firstDone; err != nil {
 		t.Fatal(err)
 	}
 }

@@ -8,10 +8,12 @@ import (
 // Execution owns the mutable state of a validated Plan. All transitions and
 // emissions are serialized; Run releases the lock while user work executes.
 type Execution struct {
-	mu     sync.Mutex
-	emit   func(Event)
-	phases map[PhaseID]*executionPhase
-	order  []PhaseID
+	mu       sync.Mutex
+	emit     func(Event)
+	phases   map[PhaseID]*executionPhase
+	order    []PhaseID
+	pending  []Event
+	emitting bool
 }
 
 type executionPhase struct {
@@ -43,6 +45,9 @@ func Start(plan Plan, emit func(Event)) (*Execution, error) {
 		order:  make([]PhaseID, 0, len(plan.Phases)),
 	}
 	for phaseIndex, plannedPhase := range plan.Phases {
+		if plannedPhase.Name != "" || plannedPhase.Open {
+			return nil, fmt.Errorf("phase %d mixes stable and legacy plan fields", phaseIndex)
+		}
 		if plannedPhase.ID == "" {
 			return nil, fmt.Errorf("phase %d has empty ID", phaseIndex)
 		}
@@ -60,6 +65,9 @@ func Start(plan Plan, emit func(Event)) (*Execution, error) {
 			order: make([]StepID, 0, len(plannedPhase.Steps)),
 		}
 		for stepIndex, plannedStep := range plannedPhase.Steps {
+			if plannedStep.Name != "" {
+				return nil, fmt.Errorf("phase %q step %d mixes stable and legacy plan fields", plannedPhase.ID, stepIndex)
+			}
 			if plannedStep.ID == "" {
 				return nil, fmt.Errorf("phase %q step %d has empty ID", plannedPhase.ID, stepIndex)
 			}
@@ -103,18 +111,21 @@ func Start(plan Plan, emit func(Event)) (*Execution, error) {
 // Running marks a step active and optionally advances its checkpoint.
 func (x *Execution) Running(phaseID PhaseID, stepID StepID, checkpoint int, message string) error {
 	x.mu.Lock()
-	defer x.mu.Unlock()
 	phase, step, err := x.step(phaseID, stepID)
 	if err != nil {
+		x.mu.Unlock()
 		return err
 	}
 	if terminal(step.status) {
+		x.mu.Unlock()
 		return fmt.Errorf("phase %q step %q is already terminal", phaseID, stepID)
 	}
 	if checkpoint < step.checkpoint {
+		x.mu.Unlock()
 		return fmt.Errorf("phase %q step %q checkpoint regressed from %d to %d", phaseID, stepID, step.checkpoint, checkpoint)
 	}
 	if checkpoint > step.checkpoints {
+		x.mu.Unlock()
 		return fmt.Errorf("phase %q step %q checkpoint %d exceeds declared %d", phaseID, stepID, checkpoint, step.checkpoints)
 	}
 	step.status = StepRunning
@@ -122,11 +133,15 @@ func (x *Execution) Running(phaseID PhaseID, stepID StepID, checkpoint int, mess
 	if message != "" {
 		step.message = message
 	}
-	x.emit(Event{
+	drain := x.queueLocked(Event{
 		Phase: phase.id, PhaseLabel: phase.label,
 		Step: step.id, StepLabel: step.label,
 		Status: StepRunning, Checkpoint: checkpoint, Of: step.checkpoints, Message: message,
 	})
+	x.mu.Unlock()
+	if drain {
+		x.drain()
+	}
 	return nil
 }
 
@@ -151,7 +166,7 @@ func (x *Execution) Run(phaseID PhaseID, stepID StepID, fn StepFunc) (StepResult
 	if fn == nil {
 		return StepResult{}, fmt.Errorf("phase %q step %q has nil function", phaseID, stepID)
 	}
-	if err := x.Running(phaseID, stepID, 0, ""); err != nil {
+	if err := x.claim(phaseID, stepID); err != nil {
 		return StepResult{}, err
 	}
 	message, err := fn()
@@ -161,19 +176,49 @@ func (x *Execution) Run(phaseID PhaseID, stepID StepID, fn StepFunc) (StepResult
 	return x.Done(phaseID, stepID, message)
 }
 
+func (x *Execution) claim(phaseID PhaseID, stepID StepID) error {
+	x.mu.Lock()
+	phase, step, err := x.step(phaseID, stepID)
+	if err != nil {
+		x.mu.Unlock()
+		return err
+	}
+	if step.status != StepPending {
+		x.mu.Unlock()
+		return fmt.Errorf("phase %q step %q cannot be claimed from status %d", phaseID, stepID, step.status)
+	}
+	step.status = StepRunning
+	drain := x.queueLocked(Event{
+		Phase: phase.id, PhaseLabel: phase.label,
+		Step: step.id, StepLabel: step.label,
+		Status: StepRunning, Of: step.checkpoints,
+	})
+	x.mu.Unlock()
+	if drain {
+		x.drain()
+	}
+	return nil
+}
+
 // SkipPending skips only untouched steps in one phase.
 func (x *Execution) SkipPending(phaseID PhaseID, reason string) error {
 	x.mu.Lock()
-	defer x.mu.Unlock()
 	phase, exists := x.phases[phaseID]
 	if !exists {
+		x.mu.Unlock()
 		return fmt.Errorf("unknown phase ID %q", phaseID)
 	}
+	drain := false
 	for _, stepID := range phase.order {
 		step := phase.steps[stepID]
 		if step.status == StepPending {
-			x.resolveLocked(phase, step, StepSkipped, reason, nil)
+			_, queuedDrain := x.resolveLocked(phase, step, StepSkipped, reason, nil)
+			drain = drain || queuedDrain
 		}
+	}
+	x.mu.Unlock()
+	if drain {
+		x.drain()
 	}
 	return nil
 }
@@ -181,43 +226,78 @@ func (x *Execution) SkipPending(phaseID PhaseID, reason string) error {
 // Finish is the terminal safety net: every unresolved step becomes skipped.
 func (x *Execution) Finish(reason string) error {
 	x.mu.Lock()
-	defer x.mu.Unlock()
+	drain := false
 	for _, phaseID := range x.order {
 		phase := x.phases[phaseID]
 		for _, stepID := range phase.order {
 			step := phase.steps[stepID]
 			if !terminal(step.status) {
-				x.resolveLocked(phase, step, StepSkipped, reason, nil)
+				_, queuedDrain := x.resolveLocked(phase, step, StepSkipped, reason, nil)
+				drain = drain || queuedDrain
 			}
 		}
+	}
+	x.mu.Unlock()
+	if drain {
+		x.drain()
 	}
 	return nil
 }
 
 func (x *Execution) resolve(phaseID PhaseID, stepID StepID, status StepStatus, message string, stepErr error) (StepResult, error) {
 	x.mu.Lock()
-	defer x.mu.Unlock()
 	phase, step, err := x.step(phaseID, stepID)
 	if err != nil {
+		x.mu.Unlock()
 		return StepResult{}, err
 	}
 	if terminal(step.status) {
+		x.mu.Unlock()
 		return StepResult{}, fmt.Errorf("phase %q step %q is already terminal", phaseID, stepID)
 	}
-	return x.resolveLocked(phase, step, status, message, stepErr), nil
+	result, drain := x.resolveLocked(phase, step, status, message, stepErr)
+	x.mu.Unlock()
+	if drain {
+		x.drain()
+	}
+	return result, nil
 }
 
-func (x *Execution) resolveLocked(phase *executionPhase, step *executionStep, status StepStatus, message string, stepErr error) StepResult {
+func (x *Execution) resolveLocked(phase *executionPhase, step *executionStep, status StepStatus, message string, stepErr error) (StepResult, bool) {
 	step.status = status
 	step.checkpoint = step.checkpoints
 	step.message = message
 	step.err = stepErr
-	x.emit(Event{
+	drain := x.queueLocked(Event{
 		Phase: phase.id, PhaseLabel: phase.label,
 		Step: step.id, StepLabel: step.label,
 		Status: status, Of: step.checkpoints, Message: message, Error: stepErr,
 	})
-	return StepResult{ID: step.id, Name: step.label, Status: status, Message: message, Error: stepErr}
+	return StepResult{ID: step.id, Name: step.label, Status: status, Message: message, Error: stepErr}, drain
+}
+
+func (x *Execution) queueLocked(event Event) bool {
+	x.pending = append(x.pending, event)
+	if x.emitting {
+		return false
+	}
+	x.emitting = true
+	return true
+}
+
+func (x *Execution) drain() {
+	for {
+		x.mu.Lock()
+		if len(x.pending) == 0 {
+			x.emitting = false
+			x.mu.Unlock()
+			return
+		}
+		event := x.pending[0]
+		x.pending = x.pending[1:]
+		x.mu.Unlock()
+		x.emit(event)
+	}
 }
 
 func (x *Execution) step(phaseID PhaseID, stepID StepID) (*executionPhase, *executionStep, error) {

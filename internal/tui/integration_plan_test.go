@@ -50,7 +50,7 @@ func TestBuildIntegrationPhases_PhasesNeverReopen(t *testing.T) {
 				perm.emit(wt, integB, send)
 				progress.ClosePhase(wt, send)
 			}
-			if err := progress.ValidateStream(stream); err != nil {
+			if err := progress.ValidateLegacyStream(stream); err != nil {
 				t.Fatalf("driver emitted an invalid stream: %v", err)
 			}
 

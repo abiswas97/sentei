@@ -32,8 +32,33 @@ func TestValidateStream_LegacyOpenPhaseRetainsDiscoveryCompatibility(t *testing.
 	Declare(Plan{Phases: []PlannedPhase{{Name: "scan", Open: true}}}, emit)
 	emit(Event{Phase: "scan", Step: "found-1", Status: StepDone})
 	ClosePhase("scan", emit)
-	if err := ValidateStream(*events); err != nil {
+	if err := ValidateLegacyStream(*events); err != nil {
 		t.Fatalf("legacy open stream rejected before producer migration: %v", err)
+	}
+}
+
+func TestValidateStream_StrictByDefaultForUnlabeledEvents(t *testing.T) {
+	events := []Event{{Phase: "p", Step: "undeclared", Status: StepRunning}}
+	if err := ValidateStream(events); err == nil {
+		t.Fatal("strict validation accepted unlabeled undeclared work")
+	}
+}
+
+func TestValidateLegacyStream_AllowsLabeledDiscovery(t *testing.T) {
+	events := []Event{{Phase: "p", PhaseLabel: "Phase", Step: "discovered", StepLabel: "Discovered", Status: StepDone}}
+	if err := ValidateLegacyStream(events); err != nil {
+		t.Fatalf("legacy validation inferred strictness from labels: %v", err)
+	}
+}
+
+func TestValidateStream_MixedMetadataDoesNotFallBack(t *testing.T) {
+	events := []Event{
+		{Phase: "p", Step: "declared", Status: StepPending, Of: 1},
+		{Phase: "p", Close: true},
+		{Phase: "p", PhaseLabel: "Phase", Step: "undeclared", StepLabel: "Undeclared", Status: StepDone},
+	}
+	if err := ValidateStream(events); err == nil {
+		t.Fatal("strict validation silently accepted mixed legacy and stable semantics")
 	}
 }
 

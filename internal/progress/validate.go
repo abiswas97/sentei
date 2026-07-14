@@ -2,22 +2,10 @@ package progress
 
 import "fmt"
 
-// ValidateStream checks the honesty invariants a well-formed stream must
-// hold. Stable streams emitted by Start carry labels and require a complete
-// declaration-and-close prefix before work. Unlabeled streams use temporary
-// discovery compatibility until their producers migrate to Execution.
+// ValidateStream checks the stable stream contract: a complete
+// declaration-and-close prefix must precede work, and every transition must
+// target declared identities without mutating terminal state.
 func ValidateStream(events []Event) error {
-	strict := false
-	for _, ev := range events {
-		if ev.PhaseLabel != "" || ev.StepLabel != "" {
-			strict = true
-			break
-		}
-	}
-	if !strict {
-		return validateLegacyStream(events)
-	}
-
 	type declaration struct {
 		checkpoints int
 		terminal    bool
@@ -102,9 +90,9 @@ func ValidateStream(events []Event) error {
 	return nil
 }
 
-// validateLegacyStream preserves discovery semantics for unconverted
-// producers. Start always emits labels and therefore never enters this path.
-func validateLegacyStream(events []Event) error {
+// ValidateLegacyStream preserves discovery semantics for unconverted
+// producers. New code must use ValidateStream.
+func ValidateLegacyStream(events []Event) error {
 	closed := map[PhaseID]bool{}
 	seen := map[string]bool{}
 	reached := map[string]int{}
