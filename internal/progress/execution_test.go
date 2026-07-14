@@ -2,6 +2,7 @@ package progress
 
 import (
 	"errors"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -306,5 +307,94 @@ func TestExecution_RunClaimsPendingStepOnce(t *testing.T) {
 	close(release)
 	if err := <-firstDone; err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestExecution_FinishWaitsForQueuedTerminalEvents(t *testing.T) {
+	delivered := make(chan Event, 16)
+	callbackBlocked := make(chan struct{})
+	releaseCallback := make(chan struct{})
+	var releaseOnce sync.Once
+	defer releaseOnce.Do(func() { close(releaseCallback) })
+
+	x, err := Start(Plan{Phases: []PlannedPhase{{ID: "p", Steps: []PlannedStep{{ID: "a"}, {ID: "b"}}}}}, func(ev Event) {
+		if ev.Step == "a" && ev.Status == StepRunning {
+			close(callbackBlocked)
+			<-releaseCallback
+		}
+		delivered <- ev
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	runningDone := make(chan error, 1)
+	go func() { runningDone <- x.Running("p", "a", 0, "working") }()
+	<-callbackBlocked
+
+	finishStarted := make(chan struct{})
+	finishDone := make(chan error, 1)
+	go func() {
+		close(finishStarted)
+		finishDone <- x.Finish("shutdown")
+	}()
+	<-finishStarted
+	select {
+	case err := <-finishDone:
+		t.Fatalf("Finish returned before blocked callback delivery: %v", err)
+	case <-time.After(100 * time.Millisecond):
+	}
+
+	releaseOnce.Do(func() { close(releaseCallback) })
+	if err := <-runningDone; err != nil {
+		t.Fatal(err)
+	}
+	if err := <-finishDone; err != nil {
+		t.Fatal(err)
+	}
+	close(delivered)
+	events := make([]Event, 0, 6)
+	for ev := range delivered {
+		events = append(events, ev)
+	}
+	if err := ValidateStream(events); err != nil {
+		t.Fatalf("flushed stream invalid: %v", err)
+	}
+	if len(events) != 6 {
+		t.Fatalf("delivered %d events, want 6: %#v", len(events), events)
+	}
+	tail := events[3:]
+	if tail[0].Step != "a" || tail[0].Status != StepRunning ||
+		tail[1].Step != "a" || tail[1].Status != StepSkipped ||
+		tail[2].Step != "b" || tail[2].Status != StepSkipped {
+		t.Fatalf("terminal delivery order = %#v", tail)
+	}
+}
+
+func TestExecution_CallbackPanicBecomesDeliveryError(t *testing.T) {
+	x, err := Start(Plan{Phases: []PlannedPhase{{ID: "p", Steps: []PlannedStep{{ID: "s"}}}}}, func(ev Event) {
+		if ev.Status == StepRunning {
+			panic("callback boom")
+		}
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var runningErr error
+	var escaped any
+	func() {
+		defer func() { escaped = recover() }()
+		runningErr = x.Running("p", "s", 0, "working")
+	}()
+	if escaped != nil {
+		t.Fatalf("callback panic escaped instead of becoming a delivery error: %v", escaped)
+	}
+	if runningErr == nil {
+		t.Fatal("Running hid callback delivery failure")
+	}
+	if !strings.Contains(runningErr.Error(), "callback boom") {
+		t.Fatalf("Running delivery error lost panic detail: %v", runningErr)
+	}
+	if err := x.Finish("shutdown"); err == nil {
+		t.Fatal("Finish did not propagate stored callback delivery failure")
 	}
 }
