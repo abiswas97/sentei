@@ -197,13 +197,15 @@ func TestStartMigrateIntegrationApply_NoStagedCompletesImmediately(t *testing.T)
 	updated, cmd := m.startMigrateIntegrationApply()
 
 	if cmd == nil {
-		t.Fatal("expected a wait command")
+		t.Fatal("expected a preparation command")
 	}
 	wantWT := filepath.Join(bareRoot, "main")
 	if len(updated.integ.targetWorktrees) != 1 || updated.integ.targetWorktrees[0] != wantWT {
 		t.Errorf("targetWorktrees = %v, want [%s] (derived from BareRoot/Branch)", updated.integ.targetWorktrees, wantWT)
 	}
 
+	preparedModel, _ := updated.updateIntegrationProgress(cmd())
+	updated = preparedModel.(Model)
 	events := drainIntegrationApply(t, updated)
 	if len(events) != 0 {
 		t.Errorf("expected no events with nothing staged, got %v", events)
@@ -228,13 +230,15 @@ func TestStartMigrateIntegrationApply_EnablesStagedIntegrations(t *testing.T) {
 	updated, cmd := m.startMigrateIntegrationApply()
 
 	if cmd == nil {
-		t.Fatal("expected a wait command")
+		t.Fatal("expected a preparation command")
 	}
+	preparedModel, _ := updated.updateIntegrationProgress(cmd())
+	updated = preparedModel.(Model)
 	events := drainIntegrationApply(t, updated)
 
 	var sawSetupDone bool
 	for _, ev := range events {
-		if ev.Step == "Setup fake-tool" && ev.Status == progress.StepDone {
+		if ev.StepLabel == "Setup fake-tool" && ev.Status == progress.StepDone {
 			sawSetupDone = true
 		}
 	}

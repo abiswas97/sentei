@@ -306,6 +306,7 @@ func TestStartIntegrationApply_ComputesPlanAndAppliesChanges(t *testing.T) {
 	m.integ.staged = map[string]bool{"enable-me": true, "disable-me": false}
 	m.shell = &mock.Runner{Responses: map[string]mock.Response{
 		wtPath + ":shell[enable-me --version]": {Output: "1.0"}, // already installed
+		wtPath + ":shell[dep1 --version]":      {Output: "1.0"},
 		wtPath + ":shell[enable-me init]":      {Output: "ok"},
 		wtPath + ":shell[disable-me clean]":    {Output: "ok"},
 	}}
@@ -316,16 +317,19 @@ func TestStartIntegrationApply_ComputesPlanAndAppliesChanges(t *testing.T) {
 		t.Errorf("targetWorktrees = %v, want [%s]", updated.integ.targetWorktrees, wtPath)
 	}
 	if cmd == nil {
-		t.Fatal("expected a wait command")
+		t.Fatal("expected a preparation command")
 	}
+	preparedMsg := cmd()
+	preparedModel, _ := updated.updateIntegrationProgress(preparedMsg)
+	updated = preparedModel.(Model)
 
 	events := drainIntegrationApply(t, updated)
 	var sawSetup, sawTeardown bool
 	for _, ev := range events {
-		if ev.Step == "Setup enable-me" && ev.Status == progress.StepDone {
+		if ev.StepLabel == "Setup enable-me" && ev.Status == progress.StepDone {
 			sawSetup = true
 		}
-		if ev.Step == "Teardown disable-me" && ev.Status == progress.StepDone {
+		if ev.StepLabel == "Teardown disable-me" && ev.Status == progress.StepDone {
 			sawTeardown = true
 		}
 	}

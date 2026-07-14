@@ -22,32 +22,20 @@ type integrationWorktreeOutcomes struct {
 	closed   bool
 }
 
-// groupIntegrationEvents folds an apply's event stream into per-worktree step
-// outcomes: groups in first-seen order, one entry per step holding its latest
-// event, plus the phase-close marker. Shared by the progress and summary views.
+// groupIntegrationEvents projects the canonical progress snapshot into the
+// summary's presentation shape without recomputing status, counts, or closure.
 func groupIntegrationEvents(events []progress.Event) []integrationWorktreeOutcomes {
-	var groups []integrationWorktreeOutcomes
-	groupIndex := make(map[string]int)
-	stepIndex := make(map[string]map[string]int)
-
-	for _, ev := range events {
-		gi, exists := groupIndex[ev.Phase]
-		if !exists {
-			gi = len(groups)
-			groupIndex[ev.Phase] = gi
-			groups = append(groups, integrationWorktreeOutcomes{worktree: ev.Phase})
-			stepIndex[ev.Phase] = make(map[string]int)
+	states := progress.Snapshot(events)
+	groups := make([]integrationWorktreeOutcomes, 0, len(states))
+	for _, phase := range states {
+		group := integrationWorktreeOutcomes{worktree: phase.Name, closed: phase.Closed}
+		for _, step := range phase.Steps {
+			group.steps = append(group.steps, integrationStepOutcome{
+				step: step.Name,
+				ev:   progress.Event{Status: step.Status, Message: step.Message, Error: step.Error},
+			})
 		}
-		if ev.Close {
-			groups[gi].closed = true
-			continue
-		}
-		if si, exists := stepIndex[ev.Phase][ev.Step]; exists {
-			groups[gi].steps[si].ev = ev
-		} else {
-			stepIndex[ev.Phase][ev.Step] = len(groups[gi].steps)
-			groups[gi].steps = append(groups[gi].steps, integrationStepOutcome{step: ev.Step, ev: ev})
-		}
+		groups = append(groups, group)
 	}
 	return groups
 }
@@ -57,6 +45,10 @@ func (m Model) updateIntegrationSummary(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyPressMsg:
 		switch {
 		case key.Matches(msg, keys.Confirm), key.Matches(msg, keys.Back):
+			if m.integ.returnView == migrateNextView {
+				m.view = migrateNextView
+				return m, nil
+			}
 			// Reload from disk so the list's active/staged markers always
 			// match persisted state, on success and save-failure alike.
 			m.view = integrationListView
@@ -193,6 +185,12 @@ func (m Model) viewIntegrationSummary() string {
 			max(m.width, 40))))
 		b.WriteString("\n")
 		b.WriteString(styleDim.Render("    The list will show what is actually on disk."))
+		b.WriteString("\n\n")
+	}
+	if m.integ.applyErr != nil {
+		b.WriteString(styleError.Render(truncateWithEllipsis(
+			fmt.Sprintf("  %s Integration preparation failed: %s", indicatorFailed, m.integ.applyErr),
+			max(m.width, 40))))
 		b.WriteString("\n\n")
 	}
 

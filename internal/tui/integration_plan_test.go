@@ -6,93 +6,60 @@ import (
 
 	"github.com/abiswas97/sentei/internal/integration"
 	"github.com/abiswas97/sentei/internal/progress"
+	"github.com/abiswas97/sentei/internal/testutil/mock"
 )
 
-// Simulates the worktree-outer apply event stream for a 2x2 apply (two
-// staged integrations across two worktrees) and asserts the spec scenario
-// "Apply phases never reopen": each worktree phase declares its full total
-// upfront, progresses monotonically, and settles exactly once.
-func TestBuildIntegrationPhases_PhasesNeverReopen(t *testing.T) {
-	integA := integration.Integration{Name: "alpha"}
-	integB := integration.Integration{Name: "beta"}
+func TestIntegrationPreparedApplyUsesStrictFixedStream(t *testing.T) {
 	worktrees := []string{"/wt/feat-1", "/wt/feat-2"}
-
-	permutations := []struct {
-		name string
-		// wantTotal is the phase total once all work has run: the declared
-		// setup steps, plus the visible skipped-install trace where emitted.
-		wantTotal int
-		emit      func(wt string, integ integration.Integration, send func(progress.Event))
-	}{
-		{"success", 2, func(wt string, integ integration.Integration, send func(progress.Event)) {
-			send(progress.Event{Phase: wt, Step: integration.SetupStepName(integ), Status: progress.StepRunning})
-			send(progress.Event{Phase: wt, Step: integration.SetupStepName(integ), Status: progress.StepDone})
-		}},
-		{"failure", 2, func(wt string, integ integration.Integration, send func(progress.Event)) {
-			send(progress.Event{Phase: wt, Step: integration.SetupStepName(integ), Status: progress.StepRunning})
-			send(progress.Event{Phase: wt, Step: integration.SetupStepName(integ), Status: progress.StepFailed, Error: errors.New("boom")})
-		}},
-		{"skip-install", 4, func(wt string, integ integration.Integration, send func(progress.Event)) {
-			send(progress.Event{Phase: wt, Step: integration.InstallStepName(integ), Status: progress.StepSkipped})
-			send(progress.Event{Phase: wt, Step: integration.SetupStepName(integ), Status: progress.StepRunning})
-			send(progress.Event{Phase: wt, Step: integration.SetupStepName(integ), Status: progress.StepDone})
-		}},
+	alpha := integration.Integration{
+		Name: "alpha", Detect: integration.DetectSpec{Command: "alpha detect"},
+		Install: integration.InstallSpec{Command: "alpha install"},
+		Setup:   integration.SetupSpec{Command: "alpha setup {path}", WorkingDir: "worktree"},
+	}
+	beta := integration.Integration{
+		Name: "beta", Detect: integration.DetectSpec{Command: "beta detect"},
+		Install: integration.InstallSpec{Command: "beta install"},
+		Setup:   integration.SetupSpec{Command: "beta setup {path}", WorkingDir: "worktree"},
+	}
+	shell := &mock.Runner{Responses: map[string]mock.Response{
+		"/wt/feat-1:shell[alpha detect]":             {Output: "installed"},
+		"/wt/feat-1:shell[beta detect]":              {Err: errors.New("missing")},
+		"/wt/feat-1:shell[beta install]":             {Output: "installed"},
+		"/wt/feat-1:shell[alpha setup '/wt/feat-1']": {Output: "ok"},
+		"/wt/feat-2:shell[alpha setup '/wt/feat-2']": {Output: "ok"},
+		"/wt/feat-1:shell[beta setup '/wt/feat-1']":  {Output: "ok"},
+		"/wt/feat-2:shell[beta setup '/wt/feat-2']":  {Output: "ok"},
+	}}
+	prepared, err := integration.PrepareApply(shell, "/repo", worktrees[0], []integration.Integration{alpha, beta}, nil, worktrees)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var events []progress.Event
+	prepared.Run(shell, func(event progress.Event) { events = append(events, event) })
+	if err := progress.ValidateStream(events); err != nil {
+		t.Fatalf("strict validation failed: %v", err)
 	}
 
-	for _, perm := range permutations {
-		t.Run(perm.name, func(t *testing.T) {
-			var stream []progress.Event
-			send := func(e progress.Event) { stream = append(stream, e) }
+	declarationEnd := 0
+	for i, event := range events {
+		if event.Close {
+			declarationEnd = i + 1
+		}
+	}
+	_, fixedTotal := progress.CheckpointProgress(progress.Snapshot(events[:declarationEnd]))
+	for prefix := declarationEnd; prefix <= len(events); prefix++ {
+		_, total := progress.CheckpointProgress(progress.Snapshot(events[:prefix]))
+		if total != fixedTotal {
+			t.Fatalf("prefix %d total = %d, want %d", prefix, total, fixedTotal)
+		}
+	}
 
-			progress.Declare(integration.ApplyPlan([]integration.Integration{integA, integB}, nil, worktrees), send)
-			for _, wt := range worktrees {
-				perm.emit(wt, integA, send)
-				perm.emit(wt, integB, send)
-				progress.ClosePhase(wt, send)
-			}
-			if err := progress.ValidateLegacyStream(stream); err != nil {
-				t.Fatalf("driver emitted an invalid stream: %v", err)
-			}
-
-			declared := 0
-			for _, e := range stream {
-				if e.Status == progress.StepPending && !e.Close {
-					declared++
-				}
-			}
-
-			m := NewModel(nil, nil, "/repo")
-			settledAt := map[string]int{}
-			maxTotal := map[string]int{}
-			for i := 1; i <= len(stream); i++ {
-				m.integ.events = stream[:i]
-				phases := m.buildIntegrationPhases()
-				for _, p := range phases {
-					if p.Total < maxTotal[p.Name] {
-						t.Fatalf("prefix %d: phase %s total regressed %d -> %d", i, p.Name, maxTotal[p.Name], p.Total)
-					}
-					maxTotal[p.Name] = p.Total
-					if i > declared && p.Total < 2 {
-						// Declaration burst fully folded: every phase carries
-						// at least its declared floor from then on; visible
-						// skip traces may grow it before close.
-						t.Fatalf("prefix %d: phase %s total = %d, below the declared floor of 2", i, p.Name, p.Total)
-					}
-					if p.Closed && p.Total != perm.wantTotal {
-						t.Fatalf("prefix %d: closed phase %s total = %d, want %d", i, p.Name, p.Total, perm.wantTotal)
-					}
-					if p.Settled() {
-						if settledAt[p.Name] == 0 {
-							settledAt[p.Name] = i
-						}
-					} else if settledAt[p.Name] != 0 {
-						t.Fatalf("prefix %d: phase %s reopened after settling at prefix %d", i, p.Name, settledAt[p.Name])
-					}
-				}
-			}
-			if len(settledAt) != 2 {
-				t.Fatalf("expected both phases to settle, got %v", settledAt)
-			}
-		})
+	m := NewModel(nil, nil, "/repo")
+	m.integ.events = events
+	phases := m.buildIntegrationPhases()
+	for _, phase := range phases {
+		if phase.Total > 0 && !phase.Settled() {
+			t.Fatalf("phase did not settle: %#v", phase)
+		}
 	}
 }

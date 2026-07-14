@@ -10,7 +10,6 @@ import (
 	tea "charm.land/bubbletea/v2"
 
 	"github.com/abiswas97/sentei/internal/integration"
-	"github.com/abiswas97/sentei/internal/progress"
 	"github.com/abiswas97/sentei/internal/repo"
 )
 
@@ -107,29 +106,15 @@ func (m Model) startMigrateIntegrationApply() (Model, tea.Cmd) {
 		wtPath = filepath.Join(result.BareRoot, result.Branch)
 	}
 	m.integ.targetWorktrees = []string{wtPath}
-
-	ch := make(chan progress.Event, 50)
-	doneCh := make(chan struct{}, 1)
-	m.integ.eventCh = ch
-	m.integ.doneCh = doneCh
+	m.integ.preparing = true
+	m.integ.applyErr = nil
 
 	repoPath := result.BareRoot
 	shell := m.shell
-
-	go func() {
-		emit := func(e progress.Event) { ch <- e }
-		if len(toEnable) > 0 {
-			progress.Declare(integration.ApplyPlan(toEnable, nil, []string{wtPath}), emit)
-			for _, integ := range toEnable {
-				integration.EnableIntegration(shell, repoPath, wtPath, []string{wtPath}, integ, emit)
-			}
-			progress.ClosePhase(wtPath, emit)
-		}
-		close(ch)
-		doneCh <- struct{}{}
-	}()
-
-	return m, waitForIntegrationEvent(ch, doneCh)
+	return m, func() tea.Msg {
+		prepared, err := integration.PrepareApply(shell, repoPath, wtPath, toEnable, nil, []string{wtPath})
+		return integrationPreparedMsg{prepared: prepared, err: err}
+	}
 }
 
 func (m Model) viewMigrateIntegrations() string {

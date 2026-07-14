@@ -201,7 +201,8 @@ type integrationState struct {
 	colCursor    int                       // 0-based column index for future expansion //nolint:unused
 
 	// Progress
-	events          []progress.Event    //nolint:unused
+	events          []progress.Event //nolint:unused
+	preparing       bool
 	finalized       bool                // apply result arrived; the hold is showing
 	targetWorktrees []string            // all apply targets, pre-populated as pending phases
 	eventCh         chan progress.Event //nolint:unused
@@ -211,7 +212,8 @@ type integrationState struct {
 	returnView viewState //nolint:unused
 
 	// Apply outcome: persistence error from the last apply, shown in the summary
-	saveErr error
+	saveErr  error
+	applyErr error
 }
 
 type Model struct {
@@ -514,6 +516,9 @@ func (m Model) Init() tea.Cmd {
 // indeterminateWaitActive reports whether a spinner-bearing wait is visible:
 // the cleanup scan or the menu worktree-context load.
 func (m Model) indeterminateWaitActive() bool {
+	if m.view == integrationProgressView && m.integ.preparing {
+		return true
+	}
 	if m.view == cleanupPreviewView && m.cleanupScan == nil {
 		return true
 	}

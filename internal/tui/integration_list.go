@@ -28,6 +28,11 @@ type integrationEventMsg struct {
 
 type integrationApplyDoneMsg struct{}
 
+type integrationPreparedMsg struct {
+	prepared integration.PreparedApply
+	err      error
+}
+
 func (m Model) loadIntegrationState() tea.Cmd {
 	return func() tea.Msg {
 		all := integration.All()
@@ -106,35 +111,29 @@ func (m Model) startIntegrationApply() (Model, tea.Cmd) {
 	}
 
 	m.integ.targetWorktrees = wtPaths
-
-	ch := make(chan progress.Event, 50)
-	doneCh := make(chan struct{}, 1)
-	m.integ.eventCh = ch
-	m.integ.doneCh = doneCh
+	m.integ.preparing = true
+	m.integ.applyErr = nil
 
 	repoPath := m.repoPath
 	shell := m.shell
 	mainWT := m.findSourceWorktree()
+	return m, func() tea.Msg {
+		prepared, err := integration.PrepareApply(shell, repoPath, mainWT, toEnable, toDisable, wtPaths)
+		return integrationPreparedMsg{prepared: prepared, err: err}
+	}
+}
 
+func (m Model) startPreparedIntegrationApply(prepared integration.PreparedApply) (Model, tea.Cmd) {
+	ch := make(chan progress.Event, 50)
+	doneCh := make(chan struct{}, 1)
+	m.integ.eventCh = ch
+	m.integ.doneCh = doneCh
+	shell := m.shell
 	go func() {
-		emit := func(e progress.Event) { ch <- e }
-		// Worktree-outer execution: each worktree phase opens once (its plan
-		// declares the certain steps upfront) and closes exactly once when
-		// that worktree's work is done, so a settled phase can never reopen.
-		progress.Declare(integration.ApplyPlan(toEnable, toDisable, wtPaths), emit)
-		for _, wtPath := range wtPaths {
-			for _, integ := range toEnable {
-				integration.EnableIntegration(shell, repoPath, mainWT, []string{wtPath}, integ, emit)
-			}
-			for _, integ := range toDisable {
-				integration.DisableIntegration(shell, []string{wtPath}, integ, emit)
-			}
-			progress.ClosePhase(wtPath, emit)
-		}
+		prepared.Run(shell, func(event progress.Event) { ch <- event })
 		close(ch)
 		doneCh <- struct{}{}
 	}()
-
 	return m, waitForIntegrationEvent(ch, doneCh)
 }
 

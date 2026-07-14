@@ -7,6 +7,8 @@ import (
 	"strings"
 	"testing"
 
+	tea "charm.land/bubbletea/v2"
+
 	"github.com/abiswas97/sentei/internal/config"
 	"github.com/abiswas97/sentei/internal/integration"
 	"github.com/abiswas97/sentei/internal/progress"
@@ -213,6 +215,38 @@ func TestViewIntegrationProgress_Loading(t *testing.T) {
 
 	if !strings.Contains(output, "Applying integration changes") {
 		t.Errorf("expected title 'Applying integration changes', got:\n%s", output)
+	}
+}
+
+func TestViewIntegrationProgress_PreparingPlanIsIndeterminate(t *testing.T) {
+	m := makeIntegrationModel()
+	m.view = integrationProgressView
+	m.integ.preparing = true
+
+	output := stripAnsi(m.viewIntegrationProgress())
+	if !strings.Contains(output, "Preparing plan...") {
+		t.Fatalf("preparation copy missing:\n%s", output)
+	}
+	bar := m.terminalProgress()
+	if bar == nil || bar.State != tea.ProgressBarIndeterminate {
+		t.Fatalf("terminal progress = %#v, want indeterminate", bar)
+	}
+}
+
+func TestUpdateIntegrationProgress_PreparationErrorIsReported(t *testing.T) {
+	m := makeIntegrationModel()
+	m.view = integrationProgressView
+	m.integ.preparing = true
+	m.integ.returnView = integrationListView
+	prepareErr := errors.New("no target worktree")
+
+	updated, _ := m.updateIntegrationProgress(integrationPreparedMsg{err: prepareErr})
+	m = updated.(Model)
+	if m.integ.preparing || !errors.Is(m.integ.applyErr, prepareErr) {
+		t.Fatalf("preparing=%v applyErr=%v", m.integ.preparing, m.integ.applyErr)
+	}
+	if m.integ.eventCh != nil {
+		t.Fatal("execution channel created after preparation failure")
 	}
 }
 

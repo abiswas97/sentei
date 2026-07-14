@@ -3,6 +3,7 @@ package tui
 import (
 	"maps"
 	"path/filepath"
+	"strings"
 
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
@@ -19,6 +20,16 @@ type integrationFinalizedMsg struct {
 
 func (m Model) updateIntegrationProgress(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case integrationPreparedMsg:
+		m.integ.preparing = false
+		if msg.err != nil {
+			m.integ.applyErr = msg.err
+			m.integ.finalized = true
+			updated, holdCmd := m.holdOrAdvance(integrationSummaryView)
+			return updated, holdCmd
+		}
+		return m.startPreparedIntegrationApply(msg.prepared)
+
 	case tea.KeyPressMsg:
 		if key.Matches(msg, keys.Quit) {
 			return m, tea.Quit
@@ -100,46 +111,29 @@ func (m Model) integrationLayout() ProgressLayout {
 }
 
 func (m Model) viewIntegrationProgress() string {
+	if m.integ.preparing {
+		var b strings.Builder
+		b.WriteString(viewTitle(titleApplyingChanges))
+		b.WriteString("\n\n")
+		b.WriteString(viewSeparator(m.width))
+		b.WriteString("\n\n  ")
+		b.WriteString(shimmerLine(starFrame(m.motionTick)+" Preparing plan...", rampAccent, m.motionTick))
+		b.WriteString("\n")
+		return b.String()
+	}
 	return m.renderProgressLayout(m.integrationLayout())
 }
 
-// buildIntegrationPhases maps apply events onto the shared phase shape, one
-// phase per worktree, with every target worktree visible as pending before
-// its events arrive. Failed step errors are baked into the step label.
 func (m Model) buildIntegrationPhases() []progress.PhaseState {
-	var phases []progress.PhaseState
-	seen := make(map[string]bool)
-
-	for _, g := range groupIntegrationEvents(m.integ.events) {
-		pd := progress.PhaseState{Name: filepath.Base(g.worktree), Closed: g.closed}
-		seen[g.worktree] = true
-		for _, s := range g.steps {
-			label := s.step
-			if s.ev.Error != nil {
-				// One-line rows law: live progress shows only the error's
-				// final line; the summary's peek and portal carry the rest.
-				label += " " + errorPeekLast(s.ev.Error.Error(), max(m.width-10, 20))
+	states := progress.Snapshot(m.integ.events)
+	for phaseIndex := range states {
+		states[phaseIndex].Name = filepath.Base(states[phaseIndex].Name)
+		for stepIndex := range states[phaseIndex].Steps {
+			step := &states[phaseIndex].Steps[stepIndex]
+			if step.Error != nil {
+				step.Name += " " + errorPeekLast(step.Error.Error(), max(m.width-10, 20))
 			}
-			step := progress.StepState{Name: label, Status: s.ev.Status, Message: s.ev.Message, Declared: 1}
-			switch s.ev.Status {
-			case progress.StepDone, progress.StepSkipped:
-				pd.Done++
-				step.Reached = 1
-			case progress.StepFailed:
-				pd.Failed++
-				pd.Done++
-				step.Reached = 1
-			}
-			pd.Steps = append(pd.Steps, step)
-		}
-		pd.Total = len(pd.Steps)
-		phases = append(phases, pd)
-	}
-
-	for _, path := range m.integ.targetWorktrees {
-		if !seen[path] {
-			phases = append(phases, progress.PhaseState{Name: filepath.Base(path)})
 		}
 	}
-	return phases
+	return states
 }

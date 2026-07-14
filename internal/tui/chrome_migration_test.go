@@ -57,25 +57,13 @@ func TestBuildRemovalPhases_PruneStaging(t *testing.T) {
 	}
 }
 
-func TestBuildIntegrationPhases_PrePopulatesTargets(t *testing.T) {
+func TestBuildIntegrationPhases_WaitsForPreparedDeclaration(t *testing.T) {
 	m := NewMenuModel(nil, nil, "/repo", nil, repo.ContextBareRepo)
 	m.integ.targetWorktrees = []string{"/repo/feature-a", "/repo/feature-b"}
 
 	phases := m.buildIntegrationPhases()
-	if len(phases) != 2 {
-		t.Fatalf("expected 2 pre-populated phases, got %d", len(phases))
-	}
-	for _, p := range phases {
-		if p.Total != 0 {
-			t.Errorf("pre-populated target %q must be pending (total 0), got %d", p.Name, p.Total)
-		}
-	}
-
-	view := stripANSI(m.viewIntegrationProgress())
-	for _, want := range []string{"feature-a", "feature-b", "pending"} {
-		if !strings.Contains(view, want) {
-			t.Errorf("expected %q visible before events arrive, view:\n%s", want, view)
-		}
+	if len(phases) != 0 {
+		t.Fatalf("expected no determinate phases before preparation, got %d", len(phases))
 	}
 }
 
