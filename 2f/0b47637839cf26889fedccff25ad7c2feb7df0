@@ -1,0 +1,60 @@
+internal/tui/migrate_integrations_test.go
+  s_47b5c057f8c030::t_d1fec7f2b3496e 241
+  s_47b5c057f8c030::t_18c7dc9cb067ee 200,207-208,233,235-236
+internal/integration/apply.go
+  s_47b5c057f8c030::t_d545617798d9b6 20,22-24
+  s_47b5c057f8c030::t_56a61a382ae8bf 48,165,235
+  s_47b5c057f8c030::t_892e2fe5fe6fbc 4-5,7,11-12,16,26,28,30-32,34-43,51-78,80-92,107-108,110-118,120-134,136-144,146-161,166-180,182-184,186-193,195-213,216-234,236-285,287,289
+  s_47b5c057f8c030::t_8fb36486c83c75 29,119,135,162,185
+  s_47b5c057f8c030::t_62800652511820 79,93-106,109
+  s_47b5c057f8c030::t_4df49c4f4b1e64 18-19,21,45-47,163-164
+internal/tui/integration_list.go
+  s_47b5c057f8c030::t_9555a71bb840d1 31-35,114-124,126,133
+internal/tui/integration_progress_test.go
+  s_47b5c057f8c030::t_a4f36cf30284e0 221-235
+  s_47b5c057f8c030::t_60897399fe29c1 236-252
+  s_47b5c057f8c030::t_a243ad4b478706 10-11
+internal/tui/integration_progress.go
+  s_47b5c057f8c030::t_9555a71bb840d1 6,23-32,114-123,128-134,138
+internal/tui/integration_summary.go
+  s_47b5c057f8c030::t_d34c1f22bf33c2 35
+  s_47b5c057f8c030::t_9034b1bc8c8924 25-26,28-34,36,38
+  s_47b5c057f8c030::t_9555a71bb840d1 48-51,190-193
+  s_47b5c057f8c030::t_2fedb53de3d706 194-195
+internal/tui/model.go
+  s_47b5c057f8c030::t_cff50c6e1fa4f6 204,215
+  s_47b5c057f8c030::t_9555a71bb840d1 205,216,519-521
+internal/tui/integration_plan_test.go
+  s_47b5c057f8c030::t_ecf3efe5269649 9,12,14-16,18-21,23-24,28-40,43-55,57-63
+  s_47b5c057f8c030::t_4ce62f5a298efe 17,22,25-27
+internal/tui/chrome_migration_test.go
+  s_47b5c057f8c030::t_d1fec7f2b3496e 60,65-66
+internal/tui/migrate_integrations.go
+  s_47b5c057f8c030::t_9555a71bb840d1 109-110,114-117
+internal/integration/apply_test.go
+  s_47b5c057f8c030::t_9b41eea33b8591 112-115,137-143
+  s_47b5c057f8c030::t_9656229c4e2886 26-38,168-170,175,179-189,193-198,200,204-205,257-259,261,263,267-268,272-276,280-282,286-287
+  s_47b5c057f8c030::t_3115d7ada6b2aa 4,9,15-16,39,41-46,48,51-59,61-71,73-75,77-84,87,89-98,100-102,104-105,107-111,116-128,133-136,145-147,149-154,157-164
+  s_47b5c057f8c030::t_60897399fe29c1 217-219,224,226,230-232,239-243,245,249-255
+  s_47b5c057f8c030::t_d34c1f22bf33c2 220-223,227-228,233-235,246-247
+  s_47b5c057f8c030::t_4df49c4f4b1e64 6-7,171-173,176-177,201-203,206-207,209-213,260,264-266,269-271,277-279,283-285,288-295
+internal/tui/integration_list_test.go
+  s_47b5c057f8c030::t_18c7dc9cb067ee 320,322-324
+  s_47b5c057f8c030::t_d1fec7f2b3496e 309,329,332
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.13",
+  "base_commit_sha": "2f0b47637839cf26889fedccff25ad7c2feb7df0",
+  "prompts": {},
+  "sessions": {
+    "s_47b5c057f8c030": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f5f62-a0bd-7f92-96e2-b1de98524420",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>"
+    }
+  }
+}
