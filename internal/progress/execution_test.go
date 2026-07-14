@@ -1,0 +1,208 @@
+package progress
+
+import (
+	"errors"
+	"sync"
+	"testing"
+)
+
+func TestExecution_FinishSettlesDistinctStepsWithEqualLabels(t *testing.T) {
+	plan := Plan{Phases: []PlannedPhase{{ID: "integrations", Label: "Integrations", Steps: []PlannedStep{
+		{ID: "ccc.copy-index", Label: "Copy index from main"},
+		{ID: "crg.copy-index", Label: "Copy index from main"},
+	}}}}
+	var events []Event
+	x, err := Start(plan, func(ev Event) { events = append(events, ev) })
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := x.Done("integrations", "ccc.copy-index", ""); err != nil {
+		t.Fatal(err)
+	}
+	if err := x.Finish("blocked by earlier failure"); err != nil {
+		t.Fatal(err)
+	}
+
+	states := Snapshot(events)
+	if len(states) != 1 || len(states[0].Steps) != 2 {
+		t.Fatalf("states = %#v", states)
+	}
+	if !states[0].Settled() {
+		t.Fatalf("phase did not settle: %#v", states[0])
+	}
+	if states[0].Steps[0].ID != "ccc.copy-index" || states[0].Steps[1].ID != "crg.copy-index" {
+		t.Fatalf("step IDs collapsed: %#v", states[0].Steps)
+	}
+	if states[0].Steps[1].Status != StepSkipped {
+		t.Fatalf("second step = %#v", states[0].Steps[1])
+	}
+	if states[0].Steps[1].Message != "blocked by earlier failure" {
+		t.Fatalf("skip reason = %q", states[0].Steps[1].Message)
+	}
+	if err := ValidateStream(events); err != nil {
+		t.Fatalf("execution emitted invalid stream: %v", err)
+	}
+}
+
+func TestExecution_RejectsUndeclaredAndTerminalMutation(t *testing.T) {
+	x, err := Start(Plan{Phases: []PlannedPhase{{ID: "p", Label: "Phase", Steps: []PlannedStep{{ID: "s", Label: "Step"}}}}}, func(Event) {})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := x.Done("p", "missing", ""); err == nil {
+		t.Fatal("undeclared step accepted")
+	}
+	if _, err := x.Done("p", "s", ""); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := x.Fail("p", "s", errors.New("late")); err == nil {
+		t.Fatal("terminal mutation accepted")
+	}
+}
+
+func TestExecution_CheckpointsAreMonotonicUnderConcurrency(t *testing.T) {
+	var mu sync.Mutex
+	var events []Event
+	x, err := Start(Plan{Phases: []PlannedPhase{{ID: "p", Label: "Phase", Steps: []PlannedStep{{ID: "s", Label: "Step", Checkpoints: 2}}}}}, func(ev Event) {
+		mu.Lock()
+		defer mu.Unlock()
+		events = append(events, ev)
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var wg sync.WaitGroup
+	for i := 0; i < 20; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			_ = x.Running("p", "s", 1, "first")
+		}()
+	}
+	wg.Wait()
+	if err := x.Running("p", "s", 2, "second"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := x.Done("p", "s", "complete"); err != nil {
+		t.Fatal(err)
+	}
+
+	mu.Lock()
+	gotEvents := append([]Event(nil), events...)
+	mu.Unlock()
+	if err := ValidateStream(gotEvents); err != nil {
+		t.Fatalf("concurrent stream invalid: %v", err)
+	}
+	step := Snapshot(gotEvents)[0].Steps[0]
+	if step.Reached != 2 || step.Declared != 2 {
+		t.Fatalf("checkpoint progress = %d/%d, want 2/2", step.Reached, step.Declared)
+	}
+}
+
+func TestExecution_StartRejectsInvalidIDs(t *testing.T) {
+	tests := []struct {
+		name string
+		plan Plan
+	}{
+		{"empty phase ID", Plan{Phases: []PlannedPhase{{Label: "Phase"}}}},
+		{"duplicate phase ID", Plan{Phases: []PlannedPhase{{ID: "p"}, {ID: "p"}}}},
+		{"empty step ID", Plan{Phases: []PlannedPhase{{ID: "p", Steps: []PlannedStep{{Label: "Step"}}}}}},
+		{"duplicate step ID", Plan{Phases: []PlannedPhase{{ID: "p", Steps: []PlannedStep{{ID: "s"}, {ID: "s"}}}}}},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			if _, err := Start(tc.plan, func(Event) {}); err == nil {
+				t.Fatal("invalid plan accepted")
+			}
+		})
+	}
+}
+
+func TestExecution_StartEmitsCompleteNormalizedDeclarationPrefix(t *testing.T) {
+	var events []Event
+	_, err := Start(Plan{Phases: []PlannedPhase{
+		{ID: "a", Label: "Alpha", Steps: []PlannedStep{{ID: "one", Label: "One", Checkpoints: 0}}},
+		{ID: "b", Label: "Beta", Steps: []PlannedStep{{ID: "two", Label: "Two", Checkpoints: 3}}},
+	}}, func(ev Event) { events = append(events, ev) })
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(events) != 4 {
+		t.Fatalf("events = %#v, want two declarations then two closes", events)
+	}
+	if events[0].Status != StepPending || events[0].Of != 1 || events[0].PhaseLabel != "Alpha" || events[0].StepLabel != "One" {
+		t.Fatalf("first declaration = %#v", events[0])
+	}
+	if events[1].Status != StepPending || events[1].Of != 3 {
+		t.Fatalf("second declaration = %#v", events[1])
+	}
+	if !events[2].Close || !events[3].Close {
+		t.Fatalf("declaration was not a complete prefix: %#v", events)
+	}
+	if err := ValidateStream(events); err != nil {
+		t.Fatalf("declaration stream invalid: %v", err)
+	}
+}
+
+func TestExecution_RejectsCheckpointRegressionAndOverflow(t *testing.T) {
+	x, err := Start(Plan{Phases: []PlannedPhase{{ID: "p", Steps: []PlannedStep{{ID: "s", Checkpoints: 2}}}}}, func(Event) {})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := x.Running("p", "s", 1, "first"); err != nil {
+		t.Fatal(err)
+	}
+	if err := x.Running("p", "s", 0, "stale"); err == nil {
+		t.Fatal("checkpoint regression accepted")
+	}
+	if err := x.Running("p", "s", 3, "overflow"); err == nil {
+		t.Fatal("checkpoint overflow accepted")
+	}
+}
+
+func TestExecution_SkipPendingLeavesRunningStepAlone(t *testing.T) {
+	var events []Event
+	x, err := Start(Plan{Phases: []PlannedPhase{{ID: "p", Steps: []PlannedStep{{ID: "running"}, {ID: "pending"}}}}}, func(ev Event) {
+		events = append(events, ev)
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := x.Running("p", "running", 0, ""); err != nil {
+		t.Fatal(err)
+	}
+	if err := x.SkipPending("p", "blocked"); err != nil {
+		t.Fatal(err)
+	}
+	states := Snapshot(events)
+	if states[0].Steps[0].Status != StepRunning || states[0].Steps[1].Status != StepSkipped {
+		t.Fatalf("steps = %#v", states[0].Steps)
+	}
+}
+
+func TestExecution_RunDoesNotHoldLockWhileFunctionRuns(t *testing.T) {
+	x, err := Start(Plan{Phases: []PlannedPhase{{ID: "p", Steps: []PlannedStep{{ID: "run"}, {ID: "other"}}}}}, func(Event) {})
+	if err != nil {
+		t.Fatal(err)
+	}
+	entered := make(chan struct{})
+	release := make(chan struct{})
+	done := make(chan error, 1)
+	go func() {
+		_, err := x.Run("p", "run", func() (string, error) {
+			close(entered)
+			<-release
+			return "ok", nil
+		})
+		done <- err
+	}()
+	<-entered
+	if _, err := x.Skip("p", "other", "not needed"); err != nil {
+		t.Fatalf("parallel transition blocked or failed: %v", err)
+	}
+	close(release)
+	if err := <-done; err != nil {
+		t.Fatal(err)
+	}
+}

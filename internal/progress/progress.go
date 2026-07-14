@@ -5,6 +5,14 @@
 // the fold from an event stream to per-phase display state.
 package progress
 
+// PhaseID and StepID are stable identities. Labels are presentation and may
+// be repeated or changed without changing the work they identify.
+//
+// These remain aliases temporarily so legacy producers can populate Event
+// fields from strings while they migrate to Execution.
+type PhaseID = string
+type StepID = string
+
 type StepStatus int
 
 const (
@@ -17,6 +25,7 @@ const (
 
 // StepResult is the recorded outcome of a single step within a phase.
 type StepResult struct {
+	ID      StepID
 	Name    string
 	Status  StepStatus
 	Message string
@@ -36,8 +45,10 @@ type Phase struct {
 // phase as complete-in-plan (no more steps will be added). A Running event
 // with Checkpoint set reports intra-step progress ("reached k of Of").
 type Event struct {
-	Phase      string
-	Step       string
+	Phase      PhaseID
+	PhaseLabel string
+	Step       StepID
+	StepLabel  string
 	Status     StepStatus
 	Checkpoint int  // reached checkpoint (1-based) within the step, on Running events
 	Of         int  // the step's declared checkpoint count (>= 1 when set)

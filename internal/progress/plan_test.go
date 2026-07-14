@@ -27,23 +27,13 @@ func TestDeclare_EstablishesTotalsBeforeWork(t *testing.T) {
 	}
 }
 
-func TestDeclare_OpenPhaseAcceptsStepsUntilClosed(t *testing.T) {
+func TestValidateStream_LegacyOpenPhaseRetainsDiscoveryCompatibility(t *testing.T) {
 	events, emit := collectEvents()
 	Declare(Plan{Phases: []PlannedPhase{{Name: "scan", Open: true}}}, emit)
 	emit(Event{Phase: "scan", Step: "found-1", Status: StepDone})
-	if err := ValidateStream(*events); err != nil {
-		t.Fatalf("appending to an open phase must be valid: %v", err)
-	}
-
-	states := Snapshot(*events)
-	if states[0].Settled() {
-		t.Error("open phase must not settle before its close marker")
-	}
-
 	ClosePhase("scan", emit)
-	states = Snapshot(*events)
-	if !states[0].Settled() {
-		t.Error("closed phase with all steps resolved must settle")
+	if err := ValidateStream(*events); err != nil {
+		t.Fatalf("legacy open stream rejected before producer migration: %v", err)
 	}
 }
 
@@ -136,6 +126,75 @@ func TestValidateStream_FlagsNewStepAfterClose(t *testing.T) {
 	}
 	if err := ValidateStream(events[:3]); err != nil {
 		t.Errorf("work on declared steps after close is legitimate: %v", err)
+	}
+}
+
+func TestValidateStream_RequiresCompleteDeclarationPrefix(t *testing.T) {
+	tests := []struct {
+		name   string
+		events []Event
+	}{
+		{
+			name: "undeclared work",
+			events: []Event{
+				{Phase: "p", PhaseLabel: "Phase", Close: true},
+				{Phase: "p", Step: "missing", Status: StepRunning},
+			},
+		},
+		{
+			name: "declaration after close",
+			events: []Event{
+				{Phase: "p", PhaseLabel: "Phase", Step: "s", StepLabel: "Step", Status: StepPending, Of: 1},
+				{Phase: "p", PhaseLabel: "Phase", Close: true},
+				{Phase: "q", Step: "late", Status: StepPending, Of: 1},
+			},
+		},
+		{
+			name: "work before every phase closes",
+			events: []Event{
+				{Phase: "p", PhaseLabel: "Phase", Step: "s", StepLabel: "Step", Status: StepPending, Of: 1},
+				{Phase: "q", PhaseLabel: "Other", Step: "t", StepLabel: "Other step", Status: StepPending, Of: 1},
+				{Phase: "p", Close: true},
+				{Phase: "p", Step: "s", Status: StepRunning},
+			},
+		},
+		{
+			name: "declared phase never closes",
+			events: []Event{
+				{Phase: "p", PhaseLabel: "Phase", Step: "s", StepLabel: "Step", Status: StepPending, Of: 1},
+			},
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			if err := ValidateStream(tc.events); err == nil {
+				t.Fatal("invalid stream accepted")
+			}
+		})
+	}
+}
+
+func TestValidateStream_RejectsTerminalMutationAndCheckpointErrors(t *testing.T) {
+	prefix := []Event{
+		{Phase: "p", PhaseLabel: "Phase", Step: "s", StepLabel: "Step", Status: StepPending, Of: 2},
+		{Phase: "p", PhaseLabel: "Phase", Close: true},
+	}
+	tests := []struct {
+		name string
+		work []Event
+	}{
+		{"terminal mutation", []Event{{Phase: "p", Step: "s", Status: StepDone}, {Phase: "p", Step: "s", Status: StepFailed}}},
+		{"checkpoint regression", []Event{{Phase: "p", Step: "s", Status: StepRunning, Checkpoint: 2}, {Phase: "p", Step: "s", Status: StepRunning, Checkpoint: 1}}},
+		{"checkpoint overflow", []Event{{Phase: "p", Step: "s", Status: StepRunning, Checkpoint: 3}}},
+		{"checkpoint total changed", []Event{{Phase: "p", Step: "s", Status: StepRunning, Checkpoint: 1, Of: 3}}},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			events := append(append([]Event(nil), prefix...), tc.work...)
+			if err := ValidateStream(events); err == nil {
+				t.Fatal("invalid stream accepted")
+			}
+		})
 	}
 }
 

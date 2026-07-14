@@ -17,7 +17,7 @@ func TestRunStep_Success(t *testing.T) {
 		return "did it", nil
 	})
 
-	want := StepResult{Name: "Step", Status: StepDone, Message: "did it"}
+	want := StepResult{ID: "Step", Name: "Step", Status: StepDone, Message: "did it"}
 	if result != want {
 		t.Errorf("result = %+v, want %+v", result, want)
 	}

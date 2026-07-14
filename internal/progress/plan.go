@@ -1,8 +1,7 @@
 package progress
 
 // Plan declares a flow's work upfront: phases, their steps, and each step's
-// checkpoint count. Declare compiles it into the event stream, so the stream
-// stays the single source of truth for totals.
+// checkpoint count. Start validates and owns execution of this plan.
 type Plan struct {
 	Phases []PlannedPhase
 }
@@ -11,28 +10,42 @@ type Plan struct {
 // declaration (scan-style discovery) and must be closed explicitly via
 // ClosePhase; all other phases are closed by Declare itself.
 type PlannedPhase struct {
-	Name  string
+	ID    PhaseID
+	Label string
 	Steps []PlannedStep
-	Open  bool
+
+	// Name and Open are temporary compatibility fields for producers that have
+	// not moved to Execution. Start deliberately does not accept them as IDs.
+	Name string
+	Open bool
 }
 
 // PlannedStep declares one step. Checkpoints below 1 declare an atomic step
 // (one checkpoint: its resolution).
 type PlannedStep struct {
+	ID          StepID
+	Label       string
 	Name        string
 	Checkpoints int
 }
 
-// Declare compiles the plan into the stream: one Pending event per planned
-// step carrying its checkpoint count, then a close marker for every phase
-// not marked Open.
+// Declare is a temporary adapter for unconverted producers. New code uses
+// Start, which emits stable labels and enforces the complete-prefix contract.
 func Declare(plan Plan, emit func(Event)) {
 	for _, phase := range plan.Phases {
+		phaseID := phase.ID
+		if phaseID == "" {
+			phaseID = phase.Name
+		}
 		for _, step := range phase.Steps {
-			emit(Event{Phase: phase.Name, Step: step.Name, Status: StepPending, Of: max(step.Checkpoints, 1)})
+			stepID := step.ID
+			if stepID == "" {
+				stepID = step.Name
+			}
+			emit(Event{Phase: phaseID, Step: stepID, Status: StepPending, Of: max(step.Checkpoints, 1)})
 		}
 		if !phase.Open {
-			emit(Event{Phase: phase.Name, Close: true})
+			emit(Event{Phase: phaseID, Close: true})
 		}
 	}
 }

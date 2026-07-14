@@ -4,6 +4,7 @@ package progress
 // first-appearance order, the derived counts, and whether the phase's step
 // set is final (Closed).
 type PhaseState struct {
+	ID     PhaseID
 	Name   string
 	Steps  []StepState
 	Total  int
@@ -17,9 +18,11 @@ type PhaseState struct {
 // have been crossed, monotonic and clamped to Declared. Resolution (Done,
 // Failed, Skipped) reaches the final checkpoint.
 type StepState struct {
+	ID       StepID
 	Name     string
 	Status   StepStatus
 	Message  string
+	Error    error
 	Reached  int
 	Declared int
 }
@@ -53,21 +56,26 @@ func CheckpointProgress(states []PhaseState) (reached, declared int) {
 // checkpoint counts, and the Closed flag; the fold is forgiving toward
 // undeclared streams, which keep discovery semantics.
 func Snapshot(events []Event) []PhaseState {
-	phases := map[string]*PhaseState{}
-	var order []string
+	phases := map[PhaseID]*PhaseState{}
+	var order []PhaseID
 
-	phaseFor := func(name string) *PhaseState {
-		ps, exists := phases[name]
+	phaseFor := func(id PhaseID, label string) *PhaseState {
+		ps, exists := phases[id]
 		if !exists {
-			ps = &PhaseState{Name: name}
-			phases[name] = ps
-			order = append(order, name)
+			if label == "" {
+				label = id
+			}
+			ps = &PhaseState{ID: id, Name: label}
+			phases[id] = ps
+			order = append(order, id)
+		} else if ps.Name == "" && label != "" {
+			ps.Name = label
 		}
 		return ps
 	}
 
 	for _, ev := range events {
-		ps := phaseFor(ev.Phase)
+		ps := phaseFor(ev.Phase, ev.PhaseLabel)
 		if ev.Close {
 			ps.Closed = true
 			continue
@@ -75,20 +83,30 @@ func Snapshot(events []Event) []PhaseState {
 
 		idx := -1
 		for i := range ps.Steps {
-			if ps.Steps[i].Name == ev.Step {
+			if ps.Steps[i].ID == ev.Step {
 				idx = i
 				break
 			}
 		}
 		if idx == -1 {
-			ps.Steps = append(ps.Steps, StepState{Name: ev.Step, Declared: 1})
+			label := ev.StepLabel
+			if label == "" {
+				label = ev.Step
+			}
+			ps.Steps = append(ps.Steps, StepState{ID: ev.Step, Name: label, Declared: 1})
 			idx = len(ps.Steps) - 1
 		}
 		step := &ps.Steps[idx]
+		if step.Name == "" && ev.StepLabel != "" {
+			step.Name = ev.StepLabel
+		}
 
 		step.Status = ev.Status
 		if ev.Message != "" {
 			step.Message = ev.Message
+		}
+		if ev.Error != nil {
+			step.Error = ev.Error
 		}
 		step.Declared = max(step.Declared, ev.Of)
 		switch ev.Status {
@@ -100,8 +118,8 @@ func Snapshot(events []Event) []PhaseState {
 	}
 
 	var result []PhaseState
-	for _, name := range order {
-		ps := phases[name]
+	for _, id := range order {
+		ps := phases[id]
 		ps.Total = len(ps.Steps)
 		for _, s := range ps.Steps {
 			switch s.Status {

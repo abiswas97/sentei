@@ -1,6 +1,7 @@
 package progress
 
 import (
+	"errors"
 	"reflect"
 	"testing"
 )
@@ -75,6 +76,22 @@ func TestSnapshot_DeterministicAndOrderPreserving(t *testing.T) {
 	}
 	if first[0].Steps[0].Name != "b1" || first[0].Steps[1].Name != "b2" {
 		t.Errorf("steps must keep first-mention order within their phase, got %+v", first[0].Steps)
+	}
+}
+
+func TestSnapshot_PreservesErrorAndLabel(t *testing.T) {
+	stepErr := errors.New("boom")
+	got := Snapshot([]Event{
+		{Phase: "p", PhaseLabel: "Readable phase", Step: "s", StepLabel: "Readable step", Status: StepPending, Of: 1},
+		{Phase: "p", PhaseLabel: "Readable phase", Close: true},
+		{Phase: "p", Step: "s", Status: StepFailed, Error: stepErr},
+	})
+	if len(got) != 1 || got[0].ID != "p" || got[0].Name != "Readable phase" {
+		t.Fatalf("phase = %#v", got)
+	}
+	step := got[0].Steps[0]
+	if step.ID != "s" || step.Name != "Readable step" || !errors.Is(step.Error, stepErr) {
+		t.Fatalf("step = %#v", step)
 	}
 }
 

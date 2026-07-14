@@ -11,10 +11,10 @@ func RunStep(phase, step string, emit func(Event), fn StepFunc) StepResult {
 	msg, err := fn()
 	if err != nil {
 		emit(Event{Phase: phase, Step: step, Status: StepFailed, Error: err})
-		return StepResult{Name: step, Status: StepFailed, Error: err}
+		return StepResult{ID: step, Name: step, Status: StepFailed, Error: err}
 	}
 	emit(Event{Phase: phase, Step: step, Status: StepDone, Message: msg})
-	return StepResult{Name: step, Status: StepDone, Message: msg}
+	return StepResult{ID: step, Name: step, Status: StepDone, Message: msg}
 }
 
 // PhaseRecorder builds a Phase step by step for sequential flows, mirroring
@@ -38,21 +38,21 @@ func (r *PhaseRecorder) Step(name string, fn StepFunc) bool {
 
 // Done records a successful step outside the standard Step flow.
 func (r *PhaseRecorder) Done(name, message string) {
-	r.phase.Steps = append(r.phase.Steps, StepResult{Name: name, Status: StepDone, Message: message})
+	r.phase.Steps = append(r.phase.Steps, StepResult{ID: name, Name: name, Status: StepDone, Message: message})
 	r.emit(Event{Phase: r.phase.Name, Step: name, Status: StepDone, Message: message})
 }
 
 // Fail records a failed step outside the standard Step flow (e.g. a
 // precondition that fails before the step starts running).
 func (r *PhaseRecorder) Fail(name string, err error) {
-	r.phase.Steps = append(r.phase.Steps, StepResult{Name: name, Status: StepFailed, Error: err})
+	r.phase.Steps = append(r.phase.Steps, StepResult{ID: name, Name: name, Status: StepFailed, Error: err})
 	r.emit(Event{Phase: r.phase.Name, Step: name, Status: StepFailed, Error: err})
 }
 
 // Skip records a non-failing skipped step (e.g. best-effort work that could
 // not run).
 func (r *PhaseRecorder) Skip(name, message string) {
-	r.phase.Steps = append(r.phase.Steps, StepResult{Name: name, Status: StepSkipped, Message: message})
+	r.phase.Steps = append(r.phase.Steps, StepResult{ID: name, Name: name, Status: StepSkipped, Message: message})
 	r.emit(Event{Phase: r.phase.Name, Step: name, Status: StepSkipped, Message: message})
 }
 
