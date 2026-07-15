@@ -16,8 +16,11 @@ vhs validate .demos/progress-arc/*.tape
 vhs .demos/progress-arc/removal-success.tape
 ```
 
-Run `setup-fixture.sh` again before each standalone recording. It recreates only
-named children of the exact fixture root, isolates HOME/XDG and Git identity,
+Each tape first changes to `/`, runs `setup-fixture.sh`, chains setup with
+`&&`, then changes to the fixture repository with another fail-closed `&&`
+before launching Sentei. A missing fixture can therefore never fall back to
+the caller's working directory. Setup recreates
+only named children of the exact fixture root, isolates HOME/XDG and Git identity,
 and installs runtime shims. The Git shim denies network-capable verbs and
 rejects absolute worktree paths outside the fixture. Network clients, package
 managers, and `gh` fail closed. The `ccc` shim proves presence and initialization,

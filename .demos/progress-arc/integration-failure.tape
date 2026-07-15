@@ -6,9 +6,9 @@ Set FontSize 16
 Set TypingSpeed 20ms
 Set Framerate 30
 Hide
-Type "source /tmp/sentei-vhs-progress-arc/demo.env; cd /tmp/sentei-vhs-progress-arc/repo/demo.git; stty rows 24 cols 80" Enter
+Type "cd / && /Users/abiswas/code/personal/sentei/progress-arc/.demos/progress-arc/setup-fixture.sh >/dev/null && source /tmp/sentei-vhs-progress-arc/demo.env && cd /tmp/sentei-vhs-progress-arc/repo/demo.git && stty rows 24 cols 80" Enter
 Show
-Type "/tmp/sentei-vhs-progress-arc/bin/sentei-after" Enter
+Type "cd /tmp/sentei-vhs-progress-arc/repo/demo.git && /tmp/sentei-vhs-progress-arc/bin/sentei-after" Enter
 Sleep 3s
 Down
 Sleep 1s
