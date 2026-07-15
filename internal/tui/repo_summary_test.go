@@ -12,6 +12,14 @@ import (
 	"github.com/abiswas97/sentei/internal/repo"
 )
 
+func TestCloneFailedPropagatesContractError(t *testing.T) {
+	want := errors.New("delivery")
+	failed, err := cloneFailed(repo.CloneResult{Err: want})
+	if !failed || !errors.Is(err, want) {
+		t.Fatalf("cloneFailed = %v, %v", failed, err)
+	}
+}
+
 func makeRepoSummaryModel(result any) Model {
 	m := NewMenuModel(nil, nil, "/repo", &config.Config{}, repo.ContextNoRepo)
 	m.repo.result = result

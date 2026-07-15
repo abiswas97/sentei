@@ -165,8 +165,16 @@ func TestMigrate_DetachedHead_RejectedBeforeDestruction(t *testing.T) {
 	if validate == nil || !validate.HasFailures() {
 		t.Fatal("detached HEAD must fail validation")
 	}
-	if findPhase(result.Phases, "Backup") != nil || findPhase(result.Phases, "Migrate") != nil {
-		t.Error("no destructive phase should run after a validation failure")
+	for _, phaseName := range []string{"Backup", "Migrate", "Copy"} {
+		phase := findPhase(result.Phases, phaseName)
+		if phase == nil {
+			t.Fatalf("prepared phase %q missing", phaseName)
+		}
+		for _, step := range phase.Steps {
+			if step.Status != progress.StepSkipped {
+				t.Errorf("%s/%s status = %v, want skipped", phaseName, step.Name, step.Status)
+			}
+		}
 	}
 	for _, c := range runner.Calls {
 		if strings.Contains(c, "clone --bare") {
@@ -293,9 +301,15 @@ func TestMigrate_BackupFailure_LeavesNoDestructiveRestore(t *testing.T) {
 	if result.BackupPath != "" {
 		t.Errorf("BackupPath must be empty on backup failure, got %q", result.BackupPath)
 	}
-	// The Migrate phase must never have run, so the repo root is untouched.
-	if findPhase(result.Phases, "Migrate") != nil {
-		t.Error("Migrate phase must not run after a backup failure")
+	// The Migrate phase is declared up front but every operation remains skipped.
+	migrate := findPhase(result.Phases, "Migrate")
+	if migrate == nil {
+		t.Fatal("prepared Migrate phase missing")
+	}
+	for _, step := range migrate.Steps {
+		if step.Status != progress.StepSkipped {
+			t.Errorf("Migrate/%s status = %v, want skipped", step.Name, step.Status)
+		}
 	}
 }
 

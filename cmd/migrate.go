@@ -41,6 +41,9 @@ func RunMigrate(args []string) error {
 	}
 
 	result := repo.Migrate(runner, shell, migrateOpts, printMigrateEvent)
+	if err := migrateResultError(result); err != nil {
+		return err
+	}
 
 	fmt.Println()
 	for _, phase := range result.Phases {
@@ -74,6 +77,13 @@ func RunMigrate(args []string) error {
 		}
 	}
 
+	return nil
+}
+
+func migrateResultError(result repo.MigrateResult) error {
+	if result.Err != nil {
+		return fmt.Errorf("migration failed: %w", result.Err)
+	}
 	return nil
 }
 

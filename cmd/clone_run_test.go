@@ -1,11 +1,21 @@
 package cmd
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/abiswas97/sentei/internal/repo"
 )
+
+func TestCloneResultErrorPropagatesContractError(t *testing.T) {
+	want := errors.New("delivery")
+	if got := cloneResultError(repo.CloneResult{Err: want}); !errors.Is(got, want) {
+		t.Fatalf("error = %v", got)
+	}
+}
 
 func TestRunClone_ParseError(t *testing.T) {
 	err := RunClone([]string{"--no-such-flag"})

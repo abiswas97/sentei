@@ -16,6 +16,9 @@ import (
 // cloneFailed reports whether the clone left the repo in a failed state and, if
 // so, the error from the first failed step.
 func cloneFailed(result repo.CloneResult) (bool, error) {
+	if result.Err != nil {
+		return true, result.Err
+	}
 	if !result.HasFailures() {
 		return false, nil
 	}

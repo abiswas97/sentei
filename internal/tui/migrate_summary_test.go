@@ -12,6 +12,14 @@ import (
 	"github.com/abiswas97/sentei/internal/repo"
 )
 
+func TestMigrateSummaryShowsContractError(t *testing.T) {
+	m := makeMigrateSummaryModel(repo.MigrateResult{Err: errors.New("delivery failed")})
+	view := stripANSI(m.viewMigrateSummary())
+	if !strings.Contains(view, "delivery failed") {
+		t.Fatalf("view = %s", view)
+	}
+}
+
 func makeMigrateSummaryModel(result repo.MigrateResult) Model {
 	m := NewMenuModel(nil, nil, "/repo", &config.Config{}, repo.ContextNoRepo)
 	m.repo.result = result

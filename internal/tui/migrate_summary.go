@@ -66,7 +66,9 @@ func (m Model) viewMigrateSummary() string {
 	hasCriticalFailure := result.HasFailures()
 	var failErr error
 	if hasCriticalFailure {
-		if _, step, ok := progress.FirstFailure(result.Phases); ok {
+		if result.Err != nil {
+			failErr = result.Err
+		} else if _, step, ok := progress.FirstFailure(result.Phases); ok {
 			failErr = step.Error
 		}
 	}

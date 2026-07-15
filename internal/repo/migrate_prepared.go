@@ -1,0 +1,211 @@
+package repo
+
+import (
+	"errors"
+	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+	"time"
+
+	"github.com/abiswas97/sentei/internal/fileutil"
+	"github.com/abiswas97/sentei/internal/git"
+	"github.com/abiswas97/sentei/internal/progress"
+)
+
+type migrateOperationKind uint8
+
+const (
+	migrateRegular migrateOperationKind = iota
+	migrateStatus
+	migrateBranch
+	migrateBackupCopy
+	migrateBackupSize
+	migrateWorktree
+)
+
+type migrateOperation struct {
+	phaseID progress.PhaseID
+	stepID  progress.StepID
+	label   string
+	kind    migrateOperationKind
+	run     func(*progress.Execution) (string, error)
+}
+
+type preparedMigrate struct {
+	result          MigrateResult
+	plan            progress.Plan
+	operations      []migrateOperation
+	backupCopyIndex int
+	backupPath      string
+	branch          *string
+	isDirty         *bool
+	err             error
+}
+
+func prepareMigrate(runner git.CommandRunner, shell git.ShellRunner, opts MigrateOptions) preparedMigrate {
+	repoPath := opts.RepoPath
+	barePath := filepath.Join(repoPath, ".bare")
+	originURL, _ := runner.Run(repoPath, "remote", "get-url", "origin")
+	backupPath := fmt.Sprintf("%s_backup_%s", repoPath, time.Now().Format("20060102_150405"))
+	branch := ""
+	isDirty := false
+	prepared := preparedMigrate{
+		result: MigrateResult{BareRoot: repoPath}, backupPath: backupPath,
+		branch: &branch, isDirty: &isDirty, backupCopyIndex: -1,
+	}
+	add := func(phaseID, phaseLabel, stepID, label string, kind migrateOperationKind, run func(*progress.Execution) (string, error)) {
+		if len(prepared.plan.Phases) == 0 || prepared.plan.Phases[len(prepared.plan.Phases)-1].ID != phaseID {
+			prepared.plan.Phases = append(prepared.plan.Phases, progress.PlannedPhase{ID: phaseID, Label: phaseLabel})
+		}
+		phase := &prepared.plan.Phases[len(prepared.plan.Phases)-1]
+		phase.Steps = append(phase.Steps, progress.PlannedStep{ID: stepID, Label: label})
+		prepared.operations = append(prepared.operations, migrateOperation{phaseID: phaseID, stepID: stepID, label: label, kind: kind, run: run})
+	}
+	add("migrate:validate", "Validate", "status", "Check repository status", migrateStatus, func(*progress.Execution) (string, error) {
+		output, err := runner.Run(repoPath, "status", "--porcelain")
+		if err != nil {
+			return "", err
+		}
+		isDirty = strings.TrimSpace(output) != ""
+		if isDirty {
+			return "uncommitted changes detected", nil
+		}
+		return "clean", nil
+	})
+	add("migrate:validate", "Validate", "branch", "Detect current branch", migrateBranch, func(*progress.Execution) (string, error) {
+		var err error
+		branch, err = runner.Run(repoPath, "branch", "--show-current")
+		if err != nil {
+			return "", err
+		}
+		if strings.TrimSpace(branch) == "" {
+			return "", errors.New("cannot migrate a detached HEAD; check out a branch first")
+		}
+		return branch, nil
+	})
+	add("migrate:backup", "Backup", "copy", "Copy repository to backup", migrateBackupCopy, func(*progress.Execution) (string, error) {
+		command := fmt.Sprintf("cp -a %q %q", repoPath, backupPath)
+		if _, err := shell.RunShell(filepath.Dir(repoPath), command); err != nil {
+			_ = fileutil.RemoveAllRetry(backupPath)
+			return "", err
+		}
+		return backupPath, nil
+	})
+	prepared.backupCopyIndex = len(prepared.operations) - 1
+	add("migrate:backup", "Backup", "size", "Calculate backup size", migrateBackupSize, func(*progress.Execution) (string, error) {
+		return calculateDirSize(backupPath), nil
+	})
+	add("migrate:convert", "Migrate", "bare-repository", "Create bare repository", migrateRegular, func(*progress.Execution) (string, error) {
+		_, err := runner.Run(repoPath, "clone", "--bare", ".git", barePath)
+		return "", err
+	})
+	add("migrate:convert", "Migrate", "remove-git", "Remove original .git", migrateRegular, func(*progress.Execution) (string, error) {
+		return "", fileutil.RemoveAllRetry(filepath.Join(repoPath, ".git"))
+	})
+	add("migrate:convert", "Migrate", "git-pointer", "Create .git pointer", migrateRegular, func(*progress.Execution) (string, error) {
+		return "", os.WriteFile(filepath.Join(repoPath, ".git"), []byte("gitdir: .bare\n"), 0644)
+	})
+	add("migrate:convert", "Migrate", "refspec", "Configure refspec", migrateRegular, func(*progress.Execution) (string, error) {
+		_, err := runner.Run(barePath, "config", "remote.origin.fetch", "+refs/heads/*:refs/remotes/origin/*")
+		return "", err
+	})
+	if strings.TrimSpace(originURL) != "" {
+		add("migrate:convert", "Migrate", "restore-origin", "Restore origin remote", migrateRegular, func(*progress.Execution) (string, error) {
+			_, err := runner.Run(barePath, "remote", "set-url", "origin", originURL)
+			return originURL, err
+		})
+	}
+	add("migrate:convert", "Migrate", "clean-root", "Clean root directory", migrateRegular, func(execution *progress.Execution) (string, error) {
+		entries, err := os.ReadDir(repoPath)
+		if err != nil {
+			return "", err
+		}
+		for _, entry := range entries {
+			name := entry.Name()
+			if name == ".bare" || name == ".git" {
+				continue
+			}
+			if err := os.RemoveAll(filepath.Join(repoPath, name)); err != nil {
+				_ = execution.Running("migrate:convert", "clean-root", 0, fmt.Sprintf("warning: could not remove %s: %v", name, err))
+			}
+		}
+		return "", nil
+	})
+	add("migrate:convert", "Migrate", "worktree", "Create worktree", migrateWorktree, func(*progress.Execution) (string, error) {
+		_, err := runner.Run(repoPath, "worktree", "add", git.WorktreePath(repoPath, branch), branch)
+		return "", err
+	})
+	add("migrate:copy", "Copy", "restore-files", "Restore working files", migrateRegular, func(execution *progress.Execution) (string, error) {
+		entries, err := os.ReadDir(backupPath)
+		if err != nil {
+			return "nothing to restore", nil
+		}
+		copied := 0
+		for _, entry := range entries {
+			name := entry.Name()
+			if name == ".git" || name == ".bare" {
+				continue
+			}
+			if err := copyTree(filepath.Join(backupPath, name), filepath.Join(git.WorktreePath(repoPath, branch), name)); err != nil {
+				_ = execution.Running("migrate:copy", "restore-files", 0, fmt.Sprintf("warning: could not copy %s: %v", name, err))
+				continue
+			}
+			copied++
+		}
+		if copied == 0 {
+			return "nothing to restore", nil
+		}
+		return fmt.Sprintf("%d items restored", copied), nil
+	})
+	return prepared
+}
+
+func (p preparedMigrate) run(emit func(progress.Event)) MigrateResult {
+	result := p.result
+	if p.err != nil {
+		result.Err = p.err
+		return result
+	}
+	execution, err := progress.Start(p.plan, emit)
+	if err != nil {
+		result.Err = fmt.Errorf("starting repository migration: %w", err)
+		return result
+	}
+	failedBy := ""
+	for index, operation := range p.operations {
+		if failedBy != "" {
+			_, err = execution.Skip(operation.phaseID, operation.stepID, "blocked by "+failedBy)
+		} else {
+			var step progress.StepResult
+			step, err = execution.Run(operation.phaseID, operation.stepID, func() (string, error) { return operation.run(execution) })
+			if err == nil && step.Status == progress.StepFailed {
+				failedBy = operation.label
+			}
+		}
+		if err != nil {
+			result.Err = errors.Join(result.Err, fmt.Errorf("executing %s: %w", operation.label, err))
+			failedBy = operation.label
+		}
+		if failedBy != "" {
+			continue
+		}
+		switch operation.kind {
+		case migrateStatus:
+			result.IsDirty = *p.isDirty
+		case migrateBranch:
+			result.Branch = *p.branch
+		case migrateBackupCopy:
+			result.BackupPath = p.backupPath
+		case migrateBackupSize:
+			result.BackupSize = calculateDirSize(p.backupPath)
+		case migrateWorktree:
+			result.WorktreePath = git.WorktreePath(result.BareRoot, result.Branch)
+		}
+		_ = index
+	}
+	finishErr := execution.Finish("repository migration finished")
+	result.Phases = execution.Phases()
+	result.Err = errors.Join(result.Err, finishErr)
+	return result
+}

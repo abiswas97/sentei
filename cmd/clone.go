@@ -39,6 +39,9 @@ func RunClone(args []string) error {
 	}
 
 	result := repo.Clone(runner, cloneOpts, printCloneEvent)
+	if err := cloneResultError(result); err != nil {
+		return err
+	}
 
 	fmt.Println()
 	for _, phase := range result.Phases {
@@ -53,6 +56,13 @@ func RunClone(args []string) error {
 	}
 
 	fmt.Printf("%s✓%s Cloned to %s\n", green, nc, filepath.Join(location, name))
+	return nil
+}
+
+func cloneResultError(result repo.CloneResult) error {
+	if result.Err != nil {
+		return fmt.Errorf("clone failed: %w", result.Err)
+	}
 	return nil
 }
 

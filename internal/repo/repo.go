@@ -54,6 +54,10 @@ func ResolveBareRoot(runner git.CommandRunner, path string) string {
 	return filepath.Dir(commonDir)
 }
 
-func (r CloneResult) HasFailures() bool   { return progress.PhasesHaveFailures(r.Phases) }
-func (r CreateResult) HasFailures() bool  { return progress.PhasesHaveFailures(r.Phases) }
-func (r MigrateResult) HasFailures() bool { return progress.PhasesHaveFailures(r.Phases) }
+func (r CloneResult) HasFailures() bool { return r.Err != nil || progress.PhasesHaveFailures(r.Phases) }
+func (r CreateResult) HasFailures() bool {
+	return r.Err != nil || progress.PhasesHaveFailures(r.Phases)
+}
+func (r MigrateResult) HasFailures() bool {
+	return r.Err != nil || progress.PhasesHaveFailures(r.Phases)
+}

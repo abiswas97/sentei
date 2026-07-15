@@ -151,7 +151,8 @@ func TestClone_NetworkError(t *testing.T) {
 	opts := CloneOptions{URL: "git@github.com:user/repo.git", Location: dir, Name: "repo"}
 	result := Clone(runner, opts, ec.Emit)
 
-	if len(result.Phases) == 0 || !result.Phases[0].HasFailures() {
+	clonePhase := findPhase(result.Phases, "Clone")
+	if clonePhase == nil || !clonePhase.HasFailures() {
 		t.Error("expected clone phase to fail on network error")
 	}
 }
@@ -192,10 +193,8 @@ func TestClone_EmptyName_RejectedBeforeAnyGitCall(t *testing.T) {
 	opts := CloneOptions{URL: "https://host/user/repo/", Location: dir, Name: ""}
 	result := Clone(runner, opts, ec.Emit)
 
-	if len(result.Phases) != 1 || result.Phases[0].Name != "Validate" {
-		t.Fatalf("expected only a Validate phase, got %+v", result.Phases)
-	}
-	if !result.Phases[0].HasFailures() {
+	validate := findPhase(result.Phases, "Validate")
+	if validate == nil || !validate.HasFailures() {
 		t.Error("empty name must fail validation")
 	}
 	if result.DefaultBranch != "" {
@@ -210,7 +209,8 @@ func TestClone_PathLikeName_Rejected(t *testing.T) {
 
 	for _, name := range []string{"/abs/target", "../escaped", "nested/name", ".."} {
 		result := Clone(runner, CloneOptions{URL: "u", Location: dir, Name: name}, ec.Emit)
-		if len(result.Phases) != 1 || !result.Phases[0].HasFailures() {
+		validate := findPhase(result.Phases, "Validate")
+		if validate == nil || !validate.HasFailures() {
 			t.Errorf("name %q should be rejected by validation, got %+v", name, result.Phases)
 		}
 	}
@@ -231,7 +231,8 @@ func TestClone_ExistingTarget_RejectedAndPreserved(t *testing.T) {
 	ec := &mock.EventCollector[progress.Event]{}
 	result := Clone(runner, CloneOptions{URL: "u", Location: dir, Name: "repo"}, ec.Emit)
 
-	if len(result.Phases) != 1 || !result.Phases[0].HasFailures() {
+	validate := findPhase(result.Phases, "Validate")
+	if validate == nil || !validate.HasFailures() {
 		t.Fatalf("existing target must be rejected, got %+v", result.Phases)
 	}
 	if _, err := os.Stat(sentinel); err != nil {
