@@ -1,0 +1,42 @@
+internal/tui/integration_summary_test.go
+  s_47b5c057f8c030::t_f5de97f1089912 10,41-42
+  s_47b5c057f8c030::t_4466b9610c72a6 11,16-31,33-40,43-49,75-116
+  s_47b5c057f8c030::t_f84b093bdc0a23 55,60-61,70-74
+  s_47b5c057f8c030::t_77cacdd1fbe63f 32,50-54,56-59,62-69
+  s_47b5c057f8c030::t_6dac3ee330c2d8 117
+internal/tui/model.go
+  s_47b5c057f8c030::t_069076272aa22b 32-33,286,462,506-520,529,595-601,604-608,647-651,678-679
+  s_47b5c057f8c030::t_603d9efa8eb822 282-285,287
+  s_47b5c057f8c030::t_3b8c9d62e4dd5d 680-682
+internal/tui/progress_test.go
+  s_47b5c057f8c030::t_bc6d3ff3222880 319-320,366-367,395,398-403
+internal/tui/remove_run_test.go
+  s_47b5c057f8c030::t_8c48a16984ca4c 112-135
+internal/tui/helpers_test.go
+  s_47b5c057f8c030::t_896a379c69b5ac 87
+internal/tui/integration_summary.go
+  s_47b5c057f8c030::t_f84b093bdc0a23 170-171
+  s_47b5c057f8c030::t_74dd2e3f06dab8 191,194,196,199,201,204,206,210,213-214,216-217,220,222,224,232-271,273,275-300,315-340
+  s_47b5c057f8c030::t_522e57d60084c7 272
+  s_47b5c057f8c030::t_3b8c9d62e4dd5d 158-169,172-174,228,301-314
+internal/tui/motion_preference_test.go
+  s_47b5c057f8c030::t_bc6d3ff3222880 183-184,186-187,216-218
+  s_47b5c057f8c030::t_77cacdd1fbe63f 189-190
+  s_47b5c057f8c030::t_be94c385097919 188
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "0cd84621c97ffb2c37c3f2d177cc5fc43c025b18",
+  "prompts": {},
+  "sessions": {
+    "s_47b5c057f8c030": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f5f62-a0bd-7f92-96e2-b1de98524420",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>"
+    }
+  }
+}
