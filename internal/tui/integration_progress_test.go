@@ -2,7 +2,6 @@ package tui
 
 import (
 	"errors"
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -308,7 +307,7 @@ func TestUpdateIntegrationProgress_ExecutionErrorDoesNotFinalizeState(t *testing
 	}
 }
 
-func TestIntegrationExecutionCanSaveOnlyCompletedOrEmpty(t *testing.T) {
+func TestClassifyIntegrationExecution(t *testing.T) {
 	one := func(status progress.StepStatus) []progress.Phase {
 		return []progress.Phase{{Steps: []progress.StepResult{{Status: status}}}}
 	}
@@ -316,27 +315,39 @@ func TestIntegrationExecutionCanSaveOnlyCompletedOrEmpty(t *testing.T) {
 		name   string
 		phases []progress.Phase
 		empty  bool
-		want   bool
+		want   integrationExecutionOutcome
 	}{
-		{name: "valid empty plan", empty: true, want: true},
-		{name: "missing result is not an empty plan", want: false},
-		{name: "all done", phases: one(progress.StepDone), want: true},
-		{name: "ordinary failure", phases: one(progress.StepFailed), want: false},
-		{name: "blocked skip", phases: one(progress.StepSkipped), want: false},
-		{name: "unresolved", phases: one(progress.StepPending), want: false},
+		{name: "valid empty plan", empty: true, want: integrationExecutionEmpty},
+		{name: "missing result is not an empty plan", want: integrationExecutionMalformed},
+		{name: "all done", phases: one(progress.StepDone), want: integrationExecutionCompleted},
+		{name: "ordinary failure", phases: one(progress.StepFailed), want: integrationExecutionDomainFailed},
+		{name: "skip without failure", phases: one(progress.StepSkipped), want: integrationExecutionMalformed},
+		{name: "unresolved", phases: one(progress.StepPending), want: integrationExecutionMalformed},
+		{name: "failure with blocked skip", phases: []progress.Phase{{Steps: []progress.StepResult{{Status: progress.StepFailed}, {Status: progress.StepSkipped}}}}, want: integrationExecutionDomainFailed},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := integrationExecutionCanSave(tt.phases, tt.empty); got != tt.want {
-				t.Fatalf("integrationExecutionCanSave() = %v, want %v", got, tt.want)
+			if got := classifyIntegrationExecution(integrationApplyResult{phases: tt.phases, empty: tt.empty}); got != tt.want {
+				t.Fatalf("classifyIntegrationExecution() = %v, want %v", got, tt.want)
 			}
 		})
 	}
 }
 
-func TestUpdateIntegrationProgress_FailedOrSkippedExecutionPreservesState(t *testing.T) {
-	for _, status := range []progress.StepStatus{progress.StepFailed, progress.StepSkipped} {
-		t.Run(fmt.Sprint(status), func(t *testing.T) {
+func TestUpdateIntegrationProgress_MalformedResultIsContractErrorAndPreservesState(t *testing.T) {
+	tests := []struct {
+		name   string
+		phases []progress.Phase
+		events []progress.Event
+	}{
+		{name: "missing phases"},
+		{name: "pending", phases: []progress.Phase{{Name: "/repo/main", Steps: []progress.StepResult{{Name: "setup", Status: progress.StepPending}}}}, events: []progress.Event{{Phase: "/repo/main", Step: "setup", Status: progress.StepPending}}},
+		{name: "running", phases: []progress.Phase{{Name: "/repo/main", Steps: []progress.StepResult{{Name: "setup", Status: progress.StepRunning}}}}, events: []progress.Event{{Phase: "/repo/main", Step: "setup", Status: progress.StepRunning}}},
+		{name: "zero status", phases: []progress.Phase{{Name: "/repo/main", Steps: []progress.StepResult{{Name: "setup"}}}}},
+		{name: "skip only", phases: []progress.Phase{{Name: "/repo/main", Steps: []progress.StepResult{{Name: "setup", Status: progress.StepSkipped}}}}, events: []progress.Event{{Phase: "/repo/main", Step: "setup", Status: progress.StepSkipped}}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
 			tmp := t.TempDir()
 			bareDir := filepath.Join(tmp, ".bare")
 			if err := os.Mkdir(bareDir, 0o755); err != nil {
@@ -349,28 +360,81 @@ func TestUpdateIntegrationProgress_FailedOrSkippedExecutionPreservesState(t *tes
 			m.view = integrationProgressView
 			m.repoPath = tmp
 			m.runner = bareDirRunner(tmp)
-			m.integ.returnView = migrateNextView
+			m.integ.returnView = integrationListView
 			m.integ.staged = map[string]bool{"cocoindex-code": true}
+			m.integ.events = tt.events
 
 			updated, _ := m.updateIntegrationProgress(integrationApplyDoneMsg{result: integrationApplyResult{
-				phases: []progress.Phase{{Steps: []progress.StepResult{{Status: status}}}},
+				phases: tt.phases,
 			}})
 			m = updated.(Model)
-			if m.integ.lifecycle != integrationSettling {
-				t.Fatalf("lifecycle=%v, want settling without save", m.integ.lifecycle)
+			if m.integ.lifecycle != integrationSettling || m.integ.executionErr == nil || !strings.Contains(m.integ.executionErr.Error(), "incomplete terminal result") {
+				t.Fatalf("lifecycle=%v executionErr=%v, want incomplete-result contract error", m.integ.lifecycle, m.integ.executionErr)
 			}
 			persisted, err := state.Load(bareDir)
 			if err != nil {
 				t.Fatal(err)
 			}
 			if len(persisted.Integrations) != 1 || persisted.Integrations[0] != "code-review-graph" || persisted.LifetimeRemoved != 4 {
-				t.Fatalf("state changed after status %v: %#v", status, persisted)
+				t.Fatalf("state changed after malformed result: %#v", persisted)
 			}
 			m = settleNow(t, m)
 			if m.view != integrationSummaryView {
 				t.Fatalf("view=%v, want integration error summary", m.view)
 			}
+			view := stripAnsi(m.viewIntegrationSummary())
+			if strings.Count(view, "Integration execution failed:") != 1 {
+				t.Fatalf("expected exactly one execution-error verdict:\n%s", view)
+			}
+			for _, forbidden := range []string{"No integration work was needed", "steps applied", "step applied"} {
+				if strings.Contains(view, forbidden) {
+					t.Fatalf("malformed result rendered success %q:\n%s", forbidden, view)
+				}
+			}
 		})
+	}
+}
+
+func TestUpdateIntegrationProgress_DomainFailureWithBlockedSkipIsNotContractError(t *testing.T) {
+	tmp := t.TempDir()
+	bareDir := filepath.Join(tmp, ".bare")
+	if err := os.Mkdir(bareDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := state.Save(bareDir, &state.State{Integrations: []string{"code-review-graph"}, LifetimeRemoved: 4}); err != nil {
+		t.Fatal(err)
+	}
+	m := makeIntegrationModel()
+	m.view = integrationProgressView
+	m.repoPath = tmp
+	m.runner = bareDirRunner(tmp)
+	m.integ.returnView = integrationListView
+	m.integ.staged = map[string]bool{"cocoindex-code": true}
+	m.integ.events = []progress.Event{
+		{Phase: "/repo/main", Step: "install", Status: progress.StepFailed, Error: errors.New("install failed")},
+		{Phase: "/repo/main", Step: "setup", Status: progress.StepSkipped, Message: "blocked by install"},
+	}
+	result := integrationApplyResult{phases: []progress.Phase{{Name: "/repo/main", Steps: []progress.StepResult{
+		{Name: "install", Status: progress.StepFailed, Error: errors.New("install failed")},
+		{Name: "setup", Status: progress.StepSkipped, Message: "blocked by install"},
+	}}}}
+
+	updated, _ := m.updateIntegrationProgress(integrationApplyDoneMsg{result: result})
+	m = updated.(Model)
+	if m.integ.executionErr != nil || m.integ.lifecycle != integrationSettling {
+		t.Fatalf("executionErr=%v lifecycle=%v, want ordinary failed outcome", m.integ.executionErr, m.integ.lifecycle)
+	}
+	persisted, err := state.Load(bareDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(persisted.Integrations) != 1 || persisted.Integrations[0] != "code-review-graph" || persisted.LifetimeRemoved != 4 {
+		t.Fatalf("state changed after domain failure: %#v", persisted)
+	}
+	m = settleNow(t, m)
+	view := stripAnsi(m.viewIntegrationSummary())
+	if strings.Contains(view, "Integration execution failed:") || strings.Count(view, "1 failed") != 1 {
+		t.Fatalf("domain failure rendered as contract error:\n%s", view)
 	}
 }
 

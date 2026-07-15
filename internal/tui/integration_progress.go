@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"errors"
 	"maps"
 	"path/filepath"
 	"strings"
@@ -17,6 +18,17 @@ import (
 type integrationFinalizedMsg struct {
 	err error
 }
+
+var errIncompleteIntegrationResult = errors.New("integration apply contract violation: incomplete terminal result")
+
+type integrationExecutionOutcome uint8
+
+const (
+	integrationExecutionCompleted integrationExecutionOutcome = iota
+	integrationExecutionEmpty
+	integrationExecutionDomainFailed
+	integrationExecutionMalformed
+)
 
 func (m Model) updateIntegrationProgress(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
@@ -47,13 +59,18 @@ func (m Model) updateIntegrationProgress(msg tea.Msg) (tea.Model, tea.Cmd) {
 			updated, holdCmd := m.holdOrAdvance(integrationSummaryView)
 			return updated, tea.Batch(finalSync, holdCmd)
 		}
-		if !integrationExecutionCanSave(msg.result.phases, msg.result.empty) {
-			m.integ.lifecycle = integrationSettling
-			updated, holdCmd := m.holdOrAdvance(integrationSummaryView)
-			return updated, tea.Batch(m.syncProgressBar(), holdCmd)
+		switch classifyIntegrationExecution(msg.result) {
+		case integrationExecutionCompleted, integrationExecutionEmpty:
+			m.integ.lifecycle = integrationSaving
+			return m, m.finalizeIntegrationApply()
+		case integrationExecutionMalformed:
+			m.integ.executionErr = errIncompleteIntegrationResult
 		}
-		m.integ.lifecycle = integrationSaving
-		return m, m.finalizeIntegrationApply()
+		// Domain failures are truthful progress outcomes, while malformed
+		// terminal results are execution-contract errors. Neither may persist.
+		m.integ.lifecycle = integrationSettling
+		updated, holdCmd := m.holdOrAdvance(integrationSummaryView)
+		return updated, tea.Batch(m.syncProgressBar(), holdCmd)
 
 	case integrationFinalizedMsg:
 		m.integ.lifecycle = integrationSettling
@@ -142,20 +159,41 @@ func (m Model) viewIntegrationProgress() string {
 	return m.renderProgressLayout(m.integrationLayout())
 }
 
-func integrationExecutionCanSave(phases []progress.Phase, empty bool) bool {
-	if empty {
-		return len(phases) == 0
+func classifyIntegrationExecution(result integrationApplyResult) integrationExecutionOutcome {
+	if result.empty {
+		if len(result.phases) == 0 {
+			return integrationExecutionEmpty
+		}
+		return integrationExecutionMalformed
 	}
-	sawStep := false
-	for _, phase := range phases {
+	if len(result.phases) == 0 {
+		return integrationExecutionMalformed
+	}
+	sawFailure := false
+	sawSkip := false
+	for _, phase := range result.phases {
+		if len(phase.Steps) == 0 {
+			return integrationExecutionMalformed
+		}
 		for _, step := range phase.Steps {
-			sawStep = true
-			if step.Status != progress.StepDone {
-				return false
+			switch step.Status {
+			case progress.StepDone:
+			case progress.StepFailed:
+				sawFailure = true
+			case progress.StepSkipped:
+				sawSkip = true
+			default:
+				return integrationExecutionMalformed
 			}
 		}
 	}
-	return sawStep
+	if sawFailure {
+		return integrationExecutionDomainFailed
+	}
+	if sawSkip {
+		return integrationExecutionMalformed
+	}
+	return integrationExecutionCompleted
 }
 
 func (m Model) buildIntegrationPhases() []progress.PhaseState {
