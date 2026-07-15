@@ -1,0 +1,73 @@
+internal/tui/remove_run.go
+  s_47b5c057f8c030::t_e6847d7188989e 20-22,30,36-41
+  s_47b5c057f8c030::t_495c87197acd2e 19
+  s_47b5c057f8c030::t_fb3ffb7932217b 42-43
+internal/tui/removal_plan_test.go
+  s_47b5c057f8c030::t_2a39875b6109ee 21-24,42-47,49
+  s_47b5c057f8c030::t_2ccb358980273e 8
+internal/tui/progress.go
+  s_47b5c057f8c030::t_e61c5fe74b68bd 111-116,122-130
+  s_47b5c057f8c030::t_6bbdfddd49aa6c 136-138,143
+  s_47b5c057f8c030::t_aa0fefd90101e5 78-81,133-135
+  s_47b5c057f8c030::t_d70fa3c92e08ea 4,28-29,36,72-75,77,82,104-105,117,131-132,139-142,145-147,180
+  s_47b5c057f8c030::t_495c87197acd2e 144
+internal/tui/create_progress.go
+  s_47b5c057f8c030::t_6feb6b377e8295 39
+internal/worktree/deleter_test.go
+  s_47b5c057f8c030::t_160b8b8f6841f9 27-54,65,106,129,166,195,236
+  s_47b5c057f8c030::t_6d5c0bf4d9a59b 92-93
+internal/tui/create_progress_test.go
+  s_47b5c057f8c030::t_e61c5fe74b68bd 93,102
+internal/worktree/deleter_execution_test.go
+  s_47b5c057f8c030::t_113b7a6bd37393 1-42,44-90
+  s_47b5c057f8c030::t_ea43e26cfe3a16 43
+internal/tui/removal_e2e_test.go
+  s_47b5c057f8c030::t_accfbf6171762a 47-50,53-54,94-101
+internal/tui/chrome_migration_test.go
+  s_47b5c057f8c030::t_2a39875b6109ee 36-42,46,51,61-64
+  s_47b5c057f8c030::t_2ccb358980273e 12
+internal/tui/progress_test.go
+  s_47b5c057f8c030::t_4bdb7ab95b37fb 66,78
+  s_47b5c057f8c030::t_46a3734f169d5a 4,12,14,19-43
+  s_47b5c057f8c030::t_5a1351aca729db 44
+internal/tui/confirm.go
+  s_47b5c057f8c030::t_c3bb95c32f5377 157
+  s_47b5c057f8c030::t_aa0fefd90101e5 25,27-29,65-67,69,87-89,121-123,132-134,188-190,193-195
+  s_47b5c057f8c030::t_f77fc7780fbdc8 116-119
+  s_47b5c057f8c030::t_4c0c96443da26a 6,24,26,30,59-60,63-64,68,70,75-86,90-115,120,124-128,130,138-139,152-156,179,182,184,186-187,191-192,196-200,203-204
+  s_47b5c057f8c030::t_4bdb7ab95b37fb 135,171,217-223,227-228,230-234,238,242
+  s_47b5c057f8c030::t_9b7b15fd57d54c 224-226,229,235-237,239-241
+  s_47b5c057f8c030::t_12f7781f912bb7 243-244
+internal/tui/remove_run_test.go
+  s_47b5c057f8c030::t_accfbf6171762a 89-92,153-157,200-205,209,224
+  s_47b5c057f8c030::t_d08c138eae52e0 206-208
+internal/progress/plan.go
+  s_47b5c057f8c030::t_6feb6b377e8295 9,24
+internal/progress/plan_test.go
+  s_47b5c057f8c030::t_a8c32233924df9 63-65,106-108,476-478
+  s_47b5c057f8c030::t_8b0009c60b7708 11,13-14,23,58,60-61,76,103-104,472-474
+cmd/remove.go
+  s_47b5c057f8c030::t_6bbdfddd49aa6c 148
+  s_47b5c057f8c030::t_bbd08fc9de5083 131-147,149-151
+internal/worktree/deleter.go
+  s_47b5c057f8c030::t_c6d1231157ff31 4,17-23,35,55-56,66-74,80,84,88-91,93,99,101,106,110-123
+  s_47b5c057f8c030::t_6bbdfddd49aa6c 34,36-39
+internal/tui/summary.go
+  s_47b5c057f8c030::t_6bbdfddd49aa6c 72-79
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "f79f28ad19587fdac4792b48c13acedbf1dcbc1e",
+  "prompts": {},
+  "sessions": {
+    "s_47b5c057f8c030": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f5f62-a0bd-7f92-96e2-b1de98524420",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>"
+    }
+  }
+}
