@@ -26,6 +26,10 @@ func progressDetailModel() Model {
 	return m
 }
 
+func compactProgressDetailText(s string) string {
+	return strings.Join(strings.Fields(stripANSI(s)), "")
+}
+
 func TestProgressDetail_IncludesStructuredFullText(t *testing.T) {
 	m := progressDetailModel()
 	title, content := m.detailContent()
@@ -34,7 +38,7 @@ func TestProgressDetail_IncludesStructuredFullText(t *testing.T) {
 		t.Fatalf("title = %q", title)
 	}
 	for _, want := range []string{"phase-id", "Readable phase", "skip-id", "界 skipped step", "skipped", "already installed with a very long reason", "fail-id", "failed", "full failure detail"} {
-		if !strings.Contains(plain, want) {
+		if !strings.Contains(compactProgressDetailText(plain), compactProgressDetailText(want)) {
 			t.Errorf("detail missing %q:\n%s", want, plain)
 		}
 	}
@@ -59,6 +63,48 @@ func TestProgressDetail_OfferedOnlyForFailureOmissionOrTopError(t *testing.T) {
 	}
 	if footer := stripANSI(viewFooter(80, m.removalLayout().Hints)); !strings.Contains(footer, "? details") {
 		t.Fatalf("details hint missing: %q", footer)
+	}
+}
+
+func TestProgressDetail_OfferedWhenConstrainedLiveRegionOmitsAllSteps(t *testing.T) {
+	layout := ProgressLayout{Height: 4, Phases: []progress.PhaseState{{
+		ID: "phase", Name: "Phase", Total: 1, Steps: []progress.StepState{{ID: "step", Name: "Step", Status: progress.StepRunning}},
+	}}}
+	viewport := BuildProgressViewport(layout.Phases, layout.Height, false)
+	if viewport.DetailRows != 1 {
+		t.Fatalf("test requires one focus row, got %d", viewport.DetailRows)
+	}
+	if !progressNeedsDetails(layout, nil) {
+		t.Fatal("omitting every step from a constrained live region must offer details")
+	}
+}
+
+func TestProgressDetail_WrapsLongSourceTextToPortalWidth(t *testing.T) {
+	skipReason := strings.Repeat("界🙂 reason ", 18)
+	errorText := strings.Repeat("錯誤🙂 failure ", 18)
+	m := NewModel(nil, nil, "/repo")
+	m.view = progressView
+	m.width, m.height, m.windowHeight = 32, 6, 12
+	m.portal = m.portal.SetSize(32, 12)
+	m.remove.run.events = []progress.Event{
+		{Phase: "phase-id", PhaseLabel: "Readable phase", Step: "skip-id", StepLabel: "Skipped step", Status: progress.StepPending, Of: 2},
+		{Phase: "phase-id", Step: "fail-id", StepLabel: "Failed step", Status: progress.StepPending, Of: 2},
+		{Phase: "phase-id", PhaseLabel: "Readable phase", Close: true},
+		{Phase: "phase-id", Step: "skip-id", Status: progress.StepSkipped, Message: skipReason},
+		{Phase: "phase-id", Step: "fail-id", Status: progress.StepFailed, Error: errors.New("\x1b[31m" + errorText + "\x1b[0m")},
+	}
+
+	_, content := m.detailContent()
+	plain := stripANSI(content)
+	for name, source := range map[string]string{"skip reason": skipReason, "error": errorText} {
+		if !strings.Contains(compactProgressDetailText(plain), compactProgressDetailText(source)) {
+			t.Errorf("%s is not recoverable after wrapping:\n%s", name, plain)
+		}
+	}
+	for i, line := range strings.Split(content, "\n") {
+		if got := lipgloss.Width(line); got > m.portal.contentWidth() {
+			t.Errorf("line %d width = %d, portal width = %d: %q", i+1, got, m.portal.contentWidth(), stripANSI(line))
+		}
 	}
 }
 

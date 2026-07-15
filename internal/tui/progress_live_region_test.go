@@ -207,7 +207,7 @@ func TestWindowSteps_HardBoundsManyActiveFailures(t *testing.T) {
 	}
 	for budget := 0; budget <= 8; budget++ {
 		window := WindowSteps(steps, budget)
-		if len(window.Steps)+btoi(window.Windowed) > budget {
+		if len(window.Steps)+btoi(window.Windowed && budget > 0) > budget {
 			t.Fatalf("budget %d returned %d steps plus stat", budget, len(window.Steps))
 		}
 	}

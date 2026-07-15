@@ -102,8 +102,8 @@ func TestWindowSteps_BudgetZero_MinimumViable(t *testing.T) {
 	steps := makeSteps(progress.StepDone, progress.StepFailed, progress.StepRunning, progress.StepPending)
 	r := WindowSteps(steps, 0)
 
-	if r.Windowed || len(r.Steps) != 0 {
-		t.Fatalf("zero budget must return no rows, got windowed=%v steps=%d", r.Windowed, len(r.Steps))
+	if !r.Windowed || len(r.Steps) != 0 || r.Stats.Showing != 0 || r.Stats.Total != len(steps) {
+		t.Fatalf("zero budget must report all rows omitted, got windowed=%v steps=%d stats=%+v", r.Windowed, len(r.Steps), r.Stats)
 	}
 }
 

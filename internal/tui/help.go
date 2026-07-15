@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/charmbracelet/x/ansi"
+
 	"github.com/abiswas97/sentei/internal/git"
 	"github.com/abiswas97/sentei/internal/progress"
 	"github.com/abiswas97/sentei/internal/repo"
@@ -104,7 +106,7 @@ func (m Model) detailContent() (string, string) {
 		if !ok || !progressNeedsDetails(layout, m.progressTopLevelError()) {
 			return "", ""
 		}
-		return portalProgressDetails, renderProgressDetails(layout, m.progressTopLevelError())
+		return portalProgressDetails, renderProgressDetails(layout, m.progressTopLevelError(), m.portal.contentWidth())
 	}
 	if m.view == cleanupPreviewView {
 		return m.cleanupDetailContent()
@@ -193,35 +195,53 @@ func progressNeedsDetails(layout ProgressLayout, topErr error) bool {
 	return false
 }
 
-func renderProgressDetails(layout ProgressLayout, topErr error) string {
+func renderProgressDetails(layout ProgressLayout, topErr error, width int) string {
 	var b strings.Builder
 	if topErr != nil {
-		fmt.Fprintf(&b, "%s\n  %s\n\n", styleError.Render("Operation error"), topErr)
+		writeProgressDetailValue(&b, "", styleError.Render("Operation error"), width)
+		writeProgressDetailValue(&b, "  ", topErr.Error(), width)
+		b.WriteString("\n")
 	}
 	for phaseIndex, phase := range layout.Phases {
 		if phaseIndex > 0 {
 			b.WriteString("\n")
 		}
-		fmt.Fprintf(&b, "%s\n", styleTitle.Render(phase.Name))
-		fmt.Fprintf(&b, "  %s  %s\n", styleDim.Render("Phase ID"), phase.ID)
-		fmt.Fprintf(&b, "  %s  %s\n", styleDim.Render("Status"), progressPhaseStatus(phase))
+		writeProgressDetailValue(&b, "", styleTitle.Render(phase.Name), width)
+		writeProgressDetailValue(&b, "  "+styleDim.Render("Phase ID")+"  ", string(phase.ID), width)
+		writeProgressDetailValue(&b, "  "+styleDim.Render("Status")+"  ", progressPhaseStatus(phase), width)
 		for _, step := range phase.Steps {
-			fmt.Fprintf(&b, "\n  %s\n", step.Name)
-			fmt.Fprintf(&b, "    %s  %s\n", styleDim.Render("Step ID"), step.ID)
-			fmt.Fprintf(&b, "    %s  %s\n", styleDim.Render("Status"), progressStepStatus(step.Status))
+			b.WriteString("\n")
+			writeProgressDetailValue(&b, "  ", step.Name, width)
+			writeProgressDetailValue(&b, "    "+styleDim.Render("Step ID")+"  ", string(step.ID), width)
+			writeProgressDetailValue(&b, "    "+styleDim.Render("Status")+"  ", progressStepStatus(step.Status), width)
 			if step.Message != "" {
 				label := "Message"
 				if step.Status == progress.StepSkipped {
 					label = "Skip reason"
 				}
-				fmt.Fprintf(&b, "    %s  %s\n", styleDim.Render(label), step.Message)
+				writeProgressDetailValue(&b, "    "+styleDim.Render(label)+"  ", step.Message, width)
 			}
 			if step.Error != nil {
-				fmt.Fprintf(&b, "    %s  %s\n", styleError.Render("Error"), step.Error)
+				writeProgressDetailValue(&b, "    "+styleError.Render("Error")+"  ", step.Error.Error(), width)
 			}
 		}
 	}
 	return strings.TrimRight(b.String(), "\n")
+}
+
+func writeProgressDetailValue(b *strings.Builder, prefix, value string, width int) {
+	prefixWidth := ansi.StringWidth(prefix)
+	wrapped := ansi.Hardwrap(value, max(width-prefixWidth, 1), true)
+	continuation := strings.Repeat(" ", prefixWidth)
+	for i, line := range strings.Split(wrapped, "\n") {
+		if i == 0 {
+			b.WriteString(prefix)
+		} else {
+			b.WriteString(continuation)
+		}
+		b.WriteString(line)
+		b.WriteString("\n")
+	}
 }
 
 func progressPhaseStatus(phase progress.PhaseState) string {

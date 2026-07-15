@@ -46,7 +46,7 @@ func WindowSteps(steps []progress.StepState, availableLines int) WindowResult {
 	}
 
 	if availableLines == 0 {
-		return WindowResult{Stats: stats}
+		return WindowResult{Windowed: len(steps) > 0, Stats: stats}
 	}
 
 	budget := availableLines - 1 // reserve the omission stat
