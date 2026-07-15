@@ -1,0 +1,30 @@
+.demos/progress-arc/removal-success.tape
+  s_47b5c057f8c030::t_0c114945077782 9
+  s_47b5c057f8c030::t_3b030ac24996b1 11
+.demos/progress-arc/before-after.tape
+  s_47b5c057f8c030::t_3b030ac24996b1 12,31
+  s_47b5c057f8c030::t_0c114945077782 9,28
+.demos/progress-arc/integration-failure.tape
+  s_47b5c057f8c030::t_3b030ac24996b1 11
+  s_47b5c057f8c030::t_0c114945077782 9
+.demos/progress-arc/README.md
+  s_47b5c057f8c030::t_0c114945077782 19
+  s_47b5c057f8c030::t_3b030ac24996b1 20-22
+  s_47b5c057f8c030::t_3f48e3a3443769 23
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "552f70f95651330757cb91314d4cefcf00dcd904",
+  "prompts": {},
+  "sessions": {
+    "s_47b5c057f8c030": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f5f62-a0bd-7f92-96e2-b1de98524420",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>"
+    }
+  }
+}
