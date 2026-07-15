@@ -1,0 +1,66 @@
+internal/tui/migrate_summary.go
+  s_47b5c057f8c030::t_b11fa2a122fd41 69-71
+internal/repo/create_execution_test.go
+  s_47b5c057f8c030::t_75e8564e93562c 64-103
+  s_47b5c057f8c030::t_79a3f3ad12a276 1-63,104-118
+internal/tui/repo_summary.go
+  s_47b5c057f8c030::t_b11fa2a122fd41 19-21
+internal/repo/clone.go
+  s_47b5c057f8c030::t_e1eadd5c498a18 27-56,72,76,79-90,92-105,108,114,118,122-126,129,131,133-140,142-205
+cmd/migrate_run_test.go
+  s_47b5c057f8c030::t_b9437a1f7a68c8 4,9-10,13-18
+  s_47b5c057f8c030::t_0329699e701df5 19
+internal/repo/repo.go
+  s_47b5c057f8c030::t_cb5e9d3134a0b4 61-63
+  s_47b5c057f8c030::t_e9011e398029a2 57
+  s_47b5c057f8c030::t_f434990d8b1767 58-60
+cmd/clone.go
+  s_47b5c057f8c030::t_b11fa2a122fd41 42-44,62-65
+  s_47b5c057f8c030::t_b956d49a6aab21 66-68
+internal/repo/clone_execution_test.go
+  s_47b5c057f8c030::t_bcc988ad78bdaa 69-98
+  s_47b5c057f8c030::t_da36c4bacbee31 1-68
+internal/repo/migrate_execution_test.go
+  s_47b5c057f8c030::t_7a0eabe0473518 1-70
+  s_47b5c057f8c030::t_bcc988ad78bdaa 71-81
+internal/repo/create.go
+  s_47b5c057f8c030::t_48ab75b57ea899 79-81
+  s_47b5c057f8c030::t_2e7e751492cb69 5,54-73,96,99-100,102-112,122,129,132,136-137,140,154-157,162,170,174-175,182,186-187,189-220
+internal/repo/migrate_prepared.go
+  s_47b5c057f8c030::t_1eceacd37e1e48 1-211
+internal/repo/migrate_test.go
+  s_47b5c057f8c030::t_92138a40bbc9ec 168-177,304-312
+internal/tui/migrate_summary_test.go
+  s_47b5c057f8c030::t_b9437a1f7a68c8 15-21
+  s_47b5c057f8c030::t_fecc1cfa4f41d9 22
+cmd/migrate.go
+  s_47b5c057f8c030::t_b11fa2a122fd41 44-46,83-86
+  s_47b5c057f8c030::t_1c01250a54e5fb 87-89
+internal/repo/clone_test.go
+  s_47b5c057f8c030::t_608db81111a1cb 154-155,196-197,212-213,234-235
+internal/tui/repo_summary_test.go
+  s_47b5c057f8c030::t_b9437a1f7a68c8 15-21
+  s_47b5c057f8c030::t_9dc78a2741113b 22
+cmd/clone_run_test.go
+  s_47b5c057f8c030::t_b9437a1f7a68c8 4,9-10,13-18
+  s_47b5c057f8c030::t_3236b0278a10b5 19
+internal/repo/migrate.go
+  s_47b5c057f8c030::t_1eceacd37e1e48 26,30
+  s_47b5c057f8c030::t_5a81c210f970de 35,59-60,74,78-79
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "011b7ce87c59efbc5110f165851691f81f8174b4",
+  "prompts": {},
+  "sessions": {
+    "s_47b5c057f8c030": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f5f62-a0bd-7f92-96e2-b1de98524420",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>"
+    }
+  }
+}
