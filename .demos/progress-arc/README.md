@@ -5,6 +5,7 @@ bare repository. Generated binaries, repositories, GIFs, and inspection frames
 stay under `/tmp/sentei-vhs-progress-arc` and are never committed.
 
 ```bash
+.demos/progress-arc/setup-fixture_test.sh
 .demos/progress-arc/setup-fixture.sh
 mkdir -p /tmp/sentei-vhs-progress-arc/bin
 git worktree add --detach /tmp/sentei-vhs-progress-arc/source-before 778421a
@@ -20,8 +21,11 @@ Each tape first changes to `/`, runs `setup-fixture.sh`, chains setup with
 `&&`, then changes to the fixture repository with another fail-closed `&&`
 before launching Sentei. A missing fixture can therefore never fall back to
 the caller's working directory. Setup recreates
-only named children of the exact fixture root, isolates HOME/XDG and Git identity,
-and installs runtime shims. The Git shim denies network-capable verbs and
+only named children of the exact fixture root. It rejects symlinked, non-owned,
+or canonically mismatched fixture paths, including symlinks anywhere beneath
+retained output trees, before resetting anything. It isolates HOME/XDG and Git
+identity and installs runtime shims. The Git shim denies
+network-capable verbs and
 rejects absolute worktree paths outside the fixture. Network clients, package
 managers, and `gh` fail closed. The `ccc` shim proves presence and initialization,
 then exits 17 from `ccc index`, making the integration-failure tape show the

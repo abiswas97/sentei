@@ -7,7 +7,53 @@ case "$ROOT" in
   *) printf 'refusing unsafe fixture root: %s\n' "$ROOT" >&2; exit 64 ;;
 esac
 
-mkdir -p "$ROOT"
+refuse() {
+  printf 'refusing unsafe fixture path: %s (%s)\n' "$1" "$2" >&2
+  exit 64
+}
+
+owner_uid() {
+  local path=$1
+  local uid
+  if uid=$(stat -f '%u' "$path" 2>/dev/null); then
+    printf '%s\n' "$uid"
+    return
+  fi
+  stat -c '%u' "$path"
+}
+
+canonical_dir() {
+  (cd -P "$1" 2>/dev/null && pwd -P)
+}
+
+ROOT_PARENT=$(canonical_dir "$(dirname "$ROOT")") || refuse "$ROOT" 'parent cannot be resolved'
+EXPECTED_ROOT="$ROOT_PARENT/$(basename "$ROOT")"
+
+[[ ! -L "$ROOT" ]] || refuse "$ROOT" 'fixture root is a symlink'
+if [[ -e "$ROOT" ]]; then
+  [[ -d "$ROOT" ]] || refuse "$ROOT" 'fixture root is not a directory'
+  [[ $(owner_uid "$ROOT") == "$(id -u)" ]] || refuse "$ROOT" 'fixture root has a different owner'
+  CANONICAL_ROOT=$(canonical_dir "$ROOT") || refuse "$ROOT" 'fixture root cannot be resolved'
+  [[ "$CANONICAL_ROOT" == "$EXPECTED_ROOT" ]] || refuse "$ROOT" 'fixture root resolves outside its boundary'
+else
+  mkdir "$ROOT"
+  CANONICAL_ROOT=$(canonical_dir "$ROOT") || refuse "$ROOT" 'created fixture root cannot be resolved'
+  [[ "$CANONICAL_ROOT" == "$EXPECTED_ROOT" ]] || refuse "$ROOT" 'created fixture root resolves outside its boundary'
+fi
+
+for child in outputs frames; do
+  retained="$ROOT/$child"
+  [[ ! -L "$retained" ]] || refuse "$retained" 'retained directory is a symlink'
+  if [[ -e "$retained" ]]; then
+    [[ -d "$retained" ]] || refuse "$retained" 'retained path is not a directory'
+    [[ $(owner_uid "$retained") == "$(id -u)" ]] || refuse "$retained" 'retained directory has a different owner'
+    retained_canonical=$(canonical_dir "$retained") || refuse "$retained" 'retained directory cannot be resolved'
+    [[ "$retained_canonical" == "$CANONICAL_ROOT/$child" ]] || refuse "$retained" 'retained directory resolves outside its boundary'
+    descendant_symlink=$(find "$retained" -type l -print -quit) || refuse "$retained" 'retained directory cannot be inspected'
+    [[ -z "$descendant_symlink" ]] || refuse "$descendant_symlink" 'symlink beneath retained directory'
+  fi
+done
+
 for child in home xdg-config xdg-cache xdg-data repo seed shims logs; do
   rm -rf "${ROOT:?}/$child"
   mkdir -p "$ROOT/$child"
