@@ -1,5 +1,53 @@
 # Changelog
 
+## [1.12.0](https://github.com/abiswas97/sentei/compare/v1.11.1...v1.12.0) (2026-07-15)
+
+
+### Features
+
+* **creator,repo:** declare known steps and close phases in pipeline flows ([2fa0778](https://github.com/abiswas97/sentei/commit/2fa07789d3ee032dd1581c0d866c9c33f5f02caa))
+* **integration:** declare apply plans upfront, worktree-outer execution ([b2dfdb2](https://github.com/abiswas97/sentei/commit/b2dfdb2c2a387119a438d38d76d94c7948f4fb43))
+* progress consolidation arc ([2db9c12](https://github.com/abiswas97/sentei/commit/2db9c12192e4310bf7bb9abb26de38eb77265555))
+* **progress:** add consolidated progress package vocabulary, runner, and fold ([e7bf135](https://github.com/abiswas97/sentei/commit/e7bf13558b8c2a6effd3df6f72773aa6a2e07b70))
+* **progress:** finalize execution contracts ([abfe5f1](https://github.com/abiswas97/sentei/commit/abfe5f18614054cc894ffcb0b681c6f32ee56890))
+* **progress:** make plans own terminal state ([b5b5665](https://github.com/abiswas97/sentei/commit/b5b566520cd24b46102b98104eebf80cc558882e))
+* **progress:** plan declarations, checkpoints, close markers, settled predicate ([f7bcfde](https://github.com/abiswas97/sentei/commit/f7bcfdeac82d9ecaec7dc26ddc63940933ba4166))
+* **tui:** checkpoint-derived bar and settled-gated phase collapse ([453788d](https://github.com/abiswas97/sentei/commit/453788d0bf24070ed12e0b1129b3f6bb8053fda3))
+* **tui:** pin the progress live region ([d8c080c](https://github.com/abiswas97/sentei/commit/d8c080ca91a196ff0358af5ce2d1a460cd12868f))
+* **tui:** removal flow declares teardown plans and removal checkpoints ([6e2cf42](https://github.com/abiswas97/sentei/commit/6e2cf42be37edf9db125c76bc3ecd3e0d9c37079))
+* **tui:** truth polish for errors title, failed counts, skip traces, elapsed gate ([120c314](https://github.com/abiswas97/sentei/commit/120c31449818b0a6e90305b48883dfb80d4bcda7))
+* **tui:** unconditional state-relative completion settle ([548e976](https://github.com/abiswas97/sentei/commit/548e9760da96a322fa66786ca5fb4cb6ad8ce015))
+
+
+### Bug Fixes
+
+* **creator:** preserve independent setup fallbacks ([9e988a7](https://github.com/abiswas97/sentei/commit/9e988a73976fb23bb6977d8a6703b8cfcfe2e0b9))
+* **creator:** settle the prepared creation plan ([7b79972](https://github.com/abiswas97/sentei/commit/7b799725376a49b9525a9069ce285e9ac54b2b8a))
+* **demos:** fail closed outside fixture ([552f70f](https://github.com/abiswas97/sentei/commit/552f70f95651330757cb91314d4cefcf00dcd904))
+* **hooks:** install hooks in shared git dir ([37a7e55](https://github.com/abiswas97/sentei/commit/37a7e555b019ae028afc85ddfa85213443fe987d))
+* **integration:** complete frozen operation engine ([a2f18e4](https://github.com/abiswas97/sentei/commit/a2f18e43e64fae77b1b8d22041b4292919e8a1a4))
+* **integration:** contain destructive operations ([ebff4c1](https://github.com/abiswas97/sentei/commit/ebff4c11d85a329006cd2530b5e1a700c8f74554))
+* **integration:** freeze exact apply plans ([2f0b476](https://github.com/abiswas97/sentei/commit/2f0b47637839cf26889fedccff25ad7c2feb7df0))
+* **integration:** preserve detection fallback ([f38c862](https://github.com/abiswas97/sentei/commit/f38c86251965b44ab945fb64ab3bc56bcc35a8db))
+* **integration:** reject incomplete apply results ([d692f8c](https://github.com/abiswas97/sentei/commit/d692f8c197f2d08b4959be2b84c5a99e4b349da3))
+* **integration:** surface prepared apply failures ([2dea12c](https://github.com/abiswas97/sentei/commit/2dea12cd19576c9521a40d1adca9e771827fd30f))
+* **progress:** flush terminal events before finish ([c23ae8f](https://github.com/abiswas97/sentei/commit/c23ae8f3aa5fb68f9bee2f7a7bbef7848b852c9c))
+* **progress:** harden execution concurrency contract ([b7adb31](https://github.com/abiswas97/sentei/commit/b7adb31eb35cf8bcd91281e8aeceb9f3bba646ab))
+* **progress:** require stable stream labels ([15a909a](https://github.com/abiswas97/sentei/commit/15a909a20c47aecf424a4170349fb421ed0e546c))
+* **removal:** report all frozen execution failures ([c851159](https://github.com/abiswas97/sentei/commit/c85115906b5f587a6f4afd0740787370b3354501))
+* **repo:** execute frozen repository plans ([011b7ce](https://github.com/abiswas97/sentei/commit/011b7ce87c59efbc5110f165851691f81f8174b4))
+* **repo:** preserve backup on partial restore ([4bc307c](https://github.com/abiswas97/sentei/commit/4bc307c81e5f28c2e088f524f6b332310aef69a9))
+* **repo:** preserve migration recovery metadata ([54cff72](https://github.com/abiswas97/sentei/commit/54cff72429b002045b514dd6211bcd82d24b426e))
+* **repo:** reserve migration backups safely ([a0bff9d](https://github.com/abiswas97/sentei/commit/a0bff9d86b68e3f45384e20beea4f920c51d1307))
+* **tui:** bound progress views to the terminal ([07cac82](https://github.com/abiswas97/sentei/commit/07cac8271c377eb5c8c801e3f56b39f0612d82d4))
+* **tui:** bound settled summaries ([17c83ae](https://github.com/abiswas97/sentei/commit/17c83aec1875c4e89cdf4ec3ae79ac7add022e02))
+* **tui:** keep removal summaries truthful ([04d5a5f](https://github.com/abiswas97/sentei/commit/04d5a5f9fbe4334aac67e3fedc17e58bebf81399))
+* **tui:** preserve narrow progress details ([06c9737](https://github.com/abiswas97/sentei/commit/06c9737a2d1ab8b49611f0de60fe9d03b8f92522))
+* **tui:** preserve omitted progress details ([c50160b](https://github.com/abiswas97/sentei/commit/c50160b79436b120f692cbe076ac1b691b5ccc31))
+* **tui:** prevent stale progress motion ([75cc8d9](https://github.com/abiswas97/sentei/commit/75cc8d91236afb9a29dae9401a7d7e0533c4949c))
+* **tui:** scope progress motion ([e236c0b](https://github.com/abiswas97/sentei/commit/e236c0bfc8faeeea73509b8ab9bdf86a6d7b964d))
+* **tui:** settle progress summaries cleanly ([0cd8462](https://github.com/abiswas97/sentei/commit/0cd84621c97ffb2c37c3f2d177cc5fc43c025b18))
+
 ## [1.11.1](https://github.com/abiswas97/sentei/compare/v1.11.0...v1.11.1) (2026-06-12)
 
 
