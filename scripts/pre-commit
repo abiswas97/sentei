@@ -3,17 +3,26 @@ set -euo pipefail
 
 REPO_ROOT="$(git rev-parse --show-toplevel)"
 
-# Identity guard: a test-helper config leak once poisoned 100+ commits with a
-# placeholder identity (Test <t@t.com>, displayed on GitHub as a stranger's
-# account). Refuse to commit under anything but the repo's real identity.
-EXPECTED_EMAIL="avishek.biswas.1997@gmail.com"
-actual_email="$(git config user.email || true)"
-if [ "$actual_email" != "$EXPECTED_EMAIL" ]; then
-	echo "ERROR: git identity is '$actual_email', expected '$EXPECTED_EMAIL'."
-	echo "       A test or tool has likely leaked config into this repo."
-	echo "       Fix: git config user.email $EXPECTED_EMAIL && git config user.name Avi"
+# Guard the effective identities Git will write, including environment
+# overrides used by automation. Never require or print a contributor's
+# personal identity; reject only the reserved test markers.
+author_ident="$(git var GIT_AUTHOR_IDENT)"
+committer_ident="$(git var GIT_COMMITTER_IDENT)"
+
+reject_identity() {
+	role="$1"
+	variable="$2"
+	echo "ERROR: effective Git $role identity uses a reserved test marker."
+	echo "       Inspect it with: git var $variable"
 	exit 1
-fi
+}
+
+case "$author_ident" in
+*sentei-test* | *"@sentei.invalid"*) reject_identity author GIT_AUTHOR_IDENT ;;
+esac
+case "$committer_ident" in
+*sentei-test* | *"@sentei.invalid"*) reject_identity committer GIT_COMMITTER_IDENT ;;
+esac
 
 staged_go_files=$(git diff --cached --name-only --diff-filter=ACM -- '*.go' || true)
 if [ -z "$staged_go_files" ]; then
