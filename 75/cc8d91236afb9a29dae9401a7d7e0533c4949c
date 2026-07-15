@@ -1,0 +1,24 @@
+internal/tui/model.go
+  s_47b5c057f8c030::t_a520238b34f4cd 644,647-649
+internal/tui/motion_preference_test.go
+  s_47b5c057f8c030::t_bab4f2241f236e 4,173-203
+  s_47b5c057f8c030::t_331f1e6d1ed8f2 204
+internal/tui/progress_layout.go
+  s_47b5c057f8c030::t_a520238b34f4cd 347
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "75cc8d91236afb9a29dae9401a7d7e0533c4949c",
+  "prompts": {},
+  "sessions": {
+    "s_47b5c057f8c030": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f5f62-a0bd-7f92-96e2-b1de98524420",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>"
+    }
+  }
+}
