@@ -108,6 +108,35 @@ func TestProgressDetail_WrapsLongSourceTextToPortalWidth(t *testing.T) {
 	}
 }
 
+func TestProgressDetail_NarrowPortalPreservesPrefixedUnicodeValues(t *testing.T) {
+	skipReason := "界🙂 already installed with 完整 reason"
+	errorText := "錯誤🙂 complete failure detail"
+	m := NewModel(nil, nil, "/repo")
+	m.view = progressView
+	m.width, m.height, m.windowHeight = 20, 6, 12
+	m.portal = m.portal.SetSize(20, 12)
+	m.remove.run.events = []progress.Event{
+		{Phase: "phase-id", PhaseLabel: "Readable phase", Step: "skip-id", StepLabel: "Skipped step", Status: progress.StepPending, Of: 2},
+		{Phase: "phase-id", Step: "fail-id", StepLabel: "Failed step", Status: progress.StepPending, Of: 2},
+		{Phase: "phase-id", PhaseLabel: "Readable phase", Close: true},
+		{Phase: "phase-id", Step: "skip-id", Status: progress.StepSkipped, Message: skipReason},
+		{Phase: "phase-id", Step: "fail-id", Status: progress.StepFailed, Error: errors.New(errorText)},
+	}
+
+	_, content := m.detailContent()
+	plain := stripANSI(content)
+	for name, source := range map[string]string{"skip reason": skipReason, "error": errorText} {
+		if !strings.Contains(compactProgressDetailText(plain), compactProgressDetailText(source)) {
+			t.Errorf("narrow detail lost %s %q:\n%s", name, source, plain)
+		}
+	}
+	for row, line := range strings.Split(content, "\n") {
+		if got := lipgloss.Width(line); got > m.portal.contentWidth() {
+			t.Errorf("row %d width=%d exceeds narrow portal width=%d: %q", row+1, got, m.portal.contentWidth(), stripANSI(line))
+		}
+	}
+}
+
 func TestProgressPortal_StaysOpenAcrossBackgroundEventAndResize(t *testing.T) {
 	m := progressDetailModel()
 	title, content := m.detailContent()

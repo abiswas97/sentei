@@ -233,7 +233,27 @@ func renderProgressDetails(layout ProgressLayout, topErr error, width int) strin
 }
 
 func writeProgressDetailValue(b *strings.Builder, prefix, value string, width int) {
+	if width <= 0 {
+		return
+	}
 	prefixWidth := ansi.StringWidth(prefix)
+	const minInlineValueWidth = 4
+	if prefix != "" && width-prefixWidth < minInlineValueWidth {
+		label := strings.TrimRight(prefix, " ")
+		b.WriteString(fitProgressLine(label, width))
+		b.WriteString("\n")
+
+		leading := len(prefix) - len(strings.TrimLeft(prefix, " "))
+		indentWidth := min(leading+2, max(width-minInlineValueWidth, 0))
+		indent := strings.Repeat(" ", indentWidth)
+		wrapped := ansi.Hardwrap(value, max(width-indentWidth, 1), true)
+		for _, line := range strings.Split(wrapped, "\n") {
+			b.WriteString(indent)
+			b.WriteString(line)
+			b.WriteString("\n")
+		}
+		return
+	}
 	wrapped := ansi.Hardwrap(value, max(width-prefixWidth, 1), true)
 	continuation := strings.Repeat(" ", prefixWidth)
 	for i, line := range strings.Split(wrapped, "\n") {
