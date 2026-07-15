@@ -15,7 +15,6 @@ func TestUpdateSummary_MenuLaunch_KeysReturnToMenu(t *testing.T) {
 		msg  tea.KeyPressMsg
 	}{
 		{"enter", tea.KeyPressMsg{Code: tea.KeyEnter}},
-		{"quit key", keyMsg("q")},
 		{"esc", tea.KeyPressMsg{Code: tea.KeyEsc}},
 	}
 	for _, tc := range cases {
@@ -32,6 +31,22 @@ func TestUpdateSummary_MenuLaunch_KeysReturnToMenu(t *testing.T) {
 				t.Error("returning to menu should not emit a command")
 			}
 		})
+	}
+}
+
+func TestUpdateSummary_MenuLaunch_QuitKeyMatchesFooter(t *testing.T) {
+	m := NewMenuModel(nil, nil, "/repo", &config.Config{}, repo.ContextBareRepo)
+	m.view = summaryView
+
+	updated, cmd := m.updateSummary(keyMsg("q"))
+	if updated.(Model).view != summaryView {
+		t.Fatalf("quit key changed view to %d before exit", updated.(Model).view)
+	}
+	if cmd == nil {
+		t.Fatal("footer advertises q quit, but q emitted no quit command")
+	}
+	if _, ok := cmd().(tea.QuitMsg); !ok {
+		t.Fatalf("q emitted %T, want tea.QuitMsg", cmd())
 	}
 }
 

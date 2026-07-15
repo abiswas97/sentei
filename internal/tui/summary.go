@@ -14,7 +14,9 @@ func (m Model) updateSummary(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyPressMsg:
 		switch {
-		case key.Matches(msg, keys.Quit), key.Matches(msg, keys.Confirm):
+		case key.Matches(msg, keys.Quit):
+			return m, tea.Quit
+		case key.Matches(msg, keys.Confirm):
 			if m.menuItems != nil {
 				m.view = menuView
 				return m, nil
