@@ -1,0 +1,25 @@
+scripts/pre-commit_test.sh
+  s_47b5c057f8c030::t_c52094bf00a132 59-65,107-109
+  s_47b5c057f8c030::t_c81c826ae4f34c 102,104-106
+  s_47b5c057f8c030::t_6914ce7629efed 1-58,66-101,103,110-112
+scripts/install-hooks.sh
+  s_47b5c057f8c030::t_1d68690267d7d4 5-10,12-16,18
+scripts/pre-commit
+  s_47b5c057f8c030::t_4d9a3eff30aaa4 6-16,18-25
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "37a7e555b019ae028afc85ddfa85213443fe987d",
+  "prompts": {},
+  "sessions": {
+    "s_47b5c057f8c030": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f5f62-a0bd-7f92-96e2-b1de98524420",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>"
+    }
+  }
+}
