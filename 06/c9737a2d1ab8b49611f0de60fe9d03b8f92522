@@ -1,0 +1,21 @@
+internal/tui/help.go
+  s_47b5c057f8c030::t_370082114991f9 236-238,240-256
+internal/tui/progress_detail_test.go
+  s_47b5c057f8c030::t_4bfa2c5e051712 111-139
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "06c9737a2d1ab8b49611f0de60fe9d03b8f92522",
+  "prompts": {},
+  "sessions": {
+    "s_47b5c057f8c030": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f5f62-a0bd-7f92-96e2-b1de98524420",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>"
+    }
+  }
+}
