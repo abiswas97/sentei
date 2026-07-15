@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 
 	tea "charm.land/bubbletea/v2"
 
@@ -12,6 +13,105 @@ import (
 	"github.com/abiswas97/sentei/internal/progress"
 	"github.com/abiswas97/sentei/internal/testutil/mock"
 )
+
+type panicShell struct {
+	delegate *mock.Runner
+	panics   bool
+}
+
+func (s *panicShell) RunShell(dir, command string) (string, error) {
+	if s.panics {
+		panic("shell exploded")
+	}
+	return s.delegate.RunShell(dir, command)
+}
+
+func TestIntegrationApplyWorkerBuffersOneTerminalResultAndRecoversPanic(t *testing.T) {
+	shell := &panicShell{delegate: &mock.Runner{Responses: map[string]mock.Response{
+		"/wt/a:shell[tool detect]": {Output: "installed"},
+	}}}
+	prepared, err := integration.PrepareApply(shell, "/repo", "/wt/a", []integration.Integration{{
+		Name: "tool", Detect: integration.DetectSpec{Command: "tool detect"},
+		Setup: integration.SetupSpec{Command: "tool setup", WorkingDir: "worktree"},
+	}}, nil, []string{"/wt/a"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	shell.panics = true
+
+	events := make(chan progress.Event, 4)
+	results := make(chan integrationApplyResult, 1)
+	go runIntegrationApplyWorker(prepared, shell, events, results)
+
+	for range events {
+	}
+	result, ok := <-results
+	if !ok || result.err == nil || !strings.Contains(result.err.Error(), "worker panicked") {
+		t.Fatalf("terminal result = %#v, ok=%v, want recovered panic error", result, ok)
+	}
+	if cap(results) != 1 {
+		t.Fatalf("terminal result channel capacity = %d, want 1", cap(results))
+	}
+	if _, ok := <-results; ok {
+		t.Fatal("terminal result channel must contain exactly one result")
+	}
+}
+
+func TestStartPreparedIntegrationApplyUsesBufferedTerminalChannel(t *testing.T) {
+	m := makeIntegrationModel()
+	prepared, err := integration.PrepareApply(&mock.Runner{}, "/repo", "", nil, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	m, cmd := m.startPreparedIntegrationApply(prepared)
+	if cap(m.integ.resultCh) != 1 {
+		t.Fatalf("terminal result channel capacity = %d, want 1", cap(m.integ.resultCh))
+	}
+	if m.integ.lifecycle != integrationExecuting || cmd == nil {
+		t.Fatalf("lifecycle=%v cmd=%v, want executing with wait command", m.integ.lifecycle, cmd)
+	}
+}
+
+func TestWaitForIntegrationEventDrainsEventsBeforeTerminalResult(t *testing.T) {
+	events := make(chan progress.Event, 2)
+	results := make(chan integrationApplyResult, 1)
+	events <- progress.Event{Step: "first"}
+	events <- progress.Event{Step: "second"}
+	close(events)
+	results <- integrationApplyResult{}
+	close(results)
+
+	for _, want := range []string{"first", "second"} {
+		msg := waitForIntegrationEvent(events, results)()
+		event, ok := msg.(integrationEventMsg)
+		if !ok || event.Event.Step != want {
+			t.Fatalf("message = %#v, want event %q", msg, want)
+		}
+	}
+	if _, ok := waitForIntegrationEvent(events, results)().(integrationApplyDoneMsg); !ok {
+		t.Fatal("terminal result arrived before queued events were drained")
+	}
+}
+
+func TestWaitForIntegrationEventClosedWithoutResultIsInternalError(t *testing.T) {
+	events := make(chan progress.Event)
+	results := make(chan integrationApplyResult, 1)
+	close(events)
+
+	messages := make(chan tea.Msg, 1)
+	go func() { messages <- waitForIntegrationEvent(events, results)() }()
+	var msg tea.Msg
+	select {
+	case msg = <-messages:
+	case <-time.After(200 * time.Millisecond):
+		t.Fatal("closed event stream wedged waiting for a missing terminal result")
+	}
+	done := msg.(integrationApplyDoneMsg)
+	if done.result.err == nil || !strings.Contains(done.result.err.Error(), "without a terminal result") {
+		t.Fatalf("terminal error = %v, want internal missing-result error", done.result.err)
+	}
+}
 
 func TestUpdateIntegrationList_LoadedMsg_SetsState(t *testing.T) {
 	m := makeIntegrationModel()
@@ -111,6 +211,20 @@ func TestUpdateIntegrationList_Toggle(t *testing.T) {
 	after := m.integ.staged[m.integ.integrations[0].Name]
 	if after == before {
 		t.Errorf("toggle should flip staged value: was %v, still %v", before, after)
+	}
+}
+
+func TestUpdateIntegrationList_ConfirmWithoutChangesStaysIdle(t *testing.T) {
+	m := makeIntegrationModel()
+	m.view = integrationListView
+
+	updated, cmd := m.updateIntegrationList(tea.KeyPressMsg{Code: tea.KeyEnter})
+	m = updated.(Model)
+	if m.view != integrationListView || cmd != nil {
+		t.Fatalf("view=%v cmd=%v, want unchanged list with no preparation command", m.view, cmd)
+	}
+	if m.integ.lifecycle != integrationIdle || m.integ.eventCh != nil {
+		t.Fatalf("lifecycle=%v eventCh=%v, want idle without channels", m.integ.lifecycle, m.integ.eventCh)
 	}
 }
 

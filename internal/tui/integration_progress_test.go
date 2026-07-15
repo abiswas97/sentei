@@ -2,6 +2,7 @@ package tui
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -50,13 +51,32 @@ func makeIntegrationModel() Model {
 	return m
 }
 
+func TestIntegrationLifecycleTransitionsKeepErrorsSeparate(t *testing.T) {
+	m := makeIntegrationModel()
+	if m.integ.lifecycle != integrationIdle {
+		t.Fatalf("initial lifecycle = %v, want idle", m.integ.lifecycle)
+	}
+
+	m.view = integrationProgressView
+	m.integ.lifecycle = integrationPreparing
+	prepareErr := errors.New("prepare failed")
+	updated, _ := m.updateIntegrationProgress(integrationPreparedMsg{err: prepareErr})
+	m = updated.(Model)
+	if m.integ.lifecycle != integrationSettling || !errors.Is(m.integ.prepareErr, prepareErr) {
+		t.Fatalf("after preparation failure: lifecycle=%v prepareErr=%v", m.integ.lifecycle, m.integ.prepareErr)
+	}
+	if m.integ.executionErr != nil || m.integ.saveErr != nil {
+		t.Fatalf("preparation failure polluted later errors: execution=%v save=%v", m.integ.executionErr, m.integ.saveErr)
+	}
+}
+
 func TestUpdateIntegrationProgress_EventMsg(t *testing.T) {
 	m := makeIntegrationModel()
 	m.view = integrationProgressView
 	ch := make(chan progress.Event, 1)
-	doneCh := make(chan struct{}, 1)
+	resultCh := make(chan integrationApplyResult, 1)
 	m.integ.eventCh = ch
-	m.integ.doneCh = doneCh
+	m.integ.resultCh = resultCh
 
 	ev := progress.Event{
 		Phase:  "/repo/main",
@@ -114,9 +134,31 @@ func TestUpdateIntegrationProgress_FinalizedMsg_Migration(t *testing.T) {
 	if m.view != migrateNextView {
 		t.Errorf("expected migrateNextView, got %d", m.view)
 	}
+	if m.integ.lifecycle != integrationIdle {
+		t.Fatalf("lifecycle=%v, want idle after clean migration hand-off", m.integ.lifecycle)
+	}
 	// current should NOT be updated for migration flow
 	if m.integ.current["cocoindex-code"] {
 		t.Error("cocoindex-code should not be updated in current for migration flow")
+	}
+}
+
+func TestUpdateIntegrationProgress_MigrationSaveErrorShowsSummaryThenReturns(t *testing.T) {
+	m := makeIntegrationModel()
+	m.view = integrationProgressView
+	m.integ.returnView = migrateNextView
+	saveErr := errors.New("disk full")
+
+	updated, _ := m.updateIntegrationProgress(integrationFinalizedMsg{err: saveErr})
+	m = settleNow(t, updated.(Model))
+	if m.view != integrationSummaryView || !errors.Is(m.integ.saveErr, saveErr) {
+		t.Fatalf("view=%v saveErr=%v, want migration integration error summary", m.view, m.integ.saveErr)
+	}
+	for _, key := range []tea.KeyPressMsg{{Code: tea.KeyEnter}, {Code: tea.KeyEsc}} {
+		returned, _ := m.updateIntegrationSummary(key)
+		if returned.(Model).view != migrateNextView {
+			t.Fatalf("key %v did not return to migrateNext", key.Code)
+		}
 	}
 }
 
@@ -221,7 +263,7 @@ func TestViewIntegrationProgress_Loading(t *testing.T) {
 func TestViewIntegrationProgress_PreparingPlanIsIndeterminate(t *testing.T) {
 	m := makeIntegrationModel()
 	m.view = integrationProgressView
-	m.integ.preparing = true
+	m.integ.lifecycle = integrationPreparing
 
 	output := stripAnsi(m.viewIntegrationProgress())
 	if !strings.Contains(output, "Preparing plan...") {
@@ -236,17 +278,134 @@ func TestViewIntegrationProgress_PreparingPlanIsIndeterminate(t *testing.T) {
 func TestUpdateIntegrationProgress_PreparationErrorIsReported(t *testing.T) {
 	m := makeIntegrationModel()
 	m.view = integrationProgressView
-	m.integ.preparing = true
+	m.integ.lifecycle = integrationPreparing
 	m.integ.returnView = integrationListView
 	prepareErr := errors.New("no target worktree")
 
 	updated, _ := m.updateIntegrationProgress(integrationPreparedMsg{err: prepareErr})
 	m = updated.(Model)
-	if m.integ.preparing || !errors.Is(m.integ.applyErr, prepareErr) {
-		t.Fatalf("preparing=%v applyErr=%v", m.integ.preparing, m.integ.applyErr)
+	if m.integ.lifecycle != integrationSettling || !errors.Is(m.integ.prepareErr, prepareErr) {
+		t.Fatalf("lifecycle=%v prepareErr=%v", m.integ.lifecycle, m.integ.prepareErr)
 	}
 	if m.integ.eventCh != nil {
 		t.Fatal("execution channel created after preparation failure")
+	}
+}
+
+func TestUpdateIntegrationProgress_ExecutionErrorDoesNotFinalizeState(t *testing.T) {
+	m := makeIntegrationModel()
+	m.view = integrationProgressView
+	m.integ.returnView = integrationListView
+	runErr := errors.New("progress sink failed")
+
+	updated, _ := m.updateIntegrationProgress(integrationApplyDoneMsg{result: integrationApplyResult{err: runErr}})
+	m = updated.(Model)
+	if !errors.Is(m.integ.executionErr, runErr) {
+		t.Fatalf("executionErr = %v, want %v", m.integ.executionErr, runErr)
+	}
+	if m.integ.lifecycle != integrationSettling {
+		t.Fatal("execution error must finalize into the error summary")
+	}
+}
+
+func TestIntegrationExecutionCanSaveOnlyCompletedOrEmpty(t *testing.T) {
+	one := func(status progress.StepStatus) []progress.Phase {
+		return []progress.Phase{{Steps: []progress.StepResult{{Status: status}}}}
+	}
+	tests := []struct {
+		name   string
+		phases []progress.Phase
+		empty  bool
+		want   bool
+	}{
+		{name: "valid empty plan", empty: true, want: true},
+		{name: "missing result is not an empty plan", want: false},
+		{name: "all done", phases: one(progress.StepDone), want: true},
+		{name: "ordinary failure", phases: one(progress.StepFailed), want: false},
+		{name: "blocked skip", phases: one(progress.StepSkipped), want: false},
+		{name: "unresolved", phases: one(progress.StepPending), want: false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := integrationExecutionCanSave(tt.phases, tt.empty); got != tt.want {
+				t.Fatalf("integrationExecutionCanSave() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestUpdateIntegrationProgress_FailedOrSkippedExecutionPreservesState(t *testing.T) {
+	for _, status := range []progress.StepStatus{progress.StepFailed, progress.StepSkipped} {
+		t.Run(fmt.Sprint(status), func(t *testing.T) {
+			tmp := t.TempDir()
+			bareDir := filepath.Join(tmp, ".bare")
+			if err := os.Mkdir(bareDir, 0o755); err != nil {
+				t.Fatal(err)
+			}
+			if err := state.Save(bareDir, &state.State{Integrations: []string{"code-review-graph"}, LifetimeRemoved: 4}); err != nil {
+				t.Fatal(err)
+			}
+			m := makeIntegrationModel()
+			m.view = integrationProgressView
+			m.repoPath = tmp
+			m.runner = bareDirRunner(tmp)
+			m.integ.returnView = migrateNextView
+			m.integ.staged = map[string]bool{"cocoindex-code": true}
+
+			updated, _ := m.updateIntegrationProgress(integrationApplyDoneMsg{result: integrationApplyResult{
+				phases: []progress.Phase{{Steps: []progress.StepResult{{Status: status}}}},
+			}})
+			m = updated.(Model)
+			if m.integ.lifecycle != integrationSettling {
+				t.Fatalf("lifecycle=%v, want settling without save", m.integ.lifecycle)
+			}
+			persisted, err := state.Load(bareDir)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(persisted.Integrations) != 1 || persisted.Integrations[0] != "code-review-graph" || persisted.LifetimeRemoved != 4 {
+				t.Fatalf("state changed after status %v: %#v", status, persisted)
+			}
+			m = settleNow(t, m)
+			if m.view != integrationSummaryView {
+				t.Fatalf("view=%v, want integration error summary", m.view)
+			}
+		})
+	}
+}
+
+func TestUpdateIntegrationProgress_EmptyExecutionSavesDesiredState(t *testing.T) {
+	tmp := t.TempDir()
+	bareDir := filepath.Join(tmp, ".bare")
+	if err := os.Mkdir(bareDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := state.Save(bareDir, &state.State{Integrations: []string{"code-review-graph"}, LifetimeRemoved: 6}); err != nil {
+		t.Fatal(err)
+	}
+	m := makeIntegrationModel()
+	m.view = integrationProgressView
+	m.repoPath = tmp
+	m.runner = bareDirRunner(tmp)
+	m.integ.returnView = integrationListView
+	m.integ.staged = map[string]bool{}
+
+	updated, saveCmd := m.updateIntegrationProgress(integrationApplyDoneMsg{result: integrationApplyResult{phases: nil, empty: true}})
+	m = updated.(Model)
+	if m.integ.lifecycle != integrationSaving || saveCmd == nil {
+		t.Fatalf("lifecycle=%v saveCmd=%v, want saving", m.integ.lifecycle, saveCmd)
+	}
+	updated, _ = m.updateIntegrationProgress(saveCmd())
+	m = updated.(Model)
+	if m.integ.lifecycle != integrationSettling || m.integ.saveErr != nil {
+		t.Fatalf("lifecycle=%v saveErr=%v, want clean settling", m.integ.lifecycle, m.integ.saveErr)
+	}
+	persisted, err := state.Load(bareDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(persisted.Integrations) != 0 || persisted.LifetimeRemoved != 6 {
+		t.Fatalf("persisted state = %#v, want empty integrations and preserved lifetime", persisted)
 	}
 }
 
@@ -277,6 +436,60 @@ func TestFinalizeIntegrationApply_SavesStagedIntegrations(t *testing.T) {
 	}
 	if !st.HasIntegration("code-review-graph") || st.HasIntegration("cocoindex-code") {
 		t.Errorf("persisted integrations = %v, want only code-review-graph", st.Integrations)
+	}
+}
+
+func TestFinalizeIntegrationApply_PreservesLifetimeRemoved(t *testing.T) {
+	tmp := t.TempDir()
+	bareDir := filepath.Join(tmp, ".bare")
+	if err := os.Mkdir(bareDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := state.Save(bareDir, &state.State{Integrations: []string{"old"}, LifetimeRemoved: 17}); err != nil {
+		t.Fatal(err)
+	}
+	m := makeIntegrationModel()
+	m.repoPath = tmp
+	m.runner = bareDirRunner(tmp)
+	m.integ.staged = map[string]bool{"code-review-graph": true}
+
+	if err := m.finalizeIntegrationApply()().(integrationFinalizedMsg).err; err != nil {
+		t.Fatal(err)
+	}
+	got, err := state.Load(bareDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.LifetimeRemoved != 17 {
+		t.Fatalf("LifetimeRemoved = %d, want 17", got.LifetimeRemoved)
+	}
+}
+
+func TestFinalizeIntegrationApply_InvalidJSONFailsWithoutOverwrite(t *testing.T) {
+	tmp := t.TempDir()
+	bareDir := filepath.Join(tmp, ".bare")
+	if err := os.Mkdir(bareDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(bareDir, "sentei.json")
+	original := []byte("{ definitely not json\n")
+	if err := os.WriteFile(path, original, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	m := makeIntegrationModel()
+	m.repoPath = tmp
+	m.runner = bareDirRunner(tmp)
+	m.integ.staged = map[string]bool{"code-review-graph": true}
+
+	if err := m.finalizeIntegrationApply()().(integrationFinalizedMsg).err; err == nil {
+		t.Fatal("invalid existing state must fail the save")
+	}
+	got, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(got) != string(original) {
+		t.Fatalf("invalid state was overwritten: %q", got)
 	}
 }
 

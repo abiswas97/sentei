@@ -190,6 +190,16 @@ type repoState struct {
 	opType   string // "create", "clone", "migrate"
 }
 
+type integrationLifecycle uint8
+
+const (
+	integrationIdle integrationLifecycle = iota
+	integrationPreparing
+	integrationExecuting
+	integrationSaving
+	integrationSettling
+)
+
 // integrationState holds all state for the integration management flow.
 type integrationState struct {
 	integrations []integration.Integration //nolint:unused
@@ -202,18 +212,18 @@ type integrationState struct {
 
 	// Progress
 	events          []progress.Event //nolint:unused
-	preparing       bool
-	finalized       bool                // apply result arrived; the hold is showing
-	targetWorktrees []string            // all apply targets, pre-populated as pending phases
-	eventCh         chan progress.Event //nolint:unused
-	doneCh          chan struct{}       //nolint:unused
+	lifecycle       integrationLifecycle
+	targetWorktrees []string                    // all apply targets, pre-populated as pending phases
+	eventCh         chan progress.Event         //nolint:unused
+	resultCh        chan integrationApplyResult //nolint:unused
 
 	// Context: where to return after progress completes
 	returnView viewState //nolint:unused
 
-	// Apply outcome: persistence error from the last apply, shown in the summary
-	saveErr  error
-	applyErr error
+	// Apply outcome stages remain distinct so summaries identify the failed contract.
+	prepareErr   error
+	executionErr error
+	saveErr      error
 }
 
 type Model struct {
@@ -464,8 +474,12 @@ func (m Model) observeSettle(now time.Time) (Model, bool) {
 	if !m.settleAdvanceReady(now) {
 		return m, false
 	}
+	leavingIntegrationProgress := m.view == integrationProgressView
 	m.progressSettling = false
 	m.view = m.progressTargetView
+	if leavingIntegrationProgress && m.view != integrationSummaryView {
+		m.integ.lifecycle = integrationIdle
+	}
 	// Leaving the progress view: discard the spring state so the next
 	// flow starts from zero, not easing down from 100%.
 	m.bar = newOverallBar()
@@ -516,7 +530,7 @@ func (m Model) Init() tea.Cmd {
 // indeterminateWaitActive reports whether a spinner-bearing wait is visible:
 // the cleanup scan or the menu worktree-context load.
 func (m Model) indeterminateWaitActive() bool {
-	if m.view == integrationProgressView && m.integ.preparing {
+	if m.view == integrationProgressView && m.integ.lifecycle == integrationPreparing {
 		return true
 	}
 	if m.view == cleanupPreviewView && m.cleanupScan == nil {

@@ -53,14 +53,20 @@ func (op applyOperation) key() string { return op.phaseID + "\x00" + op.stepID }
 // PreparedApply is an exact progress declaration plus the frozen operations
 // that implement it. Run performs no detection.
 type PreparedApply struct {
-	Plan       progress.Plan
+	plan       progress.Plan
 	operations []applyOperation
 }
+
+// Plan returns a defensive copy of the frozen progress declaration.
+func (p PreparedApply) Plan() progress.Plan { return clonePlan(p.plan) }
+
+// Empty reports whether preparation froze no work to execute.
+func (p PreparedApply) Empty() bool { return len(p.operations) == 0 }
 
 // PrepareApply performs the read-only detection pass once in the first target
 // worktree, then freezes both the declaration and every execution decision.
 func PrepareApply(shell git.ShellRunner, repoPath, mainWT string, toEnable, toDisable []Integration, wtPaths []string) (PreparedApply, error) {
-	if len(toEnable) > 0 && len(wtPaths) == 0 {
+	if (len(toEnable) > 0 || len(toDisable) > 0) && len(wtPaths) == 0 {
 		return PreparedApply{}, errors.New("preparing integrations: no target worktree")
 	}
 	probeDir := ""
@@ -195,15 +201,16 @@ func PrepareApply(shell git.ShellRunner, repoPath, mainWT string, toEnable, toDi
 		}
 	}
 
-	return PreparedApply{Plan: planForOperations(operations), operations: operations}, nil
+	return PreparedApply{plan: planForOperations(operations), operations: operations}, nil
 }
 
-func (p PreparedApply) Run(shell git.ShellRunner, emit func(progress.Event)) []progress.Phase {
-	execution, err := progress.Start(p.Plan, emit)
+func (p PreparedApply) Run(shell git.ShellRunner, emit func(progress.Event)) ([]progress.Phase, error) {
+	execution, err := progress.Start(p.plan, emit)
 	if err != nil {
-		return nil
+		return nil, fmt.Errorf("starting integration apply: %w", err)
 	}
 	results := make(map[string]progress.StepResult, len(p.operations))
+	var runErr error
 	for _, op := range p.operations {
 		blockedBy := ""
 		for _, dependency := range op.dependsOn {
@@ -214,18 +221,23 @@ func (p PreparedApply) Run(shell git.ShellRunner, emit func(progress.Event)) []p
 			}
 		}
 		if blockedBy != "" {
-			result, _ := execution.Skip(op.phaseID, op.stepID, "blocked by "+blockedBy)
+			result, err := execution.Skip(op.phaseID, op.stepID, "blocked by "+blockedBy)
+			if err != nil {
+				runErr = fmt.Errorf("skipping %s: %w", op.label, err)
+				break
+			}
 			results[op.key()] = result
 			continue
 		}
 		var result progress.StepResult
+		var transitionErr error
 		switch op.kind {
 		case applyFailure:
-			result, _ = execution.Fail(op.phaseID, op.stepID, op.failure)
+			result, transitionErr = execution.Fail(op.phaseID, op.stepID, op.failure)
 		case applyRemove:
-			result, _ = execution.Run(op.phaseID, op.stepID, func() (string, error) { return "", os.RemoveAll(op.dir) })
+			result, transitionErr = execution.Run(op.phaseID, op.stepID, func() (string, error) { return "", os.RemoveAll(op.dir) })
 		default:
-			result, _ = execution.Run(op.phaseID, op.stepID, func() (string, error) {
+			result, transitionErr = execution.Run(op.phaseID, op.stepID, func() (string, error) {
 				if op.seedSource != "" {
 					_ = os.RemoveAll(op.seedDest)
 					_ = fileutil.CopyDir(op.seedSource, op.seedDest)
@@ -237,10 +249,17 @@ func (p PreparedApply) Run(shell git.ShellRunner, emit func(progress.Event)) []p
 				return message, err
 			})
 		}
+		if transitionErr != nil {
+			runErr = fmt.Errorf("executing %s: %w", op.label, transitionErr)
+			break
+		}
 		results[op.key()] = result
 	}
-	_ = execution.Finish("integration apply finished")
-	return phasesFromResults(p.Plan, results)
+	finishErr := execution.Finish("integration apply finished")
+	if finishErr != nil {
+		finishErr = fmt.Errorf("finishing integration apply: %w", finishErr)
+	}
+	return phasesFromResults(p.plan, results), errors.Join(runErr, finishErr)
 }
 
 func detectionCommand(integ Integration) string {
@@ -260,6 +279,15 @@ func stableToken(value string) string {
 
 func stableStepID(kind, value string) progress.StepID {
 	return progress.StepID(kind + ":" + stableToken(value))
+}
+
+func clonePlan(plan progress.Plan) progress.Plan {
+	clone := progress.Plan{Phases: make([]progress.PlannedPhase, len(plan.Phases))}
+	copy(clone.Phases, plan.Phases)
+	for i := range clone.Phases {
+		clone.Phases[i].Steps = append([]progress.PlannedStep(nil), plan.Phases[i].Steps...)
+	}
+	return clone
 }
 
 func planForOperations(operations []applyOperation) progress.Plan {

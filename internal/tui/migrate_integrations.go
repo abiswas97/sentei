@@ -1,14 +1,15 @@
 package tui
 
 import (
+	"errors"
 	"fmt"
-	"path/filepath"
 	"strings"
 	"time"
 
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
 
+	"github.com/abiswas97/sentei/internal/git"
 	"github.com/abiswas97/sentei/internal/integration"
 	"github.com/abiswas97/sentei/internal/repo"
 )
@@ -69,7 +70,7 @@ func (m Model) updateMigrateIntegrations(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			if hasStagedSelections {
 				m.integ.events = nil
-				m.integ.finalized = false
+				m.integ.lifecycle = integrationIdle
 				m.integ.returnView = migrateNextView
 				m.progressStartedAt = time.Now()
 				m.progressToken++
@@ -89,9 +90,15 @@ func (m Model) updateMigrateIntegrations(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) startMigrateIntegrationApply() (Model, tea.Cmd) {
+	m.integ.prepareErr = nil
+	m.integ.executionErr = nil
+	m.integ.saveErr = nil
 	result, ok := m.repo.result.(repo.MigrateResult)
 	if !ok {
-		return m, nil
+		m.integ.prepareErr = errors.New("preparing migration integrations: missing migration result")
+		m.integ.lifecycle = integrationSettling
+		updated, cmd := m.holdOrAdvance(integrationSummaryView)
+		return updated.(Model), cmd
 	}
 
 	var toEnable []integration.Integration
@@ -101,13 +108,9 @@ func (m Model) startMigrateIntegrationApply() (Model, tea.Cmd) {
 		}
 	}
 
-	wtPath := result.WorktreePath
-	if wtPath == "" {
-		wtPath = filepath.Join(result.BareRoot, result.Branch)
-	}
+	wtPath := m.migrateWorktreePath(result)
 	m.integ.targetWorktrees = []string{wtPath}
-	m.integ.preparing = true
-	m.integ.applyErr = nil
+	m.integ.lifecycle = integrationPreparing
 
 	repoPath := result.BareRoot
 	shell := m.shell
@@ -183,5 +186,5 @@ func (m Model) migrateWorktreePath(result repo.MigrateResult) string {
 	if result.WorktreePath != "" {
 		return result.WorktreePath
 	}
-	return filepath.Join(result.BareRoot, result.Branch)
+	return git.WorktreePath(result.BareRoot, result.Branch)
 }

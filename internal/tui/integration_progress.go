@@ -21,10 +21,9 @@ type integrationFinalizedMsg struct {
 func (m Model) updateIntegrationProgress(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case integrationPreparedMsg:
-		m.integ.preparing = false
 		if msg.err != nil {
-			m.integ.applyErr = msg.err
-			m.integ.finalized = true
+			m.integ.prepareErr = msg.err
+			m.integ.lifecycle = integrationSettling
 			updated, holdCmd := m.holdOrAdvance(integrationSummaryView)
 			return updated, holdCmd
 		}
@@ -38,23 +37,37 @@ func (m Model) updateIntegrationProgress(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case integrationEventMsg:
 		m.integ.events = append(m.integ.events, msg.Event)
-		return m, tea.Batch(m.syncProgressBar(), waitForIntegrationEvent(m.integ.eventCh, m.integ.doneCh))
+		return m, tea.Batch(m.syncProgressBar(), waitForIntegrationEvent(m.integ.eventCh, m.integ.resultCh))
 
 	case integrationApplyDoneMsg:
+		if msg.result.err != nil {
+			m.integ.executionErr = msg.result.err
+			m.integ.lifecycle = integrationSettling
+			finalSync := m.syncProgressBar()
+			updated, holdCmd := m.holdOrAdvance(integrationSummaryView)
+			return updated, tea.Batch(finalSync, holdCmd)
+		}
+		if !integrationExecutionCanSave(msg.result.phases, msg.result.empty) {
+			m.integ.lifecycle = integrationSettling
+			updated, holdCmd := m.holdOrAdvance(integrationSummaryView)
+			return updated, tea.Batch(m.syncProgressBar(), holdCmd)
+		}
+		m.integ.lifecycle = integrationSaving
 		return m, m.finalizeIntegrationApply()
 
 	case integrationFinalizedMsg:
-		m.integ.finalized = true
+		m.integ.lifecycle = integrationSettling
+		m.integ.saveErr = msg.err
 		finalSync := m.syncProgressBar()
-		// The migrate flow has its own summary; hand off unchanged.
-		if m.integ.returnView == migrateNextView {
+		// Clean migration applies hand off directly. Errors use the integration
+		// summary first so their failure cannot disappear between flows.
+		if m.integ.returnView == migrateNextView && msg.err == nil {
 			updated, holdCmd := m.holdOrAdvance(migrateNextView)
 			return updated, tea.Batch(finalSync, holdCmd)
 		}
 		// In-memory current/staged are never mutated here: dismissing the
 		// summary reloads them from persisted state, so the list always
 		// matches disk whether the save succeeded or failed.
-		m.integ.saveErr = msg.err
 		if msg.err == nil {
 			m.worktreeGeneration++
 			updated, holdCmd := m.holdOrAdvance(integrationSummaryView)
@@ -93,7 +106,12 @@ func (m Model) finalizeIntegrationApply() tea.Cmd {
 				enabled = append(enabled, integ.Name)
 			}
 		}
-		err = state.Save(bareDir, &state.State{Integrations: enabled})
+		persisted, err := state.Load(bareDir)
+		if err != nil {
+			return integrationFinalizedMsg{err: err}
+		}
+		persisted.Integrations = enabled
+		err = state.Save(bareDir, persisted)
 
 		return integrationFinalizedMsg{err: err}
 	}
@@ -106,12 +124,12 @@ func (m Model) integrationLayout() ProgressLayout {
 		Width:     m.width,
 		Height:    m.height,
 		Hints:     progressFooter,
-		Completed: m.integ.finalized,
+		Completed: m.integ.lifecycle == integrationSettling,
 	}
 }
 
 func (m Model) viewIntegrationProgress() string {
-	if m.integ.preparing {
+	if m.integ.lifecycle == integrationPreparing {
 		var b strings.Builder
 		b.WriteString(viewTitle(titleApplyingChanges))
 		b.WriteString("\n\n")
@@ -122,6 +140,22 @@ func (m Model) viewIntegrationProgress() string {
 		return b.String()
 	}
 	return m.renderProgressLayout(m.integrationLayout())
+}
+
+func integrationExecutionCanSave(phases []progress.Phase, empty bool) bool {
+	if empty {
+		return len(phases) == 0
+	}
+	sawStep := false
+	for _, phase := range phases {
+		for _, step := range phase.Steps {
+			sawStep = true
+			if step.Status != progress.StepDone {
+				return false
+			}
+		}
+	}
+	return sawStep
 }
 
 func (m Model) buildIntegrationPhases() []progress.PhaseState {

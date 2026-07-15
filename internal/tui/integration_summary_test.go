@@ -75,6 +75,7 @@ func TestUpdateIntegrationProgress_Finalized_SaveError_TransitionsToSummary(t *t
 func TestUpdateIntegrationSummary_Enter_ReturnsToListAndReloads(t *testing.T) {
 	m := makeIntegrationModel()
 	m.view = integrationSummaryView
+	m.integ.lifecycle = integrationSettling
 
 	updated, cmd := m.updateIntegrationSummary(tea.KeyPressMsg{Code: tea.KeyEnter})
 	model := updated.(Model)
@@ -84,6 +85,9 @@ func TestUpdateIntegrationSummary_Enter_ReturnsToListAndReloads(t *testing.T) {
 	}
 	if cmd == nil {
 		t.Error("expected loadIntegrationState Cmd so staged markers reconcile from disk")
+	}
+	if model.integ.lifecycle != integrationIdle {
+		t.Fatalf("lifecycle=%v, want idle after dismissing summary", model.integ.lifecycle)
 	}
 }
 
@@ -104,6 +108,20 @@ func TestViewIntegrationSummary_AllSucceeded(t *testing.T) {
 	}
 	if strings.Contains(view, "failed") {
 		t.Errorf("fully successful apply must not mention failures, view:\n%s", view)
+	}
+}
+
+func TestViewIntegrationSummary_EmptyPlanShowsNoWorkVerdict(t *testing.T) {
+	m := makeIntegrationModel()
+	m.view = integrationSummaryView
+	m.integ.events = nil
+
+	view := stripAnsi(m.viewIntegrationSummary())
+	if !strings.Contains(view, "No integration work was needed") {
+		t.Fatalf("explicit no-work verdict missing:\n%s", view)
+	}
+	if strings.Contains(view, "0 steps applied") {
+		t.Fatalf("empty plan must not render a green zero-step verdict:\n%s", view)
 	}
 }
 
@@ -137,6 +155,39 @@ func TestViewIntegrationSummary_SaveError(t *testing.T) {
 	}
 	if !strings.Contains(view, "disk full") {
 		t.Errorf("expected save error detail, view:\n%s", view)
+	}
+}
+
+func TestViewIntegrationSummary_PreparationErrorUsesErrorVerdict(t *testing.T) {
+	m := makeIntegrationModel()
+	m.view = integrationSummaryView
+	m.integ.prepareErr = errors.New("no target worktree")
+
+	view := stripAnsi(m.viewIntegrationSummary())
+	if !strings.Contains(view, titleApplyErrors) {
+		t.Fatalf("preparation error must use error title, view:\n%s", view)
+	}
+	if !strings.Contains(view, "Integration preparation failed: no target worktree") {
+		t.Fatalf("preparation error headline missing, view:\n%s", view)
+	}
+	if strings.Contains(view, "0 steps applied") {
+		t.Fatalf("preparation error must not render a green zero-success verdict, view:\n%s", view)
+	}
+}
+
+func TestViewIntegrationSummary_OnlyFailuresHasOneErrorVerdictAndNoZeroSuccess(t *testing.T) {
+	m := makeIntegrationModel()
+	m.view = integrationSummaryView
+	m.integ.events = []progress.Event{{
+		Phase: "/repo/main", Step: "Setup tool", Status: progress.StepFailed, Error: errors.New("boom"),
+	}}
+
+	view := stripAnsi(m.viewIntegrationSummary())
+	if strings.Count(view, "1 failed") != 1 {
+		t.Fatalf("expected exactly one failure verdict:\n%s", view)
+	}
+	if strings.Contains(view, "0 steps applied") || strings.Contains(view, "0 step applied") {
+		t.Fatalf("error summary must not render a green zero-success verdict:\n%s", view)
 	}
 }
 

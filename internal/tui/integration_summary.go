@@ -45,6 +45,7 @@ func (m Model) updateIntegrationSummary(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyPressMsg:
 		switch {
 		case key.Matches(msg, keys.Confirm), key.Matches(msg, keys.Back):
+			m.integ.lifecycle = integrationIdle
 			if m.integ.returnView == migrateNextView {
 				m.view = migrateNextView
 				return m, nil
@@ -171,7 +172,7 @@ func (m Model) viewIntegrationSummary() string {
 	// "Complete" would oversell a run with failures: the title states the
 	// outcome, and the headline leads with the count that matters.
 	title := titleApplyComplete
-	if failed > 0 {
+	if failed > 0 || m.integ.prepareErr != nil || m.integ.executionErr != nil || m.integ.saveErr != nil {
 		title = titleApplyErrors
 	}
 	b.WriteString(viewTitle(title))
@@ -187,23 +188,35 @@ func (m Model) viewIntegrationSummary() string {
 		b.WriteString(styleDim.Render("    The list will show what is actually on disk."))
 		b.WriteString("\n\n")
 	}
-	if m.integ.applyErr != nil {
+	if m.integ.prepareErr != nil {
 		b.WriteString(styleError.Render(truncateWithEllipsis(
-			fmt.Sprintf("  %s Integration preparation failed: %s", indicatorFailed, m.integ.applyErr),
+			fmt.Sprintf("  %s Integration preparation failed: %s", indicatorFailed, m.integ.prepareErr),
+			max(m.width, 40))))
+		b.WriteString("\n\n")
+	}
+	if m.integ.executionErr != nil {
+		b.WriteString(styleError.Render(truncateWithEllipsis(
+			fmt.Sprintf("  %s Integration execution failed: %s", indicatorFailed, m.integ.executionErr),
 			max(m.width, 40))))
 		b.WriteString("\n\n")
 	}
 
-	switch failed {
-	case 0:
-		b.WriteString(styleSuccess.Render(fmt.Sprintf("  %s %d %s applied", indicatorDone, applied, pluralize(applied, "step", "steps"))))
-	default:
-		fmt.Fprintf(&b, "  %s, %s",
-			styleError.Render(fmt.Sprintf("%s %d failed", indicatorFailed, failed)),
-			styleSuccess.Render(fmt.Sprintf("%d %s applied", applied, pluralize(applied, "step", "steps"))),
-		)
+	if m.integ.prepareErr == nil && m.integ.executionErr == nil && m.integ.saveErr == nil {
+		switch {
+		case failed > 0:
+			b.WriteString("  ")
+			b.WriteString(styleError.Render(fmt.Sprintf("%s %d failed", indicatorFailed, failed)))
+			if applied > 0 {
+				b.WriteString(", ")
+				b.WriteString(styleSuccess.Render(fmt.Sprintf("%d %s applied", applied, pluralize(applied, "step", "steps"))))
+			}
+		case applied == 0:
+			b.WriteString(styleDim.Render("  No integration work was needed"))
+		default:
+			b.WriteString(styleSuccess.Render(fmt.Sprintf("  %s %d %s applied", indicatorDone, applied, pluralize(applied, "step", "steps"))))
+		}
+		b.WriteString("\n\n")
 	}
-	b.WriteString("\n\n")
 
 	shown := min(len(groups), inlineSummaryPreview)
 	renderIntegrationOutcomes(&b, groups[:shown], m.width)

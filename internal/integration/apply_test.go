@@ -70,7 +70,10 @@ func plannedLabels(plan progress.Plan) []string {
 
 func collectPreparedEvents(prepared PreparedApply, shell *applyShell) ([]progress.Event, []progress.Phase) {
 	var events []progress.Event
-	phases := prepared.Run(shell, func(event progress.Event) { events = append(events, event) })
+	phases, err := prepared.Run(shell, func(event progress.Event) { events = append(events, event) })
+	if err != nil {
+		panic(err)
+	}
 	return events, phases
 }
 
@@ -97,7 +100,7 @@ func TestPrepareApply_MissingToolPlansPrerequisiteOnce(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	labels := plannedLabels(prepared.Plan)
+	labels := plannedLabels(prepared.Plan())
 	if got := strings.Count(strings.Join(labels, "\n"), "Prerequisites/Install tool"); got != 1 {
 		t.Fatalf("install steps = %d, want 1: %v", got, labels)
 	}
@@ -176,7 +179,7 @@ func TestPrepareApply_InstalledToolPlansSetupOnlyAndDoesNotReprobe(t *testing.T)
 	if err != nil {
 		t.Fatal(err)
 	}
-	labels := strings.Join(plannedLabels(prepared.Plan), "\n")
+	labels := strings.Join(plannedLabels(prepared.Plan()), "\n")
 	if strings.Contains(labels, "Install") || strings.Count(labels, "Setup tool") != 1 {
 		t.Fatalf("plan = %s", labels)
 	}
@@ -187,6 +190,99 @@ func TestPrepareApply_InstalledToolPlansSetupOnlyAndDoesNotReprobe(t *testing.T)
 	shell.mu.Unlock()
 	if strings.Count(strings.Join(calls, "\n"), "tool detect") != 1 || strings.Count(strings.Join(calls, "\n"), "dep detect") != 1 {
 		t.Fatalf("detection calls repeated: %v", calls)
+	}
+}
+
+func TestPreparedApply_PlanInspectionCannotMutateExecution(t *testing.T) {
+	integ := testIntegration("tool")
+	shell := &applyShell{responses: map[string]mockShellResponse{
+		"/wt/a:shell[tool detect]":        {output: "installed"},
+		"/wt/a:shell[tool setup '/wt/a']": {output: "ok"},
+	}}
+	prepared, err := PrepareApply(shell, "/repo", "/wt/a", []Integration{integ}, nil, []string{"/wt/a"})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	inspection := prepared.Plan()
+	inspection.Phases[0].Label = "mutated phase"
+	inspection.Phases[0].Steps[0].Label = "mutated step"
+
+	var events []progress.Event
+	if _, err := prepared.Run(shell, func(event progress.Event) { events = append(events, event) }); err != nil {
+		t.Fatal(err)
+	}
+	states := progress.Snapshot(events)
+	if len(states) != 1 || states[0].Name != "/wt/a" || states[0].Steps[0].Name != "Setup tool" {
+		t.Fatalf("inspection mutated execution: %#v", states)
+	}
+}
+
+func TestPreparedApply_Empty(t *testing.T) {
+	prepared, err := PrepareApply(&applyShell{}, "/repo", "", nil, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !prepared.Empty() {
+		t.Fatal("an apply with no frozen operations must be empty")
+	}
+
+	prepared, err = PrepareApply(&applyShell{}, "/repo", "/wt/a", nil, []Integration{{
+		Name: "tool", Teardown: TeardownSpec{Dirs: []string{".tool/"}},
+	}}, []string{"/wt/a"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if prepared.Empty() {
+		t.Fatal("an apply with a frozen operation must not be empty")
+	}
+}
+
+func TestPreparedApply_RunSurfacesStartError(t *testing.T) {
+	prepared := PreparedApply{plan: progress.Plan{Phases: []progress.PlannedPhase{{Label: "missing ID"}}}}
+	if _, err := prepared.Run(&applyShell{}, func(progress.Event) {}); err == nil || !strings.Contains(err.Error(), "empty ID") {
+		t.Fatalf("Run error = %v, want invalid-plan error", err)
+	}
+}
+
+func TestPreparedApply_RunSurfacesTransitionDeliveryError(t *testing.T) {
+	phaseID := progress.PhaseID("phase")
+	stepID := progress.StepID("declared")
+	prepared := PreparedApply{
+		plan: progress.Plan{Phases: []progress.PlannedPhase{{
+			ID: phaseID, Label: "Phase", Steps: []progress.PlannedStep{{ID: stepID, Label: "Step"}},
+		}}},
+		operations: []applyOperation{{
+			phaseID: phaseID, phaseName: "Phase", stepID: progress.StepID("other"), label: "Step",
+			kind: applyFailure, failure: errors.New("failed"),
+		}},
+	}
+	if _, err := prepared.Run(&applyShell{}, func(progress.Event) {}); err == nil || !strings.Contains(err.Error(), "no step ID") {
+		t.Fatalf("Run error = %v, want transition error", err)
+	}
+}
+
+func TestPreparedApply_RunSurfacesFinishDeliveryError(t *testing.T) {
+	phaseID := progress.PhaseID("phase")
+	stepID := progress.StepID("declared")
+	prepared := PreparedApply{plan: progress.Plan{Phases: []progress.PlannedPhase{{
+		ID: phaseID, Label: "Phase", Steps: []progress.PlannedStep{{ID: stepID, Label: "Step"}},
+	}}}}
+	emitErr := errors.New("sink closed")
+	_, err := prepared.Run(&applyShell{}, func(event progress.Event) {
+		if event.Status == progress.StepSkipped {
+			panic(emitErr)
+		}
+	})
+	if !errors.Is(err, emitErr) {
+		t.Fatalf("Run error = %v, want %v", err, emitErr)
+	}
+}
+
+func TestPrepareApply_DisableOnlyWithoutTargetsFails(t *testing.T) {
+	_, err := PrepareApply(&applyShell{}, "/repo", "", nil, []Integration{{Name: "tool"}}, nil)
+	if err == nil || !strings.Contains(err.Error(), "no target worktree") {
+		t.Fatalf("PrepareApply error = %v, want no-target error", err)
 	}
 }
 

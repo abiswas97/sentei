@@ -35,7 +35,9 @@ func TestIntegrationPreparedApplyUsesStrictFixedStream(t *testing.T) {
 		t.Fatal(err)
 	}
 	var events []progress.Event
-	prepared.Run(shell, func(event progress.Event) { events = append(events, event) })
+	if _, err := prepared.Run(shell, func(event progress.Event) { events = append(events, event) }); err != nil {
+		t.Fatal(err)
+	}
 	if err := progress.ValidateStream(events); err != nil {
 		t.Fatalf("strict validation failed: %v", err)
 	}

@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -119,7 +120,7 @@ func drainIntegrationApply(t *testing.T, m Model) []progress.Event {
 	t.Helper()
 	var events []progress.Event
 	for range 100 {
-		msg := waitForIntegrationEvent(m.integ.eventCh, m.integ.doneCh)()
+		msg := waitForIntegrationEvent(m.integ.eventCh, m.integ.resultCh)()
 		switch msg := msg.(type) {
 		case integrationEventMsg:
 			events = append(events, msg.Event)
@@ -168,23 +169,41 @@ func TestMigrateWorktreePath(t *testing.T) {
 		t.Errorf("explicit path = %q, want /bare/main", got)
 	}
 
-	derived := repo.MigrateResult{BareRoot: "/bare", Branch: "dev"}
-	if got := m.migrateWorktreePath(derived); got != filepath.Join("/bare", "dev") {
-		t.Errorf("derived path = %q, want /bare/dev", got)
+	derived := repo.MigrateResult{BareRoot: "/bare", Branch: "feature/dev"}
+	if got := m.migrateWorktreePath(derived); got != filepath.Join("/bare", "feature-dev") {
+		t.Errorf("derived path = %q, want /bare/feature-dev", got)
 	}
 }
 
-func TestStartMigrateIntegrationApply_NonMigrateResultIsNoop(t *testing.T) {
+func TestStartMigrateIntegrationApply_MissingResultShowsPreparationError(t *testing.T) {
 	m := makeIntegrationModel()
+	m.view = integrationProgressView
+	m.integ.returnView = migrateNextView
+	m.integ.executionErr = errors.New("stale execution")
+	m.integ.saveErr = errors.New("stale save")
 	m.repo.result = nil
 
 	updated, cmd := m.startMigrateIntegrationApply()
 
-	if cmd != nil {
-		t.Error("expected no command without a migrate result")
+	if cmd == nil {
+		t.Fatal("missing migration result must settle into a visible summary")
 	}
 	if updated.integ.eventCh != nil {
 		t.Error("channels must not be wired without a migrate result")
+	}
+	if updated.integ.lifecycle != integrationSettling || updated.integ.prepareErr == nil {
+		t.Fatalf("lifecycle=%v prepareErr=%v", updated.integ.lifecycle, updated.integ.prepareErr)
+	}
+	if updated.integ.executionErr != nil || updated.integ.saveErr != nil {
+		t.Fatalf("stale errors survived: execution=%v save=%v", updated.integ.executionErr, updated.integ.saveErr)
+	}
+	updated = settleNow(t, updated)
+	if updated.view != integrationSummaryView {
+		t.Fatalf("view = %v, want integration summary", updated.view)
+	}
+	returned, _ := updated.updateIntegrationSummary(tea.KeyPressMsg{Code: tea.KeyEnter})
+	if returned.(Model).view != migrateNextView {
+		t.Fatal("enter from migration integration error must return to migrateNext")
 	}
 }
 
