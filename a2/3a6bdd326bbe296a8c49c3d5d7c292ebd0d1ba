@@ -1,0 +1,28 @@
+.demos/progress-arc/setup-fixture_test.sh
+  s_47b5c057f8c030::t_88d16daa6ecabe 61-77,120
+  s_47b5c057f8c030::t_15bb60c55c936c 1-60,103-119,122-123
+  s_47b5c057f8c030::t_5d358c32ef7632 78-102,121
+.demos/progress-arc/README.md
+  s_47b5c057f8c030::t_e3413e37f33c80 25-27
+  s_47b5c057f8c030::t_27351f2154e8df 8,24
+  s_47b5c057f8c030::t_0fae51c96bdc07 28
+.demos/progress-arc/setup-fixture.sh
+  s_47b5c057f8c030::t_9d2c45c7c3069b 52-53
+  s_47b5c057f8c030::t_25a1fb2af44616 10-51,54-56
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "a23a6bdd326bbe296a8c49c3d5d7c292ebd0d1ba",
+  "prompts": {},
+  "sessions": {
+    "s_47b5c057f8c030": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f5f62-a0bd-7f92-96e2-b1de98524420",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>"
+    }
+  }
+}
