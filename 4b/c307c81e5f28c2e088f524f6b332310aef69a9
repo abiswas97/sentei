@@ -1,0 +1,23 @@
+internal/repo/migrate_test.go
+  s_47b5c057f8c030::t_0d1bed5a523dc5 373-419
+  s_47b5c057f8c030::t_0eeac7ffdaf033 7,19-25
+internal/repo/migrate_prepared.go
+  s_47b5c057f8c030::t_b8b1ad93d3b09a 143-145,150-176
+  s_47b5c057f8c030::t_76b1d7137ea427 177-178
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "4bc307c81e5f28c2e088f524f6b332310aef69a9",
+  "prompts": {},
+  "sessions": {
+    "s_47b5c057f8c030": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f5f62-a0bd-7f92-96e2-b1de98524420",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>"
+    }
+  }
+}
