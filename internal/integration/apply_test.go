@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"sync"
 	"testing"
@@ -22,6 +23,16 @@ type mockShellResponse struct {
 	output string
 	err    error
 }
+
+type failingApplyFiles struct {
+	removeErr    error
+	copyErr      error
+	gitignoreErr error
+}
+
+func (f failingApplyFiles) removeAll(string) error                 { return f.removeErr }
+func (f failingApplyFiles) copyDir(string, string) error           { return f.copyErr }
+func (f failingApplyFiles) appendGitignore(string, []string) error { return f.gitignoreErr }
 
 func findStep(t *testing.T, events []progress.Event, label string) progress.StepState {
 	t.Helper()
@@ -66,6 +77,16 @@ func plannedLabels(plan progress.Plan) []string {
 		}
 	}
 	return labels
+}
+
+func plannedIdentities(plan progress.Plan) map[string]string {
+	identities := make(map[string]string)
+	for _, phase := range plan.Phases {
+		for _, step := range phase.Steps {
+			identities[phase.Label+"/"+step.Label] = phase.ID + "\x00" + step.ID
+		}
+	}
+	return identities
 }
 
 func collectPreparedEvents(prepared PreparedApply, shell *applyShell) ([]progress.Event, []progress.Phase) {
@@ -389,5 +410,266 @@ func TestPreparedApply_TeardownFailureStillRemovesArtifacts(t *testing.T) {
 	}
 	if step := findStep(t, events, RemoveDirStepName(".tool/", wt)); step.Status != progress.StepDone {
 		t.Fatalf("removal = %#v", step)
+	}
+}
+
+func TestPrepareApplySemanticIDsDoNotDependOnInputOrder(t *testing.T) {
+	alpha := testIntegration("alpha")
+	beta := testIntegration("beta")
+	responses := map[string]mockShellResponse{
+		"/wt/a:shell[alpha detect]": {output: "installed"},
+		"/wt/a:shell[beta detect]":  {output: "installed"},
+		"/wt/b:shell[alpha detect]": {output: "installed"},
+		"/wt/b:shell[beta detect]":  {output: "installed"},
+	}
+	first, err := PrepareApply(&applyShell{responses: responses}, "/repo", "/wt/a", []Integration{alpha, beta}, nil, []string{"/wt/a", "/wt/b"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	second, err := PrepareApply(&applyShell{responses: responses}, "/repo", "/wt/a", []Integration{beta, alpha}, nil, []string{"/wt/b", "/wt/a"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, want := plannedIdentities(second.Plan()), plannedIdentities(first.Plan()); !reflect.DeepEqual(got, want) {
+		t.Fatalf("reordered identities = %#v, want %#v", got, want)
+	}
+}
+
+func TestPrepareApplyRejectsDuplicateIntegrationIdentityBeforeDetection(t *testing.T) {
+	integ := testIntegration("tool")
+	shell := &applyShell{}
+	_, err := PrepareApply(shell, "/repo", "/wt/a", []Integration{integ, integ}, nil, []string{"/wt/a"})
+	if err == nil || !strings.Contains(err.Error(), "duplicate") {
+		t.Fatalf("PrepareApply error = %v, want duplicate identity error", err)
+	}
+	if len(shell.calls) != 0 {
+		t.Fatalf("detection ran before duplicate validation: %v", shell.calls)
+	}
+}
+
+func TestPrepareApplyRejectsConflictingDependencySpecsBeforeDetection(t *testing.T) {
+	one := testIntegration("one", Dependency{Name: "dep", Detect: "dep one", Install: "install one"})
+	two := testIntegration("two", Dependency{Name: "dep", Detect: "dep two", Install: "install two"})
+	shell := &applyShell{}
+	_, err := PrepareApply(shell, "/repo", "/wt/a", []Integration{one, two}, nil, []string{"/wt/a"})
+	if err == nil || !strings.Contains(err.Error(), "conflicting") {
+		t.Fatalf("PrepareApply error = %v, want dependency conflict", err)
+	}
+	if len(shell.calls) != 0 {
+		t.Fatalf("detection ran before dependency validation: %v", shell.calls)
+	}
+}
+
+func TestPrepareApplyRejectsMalformedDetectionBeforeSideEffects(t *testing.T) {
+	tests := []struct {
+		name  string
+		integ Integration
+	}{
+		{name: "empty integration detect", integ: Integration{Name: "tool", Setup: SetupSpec{Command: "setup"}}},
+		{name: "ambiguous integration detect", integ: Integration{Name: "tool", Detect: DetectSpec{Command: "tool detect", BinaryName: "tool"}}},
+		{name: "empty dependency detect", integ: testIntegration("tool", Dependency{Name: "dep", Install: "dep install"})},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			shell := &applyShell{}
+			_, err := PrepareApply(shell, "/repo", "/wt/a", []Integration{tc.integ}, nil, []string{"/wt/a"})
+			if err == nil {
+				t.Fatal("malformed detection accepted")
+			}
+			if len(shell.calls) != 0 {
+				t.Fatalf("shell called before preflight completed: %v", shell.calls)
+			}
+		})
+	}
+}
+
+func TestPreparedApplyRejectsInvalidOperationGraphBeforeStart(t *testing.T) {
+	op := func(id string, dependencies ...string) applyOperation {
+		return applyOperation{
+			phaseID: "phase", phaseName: "Phase", stepID: progress.StepID(id), label: id,
+			kind: applyShellCommand, dir: "/wt", command: id, dependsOn: dependencies,
+		}
+	}
+	tests := []struct {
+		name       string
+		operations []applyOperation
+	}{
+		{name: "missing reference", operations: []applyOperation{op("a", "phase\x00missing")}},
+		{name: "out of order", operations: []applyOperation{op("a", "phase\x00b"), op("b")}},
+		{name: "cycle", operations: []applyOperation{op("a", "phase\x00b"), op("b", "phase\x00a")}},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			prepared := PreparedApply{plan: planForOperations(tc.operations), operations: tc.operations}
+			shell := &applyShell{}
+			var events []progress.Event
+			if _, err := prepared.Run(shell, func(event progress.Event) { events = append(events, event) }); err == nil {
+				t.Fatal("invalid operation graph accepted")
+			}
+			if len(events) != 0 || len(shell.calls) != 0 {
+				t.Fatalf("side effects before graph validation: events=%#v calls=%v", events, shell.calls)
+			}
+		})
+	}
+}
+
+func TestPrepareApplyOmitsStaticallyEmptyOperations(t *testing.T) {
+	shell := &applyShell{responses: map[string]mockShellResponse{
+		"/wt/a:shell[tool detect]": {output: "installed"},
+	}}
+	prepared, err := PrepareApply(shell, "/repo", "/wt/a", []Integration{{
+		Name: "tool", Detect: DetectSpec{Command: "tool detect"},
+	}}, []Integration{{Name: "old"}}, []string{"/wt/a"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !prepared.Empty() || len(prepared.Plan().Phases) != 0 {
+		t.Fatalf("empty operations were declared: %#v", prepared.Plan())
+	}
+}
+
+func TestPrepareApplyKeepsMissingInstallerAsExplicitFailure(t *testing.T) {
+	shell := &applyShell{responses: map[string]mockShellResponse{
+		"/wt/a:shell[tool detect]": {err: errors.New("missing")},
+	}}
+	prepared, err := PrepareApply(shell, "/repo", "/wt/a", []Integration{{
+		Name: "tool", Detect: DetectSpec{Command: "tool detect"},
+	}}, nil, []string{"/wt/a"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	labels := plannedLabels(prepared.Plan())
+	if !reflect.DeepEqual(labels, []string{"Prerequisites/Install tool"}) {
+		t.Fatalf("plan labels = %v, want only explicit installer failure", labels)
+	}
+}
+
+func TestPrepareApplyDeclaresIndexCopyAndGitignoreOperations(t *testing.T) {
+	mainWT := t.TempDir()
+	targetWT := t.TempDir()
+	if err := os.Mkdir(filepath.Join(mainWT, ".index"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	integ := Integration{
+		Name: "tool", Detect: DetectSpec{Command: "tool detect"},
+		Setup: SetupSpec{Command: "tool setup"}, IndexCopyDir: ".index",
+		GitignoreEntries: []string{".index/"},
+	}
+	shell := &applyShell{responses: map[string]mockShellResponse{
+		targetWT + ":shell[tool detect]": {output: "installed"},
+	}}
+	prepared, err := PrepareApply(shell, "/repo", mainWT, []Integration{integ}, nil, []string{targetWT})
+	if err != nil {
+		t.Fatal(err)
+	}
+	labels := strings.Join(plannedLabels(prepared.Plan()), "\n")
+	for _, label := range []string{"Copy index for tool", "Setup tool", "Update .gitignore for tool"} {
+		if !strings.Contains(labels, label) {
+			t.Fatalf("plan does not declare %q: %s", label, labels)
+		}
+	}
+}
+
+func TestPreparedApplySurfacesFileOperationFailures(t *testing.T) {
+	tests := []struct {
+		name  string
+		op    applyOperation
+		files failingApplyFiles
+	}{
+		{
+			name: "copy", files: failingApplyFiles{copyErr: errors.New("copy broke")},
+			op: applyOperation{phaseID: "p", phaseName: "Phase", stepID: "copy", label: "Copy", kind: applyCopy, seedSource: "source", seedDest: "dest"},
+		},
+		{
+			name: "gitignore write", files: failingApplyFiles{gitignoreErr: errors.New("write broke")},
+			op: applyOperation{phaseID: "p", phaseName: "Phase", stepID: "write", label: "Write", kind: applyGitignore, gitignoreDir: "dir", gitignore: []string{"entry"}},
+		},
+		{
+			name: "remove", files: failingApplyFiles{removeErr: errors.New("remove broke")},
+			op: applyOperation{phaseID: "p", phaseName: "Phase", stepID: "remove", label: "Remove", kind: applyRemove, dir: "dir"},
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			prepared := PreparedApply{plan: planForOperations([]applyOperation{tc.op}), operations: []applyOperation{tc.op}, files: tc.files}
+			phases, err := prepared.Run(&applyShell{}, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			step := phases[0].Steps[0]
+			if step.Status != progress.StepFailed || step.Error == nil {
+				t.Fatalf("file failure was not surfaced: %#v", step)
+			}
+		})
+	}
+}
+
+func TestPreparedApplyReturnsExecutionProjectionAndCompletedStream(t *testing.T) {
+	integ := testIntegration("tool")
+	shell := &applyShell{responses: map[string]mockShellResponse{
+		"/wt/a:shell[tool detect]":        {output: "installed"},
+		"/wt/a:shell[tool setup '/wt/a']": {output: "configured"},
+	}}
+	prepared, err := PrepareApply(shell, "/repo", "/wt/a", []Integration{integ}, nil, []string{"/wt/a"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var events []progress.Event
+	phases, err := prepared.Run(shell, func(event progress.Event) { events = append(events, event) })
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := progress.ValidateCompletedStream(events); err != nil {
+		t.Fatalf("completed stream invalid: %v", err)
+	}
+	plan := prepared.Plan()
+	if len(phases) != 1 || phases[0].ID != plan.Phases[0].ID || len(phases[0].Steps) != 1 ||
+		phases[0].Steps[0].ID != plan.Phases[0].Steps[0].ID || phases[0].Steps[0].Status != progress.StepDone {
+		t.Fatalf("Run projection = %#v, plan = %#v", phases, plan)
+	}
+}
+
+func TestPrepareApplyDeduplicatesIdenticalDependencySpecs(t *testing.T) {
+	dep := Dependency{Name: "dep", Detect: "dep detect", Install: "dep install"}
+	one := testIntegration("one", dep)
+	two := testIntegration("two", dep)
+	shell := &applyShell{responses: map[string]mockShellResponse{
+		"/wt/a:shell[one detect]": {err: errors.New("missing")},
+		"/wt/a:shell[two detect]": {err: errors.New("missing")},
+		"/wt/a:shell[dep detect]": {err: errors.New("missing")},
+	}}
+	prepared, err := PrepareApply(shell, "/repo", "/wt/a", []Integration{one, two}, nil, []string{"/wt/a"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	labels := strings.Join(plannedLabels(prepared.Plan()), "\n")
+	if strings.Count(labels, "Install dependency dep") != 1 {
+		t.Fatalf("dependency operation was not deduplicated: %s", labels)
+	}
+	if strings.Count(strings.Join(shell.calls, "\n"), "dep detect") != 1 {
+		t.Fatalf("dependency detection was not deduplicated: %v", shell.calls)
+	}
+}
+
+func TestPreparedApplyPrerequisiteFailureBlocksOnlyDependentOperations(t *testing.T) {
+	dependent := testIntegration("dependent", Dependency{Name: "dep", Detect: "dep detect", Install: "dep install"})
+	independent := testIntegration("independent")
+	shell := &applyShell{responses: map[string]mockShellResponse{
+		"/wt/a:shell[dependent detect]":          {err: errors.New("missing")},
+		"/wt/a:shell[independent detect]":        {output: "installed"},
+		"/wt/a:shell[dep detect]":                {err: errors.New("missing")},
+		"/wt/a:shell[dep install]":               {err: errors.New("dep broke")},
+		"/wt/a:shell[independent setup '/wt/a']": {output: "ok"},
+	}}
+	prepared, err := PrepareApply(shell, "/repo", "/wt/a", []Integration{dependent, independent}, nil, []string{"/wt/a"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	events, _ := collectPreparedEvents(prepared, shell)
+	if got := findStep(t, events, "Setup independent"); got.Status != progress.StepDone {
+		t.Fatalf("independent setup = %#v", got)
+	}
+	if got := findStep(t, events, "Setup dependent"); got.Status != progress.StepSkipped {
+		t.Fatalf("dependent setup = %#v", got)
 	}
 }

@@ -29,6 +29,8 @@ const (
 	applyShellCommand applyOperationKind = iota
 	applyFailure
 	applyRemove
+	applyCopy
+	applyGitignore
 )
 
 type applyOperation struct {
@@ -55,10 +57,27 @@ func (op applyOperation) key() string { return op.phaseID + "\x00" + op.stepID }
 type PreparedApply struct {
 	plan       progress.Plan
 	operations []applyOperation
+	files      applyFileOperations
+}
+
+type applyFileOperations interface {
+	removeAll(path string) error
+	copyDir(source, destination string) error
+	appendGitignore(dir string, entries []string) error
+}
+
+type realApplyFileOperations struct{}
+
+func (realApplyFileOperations) removeAll(path string) error { return os.RemoveAll(path) }
+func (realApplyFileOperations) copyDir(source, destination string) error {
+	return fileutil.CopyDir(source, destination)
+}
+func (realApplyFileOperations) appendGitignore(dir string, entries []string) error {
+	return appendGitignoreEntries(dir, entries)
 }
 
 // Plan returns a defensive copy of the frozen progress declaration.
-func (p PreparedApply) Plan() progress.Plan { return clonePlan(p.plan) }
+func (p PreparedApply) Plan() progress.Plan { return p.plan.Clone() }
 
 // Empty reports whether preparation froze no work to execute.
 func (p PreparedApply) Empty() bool { return len(p.operations) == 0 }
@@ -68,6 +87,9 @@ func (p PreparedApply) Empty() bool { return len(p.operations) == 0 }
 func PrepareApply(shell git.ShellRunner, repoPath, mainWT string, toEnable, toDisable []Integration, wtPaths []string) (PreparedApply, error) {
 	if (len(toEnable) > 0 || len(toDisable) > 0) && len(wtPaths) == 0 {
 		return PreparedApply{}, errors.New("preparing integrations: no target worktree")
+	}
+	if err := validateApplyInputs(toEnable, toDisable); err != nil {
+		return PreparedApply{}, fmt.Errorf("preparing integrations: %w", err)
 	}
 	probeDir := ""
 	if len(wtPaths) > 0 {
@@ -86,8 +108,8 @@ func PrepareApply(shell git.ShellRunner, repoPath, mainWT string, toEnable, toDi
 	dependencyOp := map[string]applyOperation{}
 	var prerequisites []applyOperation
 
-	for i, integ := range toEnable {
-		decision := enabledDecision{integration: integ, key: fmt.Sprintf("%d:%s", i, integ.Name)}
+	for _, integ := range toEnable {
+		decision := enabledDecision{integration: integ, key: integ.Name}
 		_, detectErr := shell.RunShell(probeDir, detectionCommand(integ))
 		decision.installed = detectErr == nil
 		for _, dep := range integ.Dependencies {
@@ -154,36 +176,60 @@ func PrepareApply(shell git.ShellRunner, repoPath, mainWT string, toEnable, toDi
 	}
 
 	operations := append([]applyOperation(nil), prerequisites...)
-	for wtIndex, wtPath := range wtPaths {
-		phaseID := progress.PhaseID("worktree:" + stableToken(fmt.Sprintf("%d:%s", wtIndex, wtPath)))
+	for _, wtPath := range wtPaths {
+		phaseID := progress.PhaseID("worktree:" + stableToken(normalizeWorkspaceIdentity(wtPath)))
 		for _, decision := range decisions {
 			integ := decision.integration
-			workDir := wtPath
-			if integ.Setup.WorkingDir == "repo" {
-				workDir = repoPath
-			}
-			op := applyOperation{
-				phaseID: phaseID, phaseName: wtPath,
-				stepID: stableStepID("setup", decision.key), label: SetupStepName(integ),
-				kind: applyShellCommand, dir: workDir,
-				command:      strings.ReplaceAll(integ.Setup.Command, "{path}", git.ShellQuote(wtPath)),
-				gitignore:    append([]string(nil), integ.GitignoreEntries...),
-				gitignoreDir: wtPath,
-			}
+			dependencies := []string(nil)
 			if decision.toolOpKey != "" {
-				op.dependsOn = append(op.dependsOn, decision.toolOpKey)
+				dependencies = append(dependencies, decision.toolOpKey)
 			}
-			if integ.IndexCopyDir != "" && mainWT != "" && wtPath != mainWT {
+			if integ.IndexCopyDir != "" && mainWT != "" && normalizeWorkspaceIdentity(wtPath) != normalizeWorkspaceIdentity(mainWT) {
 				source := filepath.Join(mainWT, integ.IndexCopyDir)
-				if _, err := os.Stat(source); err == nil {
-					op.seedSource = source
-					op.seedDest = filepath.Join(wtPath, integ.IndexCopyDir)
+				info, err := os.Stat(source)
+				switch {
+				case err == nil && !info.IsDir():
+					return PreparedApply{}, fmt.Errorf("preparing integrations: index source %q is not a directory", source)
+				case err == nil:
+					copyOp := applyOperation{
+						phaseID: phaseID, phaseName: wtPath,
+						stepID: stableStepID("copy-index", integ.Name), label: "Copy index for " + integ.Name,
+						kind: applyCopy, dependsOn: append([]string(nil), dependencies...),
+						seedSource: source, seedDest: filepath.Join(wtPath, integ.IndexCopyDir),
+					}
+					operations = append(operations, copyOp)
+					dependencies = append(dependencies, copyOp.key())
+				case os.IsNotExist(err):
+				case err != nil:
+					return PreparedApply{}, fmt.Errorf("preparing integrations: inspecting index source %q: %w", source, err)
 				}
 			}
-			operations = append(operations, op)
+			if strings.TrimSpace(integ.Setup.Command) != "" {
+				workDir := wtPath
+				if integ.Setup.WorkingDir == "repo" {
+					workDir = repoPath
+				}
+				setupOp := applyOperation{
+					phaseID: phaseID, phaseName: wtPath,
+					stepID: stableStepID("setup", decision.key), label: SetupStepName(integ),
+					kind: applyShellCommand, dir: workDir,
+					command:   strings.ReplaceAll(integ.Setup.Command, "{path}", git.ShellQuote(wtPath)),
+					dependsOn: append([]string(nil), dependencies...),
+				}
+				operations = append(operations, setupOp)
+				dependencies = append(dependencies, setupOp.key())
+			}
+			if len(integ.GitignoreEntries) > 0 {
+				operations = append(operations, applyOperation{
+					phaseID: phaseID, phaseName: wtPath,
+					stepID: stableStepID("gitignore", integ.Name), label: "Update .gitignore for " + integ.Name,
+					kind: applyGitignore, dependsOn: append([]string(nil), dependencies...),
+					gitignore: append([]string(nil), integ.GitignoreEntries...), gitignoreDir: wtPath,
+				})
+			}
 		}
-		for disableIndex, integ := range toDisable {
-			key := fmt.Sprintf("%d:%s", disableIndex, integ.Name)
+		for _, integ := range toDisable {
+			key := integ.Name
 			if integ.Teardown.Command != "" {
 				operations = append(operations, applyOperation{
 					phaseID: phaseID, phaseName: wtPath,
@@ -191,25 +237,104 @@ func PrepareApply(shell git.ShellRunner, repoPath, mainWT string, toEnable, toDi
 					kind: applyShellCommand, dir: wtPath, command: integ.Teardown.Command,
 				})
 			}
-			for dirIndex, dir := range integ.Teardown.Dirs {
+			for _, dir := range integ.Teardown.Dirs {
 				operations = append(operations, applyOperation{
 					phaseID: phaseID, phaseName: wtPath,
-					stepID: stableStepID("remove", fmt.Sprintf("%s:%d:%s", key, dirIndex, dir)), label: RemoveDirStepName(dir, wtPath),
+					stepID: stableStepID("remove", key+":"+normalizeWorkspaceIdentity(dir)), label: RemoveDirStepName(dir, wtPath),
 					kind: applyRemove, dir: filepath.Join(wtPath, strings.TrimSuffix(dir, "/")),
 				})
 			}
 		}
 	}
 
-	return PreparedApply{plan: planForOperations(operations), operations: operations}, nil
+	if err := validateOperationGraph(operations); err != nil {
+		return PreparedApply{}, fmt.Errorf("preparing integrations: %w", err)
+	}
+	return PreparedApply{plan: planForOperations(operations), operations: operations, files: realApplyFileOperations{}}, nil
+}
+
+func validateApplyInputs(toEnable, toDisable []Integration) error {
+	identities := make(map[string]string, len(toEnable)+len(toDisable))
+	dependencies := make(map[string]Dependency)
+	for _, group := range []struct {
+		name         string
+		integrations []Integration
+	}{{"enable", toEnable}, {"disable", toDisable}} {
+		for _, integ := range group.integrations {
+			name := strings.TrimSpace(integ.Name)
+			if name == "" {
+				return errors.New("integration has empty name")
+			}
+			if prior, exists := identities[name]; exists {
+				return fmt.Errorf("duplicate integration identity %q in %s and %s", name, prior, group.name)
+			}
+			identities[name] = group.name
+			if group.name == "enable" {
+				hasCommand := strings.TrimSpace(integ.Detect.Command) != ""
+				hasBinary := strings.TrimSpace(integ.Detect.BinaryName) != ""
+				if hasCommand == hasBinary {
+					return fmt.Errorf("integration %q must declare exactly one detection command or binary", name)
+				}
+			}
+			for _, dep := range integ.Dependencies {
+				depName := strings.TrimSpace(dep.Name)
+				if depName == "" {
+					return fmt.Errorf("integration %q has dependency with empty name", name)
+				}
+				if strings.TrimSpace(dep.Detect) == "" {
+					return fmt.Errorf("dependency %q has empty detection command", depName)
+				}
+				if prior, exists := dependencies[depName]; exists && (prior.Detect != dep.Detect || prior.Install != dep.Install) {
+					return fmt.Errorf("dependency %q has conflicting specifications", depName)
+				}
+				dependencies[depName] = dep
+			}
+		}
+	}
+	return nil
+}
+
+func normalizeWorkspaceIdentity(path string) string {
+	return filepath.ToSlash(filepath.Clean(path))
+}
+
+func validateOperationGraph(operations []applyOperation) error {
+	all := make(map[string]bool, len(operations))
+	for _, op := range operations {
+		key := op.key()
+		if all[key] {
+			return fmt.Errorf("duplicate operation %q", key)
+		}
+		all[key] = true
+	}
+	completed := make(map[string]bool, len(operations))
+	for _, op := range operations {
+		for _, dependency := range op.dependsOn {
+			if !all[dependency] {
+				return fmt.Errorf("operation %q references missing dependency %q", op.key(), dependency)
+			}
+			if !completed[dependency] {
+				return fmt.Errorf("operation %q depends on out-of-order or cyclic operation %q", op.key(), dependency)
+			}
+		}
+		completed[op.key()] = true
+	}
+	return nil
 }
 
 func (p PreparedApply) Run(shell git.ShellRunner, emit func(progress.Event)) ([]progress.Phase, error) {
+	if err := validateOperationGraph(p.operations); err != nil {
+		return nil, fmt.Errorf("validating integration apply: %w", err)
+	}
 	execution, err := progress.Start(p.plan, emit)
 	if err != nil {
 		return nil, fmt.Errorf("starting integration apply: %w", err)
 	}
 	results := make(map[string]progress.StepResult, len(p.operations))
+	files := p.files
+	if files == nil {
+		files = realApplyFileOperations{}
+	}
 	var runErr error
 	for _, op := range p.operations {
 		blockedBy := ""
@@ -235,19 +360,23 @@ func (p PreparedApply) Run(shell git.ShellRunner, emit func(progress.Event)) ([]
 		case applyFailure:
 			result, transitionErr = execution.Fail(op.phaseID, op.stepID, op.failure)
 		case applyRemove:
-			result, transitionErr = execution.Run(op.phaseID, op.stepID, func() (string, error) { return "", os.RemoveAll(op.dir) })
-		default:
+			result, transitionErr = execution.Run(op.phaseID, op.stepID, func() (string, error) { return "", files.removeAll(op.dir) })
+		case applyCopy:
 			result, transitionErr = execution.Run(op.phaseID, op.stepID, func() (string, error) {
-				if op.seedSource != "" {
-					_ = os.RemoveAll(op.seedDest)
-					_ = fileutil.CopyDir(op.seedSource, op.seedDest)
+				if err := files.removeAll(op.seedDest); err != nil {
+					return "", fmt.Errorf("removing existing index: %w", err)
 				}
-				message, err := shell.RunShell(op.dir, op.command)
-				if err == nil {
-					_ = appendGitignoreEntries(op.gitignoreDir, op.gitignore)
+				if err := files.copyDir(op.seedSource, op.seedDest); err != nil {
+					return "", fmt.Errorf("copying index: %w", err)
 				}
-				return message, err
+				return "", nil
 			})
+		case applyGitignore:
+			result, transitionErr = execution.Run(op.phaseID, op.stepID, func() (string, error) {
+				return "", files.appendGitignore(op.gitignoreDir, op.gitignore)
+			})
+		default:
+			result, transitionErr = execution.Run(op.phaseID, op.stepID, func() (string, error) { return shell.RunShell(op.dir, op.command) })
 		}
 		if transitionErr != nil {
 			runErr = fmt.Errorf("executing %s: %w", op.label, transitionErr)
@@ -259,7 +388,7 @@ func (p PreparedApply) Run(shell git.ShellRunner, emit func(progress.Event)) ([]
 	if finishErr != nil {
 		finishErr = fmt.Errorf("finishing integration apply: %w", finishErr)
 	}
-	return phasesFromResults(p.plan, results), errors.Join(runErr, finishErr)
+	return execution.Phases(), errors.Join(runErr, finishErr)
 }
 
 func detectionCommand(integ Integration) string {
@@ -281,15 +410,6 @@ func stableStepID(kind, value string) progress.StepID {
 	return progress.StepID(kind + ":" + stableToken(value))
 }
 
-func clonePlan(plan progress.Plan) progress.Plan {
-	clone := progress.Plan{Phases: make([]progress.PlannedPhase, len(plan.Phases))}
-	copy(clone.Phases, plan.Phases)
-	for i := range clone.Phases {
-		clone.Phases[i].Steps = append([]progress.PlannedStep(nil), plan.Phases[i].Steps...)
-	}
-	return clone
-}
-
 func planForOperations(operations []applyOperation) progress.Plan {
 	indices := map[progress.PhaseID]int{}
 	var plan progress.Plan
@@ -303,16 +423,4 @@ func planForOperations(operations []applyOperation) progress.Plan {
 		plan.Phases[index].Steps = append(plan.Phases[index].Steps, progress.PlannedStep{ID: op.stepID, Label: op.label})
 	}
 	return plan
-}
-
-func phasesFromResults(plan progress.Plan, results map[string]progress.StepResult) []progress.Phase {
-	phases := make([]progress.Phase, 0, len(plan.Phases))
-	for _, plannedPhase := range plan.Phases {
-		phase := progress.Phase{Name: plannedPhase.Label}
-		for _, step := range plannedPhase.Steps {
-			phase.Steps = append(phase.Steps, results[plannedPhase.ID+"\x00"+step.ID])
-		}
-		phases = append(phases, phase)
-	}
-	return phases
 }
