@@ -1,0 +1,19 @@
+scripts/pre-commit_test.sh
+  s_47b5c057f8c030::t_570216522faefb 10-22,59
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "c638375f2aee7cde445f172baa2bc260d86e17ca",
+  "prompts": {},
+  "sessions": {
+    "s_47b5c057f8c030": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f5f62-a0bd-7f92-96e2-b1de98524420",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>"
+    }
+  }
+}
