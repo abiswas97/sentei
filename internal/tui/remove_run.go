@@ -34,12 +34,21 @@ type removalRun struct {
 }
 
 type teardownOperation struct {
-	stepID  progress.StepID
-	label   string
-	wtPath  string
-	command string
-	dirs    []string
+	groupID      string
+	stepID       progress.StepID
+	label        string
+	kind         teardownOperationKind
+	wtPath       string
+	command      string
+	managedPaths []string
 }
+
+type teardownOperationKind uint8
+
+const (
+	teardownCommand teardownOperationKind = iota
+	teardownArtifacts
+)
 
 type unlockOperation struct {
 	stepID   progress.StepID

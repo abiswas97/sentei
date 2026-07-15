@@ -1,6 +1,8 @@
 package tui
 
 import (
+	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -17,6 +19,12 @@ import (
 	"github.com/abiswas97/sentei/internal/testutil/mock"
 	"github.com/abiswas97/sentei/internal/worktree"
 )
+
+type teardownShellFunc func(dir, command string) (string, error)
+
+func (fn teardownShellFunc) RunShell(dir, command string) (string, error) {
+	return fn(dir, command)
+}
 
 func TestViewConfirm_CleanWorktrees(t *testing.T) {
 	m := NewModel([]git.Worktree{
@@ -256,7 +264,7 @@ func TestRunTeardownPhase_FallsBackToRemovingArtifactDirs(t *testing.T) {
 	}
 }
 
-func TestRunTeardownPhase_TeardownCommandHandlesRemoval(t *testing.T) {
+func TestRunTeardownPhase_CommandAndArtifactRemovalAreIndependent(t *testing.T) {
 	wtPath := t.TempDir()
 	artifactDir := filepath.Join(wtPath, ".fake-artifact")
 	if err := os.Mkdir(artifactDir, 0o755); err != nil {
@@ -265,7 +273,7 @@ func TestRunTeardownPhase_TeardownCommandHandlesRemoval(t *testing.T) {
 
 	m := NewModel(nil, nil, "/repo")
 	m.shell = &mock.Runner{Responses: map[string]mock.Response{
-		wtPath + ":shell[fake clean]": {Output: "cleaned"},
+		wtPath + ":shell[fake clean]": {Err: errors.New("clean failed")},
 	}}
 	integrations := []integration.Integration{{
 		Name:     "fake",
@@ -283,11 +291,156 @@ func TestRunTeardownPhase_TeardownCommandHandlesRemoval(t *testing.T) {
 	msg := m.runFrozenTeardownPhase(prepared.teardownOps, execution)()
 
 	done := msg.(teardownCompleteMsg)
-	if len(done.results) != 1 || done.results[0].Status != progress.StepDone {
-		t.Fatalf("results = %+v, want one successful teardown", done.results)
+	if len(done.results) != 2 {
+		t.Fatalf("results = %+v, want command and artifact-removal results", done.results)
 	}
-	if _, err := os.Stat(artifactDir); err != nil {
-		t.Error("a successful teardown command must not trigger the dir-removal fallback")
+	if done.results[0].Status != progress.StepFailed || done.results[1].Status != progress.StepDone {
+		t.Fatalf("results = %+v, want failed command followed by successful artifact removal", done.results)
+	}
+	if _, err := os.Stat(artifactDir); !os.IsNotExist(err) {
+		t.Error("artifact removal must still run after a failed teardown command")
+	}
+}
+
+func TestRunTeardownPhase_ArtifactRemovalFailureIsReportedIndependently(t *testing.T) {
+	parent := t.TempDir()
+	wtPath := filepath.Join(parent, "worktree")
+	artifactDir := filepath.Join(wtPath, ".fake-artifact")
+	if err := os.MkdirAll(artifactDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	m := NewModel(nil, nil, "/repo")
+	m.shell = &mock.Runner{Responses: map[string]mock.Response{
+		wtPath + ":shell[fake clean]": {Output: "cleaned"},
+	}}
+	integrations := []integration.Integration{{
+		Name:     "fake",
+		Teardown: integration.TeardownSpec{Command: "fake clean", Dirs: []string{".fake-artifact/"}},
+	}}
+
+	prepared, err := prepareRemoval([]git.Worktree{{Path: wtPath}}, integrations)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.RemoveAll(wtPath); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(wtPath, []byte("not a directory"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	execution, err := progress.Start(prepared.plan, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	done := m.runFrozenTeardownPhase(prepared.teardownOps, execution)().(teardownCompleteMsg)
+	if len(done.results) != 2 {
+		t.Fatalf("results = %+v, want command and artifact-removal results", done.results)
+	}
+	if done.results[0].Status != progress.StepDone || done.results[1].Status != progress.StepFailed {
+		t.Fatalf("results = %+v, want successful command followed by failed artifact removal", done.results)
+	}
+}
+
+func TestRunTeardownPhase_EachArtifactRemovalRunsAfterEarlierFailure(t *testing.T) {
+	wtPath := t.TempDir()
+	first := filepath.Join(wtPath, "blocked", "first")
+	second := filepath.Join(wtPath, "second")
+	if err := os.MkdirAll(first, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(second, 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	m := NewModel(nil, nil, "/repo")
+	m.shell = &mock.Runner{Responses: map[string]mock.Response{
+		wtPath + ":shell[fake clean]": {Output: "cleaned"},
+	}}
+	integrations := []integration.Integration{{
+		Name: "fake",
+		Teardown: integration.TeardownSpec{
+			Command: "fake clean",
+			Dirs:    []string{"second", "blocked/first"},
+		},
+	}}
+	prepared, err := prepareRemoval([]git.Worktree{{Path: wtPath}}, integrations)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(prepared.teardownOps) != 3 {
+		t.Fatalf("teardown operations = %d, want command plus two removals", len(prepared.teardownOps))
+	}
+	if err := os.RemoveAll(filepath.Join(wtPath, "blocked")); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(wtPath, "blocked"), []byte("not a directory"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	execution, err := progress.Start(prepared.plan, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	done := m.runFrozenTeardownPhase(prepared.teardownOps, execution)().(teardownCompleteMsg)
+	if len(done.results) != 3 {
+		t.Fatalf("results = %+v, want command plus two removal results", done.results)
+	}
+	wantStatuses := []progress.StepStatus{progress.StepDone, progress.StepFailed, progress.StepDone}
+	for i, want := range wantStatuses {
+		if done.results[i].Status != want {
+			t.Fatalf("result %d = %+v, want status %v", i, done.results[i], want)
+		}
+	}
+	if _, err := os.Stat(second); !os.IsNotExist(err) {
+		t.Fatalf("second artifact removal did not run after first failed: %v", err)
+	}
+}
+
+func TestRunTeardownPhase_RevalidatesArtifactPathAfterCommand(t *testing.T) {
+	wtPath := t.TempDir()
+	outside := t.TempDir()
+	managedParent := filepath.Join(wtPath, "managed")
+	outsideArtifact := filepath.Join(outside, "artifact")
+	if err := os.MkdirAll(filepath.Join(managedParent, "artifact"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(outsideArtifact, 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	m := NewModel(nil, nil, "/repo")
+	m.shell = teardownShellFunc(func(dir, command string) (string, error) {
+		if dir != wtPath || command != "fake clean" {
+			return "", fmt.Errorf("unexpected shell call: %s %s", dir, command)
+		}
+		if err := os.RemoveAll(managedParent); err != nil {
+			return "", err
+		}
+		return "", os.Symlink(outside, managedParent)
+	})
+	integrations := []integration.Integration{{
+		Name: "fake", Teardown: integration.TeardownSpec{Command: "fake clean", Dirs: []string{"managed/artifact"}},
+	}}
+	prepared, err := prepareRemoval([]git.Worktree{{Path: wtPath}}, integrations)
+	if err != nil {
+		t.Fatal(err)
+	}
+	execution, err := progress.Start(prepared.plan, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	done := m.runFrozenTeardownPhase(prepared.teardownOps, execution)().(teardownCompleteMsg)
+	if len(done.results) != 2 || done.results[0].Status != progress.StepDone || done.results[1].Status != progress.StepFailed {
+		t.Fatalf("results = %+v, want successful command and visible removal failure", done.results)
+	}
+	if done.results[1].Error == nil || !strings.Contains(done.results[1].Error.Error(), "symlink") {
+		t.Fatalf("removal failure = %v, want symlink error", done.results[1].Error)
+	}
+	if _, err := os.Stat(outsideArtifact); err != nil {
+		t.Fatalf("outside artifact was touched: %v", err)
 	}
 }
 

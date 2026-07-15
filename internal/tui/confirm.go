@@ -120,25 +120,47 @@ func prepareRemoval(worktrees []git.Worktree, integrations []integration.Integra
 			prepared.unlockOps = append(prepared.unlockOps, unlockOperation{stepID: stepID, worktree: wt})
 			unlock.Steps = append(unlock.Steps, progress.PlannedStep{ID: stepID, Label: worktreeLabel(wt)})
 		}
+		for _, integ := range integrations {
+			for _, dir := range integ.Teardown.Dirs {
+				if _, err := integration.ResolveManagedPath(wt.Path, dir); err != nil {
+					return removalPreparation{}, fmt.Errorf("preparing removal for integration %q: %w", integ.Name, err)
+				}
+			}
+		}
 		for _, artifact := range creator.ScanArtifacts(wt.Path, integrations) {
 			integ := findIntegrationByName(integrations, artifact.IntegrationName)
 			if integ == nil {
 				continue
 			}
-			dirs := append([]string(nil), artifact.Dirs...)
-			for i := range dirs {
-				dirs[i] = filepath.Clean(strings.TrimSpace(dirs[i]))
+			type managedArtifact struct {
+				dir string
 			}
-			sort.Strings(dirs)
-			teardownIdentity := strings.Join([]string{identity, strings.TrimSpace(integ.Name), strings.TrimSpace(integ.Teardown.Command), strings.Join(dirs, "\x00")}, "\x00")
-			if seenTeardowns[teardownIdentity] {
+			artifacts := make([]managedArtifact, len(artifact.Dirs))
+			for i, dir := range artifact.Dirs {
+				artifacts[i].dir = filepath.Clean(strings.TrimSuffix(dir, string(filepath.Separator)))
+				if _, err := integration.ResolveManagedPath(wt.Path, artifacts[i].dir); err != nil {
+					return removalPreparation{}, fmt.Errorf("preparing removal for integration %q: %w", integ.Name, err)
+				}
+			}
+			sort.Slice(artifacts, func(i, j int) bool { return artifacts[i].dir < artifacts[j].dir })
+			groupIdentity := strings.Join([]string{identity, strings.TrimSpace(integ.Name)}, "\x00")
+			if seenTeardowns[groupIdentity] {
 				return removalPreparation{}, fmt.Errorf("preparing removal: duplicate teardown identity for %s", integ.Name)
 			}
-			seenTeardowns[teardownIdentity] = true
-			stepID := removalSemanticStepID("teardown", teardownIdentity)
-			op := teardownOperation{stepID: stepID, label: integration.TeardownStepName(*integ), wtPath: wt.Path, command: integ.Teardown.Command, dirs: dirs}
-			prepared.teardownOps = append(prepared.teardownOps, op)
-			teardown.Steps = append(teardown.Steps, progress.PlannedStep{ID: stepID, Label: op.label})
+			seenTeardowns[groupIdentity] = true
+			if integ.Teardown.Command != "" {
+				commandIdentity := groupIdentity + "\x00" + strings.TrimSpace(integ.Teardown.Command)
+				stepID := removalSemanticStepID("teardown-command", commandIdentity)
+				op := teardownOperation{groupID: groupIdentity, stepID: stepID, label: integration.TeardownStepName(*integ), kind: teardownCommand, wtPath: wt.Path, command: integ.Teardown.Command}
+				prepared.teardownOps = append(prepared.teardownOps, op)
+				teardown.Steps = append(teardown.Steps, progress.PlannedStep{ID: stepID, Label: op.label})
+			}
+			for _, artifact := range artifacts {
+				stepID := removalSemanticStepID("remove-artifact", groupIdentity+"\x00"+filepath.ToSlash(artifact.dir))
+				op := teardownOperation{groupID: groupIdentity, stepID: stepID, label: integration.RemoveDirStepName(artifact.dir, wt.Path), kind: teardownArtifacts, wtPath: wt.Path, managedPaths: []string{artifact.dir}}
+				prepared.teardownOps = append(prepared.teardownOps, op)
+				teardown.Steps = append(teardown.Steps, progress.PlannedStep{ID: stepID, Label: op.label})
+			}
 		}
 		stepID := removalSemanticStepID("remove", identity)
 		prepared.targets = append(prepared.targets, worktree.RemovalTarget{Worktree: wt, StepID: stepID})
@@ -204,32 +226,55 @@ func (m Model) runFrozenTeardownPhase(operations []teardownOperation, execution 
 			err     error
 		}
 
-		resultsCh := make(chan indexedResults, len(operations))
-		sem := make(chan struct{}, maxTeardownConcurrency)
-
-		for i, operation := range operations {
-			sem <- struct{}{}
-			go func(idx int, op teardownOperation) {
-				defer func() { <-sem }()
-				result, transitionErr := execution.Run(teardownPhaseID, op.stepID, func() (string, error) {
-					if op.command != "" {
-						if _, err := shell.RunShell(op.wtPath, op.command); err == nil {
-							return "", nil
-						}
-					}
-					for _, dir := range op.dirs {
-						if err := os.RemoveAll(filepath.Join(op.wtPath, strings.TrimSuffix(dir, "/"))); err != nil {
-							return "", err
-						}
-					}
-					return "removed artifact dirs", nil
-				})
-				resultsCh <- indexedResults{index: idx, results: []progress.StepResult{result}, err: transitionErr}
-			}(i, operation)
+		type operationGroup struct {
+			id         string
+			operations []teardownOperation
+		}
+		var groups []operationGroup
+		for _, operation := range operations {
+			if len(groups) == 0 || groups[len(groups)-1].id != operation.groupID {
+				groups = append(groups, operationGroup{id: operation.groupID})
+			}
+			groups[len(groups)-1].operations = append(groups[len(groups)-1].operations, operation)
 		}
 
-		collected := make([]indexedResults, len(operations))
-		for range operations {
+		resultsCh := make(chan indexedResults, len(groups))
+		sem := make(chan struct{}, maxTeardownConcurrency)
+
+		for i, group := range groups {
+			sem <- struct{}{}
+			go func(idx int, group operationGroup) {
+				defer func() { <-sem }()
+				indexed := indexedResults{index: idx}
+				for _, op := range group.operations {
+					result, transitionErr := execution.Run(teardownPhaseID, op.stepID, func() (string, error) {
+						switch op.kind {
+						case teardownCommand:
+							return shell.RunShell(op.wtPath, op.command)
+						case teardownArtifacts:
+							for _, managedPath := range op.managedPaths {
+								path, err := integration.ResolveManagedPath(op.wtPath, managedPath)
+								if err != nil {
+									return "", fmt.Errorf("revalidating artifact path: %w", err)
+								}
+								if err := os.RemoveAll(path); err != nil {
+									return "", err
+								}
+							}
+							return "removed artifact dirs", nil
+						default:
+							return "", fmt.Errorf("unknown teardown operation kind %d", op.kind)
+						}
+					})
+					indexed.results = append(indexed.results, result)
+					indexed.err = errors.Join(indexed.err, transitionErr)
+				}
+				resultsCh <- indexed
+			}(i, group)
+		}
+
+		collected := make([]indexedResults, len(groups))
+		for range groups {
 			ir := <-resultsCh
 			collected[ir.index] = ir
 		}

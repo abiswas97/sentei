@@ -44,10 +44,16 @@ type applyOperation struct {
 	failure   error
 	dependsOn []string
 
-	seedSource   string
-	seedDest     string
-	gitignore    []string
-	gitignoreDir string
+	seedSource     string
+	seedDest       string
+	seedSourceRoot string
+	seedSourcePath string
+	seedDestRoot   string
+	seedDestPath   string
+	managedRoot    string
+	managedPath    string
+	gitignore      []string
+	gitignoreDir   string
 }
 
 func (op applyOperation) key() string { return op.phaseID + "\x00" + op.stepID }
@@ -100,6 +106,9 @@ func PrepareApplyForTarget(shell git.ShellRunner, repoPath, mainWT, probeDir str
 		return PreparedApply{}, errors.New("preparing integrations: no target worktree")
 	}
 	if err := validateApplyInputs(toEnable, toDisable); err != nil {
+		return PreparedApply{}, fmt.Errorf("preparing integrations: %w", err)
+	}
+	if err := validateManagedPaths(mainWT, toEnable, toDisable, wtPaths); err != nil {
 		return PreparedApply{}, fmt.Errorf("preparing integrations: %w", err)
 	}
 	type enabledDecision struct {
@@ -190,7 +199,14 @@ func PrepareApplyForTarget(shell git.ShellRunner, repoPath, mainWT, probeDir str
 				dependencies = append(dependencies, decision.toolOpKey)
 			}
 			if integ.IndexCopyDir != "" && mainWT != "" && normalizeWorkspaceIdentity(wtPath) != normalizeWorkspaceIdentity(mainWT) {
-				source := filepath.Join(mainWT, integ.IndexCopyDir)
+				source, err := ResolveManagedPath(mainWT, integ.IndexCopyDir)
+				if err != nil {
+					return PreparedApply{}, fmt.Errorf("preparing integrations: index source: %w", err)
+				}
+				destination, err := ResolveManagedPath(wtPath, integ.IndexCopyDir)
+				if err != nil {
+					return PreparedApply{}, fmt.Errorf("preparing integrations: index destination: %w", err)
+				}
 				info, err := os.Stat(source)
 				switch {
 				case err == nil && !info.IsDir():
@@ -200,7 +216,9 @@ func PrepareApplyForTarget(shell git.ShellRunner, repoPath, mainWT, probeDir str
 						phaseID: phaseID, phaseName: wtPath,
 						stepID: stableStepID("copy-index", integ.Name), label: "Copy index for " + integ.Name,
 						kind: applyCopy, dependsOn: append([]string(nil), dependencies...),
-						seedSource: source, seedDest: filepath.Join(wtPath, integ.IndexCopyDir),
+						seedSource: source, seedDest: destination,
+						seedSourceRoot: mainWT, seedSourcePath: integ.IndexCopyDir,
+						seedDestRoot: wtPath, seedDestPath: integ.IndexCopyDir,
 					}
 					operations = append(operations, copyOp)
 					dependencies = append(dependencies, copyOp.key())
@@ -243,10 +261,14 @@ func PrepareApplyForTarget(shell git.ShellRunner, repoPath, mainWT, probeDir str
 				})
 			}
 			for _, dir := range integ.Teardown.Dirs {
+				managedDir, err := ResolveManagedPath(wtPath, dir)
+				if err != nil {
+					return PreparedApply{}, fmt.Errorf("preparing integrations: teardown directory: %w", err)
+				}
 				operations = append(operations, applyOperation{
 					phaseID: phaseID, phaseName: wtPath,
 					stepID: stableStepID("remove", key+":"+normalizeWorkspaceIdentity(dir)), label: RemoveDirStepName(dir, wtPath),
-					kind: applyRemove, dir: filepath.Join(wtPath, strings.TrimSuffix(dir, "/")),
+					kind: applyRemove, dir: managedDir, managedRoot: wtPath, managedPath: dir,
 				})
 			}
 		}
@@ -256,6 +278,107 @@ func PrepareApplyForTarget(shell git.ShellRunner, repoPath, mainWT, probeDir str
 		return PreparedApply{}, fmt.Errorf("preparing integrations: %w", err)
 	}
 	return PreparedApply{plan: planForOperations(operations), operations: operations, files: realApplyFileOperations{}}, nil
+}
+
+func validateManagedPaths(mainWT string, toEnable, toDisable []Integration, wtPaths []string) error {
+	for _, integ := range toEnable {
+		if integ.IndexCopyDir == "" {
+			continue
+		}
+		if mainWT != "" {
+			if _, err := ResolveManagedPath(mainWT, integ.IndexCopyDir); err != nil {
+				return fmt.Errorf("integration %q index copy directory: %w", integ.Name, err)
+			}
+		}
+		for _, wtPath := range wtPaths {
+			if _, err := ResolveManagedPath(wtPath, integ.IndexCopyDir); err != nil {
+				return fmt.Errorf("integration %q index copy directory: %w", integ.Name, err)
+			}
+		}
+	}
+	for _, integ := range toDisable {
+		for _, dir := range integ.Teardown.Dirs {
+			for _, wtPath := range wtPaths {
+				if _, err := ResolveManagedPath(wtPath, dir); err != nil {
+					return fmt.Errorf("integration %q teardown directory: %w", integ.Name, err)
+				}
+			}
+		}
+	}
+	return nil
+}
+
+// ResolveManagedPath validates a declared integration path and resolves it
+// beneath root. A single trailing separator is accepted for directory specs.
+func ResolveManagedPath(root, managedPath string) (string, error) {
+	if managedPath == "" || strings.TrimSpace(managedPath) != managedPath {
+		return "", fmt.Errorf("managed path %q must be nonempty and have no surrounding whitespace", managedPath)
+	}
+	if filepath.IsAbs(managedPath) {
+		return "", fmt.Errorf("managed path %q must be relative", managedPath)
+	}
+	path := strings.TrimSuffix(managedPath, string(filepath.Separator))
+	if path == "" || filepath.Clean(path) != path || path == "." || path == ".." || strings.HasPrefix(path, ".."+string(filepath.Separator)) {
+		return "", fmt.Errorf("managed path %q must be clean and below its root", managedPath)
+	}
+	rootPath, err := filepath.Abs(root)
+	if err != nil {
+		return "", fmt.Errorf("resolving managed path root %q: %w", root, err)
+	}
+	rootPath, err = resolveExistingPath(rootPath)
+	if err != nil {
+		return "", fmt.Errorf("resolving managed path root %q: %w", root, err)
+	}
+	resolved := rootPath
+	parts := strings.Split(path, string(filepath.Separator))
+components:
+	for i, part := range parts {
+		candidate := filepath.Join(resolved, part)
+		info, err := os.Lstat(candidate)
+		switch {
+		case err == nil && info.Mode()&os.ModeSymlink != 0:
+			return "", fmt.Errorf("managed path %q contains symlink component %q", managedPath, strings.Join(parts[:i+1], string(filepath.Separator)))
+		case err == nil:
+			resolved = candidate
+		case os.IsNotExist(err):
+			resolved = filepath.Join(append([]string{resolved}, parts[i:]...)...)
+			break components
+		case err != nil:
+			return "", fmt.Errorf("inspecting managed path %q: %w", managedPath, err)
+		}
+	}
+	relative, err := filepath.Rel(rootPath, resolved)
+	if err != nil || relative == ".." || strings.HasPrefix(relative, ".."+string(filepath.Separator)) {
+		return "", fmt.Errorf("managed path %q resolves outside root %q", managedPath, root)
+	}
+	return resolved, nil
+}
+
+func resolveExistingPath(path string) (string, error) {
+	current := path
+	var missing []string
+	for {
+		_, err := os.Lstat(current)
+		switch {
+		case err == nil:
+			resolved, err := filepath.EvalSymlinks(current)
+			if err != nil {
+				return "", err
+			}
+			for i := len(missing) - 1; i >= 0; i-- {
+				resolved = filepath.Join(resolved, missing[i])
+			}
+			return resolved, nil
+		case !os.IsNotExist(err):
+			return "", err
+		}
+		parent := filepath.Dir(current)
+		if parent == current {
+			return "", err
+		}
+		missing = append(missing, filepath.Base(current))
+		current = parent
+	}
 }
 
 // BindPhase returns a copy whose operations share one caller-owned phase.
@@ -407,13 +530,38 @@ func (p PreparedApply) RunIn(execution *progress.Execution, shell git.ShellRunne
 		case applyFailure:
 			result, transitionErr = execution.Fail(op.phaseID, op.stepID, op.failure)
 		case applyRemove:
-			result, transitionErr = execution.Run(op.phaseID, op.stepID, func() (string, error) { return "", files.removeAll(op.dir) })
+			result, transitionErr = execution.Run(op.phaseID, op.stepID, func() (string, error) {
+				path := op.dir
+				if op.managedPath != "" {
+					resolved, err := ResolveManagedPath(op.managedRoot, op.managedPath)
+					if err != nil {
+						return "", fmt.Errorf("revalidating removal path: %w", err)
+					}
+					path = resolved
+				}
+				return "", files.removeAll(path)
+			})
 		case applyCopy:
 			result, transitionErr = execution.Run(op.phaseID, op.stepID, func() (string, error) {
-				if err := files.removeAll(op.seedDest); err != nil {
+				source, destination := op.seedSource, op.seedDest
+				if op.seedSourcePath != "" {
+					resolved, err := ResolveManagedPath(op.seedSourceRoot, op.seedSourcePath)
+					if err != nil {
+						return "", fmt.Errorf("revalidating index source: %w", err)
+					}
+					source = resolved
+				}
+				if op.seedDestPath != "" {
+					resolved, err := ResolveManagedPath(op.seedDestRoot, op.seedDestPath)
+					if err != nil {
+						return "", fmt.Errorf("revalidating index destination: %w", err)
+					}
+					destination = resolved
+				}
+				if err := files.removeAll(destination); err != nil {
 					return "", fmt.Errorf("removing existing index: %w", err)
 				}
-				if err := files.copyDir(op.seedSource, op.seedDest); err != nil {
+				if err := files.copyDir(source, destination); err != nil {
 					return "", fmt.Errorf("copying index: %w", err)
 				}
 				return "", nil

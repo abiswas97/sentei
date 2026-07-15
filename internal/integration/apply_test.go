@@ -24,6 +24,10 @@ type mockShellResponse struct {
 	err    error
 }
 
+type applyShellFunc func(dir, command string) (string, error)
+
+func (fn applyShellFunc) RunShell(dir, command string) (string, error) { return fn(dir, command) }
+
 type failingApplyFiles struct {
 	removeErr    error
 	copyErr      error
@@ -447,6 +451,96 @@ func TestPreparedApply_TeardownFailureStillRemovesArtifacts(t *testing.T) {
 	}
 }
 
+func TestPreparedApply_RevalidatesTeardownPathAfterCommand(t *testing.T) {
+	wt := t.TempDir()
+	outside := t.TempDir()
+	managedParent := filepath.Join(wt, "managed")
+	outsideArtifact := filepath.Join(outside, "artifact")
+	if err := os.MkdirAll(filepath.Join(managedParent, "artifact"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(outsideArtifact, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	integ := Integration{Name: "tool", Teardown: TeardownSpec{Command: "tool clean", Dirs: []string{"managed/artifact"}}}
+	shell := applyShellFunc(func(dir, command string) (string, error) {
+		if dir != wt || command != "tool clean" {
+			return "", fmt.Errorf("unexpected shell call: %s %s", dir, command)
+		}
+		if err := os.RemoveAll(managedParent); err != nil {
+			return "", err
+		}
+		return "", os.Symlink(outside, managedParent)
+	})
+	prepared, err := PrepareApply(shell, "/repo", wt, nil, []Integration{integ}, []string{wt})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var events []progress.Event
+	if _, err := prepared.Run(shell, func(event progress.Event) { events = append(events, event) }); err != nil {
+		t.Fatal(err)
+	}
+	if step := findStep(t, events, RemoveDirStepName("managed/artifact", wt)); step.Status != progress.StepFailed || step.Error == nil || !strings.Contains(step.Error.Error(), "symlink") {
+		t.Fatalf("removal step = %#v, want visible symlink failure", step)
+	}
+	if _, err := os.Stat(outsideArtifact); err != nil {
+		t.Fatalf("outside artifact was touched: %v", err)
+	}
+}
+
+func TestPreparedApply_RevalidatesIndexDestinationAfterInstall(t *testing.T) {
+	mainWT := t.TempDir()
+	targetWT := t.TempDir()
+	outside := t.TempDir()
+	sourceIndex := filepath.Join(mainWT, "managed", "index")
+	targetParent := filepath.Join(targetWT, "managed")
+	outsideIndex := filepath.Join(outside, "index")
+	if err := os.MkdirAll(sourceIndex, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(targetParent, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(outsideIndex, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	marker := filepath.Join(outsideIndex, "keep")
+	if err := os.WriteFile(marker, []byte("keep"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	integ := Integration{
+		Name: "tool", Detect: DetectSpec{Command: "tool detect"},
+		Install: InstallSpec{Command: "tool install"}, IndexCopyDir: "managed/index",
+	}
+	shell := applyShellFunc(func(dir, command string) (string, error) {
+		switch command {
+		case "tool detect":
+			return "", errors.New("missing")
+		case "tool install":
+			if err := os.RemoveAll(targetParent); err != nil {
+				return "", err
+			}
+			return "", os.Symlink(outside, targetParent)
+		default:
+			return "", fmt.Errorf("unexpected shell call: %s %s", dir, command)
+		}
+	})
+	prepared, err := PrepareApply(shell, "/repo", mainWT, []Integration{integ}, nil, []string{targetWT})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var events []progress.Event
+	if _, err := prepared.Run(shell, func(event progress.Event) { events = append(events, event) }); err != nil {
+		t.Fatal(err)
+	}
+	if step := findStep(t, events, "Copy index for tool"); step.Status != progress.StepFailed || step.Error == nil || !strings.Contains(step.Error.Error(), "symlink") {
+		t.Fatalf("copy step = %#v, want visible symlink failure", step)
+	}
+	if _, err := os.Stat(marker); err != nil {
+		t.Fatalf("outside index was touched: %v", err)
+	}
+}
+
 func TestPrepareApplySemanticIDsDoNotDependOnInputOrder(t *testing.T) {
 	alpha := testIntegration("alpha")
 	beta := testIntegration("beta")
@@ -511,6 +605,110 @@ func TestPrepareApplyRejectsMalformedDetectionBeforeSideEffects(t *testing.T) {
 			}
 			if len(shell.calls) != 0 {
 				t.Fatalf("shell called before preflight completed: %v", shell.calls)
+			}
+		})
+	}
+}
+
+func TestPrepareApplyRejectsUnsafeManagedPathsBeforeDetection(t *testing.T) {
+	tests := []struct {
+		name      string
+		toEnable  []Integration
+		toDisable []Integration
+	}{
+		{
+			name: "absolute index copy directory",
+			toEnable: []Integration{{
+				Name: "tool", Detect: DetectSpec{Command: "tool detect"}, IndexCopyDir: filepath.Join(string(filepath.Separator), "victim"),
+			}},
+		},
+		{
+			name: "parent index copy directory",
+			toEnable: []Integration{{
+				Name: "tool", Detect: DetectSpec{Command: "tool detect"}, IndexCopyDir: "../victim",
+			}},
+		},
+		{
+			name: "unclean index copy directory",
+			toEnable: []Integration{{
+				Name: "tool", Detect: DetectSpec{Command: "tool detect"}, IndexCopyDir: "cache/../victim",
+			}},
+		},
+		{
+			name:      "current teardown directory",
+			toDisable: []Integration{{Name: "tool", Teardown: TeardownSpec{Dirs: []string{"."}}}},
+		},
+		{
+			name:      "empty teardown directory",
+			toDisable: []Integration{{Name: "tool", Teardown: TeardownSpec{Dirs: []string{""}}}},
+		},
+		{
+			name:      "parent teardown directory",
+			toDisable: []Integration{{Name: "tool", Teardown: TeardownSpec{Dirs: []string{"../victim"}}}},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			shell := &applyShell{}
+			_, err := PrepareApplyForTarget(shell, t.TempDir(), t.TempDir(), t.TempDir(), tc.toEnable, tc.toDisable, []string{t.TempDir()})
+			if err == nil || !strings.Contains(err.Error(), "managed path") {
+				t.Fatalf("PrepareApplyForTarget error = %v, want managed path validation error", err)
+			}
+			if len(shell.calls) != 0 {
+				t.Fatalf("detection ran before managed path validation: %v", shell.calls)
+			}
+		})
+	}
+}
+
+func TestPrepareApplyRejectsSymlinkedManagedPathBeforeDetection(t *testing.T) {
+	outside := t.TempDir()
+	tests := []struct {
+		name      string
+		toEnable  []Integration
+		toDisable []Integration
+		linkRoot  string
+	}{
+		{
+			name: "index source",
+			toEnable: []Integration{{
+				Name: "tool", Detect: DetectSpec{Command: "tool detect"}, IndexCopyDir: "escape/index",
+			}},
+			linkRoot: "main",
+		},
+		{
+			name: "index destination",
+			toEnable: []Integration{{
+				Name: "tool", Detect: DetectSpec{Command: "tool detect"}, IndexCopyDir: "escape/index",
+			}},
+			linkRoot: "target",
+		},
+		{
+			name:      "teardown destination",
+			toDisable: []Integration{{Name: "tool", Teardown: TeardownSpec{Dirs: []string{"escape/artifact"}}}},
+			linkRoot:  "target",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			mainWT := t.TempDir()
+			targetWT := t.TempDir()
+			linkBase := mainWT
+			if tc.linkRoot == "target" {
+				linkBase = targetWT
+			}
+			if err := os.Symlink(outside, filepath.Join(linkBase, "escape")); err != nil {
+				t.Fatal(err)
+			}
+			shell := &applyShell{}
+			_, err := PrepareApplyForTarget(shell, t.TempDir(), mainWT, targetWT, tc.toEnable, tc.toDisable, []string{targetWT})
+			if err == nil || !strings.Contains(err.Error(), "symlink") {
+				t.Fatalf("PrepareApplyForTarget error = %v, want symlink validation error", err)
+			}
+			if len(shell.calls) != 0 {
+				t.Fatalf("detection ran before symlink validation: %v", shell.calls)
 			}
 		})
 	}
