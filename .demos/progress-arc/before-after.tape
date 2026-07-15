@@ -21,6 +21,9 @@ Sleep 1s
 Type "y"
 Sleep 5s
 Type "q"
+Sleep 1s
+Type "q"
+Sleep 1s
 Hide
 Type "/Users/abiswas/code/personal/sentei/progress-arc/.demos/progress-arc/setup-fixture.sh >/dev/null; source /tmp/sentei-vhs-progress-arc/demo.env; cd /tmp/sentei-vhs-progress-arc/repo/demo.git; stty rows 24 cols 80" Enter
 Show
