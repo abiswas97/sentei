@@ -641,8 +641,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if !m.motionActive() {
 			return m, nil
 		}
+		previousView := m.view
 		m.motionTick++
 		m, _ = m.observeSettle(time.Now())
+		if m.view != previousView || !m.motionActive() {
+			return m, nil
+		}
 		return m, motionTickCmd()
 	}
 

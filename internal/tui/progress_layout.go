@@ -344,7 +344,7 @@ func (m Model) renderProgressLayout(l ProgressLayout) string {
 	// settles the fill green for its hold — the bar joins the ✦ moment —
 	// but a flow that finished with failures keeps the standard gradient:
 	// the truth-hold applies to every ending, the celebration does not.
-	hasFailures := false
+	hasFailures := m.progressTopLevelError() != nil
 	for _, p := range l.Phases {
 		if p.Failed > 0 {
 			hasFailures = true

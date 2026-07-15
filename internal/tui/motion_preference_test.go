@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"errors"
 	"strings"
 	"testing"
 	"time"
@@ -166,6 +167,38 @@ func TestMotionOff_SuccessCrystallizesOnceWithGreenBar(t *testing.T) {
 	}
 	if got := strings.Count(stripANSI(out), indicatorDone); got != 1 {
 		t.Fatalf("completion crystallized %d times, want one:\n%s", got, stripANSI(out))
+	}
+}
+
+func TestMotionTick_DoesNotRescheduleAfterSettleTransition(t *testing.T) {
+	m := NewModel(nil, nil, "/repo")
+	m.view = progressView
+	m.progressTargetView = summaryView
+	m.progressSettling = true
+	m.progressSettlingSince = time.Now()
+	m.progressSettledAt = time.Now().Add(-progressSettleBeat)
+
+	updated, cmd := m.Update(motionTickMsg{})
+	model := updated.(Model)
+	if model.view != summaryView {
+		t.Fatalf("settle tick left view = %v, want summary", model.view)
+	}
+	if cmd != nil {
+		t.Fatal("stale progress motion tick rescheduled after changing views")
+	}
+}
+
+func TestCompletedTopLevelErrorBarNeverUsesSuccessPalette(t *testing.T) {
+	t.Setenv("SENTEI_MOTION", "off")
+	m := NewModel(nil, nil, "/repo")
+	m.view = progressView
+	m.progressTarget = 1
+	m.remove.run.result.Err = errors.New("progress delivery failed")
+	layout := ProgressLayout{Title: "T", Width: 80, Height: 24, Completed: true, Phases: []progress.PhaseState{{
+		Name: "Complete", Total: 1, Done: 1, Closed: true,
+	}}}
+	if out := m.renderProgressLayout(layout); strings.Contains(out, "0;135;95") {
+		t.Fatalf("top-level progress error used success palette: %q", out)
 	}
 }
 
