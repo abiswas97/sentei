@@ -189,6 +189,9 @@ func (l ProgressLayout) phaseHeadline(phase progress.PhaseState) string {
 		counts = fmt.Sprintf("%d/%d", min(phase.Done, phase.Total), phase.Total)
 		return fmt.Sprintf("  %s %s  %s", styleIndicatorFailed.Render(indicatorFailed), stylePhaseActive.Render(phase.Name), styleDim.Render(counts))
 	}
+	if l.Motion != nil && phaseHasStatus(phase, progress.StepRunning) {
+		return fmt.Sprintf("  %s  %s", l.Motion.Accent(l.Motion.Frame+" "+phase.Name), styleDim.Render(counts))
+	}
 	return fmt.Sprintf("  %s %s  %s", l.activeGlyph(), stylePhaseActive.Render(phase.Name), styleDim.Render(counts))
 }
 
@@ -321,7 +324,10 @@ func (m *Model) syncProgressBar() tea.Cmd {
 		pct = 1
 	}
 	m.progressTarget = pct
-	cmds := []tea.Cmd{m.bar.SetPercent(pct)}
+	var cmds []tea.Cmd
+	if m.motionPreference == MotionFull {
+		cmds = append(cmds, m.bar.SetPercent(pct))
+	}
 	if !m.watch.Running() {
 		cmds = append(cmds, m.watch.Start())
 	}
@@ -353,14 +359,19 @@ func (m Model) renderProgressLayout(l ProgressLayout) string {
 	bar.EmptyColor = colorDim
 	// The native percentage follows the displayed fill, so bar and label
 	// never disagree; the phase headers state actual counts.
-	l.Bar = "  " + bar.View()
+	if m.motionPreference == MotionOff {
+		l.Bar = "  " + bar.ViewAs(m.progressTarget)
+	} else {
+		l.Bar = "  " + bar.View()
+	}
 	// Sub-2s elapsed is noise that implies precision the 1Hz ticker does
 	// not have; the layout reserve keeps the bar from reflowing when the
 	// readout appears.
 	if elapsed := time.Since(m.progressStartedAt); elapsed >= 2*time.Second {
 		l.Elapsed = styleDim.Render(fmt.Sprintf("elapsed %ds", int(elapsed.Seconds())))
 	}
-	l.ActiveGlyph = starGlyph(rampAccent, m.motionTick)
-	l.Motion = m.motion()
+	if m.motionPreference == MotionFull {
+		l.Motion = m.motion()
+	}
 	return l.View()
 }

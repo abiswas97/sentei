@@ -2,6 +2,7 @@ package tui
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -266,7 +267,8 @@ type Model struct {
 	// motionTick is the one animation clock: star frames and shimmer band
 	// positions derive from it as pure functions. The tick chain runs only
 	// while a working surface is visible (motionActive).
-	motionTick int
+	motionTick       int
+	motionPreference MotionPreference
 
 	// bar springs the overall progress toward each completion target and
 	// watch counts elapsed time; both animate only in determinate progress
@@ -317,10 +319,11 @@ func NewModel(worktrees []git.Worktree, runner git.CommandRunner, repoPath strin
 			sortAscending: true,
 			filterInput:   ti,
 		},
-		width:  80,
-		height: 20,
-		bar:    newOverallBar(),
-		watch:  stopwatch.New(),
+		width:            80,
+		height:           20,
+		bar:              newOverallBar(),
+		watch:            stopwatch.New(),
+		motionPreference: motionPreference(os.Getenv),
 	}
 	m.reindex()
 	return m
@@ -401,6 +404,7 @@ func NewMenuModel(runner git.CommandRunner, shell git.ShellRunner, repoPath stri
 		worktreeGeneration: initGeneration,
 		bar:                newOverallBar(),
 		watch:              stopwatch.New(),
+		motionPreference:   motionPreference(os.Getenv),
 		remove: removeState{
 			selected:      make(map[string]bool),
 			sortField:     SortByAge,
@@ -444,11 +448,23 @@ func NewMenuModel(runner git.CommandRunner, shell git.ShellRunner, repoPath stri
 // observed on the motion clock and spring frames; a timeout tick guarantees
 // a wake-up even if both go quiet.
 func (m Model) holdOrAdvance(targetView viewState) (tea.Model, tea.Cmd) {
+	now := time.Now()
 	m.progressTargetView = targetView
 	m.progressSettling = true
-	m.progressSettlingSince = time.Now()
+	m.progressSettlingSince = now
 	m.progressSettledAt = time.Time{}
 	token := m.progressToken
+	if m.motionPreference == MotionOff {
+		if settled, advanced := m.observeSettle(now); advanced {
+			return settled, nil
+		} else {
+			m = settled
+		}
+		remaining := m.minProgressDuration - now.Sub(m.progressStartedAt)
+		return m, tea.Tick(max(remaining, 0), func(time.Time) tea.Msg {
+			return progressSettleProbeMsg{token: token}
+		})
+	}
 	return m, tea.Tick(progressSettleTimeout, func(time.Time) tea.Msg {
 		return progressSettleProbeMsg{token: token}
 	})
@@ -459,6 +475,9 @@ func (m Model) holdOrAdvance(targetView viewState) (tea.Model, tea.Cmd) {
 // beat, or the hard timeout has expired.
 func (m Model) settleAdvanceReady(now time.Time) bool {
 	holdDone := m.minProgressDuration == 0 || now.Sub(m.progressStartedAt) >= m.minProgressDuration
+	if m.motionPreference == MotionOff {
+		return holdDone
+	}
 	beatDone := !m.progressSettledAt.IsZero() && now.Sub(m.progressSettledAt) >= progressSettleBeat
 	timedOut := now.Sub(m.progressSettlingSince) >= progressSettleTimeout
 	return (holdDone && beatDone) || timedOut
@@ -471,7 +490,7 @@ func (m Model) observeSettle(now time.Time) (Model, bool) {
 	if !m.progressSettling {
 		return m, false
 	}
-	if m.bar.IsAnimating() {
+	if m.motionPreference == MotionFull && m.bar.IsAnimating() {
 		// Still gliding (or a new spring target arrived): not settled.
 		m.progressSettledAt = time.Time{}
 	} else if m.progressSettledAt.IsZero() {
@@ -528,6 +547,9 @@ func (m *Model) SetMigrateOpts(opts *MigrateOpts) {
 
 func (m Model) Init() tea.Cmd {
 	if m.view == menuView && m.context == repo.ContextBareRepo {
+		if m.motionPreference == MotionOff {
+			return tea.Batch(tea.RequestBackgroundColor, loadWorktreeContext(m.runner, m.repoPath, m.worktreeGeneration))
+		}
 		return tea.Batch(tea.RequestBackgroundColor, motionTickCmd(), loadWorktreeContext(m.runner, m.repoPath, m.worktreeGeneration))
 	}
 	return tea.RequestBackgroundColor
@@ -589,7 +611,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	if frame, ok := msg.(progressbar.FrameMsg); ok {
-		if !m.determinateProgressActive() {
+		if m.motionPreference == MotionOff || !m.determinateProgressActive() {
 			return m, nil
 		}
 		var cmd tea.Cmd
@@ -679,6 +701,9 @@ func (m Model) progressHeight() int {
 // indeterminate wait, a determinate progress view, or the cleanup result's
 // running line. The one gate for the one motion clock.
 func (m Model) motionActive() bool {
+	if m.motionPreference == MotionOff {
+		return false
+	}
 	return m.indeterminateWaitActive() ||
 		m.determinateProgressActive() ||
 		(m.view == cleanupResultView && m.cleanupResult == nil)

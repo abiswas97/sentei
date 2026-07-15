@@ -33,6 +33,20 @@ const (
 // and collapsing back. Every frame is one cell; done is the crystallized ✦.
 var starFrames = []string{"·", "✢", "✳", "✻", "✽", "✻", "✳", "✢"}
 
+type MotionPreference uint8
+
+const (
+	MotionFull MotionPreference = iota
+	MotionOff
+)
+
+func motionPreference(getenv func(string) string) MotionPreference {
+	if strings.EqualFold(getenv("SENTEI_MOTION"), "off") || strings.EqualFold(getenv("TERM"), "dumb") {
+		return MotionOff
+	}
+	return MotionFull
+}
+
 // motionTickMsg advances the motion clock.
 type motionTickMsg struct{}
 
@@ -54,22 +68,6 @@ type shimmerRamp struct {
 func starFrame(tick int) string {
 	ticksPerFrame := int(starInterval / motionResolution)
 	return starFrames[(tick/ticksPerFrame)%len(starFrames)]
-}
-
-// starGlyph returns the styled standalone star for contexts outside a
-// shimmer band (the stat line): frame size drives brightness, small=dim
-// peak=bright, so the twinkle glows as it grows.
-func starGlyph(ramp shimmerRamp, tick int) string {
-	ticksPerFrame := int(starInterval / motionResolution)
-	i := (tick / ticksPerFrame) % len(starFrames)
-	// Frame index distance from the peak frame (index 4): 0 at peak.
-	dist := i - len(starFrames)/2
-	if dist < 0 {
-		dist = -dist
-	}
-	intensity := 1 - float64(dist)/float64(len(starFrames)/2)
-	color := lerpHex(ramp.base, ramp.peak, intensity)
-	return lipgloss.NewStyle().Foreground(lipgloss.Color(color)).Render(starFrame(tick))
 }
 
 // shimmerLine renders text with a gradient band sweeping across it: each
