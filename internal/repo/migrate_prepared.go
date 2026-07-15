@@ -140,28 +140,40 @@ func prepareMigrate(runner git.CommandRunner, shell git.ShellRunner, opts Migrat
 		return "", err
 	})
 	add("migrate:copy", "Copy", "restore-files", "Restore working files", migrateRegular, func(execution *progress.Execution) (string, error) {
-		entries, err := os.ReadDir(backupPath)
-		if err != nil {
-			return "nothing to restore", nil
-		}
-		copied := 0
-		for _, entry := range entries {
-			name := entry.Name()
-			if name == ".git" || name == ".bare" {
-				continue
-			}
-			if err := copyTree(filepath.Join(backupPath, name), filepath.Join(git.WorktreePath(repoPath, branch), name)); err != nil {
-				_ = execution.Running("migrate:copy", "restore-files", 0, fmt.Sprintf("warning: could not copy %s: %v", name, err))
-				continue
-			}
-			copied++
-		}
-		if copied == 0 {
-			return "nothing to restore", nil
-		}
-		return fmt.Sprintf("%d items restored", copied), nil
+		return restoreWorkingFiles(backupPath, git.WorktreePath(repoPath, branch), copyTree, func(message string) {
+			_ = execution.Running("migrate:copy", "restore-files", 0, message)
+		})
 	})
 	return prepared
+}
+
+// restoreWorkingFiles attempts every backup entry so one bad file does not
+// hide later failures, but returns the aggregate error so callers preserve the
+// backup instead of treating a partial restore as a successful migration.
+func restoreWorkingFiles(backupPath, targetPath string, copyFn func(string, string) error, warn func(string)) (string, error) {
+	entries, err := os.ReadDir(backupPath)
+	if err != nil {
+		return "nothing restored", fmt.Errorf("read migration backup: %w", err)
+	}
+	copied := 0
+	var restoreErr error
+	for _, entry := range entries {
+		name := entry.Name()
+		if name == ".git" || name == ".bare" {
+			continue
+		}
+		if err := copyFn(filepath.Join(backupPath, name), filepath.Join(targetPath, name)); err != nil {
+			warn(fmt.Sprintf("warning: could not copy %s: %v", name, err))
+			restoreErr = errors.Join(restoreErr, fmt.Errorf("copy %s from migration backup: %w", name, err))
+			continue
+		}
+		copied++
+	}
+	message := "nothing to restore"
+	if copied > 0 {
+		message = fmt.Sprintf("%d items restored", copied)
+	}
+	return message, restoreErr
 }
 
 func (p preparedMigrate) run(emit func(progress.Event)) MigrateResult {

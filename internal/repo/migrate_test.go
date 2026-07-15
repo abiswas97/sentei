@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -15,8 +16,13 @@ import (
 // satisfy the backup phase without needing to predict the timestamp-based path.
 type alwaysOkShell struct{}
 
-func (s *alwaysOkShell) RunShell(_ string, _ string) (string, error) {
-	return "", nil
+func (s *alwaysOkShell) RunShell(_ string, command string) (string, error) {
+	lastArg := command[strings.LastIndex(command, " ")+1:]
+	backupPath, err := strconv.Unquote(lastArg)
+	if err != nil {
+		return "", err
+	}
+	return "", os.MkdirAll(backupPath, 0755)
 }
 
 func TestMigrate_Successful(t *testing.T) {
@@ -362,5 +368,52 @@ func TestCopyTree_DoesNotWriteThroughSymlinks(t *testing.T) {
 	}
 	if info.Mode()&os.ModeSymlink == 0 {
 		t.Error("source symlink should be recreated as a symlink, not dereferenced")
+	}
+}
+
+func TestRestoreWorkingFiles_MissingBackupFails(t *testing.T) {
+	_, err := restoreWorkingFiles(
+		filepath.Join(t.TempDir(), "missing-backup"),
+		t.TempDir(),
+		copyTree,
+		func(string) {},
+	)
+	if err == nil || !strings.Contains(err.Error(), "read migration backup") {
+		t.Fatalf("err = %v, want backup read failure", err)
+	}
+}
+
+func TestRestoreWorkingFiles_AttemptsAllEntriesAndReturnsCopyFailures(t *testing.T) {
+	backup := t.TempDir()
+	target := t.TempDir()
+	for _, name := range []string{"a", "b", "c"} {
+		if err := os.WriteFile(filepath.Join(backup, name), []byte(name), 0644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	want := fmt.Errorf("disk full")
+	var copied, warnings []string
+	message, err := restoreWorkingFiles(backup, target, func(src, _ string) error {
+		name := filepath.Base(src)
+		copied = append(copied, name)
+		if name == "b" {
+			return want
+		}
+		return nil
+	}, func(message string) {
+		warnings = append(warnings, message)
+	})
+
+	if err == nil || !strings.Contains(err.Error(), "copy b") || !strings.Contains(err.Error(), "disk full") {
+		t.Fatalf("err = %v, want aggregated copy failure", err)
+	}
+	if got := strings.Join(copied, ","); got != "a,b,c" {
+		t.Fatalf("copy attempts = %q, want all entries", got)
+	}
+	if message != "2 items restored" {
+		t.Fatalf("message = %q", message)
+	}
+	if len(warnings) != 1 || !strings.Contains(warnings[0], "could not copy b") {
+		t.Fatalf("warnings = %v", warnings)
 	}
 }
