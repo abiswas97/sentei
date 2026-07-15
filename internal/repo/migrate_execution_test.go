@@ -66,6 +66,8 @@ func TestPreparedMigrate_FailurePolicyAndBackupInformation(t *testing.T) {
 	for failedAt := range base.operations {
 		t.Run(base.operations[failedAt].label, func(t *testing.T) {
 			prepared := base
+			backupPath := "/repo_backup_20260715_120000"
+			prepared.backupPath = &backupPath
 			prepared.operations = append([]migrateOperation(nil), base.operations...)
 			for i := range prepared.operations {
 				prepared.operations[i].run = func(*progress.Execution) (string, error) { return "", nil }
@@ -105,6 +107,7 @@ func TestPreparedMigrate_BackupPathSurvivesDoneDeliveryPanic(t *testing.T) {
 	want := errors.New("delivery")
 	runner := &mock.Runner{Responses: map[string]mock.Response{"/repo:[remote get-url origin]": {}}}
 	prepared := prepareMigrate(runner, runner, MigrateOptions{RepoPath: "/repo"})
+	*prepared.backupPath = "/repo_backup_20260715_120000"
 	for i := range prepared.operations {
 		prepared.operations[i].run = func(*progress.Execution) (string, error) { return "", nil }
 	}
@@ -116,8 +119,8 @@ func TestPreparedMigrate_BackupPathSurvivesDoneDeliveryPanic(t *testing.T) {
 	if !errors.Is(result.Err, want) {
 		t.Fatalf("Err = %v", result.Err)
 	}
-	if result.BackupPath != prepared.backupPath {
-		t.Fatalf("BackupPath = %q, want %q", result.BackupPath, prepared.backupPath)
+	if result.BackupPath != *prepared.backupPath {
+		t.Fatalf("BackupPath = %q, want %q", result.BackupPath, *prepared.backupPath)
 	}
 }
 

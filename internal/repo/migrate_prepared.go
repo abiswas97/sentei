@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
@@ -37,17 +38,18 @@ type preparedMigrate struct {
 	plan            progress.Plan
 	operations      []migrateOperation
 	backupCopyIndex int
-	backupPath      string
+	backupPath      *string
 	branch          *string
 	isDirty         *bool
 	err             error
 }
 
-func prepareMigrate(runner git.CommandRunner, shell git.ShellRunner, opts MigrateOptions) preparedMigrate {
+func prepareMigrate(runner git.CommandRunner, _ git.ShellRunner, opts MigrateOptions) preparedMigrate {
 	repoPath := opts.RepoPath
 	barePath := filepath.Join(repoPath, ".bare")
 	originURL, originErr := runner.Run(repoPath, "remote", "get-url", "origin")
-	backupPath := fmt.Sprintf("%s_backup_%s", repoPath, time.Now().Format("20060102_150405"))
+	preferredBackupPath := fmt.Sprintf("%s_backup_%s", repoPath, time.Now().Format("20060102_150405"))
+	backupPath := new(string)
 	branch := ""
 	isDirty := false
 	prepared := preparedMigrate{
@@ -88,16 +90,16 @@ func prepareMigrate(runner git.CommandRunner, shell git.ShellRunner, opts Migrat
 		return branch, nil
 	})
 	add("migrate:backup", "Backup", "copy", "Copy repository to backup", migrateBackupCopy, func(*progress.Execution) (string, error) {
-		command := fmt.Sprintf("cp -a %q %q", repoPath, backupPath)
-		if _, err := shell.RunShell(filepath.Dir(repoPath), command); err != nil {
-			_ = fileutil.RemoveAllRetry(backupPath)
+		path, err := copyRepositoryBackup(repoPath, preferredBackupPath, copyRepositoryContents)
+		if err != nil {
 			return "", err
 		}
-		return backupPath, nil
+		*backupPath = path
+		return path, nil
 	})
 	prepared.backupCopyIndex = len(prepared.operations) - 1
 	add("migrate:backup", "Backup", "size", "Calculate backup size", migrateBackupSize, func(*progress.Execution) (string, error) {
-		return calculateDirSize(backupPath), nil
+		return calculateDirSize(*backupPath), nil
 	})
 	add("migrate:convert", "Migrate", "bare-repository", "Create bare repository", migrateRegular, func(*progress.Execution) (string, error) {
 		_, err := runner.Run(repoPath, "clone", "--bare", ".git", barePath)
@@ -140,11 +142,55 @@ func prepareMigrate(runner git.CommandRunner, shell git.ShellRunner, opts Migrat
 		return "", err
 	})
 	add("migrate:copy", "Copy", "restore-files", "Restore working files", migrateRegular, func(execution *progress.Execution) (string, error) {
-		return restoreWorkingFiles(backupPath, git.WorktreePath(repoPath, branch), copyTree, func(message string) {
+		return restoreWorkingFiles(*backupPath, git.WorktreePath(repoPath, branch), copyTree, func(message string) {
 			_ = execution.Running("migrate:copy", "restore-files", 0, message)
 		})
 	})
 	return prepared
+}
+
+func copyRepositoryBackup(source, preferredPath string, copyFn func(string, string) error) (string, error) {
+	backupPath := preferredPath
+	for suffix := 0; ; suffix++ {
+		if suffix > 0 {
+			backupPath = fmt.Sprintf("%s_%d", preferredPath, suffix)
+		}
+		err := os.Mkdir(backupPath, 0700)
+		if err == nil {
+			break
+		}
+		if errors.Is(err, os.ErrExist) {
+			continue
+		}
+		return "", fmt.Errorf("reserve migration backup %q: %w", backupPath, err)
+	}
+
+	cleanupFailure := func(operationErr error) (string, error) {
+		if cleanupErr := fileutil.RemoveAllRetry(backupPath); cleanupErr != nil {
+			return "", errors.Join(operationErr, fmt.Errorf("clean partial migration backup %q: %w", backupPath, cleanupErr))
+		}
+		return "", operationErr
+	}
+	if err := copyFn(source, backupPath); err != nil {
+		return cleanupFailure(fmt.Errorf("copy repository to migration backup %q: %w", backupPath, err))
+	}
+	if err := os.Chmod(backupPath, 0700); err != nil {
+		return cleanupFailure(fmt.Errorf("secure migration backup %q: %w", backupPath, err))
+	}
+	return backupPath, nil
+}
+
+func copyRepositoryContents(source, destination string) error {
+	separator := string(os.PathSeparator)
+	command := exec.Command("cp", "-a", source+separator+".", destination+separator)
+	output, err := command.CombinedOutput()
+	if err == nil {
+		return nil
+	}
+	if detail := strings.TrimSpace(string(output)); detail != "" {
+		return fmt.Errorf("cp -a: %s: %w", detail, err)
+	}
+	return fmt.Errorf("cp -a: %w", err)
 }
 
 // restoreWorkingFiles attempts every backup entry so one bad file does not
@@ -195,7 +241,7 @@ func (p preparedMigrate) run(emit func(progress.Event)) MigrateResult {
 			var step progress.StepResult
 			step, err = execution.Run(operation.phaseID, operation.stepID, func() (string, error) { return operation.run(execution) })
 			if operation.kind == migrateBackupCopy && step.Status == progress.StepDone {
-				result.BackupPath = p.backupPath
+				result.BackupPath = *p.backupPath
 			}
 			if err == nil && step.Status == progress.StepFailed {
 				failedBy = operation.label
@@ -214,9 +260,9 @@ func (p preparedMigrate) run(emit func(progress.Event)) MigrateResult {
 		case migrateBranch:
 			result.Branch = *p.branch
 		case migrateBackupCopy:
-			result.BackupPath = p.backupPath
+			result.BackupPath = *p.backupPath
 		case migrateBackupSize:
-			result.BackupSize = calculateDirSize(p.backupPath)
+			result.BackupSize = calculateDirSize(*p.backupPath)
 		case migrateWorktree:
 			result.WorktreePath = git.WorktreePath(result.BareRoot, result.Branch)
 		}

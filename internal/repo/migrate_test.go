@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"testing"
 
@@ -12,17 +11,123 @@ import (
 	"github.com/abiswas97/sentei/internal/testutil/mock"
 )
 
-// alwaysOkShell is a ShellRunner that succeeds for all calls — used to
-// satisfy the backup phase without needing to predict the timestamp-based path.
+// alwaysOkShell is a ShellRunner that succeeds for all calls.
 type alwaysOkShell struct{}
 
-func (s *alwaysOkShell) RunShell(_ string, command string) (string, error) {
-	lastArg := command[strings.LastIndex(command, " ")+1:]
-	backupPath, err := strconv.Unquote(lastArg)
-	if err != nil {
-		return "", err
+func (s *alwaysOkShell) RunShell(_ string, _ string) (string, error) {
+	return "", nil
+}
+
+func TestCopyRepositoryBackup_UsesUniqueSiblingWhenPreferredPathExists(t *testing.T) {
+	dir := t.TempDir()
+	source := filepath.Join(dir, "repo")
+	preferred := filepath.Join(dir, "repo_backup_20260715_120000")
+	if err := os.Mkdir(source, 0755); err != nil {
+		t.Fatal(err)
 	}
-	return "", os.MkdirAll(backupPath, 0755)
+	if err := os.WriteFile(filepath.Join(source, "tracked.txt"), []byte("repository"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Mkdir(preferred, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(preferred, "owner.txt"), []byte("existing"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	backupPath, err := copyRepositoryBackup(source, preferred, copyTree)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if backupPath == preferred {
+		t.Fatalf("backupPath = existing destination %q", backupPath)
+	}
+	if got, err := os.ReadFile(filepath.Join(preferred, "owner.txt")); err != nil || string(got) != "existing" {
+		t.Fatalf("existing destination changed: content=%q err=%v", got, err)
+	}
+	if got, err := os.ReadFile(filepath.Join(backupPath, "tracked.txt")); err != nil || string(got) != "repository" {
+		t.Fatalf("backup content=%q err=%v", got, err)
+	}
+}
+
+func TestCopyRepositoryBackup_FailureCleansOnlyReservedDestination(t *testing.T) {
+	dir := t.TempDir()
+	source := filepath.Join(dir, "repo")
+	preferred := filepath.Join(dir, "repo_backup_20260715_120000")
+	if err := os.Mkdir(source, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Mkdir(preferred, 0755); err != nil {
+		t.Fatal(err)
+	}
+	ownerFile := filepath.Join(preferred, "owner.txt")
+	if err := os.WriteFile(ownerFile, []byte("existing"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	backupPath, err := copyRepositoryBackup(source, preferred, func(_, dst string) error {
+		if writeErr := os.WriteFile(filepath.Join(dst, "partial"), []byte("partial"), 0644); writeErr != nil {
+			return writeErr
+		}
+		return fmt.Errorf("disk full")
+	})
+	if err == nil || !strings.Contains(err.Error(), "disk full") {
+		t.Fatalf("err = %v, want copy failure", err)
+	}
+	if backupPath != "" {
+		t.Fatalf("backupPath = %q, want empty on failure", backupPath)
+	}
+	if got, readErr := os.ReadFile(ownerFile); readErr != nil || string(got) != "existing" {
+		t.Fatalf("existing destination changed: content=%q err=%v", got, readErr)
+	}
+	if _, statErr := os.Stat(preferred + "_1"); !os.IsNotExist(statErr) {
+		t.Fatalf("reserved failed destination remains: %v", statErr)
+	}
+}
+
+func TestCopyRepositoryBackup_TreatsShellMetacharactersAsLiteralPath(t *testing.T) {
+	dir := t.TempDir()
+	source := filepath.Join(dir, "repo$(touch injected)`touch injected2`")
+	if err := os.Mkdir(source, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(source, "tracked.txt"), []byte("repository"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	backupPath, err := copyRepositoryBackup(source, source+"_backup_20260715_120000", copyRepositoryContents)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "injected")); !os.IsNotExist(err) {
+		t.Fatalf("$() path content executed: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "injected2")); !os.IsNotExist(err) {
+		t.Fatalf("backtick path content executed: %v", err)
+	}
+	if got, err := os.ReadFile(filepath.Join(backupPath, "tracked.txt")); err != nil || string(got) != "repository" {
+		t.Fatalf("backup content=%q err=%v", got, err)
+	}
+}
+
+func TestCopyRepositoryBackup_KeepsBackupRootPrivate(t *testing.T) {
+	dir := t.TempDir()
+	source := filepath.Join(dir, "repo")
+	if err := os.Mkdir(source, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	backupPath, err := copyRepositoryBackup(source, source+"_backup_20260715_120000", copyRepositoryContents)
+	if err != nil {
+		t.Fatal(err)
+	}
+	info, err := os.Stat(backupPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := info.Mode().Perm(); got != 0700 {
+		t.Fatalf("backup root mode = %04o, want 0700", got)
+	}
 }
 
 func TestMigrate_Successful(t *testing.T) {
@@ -282,13 +387,6 @@ func findPhase(phases []progress.Phase, name string) *progress.Phase {
 	return nil
 }
 
-// failingShell fails every shell command (used to fail the backup cp).
-type failingShell struct{}
-
-func (s *failingShell) RunShell(_ string, _ string) (string, error) {
-	return "", fmt.Errorf("cp -a: No space left on device")
-}
-
 func TestMigrate_BackupFailure_LeavesNoDestructiveRestore(t *testing.T) {
 	dir := t.TempDir()
 	repoPath := filepath.Join(dir, "proj")
@@ -301,7 +399,11 @@ func TestMigrate_BackupFailure_LeavesNoDestructiveRestore(t *testing.T) {
 	}}
 
 	ec := &mock.EventCollector[progress.Event]{}
-	result := Migrate(runner, &failingShell{}, MigrateOptions{RepoPath: repoPath}, ec.Emit)
+	prepared := prepareMigrate(runner, &alwaysOkShell{}, MigrateOptions{RepoPath: repoPath})
+	prepared.operations[prepared.backupCopyIndex].run = func(*progress.Execution) (string, error) {
+		return "", fmt.Errorf("cp -a: No space left on device")
+	}
+	result := prepared.run(ec.Emit)
 
 	backup := findPhase(result.Phases, "Backup")
 	if backup == nil || !backup.HasFailures() {
