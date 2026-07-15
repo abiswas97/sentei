@@ -32,8 +32,9 @@ type StepResult struct {
 	Error   error
 }
 
-// Phase is a named group of step results.
+// Phase is an identified, named group of step results.
 type Phase struct {
+	ID    PhaseID
 	Name  string
 	Steps []StepResult
 }

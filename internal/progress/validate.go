@@ -14,9 +14,23 @@ func ValidateStream(events []Event) error {
 	declarations := map[string]*declaration{}
 	declaredPhases := map[PhaseID]bool{}
 	closed := map[PhaseID]bool{}
+	phaseLabels := map[PhaseID]string{}
+	stepLabels := map[string]string{}
 	prefixStage := 0 // 0: declarations, 1: closes, 2: work
 	for i, ev := range events {
 		key := ev.Phase + "\x00" + ev.Step
+		if ev.PhaseLabel != "" {
+			if label := phaseLabels[ev.Phase]; label != "" && label != ev.PhaseLabel {
+				return fmt.Errorf("event %d: phase %q label changed from %q to %q", i, ev.Phase, label, ev.PhaseLabel)
+			}
+			phaseLabels[ev.Phase] = ev.PhaseLabel
+		}
+		if ev.StepLabel != "" {
+			if label := stepLabels[key]; label != "" && label != ev.StepLabel {
+				return fmt.Errorf("event %d: phase %q step %q label changed from %q to %q", i, ev.Phase, ev.Step, label, ev.StepLabel)
+			}
+			stepLabels[key] = ev.StepLabel
+		}
 		if ev.Status == StepPending && !ev.Close {
 			if prefixStage != 0 {
 				return fmt.Errorf("event %d: declaration for step %q appears after declaration prefix", i, ev.Step)
@@ -74,7 +88,17 @@ func ValidateStream(events []Event) error {
 				return fmt.Errorf("event %d: step %q checkpoint %d exceeds declared %d", i, ev.Step, ev.Checkpoint, decl.checkpoints)
 			}
 			decl.reached = ev.Checkpoint
-		case StepDone, StepFailed, StepSkipped:
+		case StepDone:
+			decl.terminal = true
+		case StepFailed:
+			if ev.Error == nil {
+				return fmt.Errorf("event %d: failed step %q has no error", i, ev.Step)
+			}
+			decl.terminal = true
+		case StepSkipped:
+			if ev.Message == "" {
+				return fmt.Errorf("event %d: skipped step %q has no reason", i, ev.Step)
+			}
 			decl.terminal = true
 		case StepPending:
 			return fmt.Errorf("event %d: pending status outside declaration prefix", i)
@@ -85,6 +109,42 @@ func ValidateStream(events []Event) error {
 	for phaseID := range declaredPhases {
 		if !closed[phaseID] {
 			return fmt.Errorf("declaration prefix: phase %q was not closed", phaseID)
+		}
+	}
+	return nil
+}
+
+// ValidateCompletedStream applies the strict stream contract and additionally
+// requires a completed execution.
+func ValidateCompletedStream(events []Event) error {
+	if err := ValidateStream(events); err != nil {
+		return err
+	}
+	if len(events) == 0 {
+		return nil
+	}
+
+	declared := map[string]Event{}
+	phaseSteps := map[PhaseID]int{}
+	terminalSteps := map[string]bool{}
+	for _, ev := range events {
+		key := ev.Phase + "\x00" + ev.Step
+		switch {
+		case ev.Status == StepPending && !ev.Close:
+			declared[key] = ev
+			phaseSteps[ev.Phase]++
+		case !ev.Close && terminal(ev.Status):
+			terminalSteps[key] = true
+		}
+	}
+	for key, declaration := range declared {
+		if !terminalSteps[key] {
+			return fmt.Errorf("phase %q step %q is not terminal", declaration.Phase, declaration.Step)
+		}
+	}
+	for _, ev := range events {
+		if ev.Close && phaseSteps[ev.Phase] == 0 {
+			return fmt.Errorf("phase %q has no declared steps", ev.Phase)
 		}
 	}
 	return nil

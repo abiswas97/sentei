@@ -6,6 +6,22 @@ type Plan struct {
 	Phases []PlannedPhase
 }
 
+// Clone returns an independently mutable copy of the plan, including legacy
+// compatibility fields retained for producers that have not migrated yet.
+func (p Plan) Clone() Plan {
+	var clone Plan
+	if p.Phases != nil {
+		clone.Phases = make([]PlannedPhase, len(p.Phases))
+	}
+	for i := range p.Phases {
+		clone.Phases[i] = p.Phases[i]
+		if p.Phases[i].Steps != nil {
+			clone.Phases[i].Steps = append([]PlannedStep{}, p.Phases[i].Steps...)
+		}
+	}
+	return clone
+}
+
 // PlannedPhase declares one phase. Open phases may append steps after
 // declaration (scan-style discovery) and must be closed explicitly via
 // ClosePhase; all other phases are closed by Declare itself.

@@ -18,7 +18,17 @@ type Execution struct {
 	deliveredSequence uint64
 	delivery          *sync.Cond
 	deliveryErr       error
+	lifecycle         executionLifecycle
+	finishTarget      uint64
 }
+
+type executionLifecycle uint8
+
+const (
+	executionActive executionLifecycle = iota
+	executionFinishing
+	executionFinished
+)
 
 type queuedEvent struct {
 	sequence uint64
@@ -63,6 +73,9 @@ func Start(plan Plan, emit func(Event)) (*Execution, error) {
 		}
 		if _, exists := x.phases[plannedPhase.ID]; exists {
 			return nil, fmt.Errorf("duplicate phase ID %q", plannedPhase.ID)
+		}
+		if len(plannedPhase.Steps) == 0 {
+			return nil, fmt.Errorf("phase %q has no steps", plannedPhase.ID)
 		}
 		label := plannedPhase.Label
 		if label == "" {
@@ -131,8 +144,7 @@ func Start(plan Plan, emit func(Event)) (*Execution, error) {
 // Running marks a step active and optionally advances its checkpoint.
 func (x *Execution) Running(phaseID PhaseID, stepID StepID, checkpoint int, message string) error {
 	x.mu.Lock()
-	if x.deliveryErr != nil {
-		err := x.deliveryErr
+	if err := x.mutationErrorLocked(); err != nil {
 		x.mu.Unlock()
 		return err
 	}
@@ -177,11 +189,17 @@ func (x *Execution) Done(phaseID PhaseID, stepID StepID, message string) (StepRe
 
 // Fail resolves a declared step unsuccessfully.
 func (x *Execution) Fail(phaseID PhaseID, stepID StepID, err error) (StepResult, error) {
+	if err == nil {
+		return StepResult{}, fmt.Errorf("phase %q step %q has nil failure", phaseID, stepID)
+	}
 	return x.resolve(phaseID, stepID, StepFailed, "", err)
 }
 
 // Skip resolves a declared step without running it.
 func (x *Execution) Skip(phaseID PhaseID, stepID StepID, reason string) (StepResult, error) {
+	if reason == "" {
+		return StepResult{}, fmt.Errorf("phase %q step %q has empty skip reason", phaseID, stepID)
+	}
 	return x.resolve(phaseID, stepID, StepSkipped, reason, nil)
 }
 
@@ -203,8 +221,7 @@ func (x *Execution) Run(phaseID PhaseID, stepID StepID, fn StepFunc) (StepResult
 
 func (x *Execution) claim(phaseID PhaseID, stepID StepID) error {
 	x.mu.Lock()
-	if x.deliveryErr != nil {
-		err := x.deliveryErr
+	if err := x.mutationErrorLocked(); err != nil {
 		x.mu.Unlock()
 		return err
 	}
@@ -232,9 +249,11 @@ func (x *Execution) claim(phaseID PhaseID, stepID StepID) error {
 
 // SkipPending skips only untouched steps in one phase.
 func (x *Execution) SkipPending(phaseID PhaseID, reason string) error {
+	if reason == "" {
+		return fmt.Errorf("phase %q has empty skip reason", phaseID)
+	}
 	x.mu.Lock()
-	if x.deliveryErr != nil {
-		err := x.deliveryErr
+	if err := x.mutationErrorLocked(); err != nil {
 		x.mu.Unlock()
 		return err
 	}
@@ -260,39 +279,76 @@ func (x *Execution) SkipPending(phaseID PhaseID, reason string) error {
 
 // Finish is the terminal safety net and producer-shutdown barrier: every
 // unresolved step becomes skipped, and the method waits until all events
-// queued through that terminalization have been delivered. Finish must not be
-// called reentrantly from an emit callback.
+// queued through that terminalization have been delivered. Producers must
+// join their workers before calling Finish. Finish must not be called
+// reentrantly from an emit callback.
 func (x *Execution) Finish(reason string) error {
-	x.mu.Lock()
-	if x.deliveryErr != nil {
-		err := x.deliveryErr
-		x.mu.Unlock()
-		return err
+	if reason == "" {
+		return fmt.Errorf("finish reason is empty")
 	}
+	x.mu.Lock()
 	drain := false
-	target := x.nextSequence
-	for _, phaseID := range x.order {
-		phase := x.phases[phaseID]
-		for _, stepID := range phase.order {
-			step := phase.steps[stepID]
-			if !terminal(step.status) {
+	if x.lifecycle == executionActive {
+		x.lifecycle = executionFinishing
+		x.finishTarget = x.nextSequence
+		for _, phaseID := range x.order {
+			phase := x.phases[phaseID]
+			for _, stepID := range phase.order {
+				step := phase.steps[stepID]
+				if terminal(step.status) {
+					continue
+				}
+				if x.deliveryErr != nil {
+					step.status = StepSkipped
+					step.checkpoint = step.checkpoints
+					step.message = reason
+					step.err = nil
+					continue
+				}
 				_, sequence, queuedDrain := x.resolveLocked(phase, step, StepSkipped, reason, nil)
-				target = sequence
+				x.finishTarget = sequence
 				drain = drain || queuedDrain
 			}
 		}
 	}
+	target := x.finishTarget
 	x.mu.Unlock()
 	if drain {
 		_ = x.drain()
 	}
-	return x.waitForDelivery(target)
+	err := x.waitForDelivery(target)
+	x.mu.Lock()
+	if x.lifecycle == executionFinishing {
+		x.lifecycle = executionFinished
+	}
+	x.mu.Unlock()
+	return err
+}
+
+// Phases returns a plan-ordered snapshot of the execution's internal state.
+// The returned phases and step slices may be mutated by the caller.
+func (x *Execution) Phases() []Phase {
+	x.mu.Lock()
+	defer x.mu.Unlock()
+
+	phases := make([]Phase, 0, len(x.order))
+	for _, phaseID := range x.order {
+		state := x.phases[phaseID]
+		phase := Phase{ID: state.id, Name: state.label, Steps: make([]StepResult, 0, len(state.order))}
+		for _, stepID := range state.order {
+			step := state.steps[stepID]
+			phase.Steps = append(phase.Steps, StepResult{
+				ID: step.id, Name: step.label, Status: step.status, Message: step.message, Error: step.err,
+			})
+		}
+		phases = append(phases, phase)
+	}
+	return phases
 }
 
 func (x *Execution) resolve(phaseID PhaseID, stepID StepID, status StepStatus, message string, stepErr error) (StepResult, error) {
 	x.mu.Lock()
-	if x.deliveryErr != nil {
-		err := x.deliveryErr
+	if err := x.mutationErrorLocked(); err != nil {
 		x.mu.Unlock()
 		return StepResult{}, err
 	}
@@ -313,6 +369,16 @@ func (x *Execution) resolve(phaseID PhaseID, stepID StepID, status StepStatus, m
 		}
 	}
 	return result, nil
+}
+
+func (x *Execution) mutationErrorLocked() error {
+	if x.deliveryErr != nil {
+		return x.deliveryErr
+	}
+	if x.lifecycle != executionActive {
+		return fmt.Errorf("execution has begun finishing")
+	}
+	return nil
 }
 
 func (x *Execution) resolveLocked(phase *executionPhase, step *executionStep, status StepStatus, message string, stepErr error) (StepResult, uint64, bool) {

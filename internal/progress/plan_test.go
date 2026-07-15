@@ -1,9 +1,63 @@
 package progress
 
 import (
+	"errors"
 	"math/rand"
+	"reflect"
+	"strings"
 	"testing"
 )
+
+func TestPlanCloneDeepCopiesCompatibilityAndStableFields(t *testing.T) {
+	original := Plan{Phases: []PlannedPhase{{
+		ID: "stable-phase", Label: "Phase", Name: "legacy-phase", Open: true,
+		Steps: []PlannedStep{{ID: "stable-step", Label: "Step", Name: "legacy-step", Checkpoints: 3}},
+	}}}
+
+	clone := original.Clone()
+	if !reflect.DeepEqual(clone, original) {
+		t.Fatalf("Clone() = %#v, want %#v", clone, original)
+	}
+	clone.Phases[0].ID = "changed-phase"
+	clone.Phases[0].Name = "changed-legacy-phase"
+	clone.Phases[0].Open = false
+	clone.Phases[0].Steps[0].ID = "changed-step"
+	clone.Phases[0].Steps[0].Name = "changed-legacy-step"
+	if original.Phases[0].ID != "stable-phase" || original.Phases[0].Name != "legacy-phase" || !original.Phases[0].Open ||
+		original.Phases[0].Steps[0].ID != "stable-step" || original.Phases[0].Steps[0].Name != "legacy-step" {
+		t.Fatalf("mutating clone changed original: %#v", original)
+	}
+}
+
+func TestPlanClonePreservesNilAndEmptySlices(t *testing.T) {
+	if clone := (Plan{}).Clone(); clone.Phases != nil {
+		t.Fatalf("nil phases cloned as %#v", clone.Phases)
+	}
+	original := Plan{Phases: []PlannedPhase{{ID: "nil"}, {ID: "empty", Steps: []PlannedStep{}}}}
+	clone := original.Clone()
+	if clone.Phases[0].Steps != nil {
+		t.Fatalf("nil steps cloned as %#v", clone.Phases[0].Steps)
+	}
+	if clone.Phases[1].Steps == nil {
+		t.Fatal("explicitly empty steps cloned as nil")
+	}
+}
+
+func TestExecutionStartAcceptsEmptyPlan(t *testing.T) {
+	x, err := Start(Plan{}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := x.Finish("empty execution complete"); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestExecutionStartRejectsPhaseWithoutSteps(t *testing.T) {
+	if _, err := Start(Plan{Phases: []PlannedPhase{{ID: "empty"}}}, nil); err == nil {
+		t.Fatal("phase with zero steps accepted")
+	}
+}
 
 func TestDeclare_EstablishesTotalsBeforeWork(t *testing.T) {
 	events, emit := collectEvents()
@@ -218,6 +272,132 @@ func TestValidateStream_RejectsTerminalMutationAndCheckpointErrors(t *testing.T)
 			events := append(append([]Event(nil), prefix...), tc.work...)
 			if err := ValidateStream(events); err == nil {
 				t.Fatal("invalid stream accepted")
+			}
+		})
+	}
+}
+
+func TestValidateStreamRejectsUnstableLabels(t *testing.T) {
+	tests := []struct {
+		name   string
+		events []Event
+	}{
+		{
+			name: "phase label changes between declarations",
+			events: []Event{
+				{Phase: "p", PhaseLabel: "Phase", Step: "a", StepLabel: "A", Status: StepPending, Of: 1},
+				{Phase: "p", PhaseLabel: "Changed", Step: "b", StepLabel: "B", Status: StepPending, Of: 1},
+				{Phase: "p", Close: true},
+				{Phase: "p", Step: "a", Status: StepDone},
+				{Phase: "p", Step: "b", Status: StepDone},
+			},
+		},
+		{
+			name: "phase label changes on close",
+			events: []Event{
+				{Phase: "p", PhaseLabel: "Phase", Step: "s", StepLabel: "Step", Status: StepPending, Of: 1},
+				{Phase: "p", PhaseLabel: "Changed", Close: true},
+			},
+		},
+		{
+			name: "step label changes during work",
+			events: []Event{
+				{Phase: "p", PhaseLabel: "Phase", Step: "s", StepLabel: "Step", Status: StepPending, Of: 1},
+				{Phase: "p", PhaseLabel: "Phase", Close: true},
+				{Phase: "p", PhaseLabel: "Phase", Step: "s", StepLabel: "Changed", Status: StepDone},
+			},
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			if err := ValidateStream(tc.events); err == nil || !strings.Contains(err.Error(), "label") {
+				t.Fatalf("ValidateStream() error = %v, want label error", err)
+			}
+		})
+	}
+}
+
+func TestValidateStreamRequiresTerminalPayloads(t *testing.T) {
+	prefix := []Event{
+		{Phase: "p", Step: "s", Status: StepPending, Of: 1},
+		{Phase: "p", Close: true},
+	}
+	tests := []struct {
+		name  string
+		event Event
+	}{
+		{"failed without error", Event{Phase: "p", Step: "s", Status: StepFailed}},
+		{"skipped without reason", Event{Phase: "p", Step: "s", Status: StepSkipped}},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			events := append(append([]Event(nil), prefix...), tc.event)
+			if err := ValidateStream(events); err == nil {
+				t.Fatal("terminal event without required payload accepted")
+			}
+		})
+	}
+}
+
+func TestValidateCompletedStream(t *testing.T) {
+	failure := errors.New("failed")
+	tests := []struct {
+		name    string
+		events  []Event
+		wantErr bool
+	}{
+		{name: "empty"},
+		{
+			name: "valid",
+			events: []Event{
+				{Phase: "p", Step: "done", Status: StepPending, Of: 1},
+				{Phase: "p", Step: "failed", Status: StepPending, Of: 1},
+				{Phase: "p", Step: "skipped", Status: StepPending, Of: 1},
+				{Phase: "p", Close: true},
+				{Phase: "p", Step: "done", Status: StepDone},
+				{Phase: "p", Step: "failed", Status: StepFailed, Error: failure},
+				{Phase: "p", Step: "skipped", Status: StepSkipped, Message: "not needed"},
+			},
+		},
+		{
+			name: "pending",
+			events: []Event{
+				{Phase: "p", Step: "s", Status: StepPending, Of: 1},
+				{Phase: "p", Close: true},
+			},
+			wantErr: true,
+		},
+		{
+			name: "running",
+			events: []Event{
+				{Phase: "p", Step: "s", Status: StepPending, Of: 1},
+				{Phase: "p", Close: true},
+				{Phase: "p", Step: "s", Status: StepRunning},
+			},
+			wantErr: true,
+		},
+		{name: "close only", events: []Event{{Phase: "p", Close: true}}, wantErr: true},
+		{
+			name: "one incomplete step",
+			events: []Event{
+				{Phase: "p", Step: "done", Status: StepPending, Of: 1},
+				{Phase: "p", Step: "pending", Status: StepPending, Of: 1},
+				{Phase: "p", Close: true},
+				{Phase: "p", Step: "done", Status: StepDone},
+			},
+			wantErr: true,
+		},
+		{
+			name:    "unclosed phase",
+			events:  []Event{{Phase: "p", Step: "s", Status: StepPending, Of: 1}},
+			wantErr: true,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			err := ValidateCompletedStream(tc.events)
+			if (err != nil) != tc.wantErr {
+				t.Fatalf("ValidateCompletedStream() error = %v, wantErr %v", err, tc.wantErr)
 			}
 		})
 	}
