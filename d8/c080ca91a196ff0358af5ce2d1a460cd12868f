@@ -1,0 +1,66 @@
+internal/tui/progress_layout.go
+  s_47b5c057f8c030::t_bcfdbdb17a26eb 48-54
+  s_47b5c057f8c030::t_07ce8866035e6f 118-125
+  s_47b5c057f8c030::t_d72e93bdd503c0 323
+  s_47b5c057f8c030::t_78fa85b05e0cc3 11-12,86-88,90-94,96-104,107-117,126-137,139-140,142-143,145-157,159-160,162-174,177-178,180,182,184-185,187-190,192-210,212,214,216,218-222,224-225,227-228,231-259,261
+internal/tui/progress_layout_test.go
+  s_47b5c057f8c030::t_efd0c2badb118b 27,139
+internal/tui/progress_live_region_test.go
+  s_47b5c057f8c030::t_9fdb3f10c5b21c 9
+  s_47b5c057f8c030::t_ac006ec144423e 1-7,10-12,62,127-221
+  s_47b5c057f8c030::t_28588085e5a5a4 63-104,106-126
+  s_47b5c057f8c030::t_d042c30f7f6977 8,13-61
+  s_47b5c057f8c030::t_7976d6fe909fa2 105
+internal/tui/window.go
+  s_47b5c057f8c030::t_efd0c2badb118b 72-73,76,79,81,83
+  s_47b5c057f8c030::t_2bcb14d66a2c41 42,48-49,52-71,75,80,82,87-96
+internal/tui/window_test.go
+  s_47b5c057f8c030::t_efd0c2badb118b 105-106
+internal/tui/model.go
+  s_47b5c057f8c030::t_d72e93bdd503c0 238-240,282,585,671-675
+  s_47b5c057f8c030::t_efd0c2badb118b 320,398
+  s_47b5c057f8c030::t_7d96bac5b6534d 676-677
+internal/tui/help.go
+  s_47b5c057f8c030::t_8413c7c1c6a6ea 4,9-10,102-108,149-255
+  s_47b5c057f8c030::t_04b724ff2049aa 256
+internal/tui/integration_progress.go
+  s_47b5c057f8c030::t_bcfdbdb17a26eb 138,145
+  s_47b5c057f8c030::t_d72e93bdd503c0 142
+internal/tui/progress_viewport.go
+  s_47b5c057f8c030::t_e380a2f743810d 45-46,48
+  s_47b5c057f8c030::t_afa1c3b3d5798e 114-115
+  s_47b5c057f8c030::t_2bcb14d66a2c41 1-35,37-44,47,49-113,116-131
+  s_47b5c057f8c030::t_efd0c2badb118b 36
+internal/tui/copy.go
+  s_47b5c057f8c030::t_8413c7c1c6a6ea 41
+internal/tui/progress_detail_test.go
+  s_47b5c057f8c030::t_05b670b905332c 1-59,61-79
+  s_47b5c057f8c030::t_966ce931350d9c 60
+internal/tui/repo_progress.go
+  s_47b5c057f8c030::t_bcfdbdb17a26eb 101,109
+  s_47b5c057f8c030::t_d72e93bdd503c0 107
+internal/tui/motion_test.go
+  s_47b5c057f8c030::t_eb879c9593bf8b 147-149,151-152
+internal/tui/progress.go
+  s_47b5c057f8c030::t_bcfdbdb17a26eb 169,176
+  s_47b5c057f8c030::t_d72e93bdd503c0 174
+internal/tui/create_progress.go
+  s_47b5c057f8c030::t_bcfdbdb17a26eb 35,43
+  s_47b5c057f8c030::t_d72e93bdd503c0 41
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "d8c080ca91a196ff0358af5ce2d1a460cd12868f",
+  "prompts": {},
+  "sessions": {
+    "s_47b5c057f8c030": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f5f62-a0bd-7f92-96e2-b1de98524420",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>"
+    }
+  }
+}
