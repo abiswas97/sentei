@@ -1,0 +1,30 @@
+internal/repo/migrate_prepared.go
+  s_47b5c057f8c030::t_cc113a7ab73584 7,41,51-52,93-94,97-98,102,145,152-167,169,171,179-195,244,263,265
+  s_47b5c057f8c030::t_bf616ae3c4d92f 47
+  s_47b5c057f8c030::t_213588b8f31197 168,170,172-178
+internal/repo/migrate_test.go
+  s_47b5c057f8c030::t_658dfeee5eef0b 110,402-406
+  s_47b5c057f8c030::t_7d6512b641b881 14,17-97,100-109,111
+  s_47b5c057f8c030::t_bf616ae3c4d92f 98
+  s_47b5c057f8c030::t_9155cd122b9fa7 99,113-124,126-129
+  s_47b5c057f8c030::t_c68efff5f843b4 112
+internal/repo/migrate_execution_test.go
+  s_47b5c057f8c030::t_658dfeee5eef0b 69-70
+  s_47b5c057f8c030::t_cc113a7ab73584 110,122-123
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "a0bff9d86b68e3f45384e20beea4f920c51d1307",
+  "prompts": {},
+  "sessions": {
+    "s_47b5c057f8c030": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f5f62-a0bd-7f92-96e2-b1de98524420",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>"
+    }
+  }
+}
