@@ -1,0 +1,22 @@
+internal/integration/apply_test.go
+  s_47b5c057f8c030::t_dade4ccecea9e3 485-490,493-507
+  s_47b5c057f8c030::t_744b7a710e71b7 491-492
+internal/integration/apply.go
+  s_47b5c057f8c030::t_5b472c31fb1633 113,274-275,393-397,399-402,404
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "f38c86251965b44ab945fb64ab3bc56bcc35a8db",
+  "prompts": {},
+  "sessions": {
+    "s_47b5c057f8c030": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f5f62-a0bd-7f92-96e2-b1de98524420",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>"
+    }
+  }
+}
