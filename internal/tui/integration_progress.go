@@ -1,15 +1,16 @@
 package tui
 
 import (
+	"errors"
 	"maps"
 	"path/filepath"
+	"strings"
 
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
 
 	"github.com/abiswas97/sentei/internal/git"
-	"github.com/abiswas97/sentei/internal/integration"
-	"github.com/abiswas97/sentei/internal/pipeline"
+	"github.com/abiswas97/sentei/internal/progress"
 	"github.com/abiswas97/sentei/internal/repo"
 	"github.com/abiswas97/sentei/internal/state"
 )
@@ -18,8 +19,28 @@ type integrationFinalizedMsg struct {
 	err error
 }
 
+var errIncompleteIntegrationResult = errors.New("integration apply contract violation: incomplete terminal result")
+
+type integrationExecutionOutcome uint8
+
+const (
+	integrationExecutionCompleted integrationExecutionOutcome = iota
+	integrationExecutionEmpty
+	integrationExecutionDomainFailed
+	integrationExecutionMalformed
+)
+
 func (m Model) updateIntegrationProgress(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case integrationPreparedMsg:
+		if msg.err != nil {
+			m.integ.prepareErr = msg.err
+			m.integ.lifecycle = integrationSettling
+			updated, holdCmd := m.holdOrAdvance(integrationSummaryView)
+			return updated, holdCmd
+		}
+		return m.startPreparedIntegrationApply(msg.prepared)
+
 	case tea.KeyPressMsg:
 		if key.Matches(msg, keys.Quit) {
 			return m, tea.Quit
@@ -28,23 +49,42 @@ func (m Model) updateIntegrationProgress(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case integrationEventMsg:
 		m.integ.events = append(m.integ.events, msg.Event)
-		return m, tea.Batch(m.syncProgressBar(), waitForIntegrationEvent(m.integ.eventCh, m.integ.doneCh))
+		return m, tea.Batch(m.syncProgressBar(), waitForIntegrationEvent(m.integ.eventCh, m.integ.resultCh))
 
 	case integrationApplyDoneMsg:
-		return m, m.finalizeIntegrationApply()
+		if msg.result.err != nil {
+			m.integ.executionErr = msg.result.err
+			m.integ.lifecycle = integrationSettling
+			finalSync := m.syncProgressBar()
+			updated, holdCmd := m.holdOrAdvance(integrationSummaryView)
+			return updated, tea.Batch(finalSync, holdCmd)
+		}
+		switch classifyIntegrationExecution(msg.result) {
+		case integrationExecutionCompleted, integrationExecutionEmpty:
+			m.integ.lifecycle = integrationSaving
+			return m, m.finalizeIntegrationApply()
+		case integrationExecutionMalformed:
+			m.integ.executionErr = errIncompleteIntegrationResult
+		}
+		// Domain failures are truthful progress outcomes, while malformed
+		// terminal results are execution-contract errors. Neither may persist.
+		m.integ.lifecycle = integrationSettling
+		updated, holdCmd := m.holdOrAdvance(integrationSummaryView)
+		return updated, tea.Batch(m.syncProgressBar(), holdCmd)
 
 	case integrationFinalizedMsg:
-		m.integ.finalized = true
+		m.integ.lifecycle = integrationSettling
+		m.integ.saveErr = msg.err
 		finalSync := m.syncProgressBar()
-		// The migrate flow has its own summary; hand off unchanged.
-		if m.integ.returnView == migrateNextView {
+		// Clean migration applies hand off directly. Errors use the integration
+		// summary first so their failure cannot disappear between flows.
+		if m.integ.returnView == migrateNextView && msg.err == nil {
 			updated, holdCmd := m.holdOrAdvance(migrateNextView)
 			return updated, tea.Batch(finalSync, holdCmd)
 		}
 		// In-memory current/staged are never mutated here: dismissing the
 		// summary reloads them from persisted state, so the list always
 		// matches disk whether the save succeeded or failed.
-		m.integ.saveErr = msg.err
 		if msg.err == nil {
 			m.worktreeGeneration++
 			updated, holdCmd := m.holdOrAdvance(integrationSummaryView)
@@ -83,94 +123,111 @@ func (m Model) finalizeIntegrationApply() tea.Cmd {
 				enabled = append(enabled, integ.Name)
 			}
 		}
-		err = state.Save(bareDir, &state.State{Integrations: enabled})
+		persisted, err := state.Load(bareDir)
+		if err != nil {
+			return integrationFinalizedMsg{err: err}
+		}
+		persisted.Integrations = enabled
+		err = state.Save(bareDir, persisted)
 
 		return integrationFinalizedMsg{err: err}
 	}
 }
 
 func (m Model) integrationLayout() ProgressLayout {
-	done, total := m.integrationOverallProgress()
-	return ProgressLayout{
-		Title:        titleApplyingChanges,
-		Phases:       m.buildIntegrationPhases(),
-		Width:        m.width,
-		Height:       m.height,
-		Hints:        progressFooter,
-		OverallDone:  done,
-		OverallTotal: total,
-		Completed:    m.integ.finalized,
-	}
+	return m.withProgressDetails(ProgressLayout{
+		Title:     titleApplyingChanges,
+		Phases:    m.buildIntegrationPhases(),
+		Width:     m.width,
+		Height:    m.progressHeight(),
+		Hints:     progressFooter,
+		Completed: m.integ.lifecycle == integrationSettling,
+	})
 }
 
 func (m Model) viewIntegrationProgress() string {
+	if m.integ.lifecycle == integrationPreparing {
+		return m.viewIntegrationPreparing()
+	}
 	return m.renderProgressLayout(m.integrationLayout())
 }
 
-// buildIntegrationPhases maps apply events onto the shared phase shape, one
-// phase per worktree, with every target worktree visible as pending before
-// its events arrive. Failed step errors are baked into the step label.
-func (m Model) buildIntegrationPhases() []phaseDisplay {
-	var phases []phaseDisplay
-	seen := make(map[string]bool)
-
-	for _, g := range groupIntegrationEvents(m.integ.events) {
-		pd := phaseDisplay{name: filepath.Base(g.worktree)}
-		seen[g.worktree] = true
-		for _, s := range g.steps {
-			if s.ev.Status == integration.StatusSkipped {
-				continue // skipped steps stay hidden, as before
-			}
-			label := s.step
-			if s.ev.Error != nil {
-				// One-line rows law: live progress shows only the error's
-				// final line; the summary's peek and portal carry the rest.
-				label += " " + errorPeekLast(s.ev.Error.Error(), max(m.width-10, 20))
-			}
-			var status pipeline.StepStatus
-			switch s.ev.Status {
-			case integration.StatusDone:
-				status = pipeline.StepDone
-				pd.done++
-			case integration.StatusRunning:
-				status = pipeline.StepRunning
-			case integration.StatusFailed:
-				status = pipeline.StepFailed
-				pd.failed++
-				pd.done++
-			}
-			pd.steps = append(pd.steps, stepDisplay{name: label, status: status})
-		}
-		pd.total = len(pd.steps)
-		phases = append(phases, pd)
+func (m Model) viewIntegrationPreparing() string {
+	height := max(m.progressHeight(), 0)
+	if height == 0 {
+		return ""
 	}
+	width := max(m.width, 1)
+	title := fitProgressLine(viewTitle(titleApplyingChanges), width)
+	wait := fitProgressLine("  "+shimmerLine(starFrame(m.motionTick)+" Preparing plan...", rampAccent, m.motionTick), width)
+	separator := fitProgressLine(viewSeparator(width), width)
 
-	for _, path := range m.integ.targetWorktrees {
-		if !seen[path] {
-			phases = append(phases, phaseDisplay{name: filepath.Base(path)})
+	var lines []string
+	switch progressTier(height) {
+	case progressViewportEmergency:
+		if height == 1 {
+			lines = []string{wait}
+		} else {
+			lines = []string{title, wait}
 		}
+	case progressViewportMinimal:
+		lines = []string{title, separator, wait}
+	default:
+		lines = []string{title, "", separator, "", wait}
 	}
-	return phases
+	if len(lines) > height {
+		lines = lines[:height]
+	}
+	return strings.Join(lines, "\n")
 }
 
-// integrationOverallProgress counts resolved unique steps against the
-// upfront step total so the bar reflects the whole apply, not just the
-// worktrees that have emitted events.
-func (m Model) integrationOverallProgress() (done, total int) {
-	total = m.integ.totalSteps
-	resolved := make(map[string]bool)
-	for _, ev := range m.integ.events {
-		key := ev.Worktree + ":" + ev.Step
-		if resolved[key] {
-			continue
+func classifyIntegrationExecution(result integrationApplyResult) integrationExecutionOutcome {
+	if result.empty {
+		if len(result.phases) == 0 {
+			return integrationExecutionEmpty
 		}
-		if ev.Status == integration.StatusDone || ev.Status == integration.StatusFailed || ev.Status == integration.StatusSkipped {
-			resolved[key] = true
-			done++
+		return integrationExecutionMalformed
+	}
+	if len(result.phases) == 0 {
+		return integrationExecutionMalformed
+	}
+	sawFailure := false
+	sawSkip := false
+	for _, phase := range result.phases {
+		if len(phase.Steps) == 0 {
+			return integrationExecutionMalformed
+		}
+		for _, step := range phase.Steps {
+			switch step.Status {
+			case progress.StepDone:
+			case progress.StepFailed:
+				sawFailure = true
+			case progress.StepSkipped:
+				sawSkip = true
+			default:
+				return integrationExecutionMalformed
+			}
 		}
 	}
-	if total == 0 {
-		total = done
+	if sawFailure {
+		return integrationExecutionDomainFailed
 	}
-	return done, total
+	if sawSkip {
+		return integrationExecutionMalformed
+	}
+	return integrationExecutionCompleted
+}
+
+func (m Model) buildIntegrationPhases() []progress.PhaseState {
+	states := progress.Snapshot(m.integ.events)
+	for phaseIndex := range states {
+		states[phaseIndex].Name = filepath.Base(states[phaseIndex].Name)
+		for stepIndex := range states[phaseIndex].Steps {
+			step := &states[phaseIndex].Steps[stepIndex]
+			if step.Error != nil {
+				step.Name += " " + errorPeekLast(step.Error.Error(), max(m.width-10, 20))
+			}
+		}
+	}
+	return states
 }

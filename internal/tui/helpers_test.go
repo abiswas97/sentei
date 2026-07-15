@@ -2,8 +2,10 @@ package tui
 
 import (
 	"path/filepath"
+	"testing"
+	"time"
 
-	"charm.land/bubbles/v2/progress"
+	progressbar "charm.land/bubbles/v2/progress"
 	"charm.land/bubbles/v2/spinner"
 	"charm.land/bubbles/v2/stopwatch"
 	tea "charm.land/bubbletea/v2"
@@ -57,7 +59,7 @@ func pumpCmds(model tea.Model, cmd tea.Cmd) tea.Model {
 			continue
 		}
 		switch msg.(type) {
-		case progress.FrameMsg, stopwatch.StartStopMsg, spinner.TickMsg, motionTickMsg:
+		case progressbar.FrameMsg, stopwatch.StartStopMsg, spinner.TickMsg, motionTickMsg:
 			continue
 		}
 		var next tea.Cmd
@@ -67,4 +69,20 @@ func pumpCmds(model tea.Model, cmd tea.Cmd) tea.Model {
 		}
 	}
 	return model
+}
+
+// settleNow fast-forwards the completion settle in tests: backdates the
+// settling clock past the hard timeout and runs the observation, returning
+// the advanced model. Fails the test if the flow was not settling.
+func settleNow(t *testing.T, m Model) Model {
+	t.Helper()
+	if !m.progressSettling {
+		t.Fatal("flow is not in the completion settle")
+	}
+	m.progressSettlingSince = time.Now().Add(-progressSettleTimeout - time.Millisecond)
+	model, advanced := m.observeSettle(time.Now())
+	if !advanced {
+		t.Fatal("settle observation did not advance the view")
+	}
+	return model.completeProgressTransition()
 }

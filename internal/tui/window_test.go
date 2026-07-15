@@ -3,13 +3,13 @@ package tui
 import (
 	"testing"
 
-	"github.com/abiswas97/sentei/internal/pipeline"
+	"github.com/abiswas97/sentei/internal/progress"
 )
 
-func makeSteps(statuses ...pipeline.StepStatus) []stepDisplay {
-	steps := make([]stepDisplay, len(statuses))
+func makeSteps(statuses ...progress.StepStatus) []progress.StepState {
+	steps := make([]progress.StepState, len(statuses))
 	for i, st := range statuses {
-		steps[i] = stepDisplay{name: stepName(i), status: st}
+		steps[i] = progress.StepState{Name: stepName(i), Status: st}
 	}
 	return steps
 }
@@ -18,10 +18,10 @@ func stepName(i int) string {
 	return string(rune('a' + i%26))
 }
 
-func countByStatus(steps []stepDisplay, status pipeline.StepStatus) int {
+func countByStatus(steps []progress.StepState, status progress.StepStatus) int {
 	n := 0
 	for _, s := range steps {
-		if s.status == status {
+		if s.Status == status {
 			n++
 		}
 	}
@@ -29,7 +29,7 @@ func countByStatus(steps []stepDisplay, status pipeline.StepStatus) int {
 }
 
 func TestWindowSteps_AllFit(t *testing.T) {
-	steps := makeSteps(pipeline.StepDone, pipeline.StepRunning, pipeline.StepPending, pipeline.StepPending, pipeline.StepPending)
+	steps := makeSteps(progress.StepDone, progress.StepRunning, progress.StepPending, progress.StepPending, progress.StepPending)
 	r := WindowSteps(steps, 10)
 	if r.Windowed {
 		t.Error("expected no windowing when all items fit")
@@ -40,13 +40,13 @@ func TestWindowSteps_AllFit(t *testing.T) {
 }
 
 func TestWindowSteps_ExceedsBudget(t *testing.T) {
-	var statuses []pipeline.StepStatus
+	var statuses []progress.StepStatus
 	for range 10 {
-		statuses = append(statuses, pipeline.StepDone)
+		statuses = append(statuses, progress.StepDone)
 	}
-	statuses = append(statuses, pipeline.StepRunning, pipeline.StepRunning, pipeline.StepRunning)
+	statuses = append(statuses, progress.StepRunning, progress.StepRunning, progress.StepRunning)
 	for range 17 {
-		statuses = append(statuses, pipeline.StepPending)
+		statuses = append(statuses, progress.StepPending)
 	}
 	r := WindowSteps(makeSteps(statuses...), 8)
 
@@ -71,66 +71,58 @@ func TestWindowSteps_ExceedsBudget(t *testing.T) {
 }
 
 func TestWindowSteps_FailedAlwaysVisible(t *testing.T) {
-	var statuses []pipeline.StepStatus
+	var statuses []progress.StepStatus
 	for range 27 {
-		statuses = append(statuses, pipeline.StepDone)
+		statuses = append(statuses, progress.StepDone)
 	}
-	statuses = append(statuses, pipeline.StepFailed, pipeline.StepFailed, pipeline.StepFailed)
+	statuses = append(statuses, progress.StepFailed, progress.StepFailed, progress.StepFailed)
 	r := WindowSteps(makeSteps(statuses...), 5)
 
-	if got := countByStatus(r.Steps, pipeline.StepFailed); got != 3 {
+	if got := countByStatus(r.Steps, progress.StepFailed); got != 3 {
 		t.Errorf("expected all 3 failed steps visible under budget pressure, got %d", got)
 	}
 }
 
 func TestWindowSteps_ActiveAlwaysVisible(t *testing.T) {
-	var statuses []pipeline.StepStatus
+	var statuses []progress.StepStatus
 	for range 25 {
-		statuses = append(statuses, pipeline.StepPending)
+		statuses = append(statuses, progress.StepPending)
 	}
 	for range 5 {
-		statuses = append(statuses, pipeline.StepRunning)
+		statuses = append(statuses, progress.StepRunning)
 	}
 	r := WindowSteps(makeSteps(statuses...), 6)
 
-	if got := countByStatus(r.Steps, pipeline.StepRunning); got != 5 {
+	if got := countByStatus(r.Steps, progress.StepRunning); got != 5 {
 		t.Errorf("expected all 5 active steps visible, got %d", got)
 	}
 }
 
 func TestWindowSteps_BudgetZero_MinimumViable(t *testing.T) {
-	steps := makeSteps(pipeline.StepDone, pipeline.StepFailed, pipeline.StepRunning, pipeline.StepPending)
+	steps := makeSteps(progress.StepDone, progress.StepFailed, progress.StepRunning, progress.StepPending)
 	r := WindowSteps(steps, 0)
 
-	if !r.Windowed {
-		t.Fatal("expected windowing at zero budget")
-	}
-	if len(r.Steps) != 2 {
-		t.Fatalf("expected only failed+active at zero budget, got %d steps", len(r.Steps))
-	}
-	for _, s := range r.Steps {
-		if s.status != pipeline.StepFailed && s.status != pipeline.StepRunning {
-			t.Errorf("unexpected status %v in minimum viable display", s.status)
-		}
+	if !r.Windowed || len(r.Steps) != 0 || r.Stats.Showing != 0 || r.Stats.Total != len(steps) {
+		t.Fatalf("zero budget must report all rows omitted, got windowed=%v steps=%d stats=%+v", r.Windowed, len(r.Steps), r.Stats)
 	}
 }
 
 func TestWindowSteps_RecentCompletedShown(t *testing.T) {
-	steps := []stepDisplay{
-		{name: "old-done", status: pipeline.StepDone},
-		{name: "mid-done", status: pipeline.StepDone},
-		{name: "new-done", status: pipeline.StepDone},
-		{name: "running", status: pipeline.StepRunning},
-		{name: "next-pending", status: pipeline.StepPending},
-		{name: "far-pending-1", status: pipeline.StepPending},
-		{name: "far-pending-2", status: pipeline.StepPending},
-		{name: "far-pending-3", status: pipeline.StepPending},
+	steps := []progress.StepState{
+		{Name: "old-done", Status: progress.StepDone},
+		{Name: "mid-done", Status: progress.StepDone},
+		{Name: "new-done", Status: progress.StepDone},
+		{Name: "running", Status: progress.StepRunning},
+		{Name: "next-pending", Status: progress.StepPending},
+		{Name: "far-pending-1", Status: progress.StepPending},
+		{Name: "far-pending-2", Status: progress.StepPending},
+		{Name: "far-pending-3", Status: progress.StepPending},
 	}
 	r := WindowSteps(steps, 5) // 8 items in 5 lines -> windowed
 
 	names := make(map[string]bool)
 	for _, s := range r.Steps {
-		names[s.name] = true
+		names[s.Name] = true
 	}
 	for _, want := range []string{"running", "new-done", "mid-done", "next-pending"} {
 		if !names[want] {
@@ -143,13 +135,13 @@ func TestWindowSteps_RecentCompletedShown(t *testing.T) {
 }
 
 func TestWindowSteps_ResponsiveAcrossHeights(t *testing.T) {
-	var statuses []pipeline.StepStatus
+	var statuses []progress.StepStatus
 	for range 12 {
-		statuses = append(statuses, pipeline.StepDone)
+		statuses = append(statuses, progress.StepDone)
 	}
-	statuses = append(statuses, pipeline.StepRunning, pipeline.StepRunning)
+	statuses = append(statuses, progress.StepRunning, progress.StepRunning)
 	for range 16 {
-		statuses = append(statuses, pipeline.StepPending)
+		statuses = append(statuses, progress.StepPending)
 	}
 	steps := makeSteps(statuses...) // 30 items
 

@@ -7,11 +7,37 @@ import (
 	"strings"
 	"testing"
 
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
+
 	"github.com/abiswas97/sentei/internal/config"
 	"github.com/abiswas97/sentei/internal/integration"
+	"github.com/abiswas97/sentei/internal/progress"
 	"github.com/abiswas97/sentei/internal/repo"
 	"github.com/abiswas97/sentei/internal/state"
 )
+
+func TestIntegrationPreparingFrameFitsEveryResponsiveTier(t *testing.T) {
+	for _, width := range []int{20, 40, 50, 80, 120} {
+		for height := 1; height <= 40; height++ {
+			m := NewModel(nil, nil, "/repo")
+			m.view = integrationProgressView
+			m.integ.lifecycle = integrationPreparing
+			m.width, m.windowHeight = width, height
+
+			view := m.viewIntegrationProgress()
+			lines := strings.Split(view, "\n")
+			if len(lines) > height {
+				t.Fatalf("%dx%d preparing frame has %d rows:\n%s", width, height, len(lines), stripANSI(view))
+			}
+			for row, line := range lines {
+				if got := lipgloss.Width(line); got > width {
+					t.Fatalf("%dx%d row %d width=%d:\n%s", width, height, row+1, got, stripANSI(view))
+				}
+			}
+		}
+	}
+}
 
 func TestUpdateIntegrationProgress_FinalizedMsg_SaveError_DoesNotApply(t *testing.T) {
 	m := makeIntegrationModel()
@@ -47,18 +73,37 @@ func makeIntegrationModel() Model {
 	return m
 }
 
+func TestIntegrationLifecycleTransitionsKeepErrorsSeparate(t *testing.T) {
+	m := makeIntegrationModel()
+	if m.integ.lifecycle != integrationIdle {
+		t.Fatalf("initial lifecycle = %v, want idle", m.integ.lifecycle)
+	}
+
+	m.view = integrationProgressView
+	m.integ.lifecycle = integrationPreparing
+	prepareErr := errors.New("prepare failed")
+	updated, _ := m.updateIntegrationProgress(integrationPreparedMsg{err: prepareErr})
+	m = updated.(Model)
+	if m.integ.lifecycle != integrationSettling || !errors.Is(m.integ.prepareErr, prepareErr) {
+		t.Fatalf("after preparation failure: lifecycle=%v prepareErr=%v", m.integ.lifecycle, m.integ.prepareErr)
+	}
+	if m.integ.executionErr != nil || m.integ.saveErr != nil {
+		t.Fatalf("preparation failure polluted later errors: execution=%v save=%v", m.integ.executionErr, m.integ.saveErr)
+	}
+}
+
 func TestUpdateIntegrationProgress_EventMsg(t *testing.T) {
 	m := makeIntegrationModel()
 	m.view = integrationProgressView
-	ch := make(chan integration.ManagerEvent, 1)
-	doneCh := make(chan struct{}, 1)
+	ch := make(chan progress.Event, 1)
+	resultCh := make(chan integrationApplyResult, 1)
 	m.integ.eventCh = ch
-	m.integ.doneCh = doneCh
+	m.integ.resultCh = resultCh
 
-	ev := integration.ManagerEvent{
-		Worktree: "/repo/main",
-		Step:     "Install code-review-graph",
-		Status:   integration.StatusRunning,
+	ev := progress.Event{
+		Phase:  "/repo/main",
+		Step:   "Install code-review-graph",
+		Status: progress.StepRunning,
 	}
 	updated, _ := m.updateIntegrationProgress(integrationEventMsg{Event: ev})
 	m = updated.(Model)
@@ -79,6 +124,7 @@ func TestUpdateIntegrationProgress_FinalizedMsg_DoesNotMutateInMemory(t *testing
 	updated, _ := m.updateIntegrationProgress(integrationFinalizedMsg{err: nil})
 	m = updated.(Model)
 
+	m = settleNow(t, m)
 	if m.view != integrationSummaryView {
 		t.Errorf("expected integrationSummaryView, got %d", m.view)
 	}
@@ -106,8 +152,12 @@ func TestUpdateIntegrationProgress_FinalizedMsg_Migration(t *testing.T) {
 	updated, _ := m.updateIntegrationProgress(integrationFinalizedMsg{err: nil})
 	m = updated.(Model)
 
+	m = settleNow(t, m)
 	if m.view != migrateNextView {
 		t.Errorf("expected migrateNextView, got %d", m.view)
+	}
+	if m.integ.lifecycle != integrationIdle {
+		t.Fatalf("lifecycle=%v, want idle after clean migration hand-off", m.integ.lifecycle)
 	}
 	// current should NOT be updated for migration flow
 	if m.integ.current["cocoindex-code"] {
@@ -115,12 +165,31 @@ func TestUpdateIntegrationProgress_FinalizedMsg_Migration(t *testing.T) {
 	}
 }
 
+func TestUpdateIntegrationProgress_MigrationSaveErrorShowsSummaryThenReturns(t *testing.T) {
+	m := makeIntegrationModel()
+	m.view = integrationProgressView
+	m.integ.returnView = migrateNextView
+	saveErr := errors.New("disk full")
+
+	updated, _ := m.updateIntegrationProgress(integrationFinalizedMsg{err: saveErr})
+	m = settleNow(t, updated.(Model))
+	if m.view != integrationSummaryView || !errors.Is(m.integ.saveErr, saveErr) {
+		t.Fatalf("view=%v saveErr=%v, want migration integration error summary", m.view, m.integ.saveErr)
+	}
+	for _, key := range []tea.KeyPressMsg{{Code: tea.KeyEnter}, {Code: tea.KeyEsc}} {
+		returned, _ := m.updateIntegrationSummary(key)
+		if returned.(Model).view != migrateNextView {
+			t.Fatalf("key %v did not return to migrateNext", key.Code)
+		}
+	}
+}
+
 func TestViewIntegrationProgress_GroupsByWorktree(t *testing.T) {
 	m := makeIntegrationModel()
 	m.view = integrationProgressView
-	m.integ.events = []integration.ManagerEvent{
-		{Worktree: "/repo/main", Step: "Install step", Status: integration.StatusDone},
-		{Worktree: "/repo/feature", Step: "Install step", Status: integration.StatusRunning},
+	m.integ.events = []progress.Event{
+		{Phase: "/repo/main", Step: "Install step", Status: progress.StepDone},
+		{Phase: "/repo/feature", Step: "Install step", Status: progress.StepRunning},
 	}
 
 	output := stripAnsi(m.viewIntegrationProgress())
@@ -136,13 +205,12 @@ func TestViewIntegrationProgress_GroupsByWorktree(t *testing.T) {
 func TestViewIntegrationProgress_ShowsProgressBar(t *testing.T) {
 	m := makeIntegrationModel()
 	m.view = integrationProgressView
-	m.integ.totalSteps = 3 // Known upfront.
-	m.integ.events = []integration.ManagerEvent{
-		{Worktree: "/repo/main", Step: "step1", Status: integration.StatusRunning},
-		{Worktree: "/repo/main", Step: "step1", Status: integration.StatusDone},
-		{Worktree: "/repo/main", Step: "step2", Status: integration.StatusRunning},
-		{Worktree: "/repo/main", Step: "step2", Status: integration.StatusDone},
-		{Worktree: "/repo/main", Step: "step3", Status: integration.StatusRunning},
+	m.integ.events = []progress.Event{
+		{Phase: "/repo/main", Step: "step1", Status: progress.StepRunning},
+		{Phase: "/repo/main", Step: "step1", Status: progress.StepDone},
+		{Phase: "/repo/main", Step: "step2", Status: progress.StepRunning},
+		{Phase: "/repo/main", Step: "step2", Status: progress.StepDone},
+		{Phase: "/repo/main", Step: "step3", Status: progress.StepRunning},
 	}
 
 	output := stripAnsi(m.viewIntegrationProgress())
@@ -156,14 +224,13 @@ func TestViewIntegrationProgress_ShowsProgressBar(t *testing.T) {
 func TestViewIntegrationProgress_ProgressCountsUniqueSteps(t *testing.T) {
 	m := makeIntegrationModel()
 	m.view = integrationProgressView
-	m.integ.totalSteps = 3
-	m.integ.events = []integration.ManagerEvent{
-		{Worktree: "/repo/main", Step: "Setup code-review-graph", Status: integration.StatusRunning},
-		{Worktree: "/repo/main", Step: "Setup code-review-graph", Status: integration.StatusDone},
-		{Worktree: "/repo/main", Step: "Install cocoindex-code", Status: integration.StatusRunning},
-		{Worktree: "/repo/main", Step: "Install cocoindex-code", Status: integration.StatusDone},
-		{Worktree: "/repo/main", Step: "Setup cocoindex-code", Status: integration.StatusRunning},
-		{Worktree: "/repo/main", Step: "Setup cocoindex-code", Status: integration.StatusDone},
+	m.integ.events = []progress.Event{
+		{Phase: "/repo/main", Step: "Setup code-review-graph", Status: progress.StepRunning},
+		{Phase: "/repo/main", Step: "Setup code-review-graph", Status: progress.StepDone},
+		{Phase: "/repo/main", Step: "Install cocoindex-code", Status: progress.StepRunning},
+		{Phase: "/repo/main", Step: "Install cocoindex-code", Status: progress.StepDone},
+		{Phase: "/repo/main", Step: "Setup cocoindex-code", Status: progress.StepRunning},
+		{Phase: "/repo/main", Step: "Setup cocoindex-code", Status: progress.StepDone},
 	}
 
 	output := stripAnsi(m.viewIntegrationProgress())
@@ -177,16 +244,23 @@ func TestViewIntegrationProgress_ProgressCountsUniqueSteps(t *testing.T) {
 func TestViewIntegrationProgress_TotalKnownUpfront(t *testing.T) {
 	m := makeIntegrationModel()
 	m.view = integrationProgressView
-	m.integ.totalSteps = 9
-	m.integ.events = []integration.ManagerEvent{
-		{Worktree: "/repo/main", Step: "Setup crg", Status: integration.StatusDone},
-		{Worktree: "/repo/main", Step: "Install ccc", Status: integration.StatusRunning},
+	// The declared plan establishes the denominator before work starts: nine
+	// pending steps across three worktrees, one resolved so far.
+	m.integ.events = []progress.Event{}
+	for _, wt := range []string{"/repo/main", "/repo/feat-1", "/repo/feat-2"} {
+		for _, step := range []string{"Setup crg", "Setup ccc", "Setup third"} {
+			m.integ.events = append(m.integ.events, progress.Event{Phase: wt, Step: step, Status: progress.StepPending, Of: 1})
+		}
 	}
+	m.integ.events = append(m.integ.events,
+		progress.Event{Phase: "/repo/main", Step: "Setup crg", Status: progress.StepDone},
+		progress.Event{Phase: "/repo/main", Step: "Setup ccc", Status: progress.StepRunning},
+	)
 
-	// 1 done out of 9: the upfront total is the spring target's denominator.
+	// 1 done out of 9: the declared total is the spring target's denominator.
 	done, total := m.integrationLayout().overall()
 	if done != 1 || total != 9 {
-		t.Errorf("overall() = %d/%d, want 1/9 (upfront total)", done, total)
+		t.Errorf("overall() = %d/%d, want 1/9 (declared total)", done, total)
 	}
 	if cmd := m.syncProgressBar(); cmd == nil {
 		t.Error("expected a spring target command from the upfront total")
@@ -205,6 +279,220 @@ func TestViewIntegrationProgress_Loading(t *testing.T) {
 
 	if !strings.Contains(output, "Applying integration changes") {
 		t.Errorf("expected title 'Applying integration changes', got:\n%s", output)
+	}
+}
+
+func TestViewIntegrationProgress_PreparingPlanIsIndeterminate(t *testing.T) {
+	m := makeIntegrationModel()
+	m.view = integrationProgressView
+	m.integ.lifecycle = integrationPreparing
+
+	output := stripAnsi(m.viewIntegrationProgress())
+	if !strings.Contains(output, "Preparing plan...") {
+		t.Fatalf("preparation copy missing:\n%s", output)
+	}
+	bar := m.terminalProgress()
+	if bar == nil || bar.State != tea.ProgressBarIndeterminate {
+		t.Fatalf("terminal progress = %#v, want indeterminate", bar)
+	}
+}
+
+func TestUpdateIntegrationProgress_PreparationErrorIsReported(t *testing.T) {
+	m := makeIntegrationModel()
+	m.view = integrationProgressView
+	m.integ.lifecycle = integrationPreparing
+	m.integ.returnView = integrationListView
+	prepareErr := errors.New("no target worktree")
+
+	updated, _ := m.updateIntegrationProgress(integrationPreparedMsg{err: prepareErr})
+	m = updated.(Model)
+	if m.integ.lifecycle != integrationSettling || !errors.Is(m.integ.prepareErr, prepareErr) {
+		t.Fatalf("lifecycle=%v prepareErr=%v", m.integ.lifecycle, m.integ.prepareErr)
+	}
+	if m.integ.eventCh != nil {
+		t.Fatal("execution channel created after preparation failure")
+	}
+}
+
+func TestUpdateIntegrationProgress_ExecutionErrorDoesNotFinalizeState(t *testing.T) {
+	m := makeIntegrationModel()
+	m.view = integrationProgressView
+	m.integ.returnView = integrationListView
+	runErr := errors.New("progress sink failed")
+
+	updated, _ := m.updateIntegrationProgress(integrationApplyDoneMsg{result: integrationApplyResult{err: runErr}})
+	m = updated.(Model)
+	if !errors.Is(m.integ.executionErr, runErr) {
+		t.Fatalf("executionErr = %v, want %v", m.integ.executionErr, runErr)
+	}
+	if m.integ.lifecycle != integrationSettling {
+		t.Fatal("execution error must finalize into the error summary")
+	}
+}
+
+func TestClassifyIntegrationExecution(t *testing.T) {
+	one := func(status progress.StepStatus) []progress.Phase {
+		return []progress.Phase{{Steps: []progress.StepResult{{Status: status}}}}
+	}
+	tests := []struct {
+		name   string
+		phases []progress.Phase
+		empty  bool
+		want   integrationExecutionOutcome
+	}{
+		{name: "valid empty plan", empty: true, want: integrationExecutionEmpty},
+		{name: "missing result is not an empty plan", want: integrationExecutionMalformed},
+		{name: "all done", phases: one(progress.StepDone), want: integrationExecutionCompleted},
+		{name: "ordinary failure", phases: one(progress.StepFailed), want: integrationExecutionDomainFailed},
+		{name: "skip without failure", phases: one(progress.StepSkipped), want: integrationExecutionMalformed},
+		{name: "unresolved", phases: one(progress.StepPending), want: integrationExecutionMalformed},
+		{name: "failure with blocked skip", phases: []progress.Phase{{Steps: []progress.StepResult{{Status: progress.StepFailed}, {Status: progress.StepSkipped}}}}, want: integrationExecutionDomainFailed},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := classifyIntegrationExecution(integrationApplyResult{phases: tt.phases, empty: tt.empty}); got != tt.want {
+				t.Fatalf("classifyIntegrationExecution() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestUpdateIntegrationProgress_MalformedResultIsContractErrorAndPreservesState(t *testing.T) {
+	tests := []struct {
+		name   string
+		phases []progress.Phase
+		events []progress.Event
+	}{
+		{name: "missing phases"},
+		{name: "pending", phases: []progress.Phase{{Name: "/repo/main", Steps: []progress.StepResult{{Name: "setup", Status: progress.StepPending}}}}, events: []progress.Event{{Phase: "/repo/main", Step: "setup", Status: progress.StepPending}}},
+		{name: "running", phases: []progress.Phase{{Name: "/repo/main", Steps: []progress.StepResult{{Name: "setup", Status: progress.StepRunning}}}}, events: []progress.Event{{Phase: "/repo/main", Step: "setup", Status: progress.StepRunning}}},
+		{name: "zero status", phases: []progress.Phase{{Name: "/repo/main", Steps: []progress.StepResult{{Name: "setup"}}}}},
+		{name: "skip only", phases: []progress.Phase{{Name: "/repo/main", Steps: []progress.StepResult{{Name: "setup", Status: progress.StepSkipped}}}}, events: []progress.Event{{Phase: "/repo/main", Step: "setup", Status: progress.StepSkipped}}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tmp := t.TempDir()
+			bareDir := filepath.Join(tmp, ".bare")
+			if err := os.Mkdir(bareDir, 0o755); err != nil {
+				t.Fatal(err)
+			}
+			if err := state.Save(bareDir, &state.State{Integrations: []string{"code-review-graph"}, LifetimeRemoved: 4}); err != nil {
+				t.Fatal(err)
+			}
+			m := makeIntegrationModel()
+			m.view = integrationProgressView
+			m.repoPath = tmp
+			m.runner = bareDirRunner(tmp)
+			m.integ.returnView = integrationListView
+			m.integ.staged = map[string]bool{"cocoindex-code": true}
+			m.integ.events = tt.events
+
+			updated, _ := m.updateIntegrationProgress(integrationApplyDoneMsg{result: integrationApplyResult{
+				phases: tt.phases,
+			}})
+			m = updated.(Model)
+			if m.integ.lifecycle != integrationSettling || m.integ.executionErr == nil || !strings.Contains(m.integ.executionErr.Error(), "incomplete terminal result") {
+				t.Fatalf("lifecycle=%v executionErr=%v, want incomplete-result contract error", m.integ.lifecycle, m.integ.executionErr)
+			}
+			persisted, err := state.Load(bareDir)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(persisted.Integrations) != 1 || persisted.Integrations[0] != "code-review-graph" || persisted.LifetimeRemoved != 4 {
+				t.Fatalf("state changed after malformed result: %#v", persisted)
+			}
+			m = settleNow(t, m)
+			if m.view != integrationSummaryView {
+				t.Fatalf("view=%v, want integration error summary", m.view)
+			}
+			view := stripAnsi(m.viewIntegrationSummary())
+			if strings.Count(view, "Integration execution failed:") != 1 {
+				t.Fatalf("expected exactly one execution-error verdict:\n%s", view)
+			}
+			for _, forbidden := range []string{"No integration work was needed", "steps applied", "step applied"} {
+				if strings.Contains(view, forbidden) {
+					t.Fatalf("malformed result rendered success %q:\n%s", forbidden, view)
+				}
+			}
+		})
+	}
+}
+
+func TestUpdateIntegrationProgress_DomainFailureWithBlockedSkipIsNotContractError(t *testing.T) {
+	tmp := t.TempDir()
+	bareDir := filepath.Join(tmp, ".bare")
+	if err := os.Mkdir(bareDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := state.Save(bareDir, &state.State{Integrations: []string{"code-review-graph"}, LifetimeRemoved: 4}); err != nil {
+		t.Fatal(err)
+	}
+	m := makeIntegrationModel()
+	m.view = integrationProgressView
+	m.repoPath = tmp
+	m.runner = bareDirRunner(tmp)
+	m.integ.returnView = integrationListView
+	m.integ.staged = map[string]bool{"cocoindex-code": true}
+	m.integ.events = []progress.Event{
+		{Phase: "/repo/main", Step: "install", Status: progress.StepFailed, Error: errors.New("install failed")},
+		{Phase: "/repo/main", Step: "setup", Status: progress.StepSkipped, Message: "blocked by install"},
+	}
+	result := integrationApplyResult{phases: []progress.Phase{{Name: "/repo/main", Steps: []progress.StepResult{
+		{Name: "install", Status: progress.StepFailed, Error: errors.New("install failed")},
+		{Name: "setup", Status: progress.StepSkipped, Message: "blocked by install"},
+	}}}}
+
+	updated, _ := m.updateIntegrationProgress(integrationApplyDoneMsg{result: result})
+	m = updated.(Model)
+	if m.integ.executionErr != nil || m.integ.lifecycle != integrationSettling {
+		t.Fatalf("executionErr=%v lifecycle=%v, want ordinary failed outcome", m.integ.executionErr, m.integ.lifecycle)
+	}
+	persisted, err := state.Load(bareDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(persisted.Integrations) != 1 || persisted.Integrations[0] != "code-review-graph" || persisted.LifetimeRemoved != 4 {
+		t.Fatalf("state changed after domain failure: %#v", persisted)
+	}
+	m = settleNow(t, m)
+	view := stripAnsi(m.viewIntegrationSummary())
+	if strings.Contains(view, "Integration execution failed:") || strings.Count(view, "1 failed") != 1 {
+		t.Fatalf("domain failure rendered as contract error:\n%s", view)
+	}
+}
+
+func TestUpdateIntegrationProgress_EmptyExecutionSavesDesiredState(t *testing.T) {
+	tmp := t.TempDir()
+	bareDir := filepath.Join(tmp, ".bare")
+	if err := os.Mkdir(bareDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := state.Save(bareDir, &state.State{Integrations: []string{"code-review-graph"}, LifetimeRemoved: 6}); err != nil {
+		t.Fatal(err)
+	}
+	m := makeIntegrationModel()
+	m.view = integrationProgressView
+	m.repoPath = tmp
+	m.runner = bareDirRunner(tmp)
+	m.integ.returnView = integrationListView
+	m.integ.staged = map[string]bool{}
+
+	updated, saveCmd := m.updateIntegrationProgress(integrationApplyDoneMsg{result: integrationApplyResult{phases: nil, empty: true}})
+	m = updated.(Model)
+	if m.integ.lifecycle != integrationSaving || saveCmd == nil {
+		t.Fatalf("lifecycle=%v saveCmd=%v, want saving", m.integ.lifecycle, saveCmd)
+	}
+	updated, _ = m.updateIntegrationProgress(saveCmd())
+	m = updated.(Model)
+	if m.integ.lifecycle != integrationSettling || m.integ.saveErr != nil {
+		t.Fatalf("lifecycle=%v saveErr=%v, want clean settling", m.integ.lifecycle, m.integ.saveErr)
+	}
+	persisted, err := state.Load(bareDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(persisted.Integrations) != 0 || persisted.LifetimeRemoved != 6 {
+		t.Fatalf("persisted state = %#v, want empty integrations and preserved lifetime", persisted)
 	}
 }
 
@@ -235,6 +523,60 @@ func TestFinalizeIntegrationApply_SavesStagedIntegrations(t *testing.T) {
 	}
 	if !st.HasIntegration("code-review-graph") || st.HasIntegration("cocoindex-code") {
 		t.Errorf("persisted integrations = %v, want only code-review-graph", st.Integrations)
+	}
+}
+
+func TestFinalizeIntegrationApply_PreservesLifetimeRemoved(t *testing.T) {
+	tmp := t.TempDir()
+	bareDir := filepath.Join(tmp, ".bare")
+	if err := os.Mkdir(bareDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := state.Save(bareDir, &state.State{Integrations: []string{"old"}, LifetimeRemoved: 17}); err != nil {
+		t.Fatal(err)
+	}
+	m := makeIntegrationModel()
+	m.repoPath = tmp
+	m.runner = bareDirRunner(tmp)
+	m.integ.staged = map[string]bool{"code-review-graph": true}
+
+	if err := m.finalizeIntegrationApply()().(integrationFinalizedMsg).err; err != nil {
+		t.Fatal(err)
+	}
+	got, err := state.Load(bareDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.LifetimeRemoved != 17 {
+		t.Fatalf("LifetimeRemoved = %d, want 17", got.LifetimeRemoved)
+	}
+}
+
+func TestFinalizeIntegrationApply_InvalidJSONFailsWithoutOverwrite(t *testing.T) {
+	tmp := t.TempDir()
+	bareDir := filepath.Join(tmp, ".bare")
+	if err := os.Mkdir(bareDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(bareDir, "sentei.json")
+	original := []byte("{ definitely not json\n")
+	if err := os.WriteFile(path, original, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	m := makeIntegrationModel()
+	m.repoPath = tmp
+	m.runner = bareDirRunner(tmp)
+	m.integ.staged = map[string]bool{"code-review-graph": true}
+
+	if err := m.finalizeIntegrationApply()().(integrationFinalizedMsg).err; err == nil {
+		t.Fatal("invalid existing state must fail the save")
+	}
+	got, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(got) != string(original) {
+		t.Fatalf("invalid state was overwritten: %q", got)
 	}
 }
 

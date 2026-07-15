@@ -7,6 +7,8 @@ import (
 	tea "charm.land/bubbletea/v2"
 
 	"github.com/abiswas97/sentei/internal/git"
+	"github.com/abiswas97/sentei/internal/progress"
+	"github.com/abiswas97/sentei/internal/worktree"
 )
 
 // TestE2E_RemovalFlowChrome drives select -> confirm -> progress -> summary
@@ -42,12 +44,15 @@ func TestE2E_RemovalFlowChrome(t *testing.T) {
 		}
 	}
 
-	for _, path := range []string{"/work/a", "/work/b"} {
-		updated, _ = m.updateProgress(worktreeDeletedMsg{Path: path})
-		m = updated.(Model)
-	}
+	updated, _ = m.updateProgress(deletionsCompleteMsg{Result: worktree.DeletionResult{SuccessCount: 2}})
+	m = updated.(Model)
+	updated, _ = m.updateProgress(pruneCompleteMsg{})
+	m = updated.(Model)
 	updated, _ = m.updateProgress(cleanupCompleteMsg{})
 	m = updated.(Model)
+	updated, _ = m.updateProgress(removalEventsCompleteMsg{})
+	m = updated.(Model)
+	m = settleNow(t, m)
 	if m.view != summaryView {
 		t.Fatalf("expected summaryView, got %d", m.view)
 	}
@@ -86,6 +91,14 @@ func TestUpdateProgress_WindowSizeUpdatesWindowing(t *testing.T) {
 	m.width = 100
 	m.remove.run = newRemovalRun(worktrees)
 	m.remove.run.statuses[worktrees[0].Path] = statusRemoving
+	for i, wt := range worktrees {
+		stepID := progress.StepID(stepName(i))
+		m.remove.run.events = append(m.remove.run.events, progress.Event{Phase: worktree.RemovalPhaseID, PhaseLabel: worktree.RemovalPhaseName, Step: stepID, StepLabel: wt.Branch, Status: progress.StepPending, Of: 2})
+	}
+	m.remove.run.events = append(m.remove.run.events,
+		progress.Event{Phase: worktree.RemovalPhaseID, PhaseLabel: worktree.RemovalPhaseName, Close: true},
+		progress.Event{Phase: worktree.RemovalPhaseID, Step: progress.StepID(stepName(0)), Status: progress.StepRunning, Checkpoint: 1, Of: 2},
+	)
 	m.view = progressView
 
 	updated, _ := m.Update(tea.WindowSizeMsg{Width: 100, Height: 16})

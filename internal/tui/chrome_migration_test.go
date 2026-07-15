@@ -7,9 +7,9 @@ import (
 
 	"github.com/abiswas97/sentei/internal/cleanup"
 	"github.com/abiswas97/sentei/internal/git"
-	"github.com/abiswas97/sentei/internal/integration"
-	"github.com/abiswas97/sentei/internal/pipeline"
+	"github.com/abiswas97/sentei/internal/progress"
 	"github.com/abiswas97/sentei/internal/repo"
+	"github.com/abiswas97/sentei/internal/worktree"
 )
 
 func TestViewProgress_NoPurpleBadge_HasChromeAndBar(t *testing.T) {
@@ -33,68 +33,67 @@ func TestViewProgress_NoPurpleBadge_HasChromeAndBar(t *testing.T) {
 func TestBuildRemovalPhases_PruneStaging(t *testing.T) {
 	m := NewModel(nil, nil, "/repo")
 	m.remove.run = newRemovalRun([]git.Worktree{{Path: "/work/a", Branch: "refs/heads/a"}})
+	m.remove.run.events = []progress.Event{
+		{Phase: worktree.RemovalPhaseID, PhaseLabel: worktree.RemovalPhaseName, Step: "remove-0", StepLabel: "a", Status: progress.StepPending, Of: 2},
+		{Phase: cleanupPhaseID, PhaseLabel: "Prune & cleanup", Step: pruneStepID, StepLabel: "Prune worktree metadata", Status: progress.StepPending, Of: 1},
+		{Phase: cleanupPhaseID, PhaseLabel: "Prune & cleanup", Step: cleanupStepID, StepLabel: "Repository cleanup", Status: progress.StepPending, Of: 1},
+		{Phase: worktree.RemovalPhaseID, PhaseLabel: worktree.RemovalPhaseName, Close: true},
+		{Phase: cleanupPhaseID, PhaseLabel: "Prune & cleanup", Close: true},
+	}
 
 	phases := m.buildRemovalPhases()
 	last := phases[len(phases)-1]
-	if last.name != "Prune & cleanup" || last.total != 0 {
+	if last.Name != "Prune & cleanup" || last.Total != 2 {
 		t.Errorf("expected pending prune phase before removal completes, got %+v", last)
 	}
 
 	// Removal finished: prune phase becomes active work.
-	m.remove.run.statuses["/work/a"] = statusRemoved
+	m.remove.run.events = append(m.remove.run.events, progress.Event{Phase: worktree.RemovalPhaseID, Step: "remove-0", Status: progress.StepDone})
 	phases = m.buildRemovalPhases()
 	last = phases[len(phases)-1]
-	if last.total != 2 || last.done != 0 {
+	if last.Total != 2 || last.Done != 0 {
 		t.Errorf("expected active 0/2 prune phase after removal completes, got %+v", last)
 	}
 
 	pruneErr := error(nil)
 	m.remove.run.pruneErr = &pruneErr
 	m.remove.run.cleanupResult = &cleanup.Result{}
+	m.remove.run.events = append(m.remove.run.events,
+		progress.Event{Phase: cleanupPhaseID, Step: pruneStepID, Status: progress.StepDone},
+		progress.Event{Phase: cleanupPhaseID, Step: cleanupStepID, Status: progress.StepDone},
+	)
 	phases = m.buildRemovalPhases()
 	last = phases[len(phases)-1]
-	if last.done != 2 || last.failed != 0 {
+	if last.Done != 2 || last.Failed != 0 {
 		t.Errorf("expected completed prune phase, got %+v", last)
 	}
 }
 
-func TestBuildIntegrationPhases_PrePopulatesTargets(t *testing.T) {
+func TestBuildIntegrationPhases_WaitsForPreparedDeclaration(t *testing.T) {
 	m := NewMenuModel(nil, nil, "/repo", nil, repo.ContextBareRepo)
 	m.integ.targetWorktrees = []string{"/repo/feature-a", "/repo/feature-b"}
 
 	phases := m.buildIntegrationPhases()
-	if len(phases) != 2 {
-		t.Fatalf("expected 2 pre-populated phases, got %d", len(phases))
-	}
-	for _, p := range phases {
-		if p.total != 0 {
-			t.Errorf("pre-populated target %q must be pending (total 0), got %d", p.name, p.total)
-		}
-	}
-
-	view := stripANSI(m.viewIntegrationProgress())
-	for _, want := range []string{"feature-a", "feature-b", "pending"} {
-		if !strings.Contains(view, want) {
-			t.Errorf("expected %q visible before events arrive, view:\n%s", want, view)
-		}
+	if len(phases) != 0 {
+		t.Fatalf("expected no determinate phases before preparation, got %d", len(phases))
 	}
 }
 
 func TestBuildIntegrationPhases_ErrorBakedIntoLabel(t *testing.T) {
 	m := NewMenuModel(nil, nil, "/repo", nil, repo.ContextBareRepo)
-	m.integ.events = []integration.ManagerEvent{
-		{Worktree: "/repo/a", Step: "Install pipx", Status: integration.StatusFailed, Error: errors.New("exit 1")},
+	m.integ.events = []progress.Event{
+		{Phase: "/repo/a", Step: "Install pipx", Status: progress.StepFailed, Error: errors.New("exit 1")},
 	}
 
 	phases := m.buildIntegrationPhases()
-	if len(phases) != 1 || len(phases[0].steps) != 1 {
+	if len(phases) != 1 || len(phases[0].Steps) != 1 {
 		t.Fatalf("unexpected phases: %+v", phases)
 	}
-	if phases[0].steps[0].status != pipeline.StepFailed {
-		t.Errorf("expected failed step, got %v", phases[0].steps[0].status)
+	if phases[0].Steps[0].Status != progress.StepFailed {
+		t.Errorf("expected failed step, got %v", phases[0].Steps[0].Status)
 	}
-	if !strings.Contains(phases[0].steps[0].name, "exit 1") {
-		t.Errorf("expected error in step label, got %q", phases[0].steps[0].name)
+	if !strings.Contains(phases[0].Steps[0].Name, "exit 1") {
+		t.Errorf("expected error in step label, got %q", phases[0].Steps[0].Name)
 	}
 }
 

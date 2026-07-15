@@ -5,10 +5,31 @@ import (
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 
 	"github.com/abiswas97/sentei/internal/git"
 	"github.com/abiswas97/sentei/internal/repo"
 )
+
+func TestPortal_FitsNarrowAndEmergencyTerminals(t *testing.T) {
+	for _, width := range []int{20, 32} {
+		for height := 1; height <= 11; height++ {
+			var p DetailPortal
+			p = p.SetSize(width, height)
+			p = p.Open(portalDetails, "界 details with a long title", strings.Repeat("long 界🙂 detail line\n", 30))
+			background := strings.TrimSuffix(strings.Repeat(strings.Repeat(" ", width)+"\n", height), "\n")
+			view := p.View(background)
+			if got := lipgloss.Height(view); got > height {
+				t.Fatalf("%dx%d portal height=%d:\n%s", width, height, got, stripANSI(view))
+			}
+			for row, line := range strings.Split(view, "\n") {
+				if got := lipgloss.Width(line); got > width {
+					t.Fatalf("%dx%d portal row %d width=%d:\n%s", width, height, row+1, got, stripANSI(view))
+				}
+			}
+		}
+	}
+}
 
 func portalTestModel() Model {
 	m := NewMenuModel(nil, nil, "/repo", nil, repo.ContextBareRepo)
@@ -53,6 +74,24 @@ func TestPortal_ScrollResetsOnReopen(t *testing.T) {
 	p = p.Open(portalHelp, "T", strings.Repeat("line\n", 50))
 	if p.viewport.YOffset() != 0 {
 		t.Errorf("scroll must reset on reopen, got offset %d", p.viewport.YOffset())
+	}
+}
+
+func TestPortal_RefreshPreservesOrClampsScroll(t *testing.T) {
+	var p DetailPortal
+	p = p.SetSize(40, 10)
+	p = p.Open(portalDetails, "Details", strings.Repeat("line\n", 50))
+	p.viewport.ScrollDown(8)
+	offset := p.viewport.YOffset()
+
+	p = p.Refresh("Updated details", strings.Repeat("updated\n", 50))
+	if got := p.viewport.YOffset(); got != offset {
+		t.Fatalf("same-size refresh moved offset from %d to %d", offset, got)
+	}
+
+	p = p.Refresh("Updated details", "one line")
+	if got := p.viewport.YOffset(); got != 0 {
+		t.Fatalf("short refresh did not clamp offset, got %d", got)
 	}
 }
 

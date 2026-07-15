@@ -28,6 +28,7 @@ const (
 	titleSetUpIntegrations = "Set up integrations"
 	titleApplyingChanges   = "Applying integration changes"
 	titleApplyComplete     = "Apply complete"
+	titleApplyErrors       = "Apply finished with errors"
 	titleCleanupPreview    = "Cleanup preview"
 	titleConfirmCleanup    = "Confirm cleanup"
 	titleRunningCleanup    = "Running cleanup"
@@ -37,6 +38,7 @@ const (
 	portalApplyDetails       = "Apply details"
 	portalIntegrationDetails = "Integration details"
 	portalAggressiveDetails  = "Aggressive cleanup details"
+	portalProgressDetails    = "Progress details"
 )
 
 // whisperMilestone is the dim celebration line on the removal summary when

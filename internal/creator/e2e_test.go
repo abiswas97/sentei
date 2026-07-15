@@ -10,8 +10,7 @@ import (
 
 	"github.com/abiswas97/sentei/internal/config"
 	"github.com/abiswas97/sentei/internal/git"
-	"github.com/abiswas97/sentei/internal/integration"
-	"github.com/abiswas97/sentei/internal/pipeline"
+	"github.com/abiswas97/sentei/internal/progress"
 )
 
 func TestE2E_CreateWorktree(t *testing.T) {
@@ -74,8 +73,8 @@ func TestE2E_CreateWorktree(t *testing.T) {
 	}
 
 	shell := &git.DefaultShellRunner{}
-	var events []pipeline.Event
-	result := Run(runner, shell, opts, func(e pipeline.Event) {
+	var events []progress.Event
+	result := Run(runner, shell, opts, func(e progress.Event) {
 		events = append(events, e)
 	})
 
@@ -118,59 +117,10 @@ func TestE2E_CreateWorktree(t *testing.T) {
 	for _, phase := range result.Phases {
 		if phase.Name == "Setup" {
 			for _, step := range phase.Steps {
-				if step.Status == pipeline.StepFailed && step.Name == "Create worktree" {
+				if step.Status == progress.StepFailed && step.Name == "Create worktree" {
 					t.Errorf("create worktree step failed: %v", step.Error)
 				}
 			}
 		}
-	}
-}
-
-func TestE2E_Teardown(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping E2E test in short mode")
-	}
-
-	tmpDir := t.TempDir()
-
-	// Create fake integration artifacts
-	crgDir := filepath.Join(tmpDir, ".code-review-graph")
-	os.MkdirAll(crgDir, 0755)
-	os.WriteFile(filepath.Join(crgDir, "graph.json"), []byte("{}"), 0644)
-
-	cocDir := filepath.Join(tmpDir, ".cocoindex_code")
-	os.MkdirAll(cocDir, 0755)
-	os.WriteFile(filepath.Join(cocDir, "index.db"), []byte("data"), 0644)
-
-	shell := &git.DefaultShellRunner{}
-	integrations := []integration.Integration{
-		{
-			Name:     "code-review-graph",
-			Teardown: integration.TeardownSpec{Dirs: []string{".code-review-graph/"}},
-		},
-		{
-			Name:     "cocoindex-code",
-			Teardown: integration.TeardownSpec{Dirs: []string{".cocoindex_code/"}},
-		},
-	}
-
-	var events []pipeline.Event
-	results := Teardown(shell, tmpDir, integrations, func(e pipeline.Event) {
-		events = append(events, e)
-	})
-
-	// Both should succeed
-	for _, r := range results {
-		if r.Status != pipeline.StepDone {
-			t.Errorf("teardown %q: status = %v, want pipeline.StepDone", r.Name, r.Status)
-		}
-	}
-
-	// Verify directories removed
-	if _, err := os.Stat(crgDir); !os.IsNotExist(err) {
-		t.Error(".code-review-graph/ should be deleted")
-	}
-	if _, err := os.Stat(cocDir); !os.IsNotExist(err) {
-		t.Error(".cocoindex_code/ should be deleted")
 	}
 }

@@ -2,6 +2,7 @@ package repo
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -9,7 +10,7 @@ import (
 	"strings"
 
 	"github.com/abiswas97/sentei/internal/git"
-	"github.com/abiswas97/sentei/internal/pipeline"
+	"github.com/abiswas97/sentei/internal/progress"
 )
 
 // GhRunner executes gh CLI commands directly without a shell, preventing shell injection.
@@ -49,58 +50,66 @@ type CreateResult struct {
 	RepoPath     string
 	WorktreePath string
 	GitHubURL    string
-	Phases       []pipeline.Phase
+	Phases       []progress.Phase
+	Err          error
+}
+
+const createSetupPhaseID progress.PhaseID = "create:setup"
+const createGitHubPhaseID progress.PhaseID = "create:github"
+
+type createOperation struct {
+	phaseID progress.PhaseID
+	stepID  progress.StepID
+	label   string
+	run     progress.StepFunc
+}
+
+type preparedCreate struct {
+	result     CreateResult
+	plan       progress.Plan
+	operations []createOperation
+	publish    bool
+	name       string
+	githubUser *string
 }
 
 // SetupFailed reports whether a non-GitHub phase failed (the local repo itself is
 // broken, not merely unpublished) and the first such error.
 func (r CreateResult) SetupFailed() (bool, error) {
+	if r.Err != nil {
+		return true, r.Err
+	}
 	for _, p := range r.Phases {
 		if p.Name != PhaseGitHub && p.HasFailures() {
-			_, step, _ := pipeline.FirstFailure([]pipeline.Phase{p})
+			_, step, _ := progress.FirstFailure([]progress.Phase{p})
 			return true, step.Error
 		}
 	}
 	return false, nil
 }
 
-func Create(runner git.CommandRunner, shell git.ShellRunner, opts CreateOptions, emit func(pipeline.Event)) CreateResult {
+func Create(runner git.CommandRunner, shell git.ShellRunner, opts CreateOptions, emit func(progress.Event)) CreateResult {
 	return CreateWithGh(runner, shell, &DefaultGhRunner{}, opts, emit)
 }
 
-func CreateWithGh(runner git.CommandRunner, _ git.ShellRunner, gh GhRunner, opts CreateOptions, emit func(pipeline.Event)) CreateResult {
-	result := CreateResult{}
-	repoPath := filepath.Join(opts.Location, opts.Name)
-	result.RepoPath = repoPath
-
-	setupPhase := runCreateSetup(runner, repoPath, opts, emit)
-	result.Phases = append(result.Phases, setupPhase)
-	if setupPhase.HasFailures() {
-		return result
-	}
-	result.WorktreePath = git.WorktreePath(repoPath, "main")
-
-	if opts.PublishGitHub {
-		ghPhase := runCreateGitHub(runner, gh, repoPath, opts, emit)
-		result.Phases = append(result.Phases, ghPhase)
-		if !ghPhase.HasFailures() {
-			// Extract GitHub URL from user lookup
-			for _, step := range ghPhase.Steps {
-				if step.Name == "Look up GitHub user" && step.Status == pipeline.StepDone {
-					result.GitHubURL = fmt.Sprintf("github.com/%s/%s", step.Message, opts.Name)
-				}
-			}
-		}
-	}
-
-	return result
+func CreateWithGh(runner git.CommandRunner, _ git.ShellRunner, gh GhRunner, opts CreateOptions, emit func(progress.Event)) CreateResult {
+	return prepareCreate(runner, gh, opts).run(emit)
 }
 
-func runCreateSetup(runner git.CommandRunner, repoPath string, opts CreateOptions, emit func(pipeline.Event)) pipeline.Phase {
-	rec := pipeline.NewPhaseRecorder("Setup", emit)
+func prepareCreate(runner git.CommandRunner, gh GhRunner, opts CreateOptions) preparedCreate {
+	repoPath := filepath.Join(opts.Location, opts.Name)
 	barePath := filepath.Join(repoPath, ".bare")
-
-	ok := rec.Step("Create directory", func() (string, error) {
+	mainPath := git.WorktreePath(repoPath, "main")
+	ghUser := ""
+	prepared := preparedCreate{result: CreateResult{RepoPath: repoPath}, publish: opts.PublishGitHub, name: opts.Name, githubUser: &ghUser}
+	add := func(phaseID progress.PhaseID, phaseLabel, id, label string, run progress.StepFunc) {
+		if len(prepared.plan.Phases) == 0 || prepared.plan.Phases[len(prepared.plan.Phases)-1].ID != phaseID {
+			prepared.plan.Phases = append(prepared.plan.Phases, progress.PlannedPhase{ID: phaseID, Label: phaseLabel})
+		}
+		prepared.plan.Phases[len(prepared.plan.Phases)-1].Steps = append(prepared.plan.Phases[len(prepared.plan.Phases)-1].Steps, progress.PlannedStep{ID: id, Label: label})
+		prepared.operations = append(prepared.operations, createOperation{phaseID: phaseID, stepID: id, label: label, run: run})
+	}
+	add(createSetupPhaseID, "Setup", "directory", "Create directory", func() (string, error) {
 		if err := os.MkdirAll(repoPath, 0755); err != nil {
 			return "", err
 		}
@@ -110,46 +119,25 @@ func runCreateSetup(runner git.CommandRunner, repoPath string, opts CreateOption
 		}
 		return "", nil
 	})
-	if !ok {
-		return rec.Phase()
-	}
-
-	ok = rec.Step("Init bare repository", func() (string, error) {
+	add(createSetupPhaseID, "Setup", "bare-init", "Init bare repository", func() (string, error) {
 		if err := os.MkdirAll(barePath, 0755); err != nil {
 			return "", err
 		}
 		_, err := runner.Run(barePath, "init", "--bare")
 		return "", err
 	})
-	if !ok {
-		return rec.Phase()
-	}
-
-	ok = rec.Step("Create .git pointer", func() (string, error) {
+	add(createSetupPhaseID, "Setup", "git-pointer", "Create .git pointer", func() (string, error) {
 		return "", os.WriteFile(filepath.Join(repoPath, ".git"), []byte("gitdir: .bare\n"), 0644)
 	})
-	if !ok {
-		return rec.Phase()
-	}
-
-	ok = rec.Step("Configure refspec", func() (string, error) {
+	add(createSetupPhaseID, "Setup", "refspec", "Configure refspec", func() (string, error) {
 		_, err := runner.Run(barePath, "config", "remote.origin.fetch", "+refs/heads/*:refs/remotes/origin/*")
 		return "", err
 	})
-	if !ok {
-		return rec.Phase()
-	}
-
-	ok = rec.Step("Create main worktree", func() (string, error) {
-		_, err := runner.Run(repoPath, "worktree", "add", git.WorktreePath(repoPath, "main"), "-b", "main")
+	add(createSetupPhaseID, "Setup", "main-worktree", "Create main worktree", func() (string, error) {
+		_, err := runner.Run(repoPath, "worktree", "add", mainPath, "-b", "main")
 		return "", err
 	})
-	if !ok {
-		return rec.Phase()
-	}
-
-	rec.Step("Initial commit", func() (string, error) {
-		mainPath := git.WorktreePath(repoPath, "main")
+	add(createSetupPhaseID, "Setup", "initial-commit", "Initial commit", func() (string, error) {
 		if err := os.MkdirAll(mainPath, 0755); err != nil {
 			return "", err
 		}
@@ -163,27 +151,15 @@ func runCreateSetup(runner git.CommandRunner, repoPath string, opts CreateOption
 		_, err := runner.Run(mainPath, "commit", "-m", "Initial commit")
 		return "", err
 	})
-
-	return rec.Phase()
-}
-
-func runCreateGitHub(runner git.CommandRunner, gh GhRunner, repoPath string, opts CreateOptions, emit func(pipeline.Event)) pipeline.Phase {
-	rec := pipeline.NewPhaseRecorder(PhaseGitHub, emit)
-	barePath := filepath.Join(repoPath, ".bare")
-
-	var ghUser string
-	ok := rec.Step("Look up GitHub user", func() (string, error) {
+	if !opts.PublishGitHub {
+		return prepared
+	}
+	add(createGitHubPhaseID, PhaseGitHub, "github-user", "Look up GitHub user", func() (string, error) {
 		var err error
 		ghUser, err = gh.RunGh(repoPath, "api", "user", "--jq", ".login")
 		return ghUser, err
 	})
-	if !ok {
-		return rec.Phase()
-	}
-
-	// Create the repo without --source/--push — we push manually after
-	// configuring the remote.
-	ok = rec.Step("Create GitHub repository", func() (string, error) {
+	add(createGitHubPhaseID, PhaseGitHub, "github-repository", "Create GitHub repository", func() (string, error) {
 		ghArgs := []string{"repo", "create", opts.Name, "--" + opts.Visibility}
 		if opts.Description != "" {
 			ghArgs = append(ghArgs, "--description", opts.Description)
@@ -191,39 +167,57 @@ func runCreateGitHub(runner git.CommandRunner, gh GhRunner, repoPath string, opt
 		_, err := gh.RunGh(repoPath, ghArgs...)
 		return "", err
 	})
-	if !ok {
-		return rec.Phase()
-	}
-
-	// Configure the remote using gh's configured protocol so the push uses the
-	// auth the user actually has. Forcing SSH breaks push for an HTTPS-only gh
-	// login (gh's default), orphaning the just-created empty GitHub repo.
-	ok = rec.Step("Configure remote", func() (string, error) {
+	add(createGitHubPhaseID, PhaseGitHub, "github-remote", "Configure remote", func() (string, error) {
 		_, err := runner.Run(barePath, "remote", "set-url", "origin", ghRemoteURL(gh, repoPath, ghUser, opts.Name))
 		return "", err
 	})
-	if !ok {
-		return rec.Phase()
-	}
-
-	ok = rec.Step("Push to GitHub", func() (string, error) {
-		if _, err := runner.Run(git.WorktreePath(repoPath, "main"), "push", "-u", "origin", "main"); err != nil {
+	add(createGitHubPhaseID, PhaseGitHub, "github-push", "Push to GitHub", func() (string, error) {
+		if _, err := runner.Run(mainPath, "push", "-u", "origin", "main"); err != nil {
 			// The empty remote repo from "Create GitHub repository" is left behind;
 			// tell the user so they can delete it or push manually before retrying.
 			return "", fmt.Errorf("%w (an empty GitHub repo %q now exists; delete it or push to it manually before retrying)", err, opts.Name)
 		}
 		return "", nil
 	})
-	if !ok {
-		return rec.Phase()
-	}
-
-	rec.Step("Set remote HEAD", func() (string, error) {
+	add(createGitHubPhaseID, PhaseGitHub, "github-head", "Set remote HEAD", func() (string, error) {
 		_, err := runner.Run(barePath, "remote", "set-head", "origin", "main")
 		return "", err
 	})
+	return prepared
+}
 
-	return rec.Phase()
+func (p preparedCreate) run(emit func(progress.Event)) CreateResult {
+	result := p.result
+	execution, err := progress.Start(p.plan, emit)
+	if err != nil {
+		result.Err = fmt.Errorf("starting repository create: %w", err)
+		return result
+	}
+	for index, operation := range p.operations {
+		step, transitionErr := execution.Run(operation.phaseID, operation.stepID, operation.run)
+		if transitionErr != nil {
+			result.Err = fmt.Errorf("executing %s: %w", operation.label, transitionErr)
+			break
+		}
+		if operation.phaseID == createSetupPhaseID && index == 5 && step.Status == progress.StepDone {
+			result.WorktreePath = git.WorktreePath(result.RepoPath, "main")
+		}
+		if step.Status != progress.StepFailed {
+			continue
+		}
+		_ = execution.SkipPending(operation.phaseID, "blocked by "+operation.label)
+		if operation.phaseID == createSetupPhaseID && p.publish {
+			_ = execution.SkipPending(createGitHubPhaseID, "blocked by "+operation.label)
+		}
+		break
+	}
+	finishErr := execution.Finish("repository create finished")
+	result.Phases = execution.Phases()
+	result.Err = errors.Join(result.Err, finishErr)
+	if result.Err == nil && result.WorktreePath != "" && p.publish && !progress.PhasesHaveFailures(result.Phases) {
+		result.GitHubURL = fmt.Sprintf("github.com/%s/%s", *p.githubUser, p.name)
+	}
+	return result
 }
 
 // ghRemoteURL returns the origin URL matching gh's configured git protocol, so

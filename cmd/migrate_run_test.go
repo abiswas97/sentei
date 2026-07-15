@@ -1,11 +1,21 @@
 package cmd
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/abiswas97/sentei/internal/repo"
 )
+
+func TestMigrateResultErrorPropagatesContractError(t *testing.T) {
+	want := errors.New("delivery")
+	if got := migrateResultError(repo.MigrateResult{Err: want}); !errors.Is(got, want) {
+		t.Fatalf("error = %v", got)
+	}
+}
 
 func TestRunMigrate_ParseError(t *testing.T) {
 	err := RunMigrate([]string{"--no-such-flag"})

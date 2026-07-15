@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 	"testing"
@@ -8,10 +9,66 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
+	"github.com/abiswas97/sentei/internal/cleanup"
 	"github.com/abiswas97/sentei/internal/git"
+	"github.com/abiswas97/sentei/internal/progress"
 	"github.com/abiswas97/sentei/internal/repo"
 	"github.com/abiswas97/sentei/internal/worktree"
 )
+
+func TestUpdateProgress_CleanupErrorsFailResultAndAppearInSummary(t *testing.T) {
+	cleanupErr := errors.New("config cleanup failed")
+	m := NewModel(nil, nil, "/repo")
+	m.view = progressView
+	m.remove.run.progressCh = make(chan progress.Event, 8)
+	execution, err := progress.Start(progress.Plan{Phases: []progress.PlannedPhase{{
+		ID: cleanupPhaseID, Label: "Prune & cleanup",
+		Steps: []progress.PlannedStep{{ID: cleanupStepID, Label: "Repository cleanup"}},
+	}}}, func(event progress.Event) { m.remove.run.progressCh <- event })
+	if err != nil {
+		t.Fatal(err)
+	}
+	m.remove.run.execution = execution
+
+	updated, _ := m.updateProgress(cleanupCompleteMsg{Result: cleanup.Result{Errors: []cleanup.OperationError{{Step: "config", Err: cleanupErr}}}})
+	m = updated.(Model)
+	if !errors.Is(m.remove.run.result.Err, cleanupErr) || !m.remove.run.result.HasFailures() {
+		t.Fatalf("cleanup failure classification = %+v", m.remove.run.result)
+	}
+	m.view = summaryView
+	view := stripANSI(m.viewSummary())
+	if !strings.Contains(view, "Cleanup failures") || !strings.Contains(view, "config cleanup failed") {
+		t.Fatalf("summary omitted cleanup error:\n%s", view)
+	}
+}
+
+func TestViewSummary_ExecutionFailureOverridesSuccessfulDeletionCopy(t *testing.T) {
+	m := NewModel(nil, nil, "/repo")
+	m.remove.run.result = worktree.DeletionResult{
+		SuccessCount: 1,
+		Phases:       []progress.Phase{{Name: "Unlock", Steps: []progress.StepResult{{Name: "feature/a", Status: progress.StepFailed, Error: errors.New("unlock denied")}}}},
+	}
+	m.view = summaryView
+
+	view := stripANSI(m.viewSummary())
+	if strings.Contains(view, "removed successfully") {
+		t.Fatalf("summary advertised success despite failed execution:\n%s", view)
+	}
+	if !strings.Contains(view, "1 removed") || !strings.Contains(view, "unlock denied") {
+		t.Fatalf("summary lost deletion count or execution error:\n%s", view)
+	}
+}
+
+func TestViewSummary_DeliveryErrorIsVisible(t *testing.T) {
+	m := NewModel(nil, nil, "/repo")
+	m.remove.run.result = worktree.DeletionResult{SuccessCount: 1, Err: errors.New("progress delivery failed")}
+	m.view = summaryView
+
+	view := stripANSI(m.viewSummary())
+	if strings.Contains(view, "removed successfully") || !strings.Contains(view, "progress delivery failed") {
+		t.Fatalf("delivery failure not visible:\n%s", view)
+	}
+}
 
 type stubRunner struct {
 	responses map[string]stubResponse
@@ -34,7 +91,7 @@ func (s *stubRunner) Run(dir string, args ...string) (string, error) {
 	return resp.output, resp.err
 }
 
-func TestUpdateProgress_AllDeletionsComplete_TriggersPrune(t *testing.T) {
+func TestUpdateProgress_DeletionsComplete_TriggersPrune(t *testing.T) {
 	runner := &stubRunner{
 		responses: map[string]stubResponse{
 			"/repo worktree prune": {output: ""},
@@ -46,7 +103,7 @@ func TestUpdateProgress_AllDeletionsComplete_TriggersPrune(t *testing.T) {
 	}, runner, "/repo")
 	m.view = progressView
 
-	updated, cmd := m.updateProgress(allDeletionsCompleteMsg{})
+	updated, cmd := m.updateProgress(deletionsCompleteMsg{})
 
 	if cmd == nil {
 		t.Fatal("expected a Cmd from allDeletionsCompleteMsg, got nil")
@@ -107,6 +164,7 @@ func TestUpdateProgress_CleanupComplete_TransitionsToSummary(t *testing.T) {
 	updated, _ := m.updateProgress(cleanupCompleteMsg{})
 	model := updated.(Model)
 
+	model = settleNow(t, model)
 	if model.view != summaryView {
 		t.Errorf("expected summaryView, got %d", model.view)
 	}
@@ -193,21 +251,6 @@ func TestWithMinProgressDuration_SetsField(t *testing.T) {
 	}
 }
 
-func TestHoldOrAdvance_ZeroDuration_TransitionsImmediately(t *testing.T) {
-	m := NewModel([]git.Worktree{}, nil, "/repo")
-	// minProgressDuration defaults to 0
-
-	result, cmd := m.holdOrAdvance(summaryView)
-	model := result.(Model)
-
-	if model.view != summaryView {
-		t.Errorf("expected summaryView, got %d", model.view)
-	}
-	if cmd != nil {
-		t.Error("expected nil cmd when transitioning immediately")
-	}
-}
-
 func TestHoldOrAdvance_MinDurationNotElapsed_HoldsAndReturnsCmd(t *testing.T) {
 	m := NewModel([]git.Worktree{}, nil, "/repo")
 	m.minProgressDuration = 10 * time.Second
@@ -245,7 +288,7 @@ func TestHoldOrAdvance_MinDurationElapsed_StillSettles(t *testing.T) {
 	}
 }
 
-func TestHoldOrAdvance_NoHold_TransitionsImmediately(t *testing.T) {
+func TestHoldOrAdvance_NoEntryHold_StillSettles(t *testing.T) {
 	m := NewModel([]git.Worktree{}, nil, "/repo")
 	m.minProgressDuration = 0
 	m.progressToken = 1
@@ -253,98 +296,110 @@ func TestHoldOrAdvance_NoHold_TransitionsImmediately(t *testing.T) {
 	result, cmd := m.holdOrAdvance(summaryView)
 	model := result.(Model)
 
-	if model.view != summaryView {
-		t.Errorf("expected immediate transition with holds disabled, got %d", model.view)
-	}
-	if cmd != nil {
-		t.Error("expected nil cmd with holds disabled")
-	}
-}
-
-func TestProgressHoldExpiredMsg_CorrectToken_Transitions(t *testing.T) {
-	m := NewModel([]git.Worktree{}, nil, "/repo")
-	m.view = progressView
-	m.progressToken = 3
-	m.progressTargetView = summaryView
-
-	result, cmd := m.Update(progressHoldExpiredMsg{token: 3})
-	model := result.(Model)
-
-	if model.view != summaryView {
-		t.Errorf("expected summaryView, got %d", model.view)
-	}
-	if cmd != nil {
-		t.Errorf("expected nil cmd, got %v", cmd)
-	}
-}
-
-func TestHoldCycle_CompletionHoldsUntilExpiry(t *testing.T) {
-	// Model just entered progressView with a 50ms hold.
-	m := NewModel([]git.Worktree{}, nil, "/repo")
-	m.view = progressView
-	m.minProgressDuration = 50 * time.Millisecond
-	m.progressStartedAt = time.Now()
-	m.progressToken = 1
-
-	// Operation completes immediately.
-	result, cmd := m.updateProgress(cleanupCompleteMsg{})
-	model := result.(Model)
-
-	// Should NOT have transitioned yet — min duration not elapsed.
 	if model.view == summaryView {
-		t.Fatal("should not transition to summaryView before min duration elapses")
+		t.Error("the completion settle applies in every run mode: no instant cut")
+	}
+	if !model.progressSettling {
+		t.Error("holdOrAdvance must begin settling")
 	}
 	if cmd == nil {
-		t.Fatal("expected a hold cmd (tea.Tick)")
-	}
-
-	// Execute the cmd — returns a tea.BatchMsg containing the hold tick and reload.
-	msg := cmd()
-	batch, ok := msg.(tea.BatchMsg)
-	if !ok {
-		t.Fatalf("expected tea.BatchMsg, got %T", msg)
-	}
-
-	// Find the hold tick in the batch and execute it.
-	var holdMsg progressHoldExpiredMsg
-	found := false
-	for _, batchCmd := range batch {
-		if batchCmd == nil {
-			continue
-		}
-		batchMsg := batchCmd()
-		if hm, ok := batchMsg.(progressHoldExpiredMsg); ok {
-			holdMsg = hm
-			found = true
-			break
-		}
-	}
-	if !found {
-		t.Fatal("expected progressHoldExpiredMsg in batch")
-	}
-	if holdMsg.token != 1 {
-		t.Errorf("token = %d, want 1", holdMsg.token)
-	}
-
-	// Deliver the expired message.
-	result2, _ := model.Update(holdMsg)
-	model2 := result2.(Model)
-
-	if model2.view != summaryView {
-		t.Errorf("expected summaryView after hold expired, got %d", model2.view)
+		t.Error("expected the hard-timeout probe cmd")
 	}
 }
 
-func TestProgressHoldExpiredMsg_StaleToken_Ignored(t *testing.T) {
+func TestObserveSettle_AdvancesAfterBeat(t *testing.T) {
+	m := NewModel([]git.Worktree{}, nil, "/repo")
+	m.view = progressView
+	m.progressTargetView = summaryView
+	m.progressSettling = true
+	m.progressSettlingSince = time.Now().Add(-time.Second)
+	m.progressSettledAt = time.Now().Add(-progressSettleBeat - time.Millisecond)
+
+	model, advanced := m.observeSettle(time.Now())
+	if !advanced || !model.progressTransitionPending || model.view != progressView {
+		t.Errorf("settled fill must schedule a renderer-safe transition, got view %d pending=%v", model.view, model.progressTransitionPending)
+	}
+	if model.progressSettling {
+		t.Error("advancing must end the settling state")
+	}
+}
+
+func TestObserveSettle_BeatNotElapsed_Holds(t *testing.T) {
+	m := NewModel([]git.Worktree{}, nil, "/repo")
+	m.view = progressView
+	m.progressTargetView = summaryView
+	m.progressSettling = true
+	m.progressSettlingSince = time.Now()
+	m.progressSettledAt = time.Now() // just settled: beat starts now
+
+	model, advanced := m.observeSettle(time.Now())
+	if advanced || model.view == summaryView {
+		t.Error("the view must hold until the settled beat elapses")
+	}
+}
+
+func TestObserveSettle_EntryHoldGates(t *testing.T) {
+	m := NewModel([]git.Worktree{}, nil, "/repo")
+	m.view = progressView
+	m.progressTargetView = summaryView
+	m.minProgressDuration = 10 * time.Second // playground entry hold, far from done
+	m.progressStartedAt = time.Now()
+	m.progressSettling = true
+	m.progressSettlingSince = time.Now()
+	m.progressSettledAt = time.Now().Add(-progressSettleBeat - time.Millisecond)
+
+	model, advanced := m.observeSettle(time.Now())
+	if advanced || model.view == summaryView {
+		t.Error("playground entry hold must keep gating even after the beat")
+	}
+}
+
+func TestObserveSettle_TimeoutForcesAdvance(t *testing.T) {
+	m := NewModel([]git.Worktree{}, nil, "/repo")
+	m.view = progressView
+	m.progressTargetView = summaryView
+	m.progressSettling = true
+	m.progressSettlingSince = time.Now().Add(-progressSettleTimeout - time.Millisecond)
+	// Never settled (settledAt zero): the hard timeout must still advance.
+
+	model, advanced := m.observeSettle(time.Now())
+	if !advanced || !model.progressTransitionPending || model.view != progressView {
+		t.Error("the hard timeout must schedule a view that cannot settle")
+	}
+}
+
+func TestSettleProbe_StaleToken_Ignored(t *testing.T) {
 	m := NewModel([]git.Worktree{}, nil, "/repo")
 	m.view = progressView
 	m.progressToken = 5
 	m.progressTargetView = summaryView
+	m.progressSettling = true
+	m.progressSettlingSince = time.Now().Add(-progressSettleTimeout - time.Millisecond)
 
-	result, _ := m.Update(progressHoldExpiredMsg{token: 3}) // stale token
+	result, _ := m.Update(progressSettleProbeMsg{token: 3}) // stale token
 	model := result.(Model)
 
 	if model.view == summaryView {
-		t.Error("stale token should not transition view")
+		t.Error("stale probe token should not transition view")
+	}
+}
+
+func TestSettleProbe_CorrectToken_RunsCheck(t *testing.T) {
+	m := NewModel([]git.Worktree{}, nil, "/repo")
+	m.view = progressView
+	m.progressToken = 3
+	m.progressTargetView = summaryView
+	m.progressSettling = true
+	m.progressSettlingSince = time.Now().Add(-progressSettleTimeout - time.Millisecond)
+
+	result, cmd := m.Update(progressSettleProbeMsg{token: 3})
+	model := result.(Model)
+
+	if model.view != progressView || !model.progressTransitionPending || cmd == nil {
+		t.Errorf("timeout probe must schedule refresh before transition, view=%d pending=%v cmd=%v", model.view, model.progressTransitionPending, cmd != nil)
+	}
+	completed, _ := model.Update(progressTransitionMsg{token: 3})
+	if completed.(Model).view != summaryView {
+		t.Errorf("post-refresh transition ended at %d, want summary", completed.(Model).view)
 	}
 }

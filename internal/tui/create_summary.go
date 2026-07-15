@@ -10,7 +10,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 
 	"github.com/abiswas97/sentei/internal/git"
-	"github.com/abiswas97/sentei/internal/pipeline"
+	"github.com/abiswas97/sentei/internal/progress"
 )
 
 func (m Model) updateCreateSummary(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -43,13 +43,21 @@ func (m Model) viewCreateSummary() string {
 	}
 
 	hasFailures := result != nil && result.HasFailures()
+	hasContractError := result != nil && result.Err != nil
 
 	b.WriteString(viewTitle(titleWorktreeCreated))
 	b.WriteString("\n\n")
 	b.WriteString(viewSeparator(m.width))
 	b.WriteString("\n\n")
 
-	if hasFailures {
+	if hasContractError {
+		fmt.Fprintf(&b, "  %s %s creation failed\n\n",
+			styleIndicatorFailed.Render(indicatorFailed), branch)
+		for _, line := range errorPeekLines(result.Err.Error(), max(m.width-8, 20)) {
+			fmt.Fprintf(&b, "      %s\n", styleError.Render(line))
+		}
+		b.WriteString("\n")
+	} else if hasFailures {
 		fmt.Fprintf(&b, "  %s %s created with issues\n\n",
 			styleIndicatorWarning.Render(indicatorWarning), branch)
 	} else {
@@ -73,11 +81,11 @@ func (m Model) viewCreateSummary() string {
 			}
 			for _, step := range phase.Steps {
 				status := styleIndicatorDone.Render(indicatorDone)
-				if step.Status == pipeline.StepFailed {
+				if step.Status == progress.StepFailed {
 					status = styleIndicatorFailed.Render(indicatorFailed)
 				}
 				fmt.Fprintf(&b, "    %-10s %s %s\n", styleDim.Render(label), step.Name, status)
-				if step.Status == pipeline.StepFailed && step.Error != nil {
+				if step.Status == progress.StepFailed && step.Error != nil {
 					peek := errorPeekLines(step.Error.Error(), max(m.width-8, 20))
 					for i, line := range peek {
 						style := styleDim

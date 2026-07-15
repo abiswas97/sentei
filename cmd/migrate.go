@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 
 	"github.com/abiswas97/sentei/internal/git"
-	"github.com/abiswas97/sentei/internal/pipeline"
+	"github.com/abiswas97/sentei/internal/progress"
 	"github.com/abiswas97/sentei/internal/repo"
 )
 
@@ -41,12 +41,15 @@ func RunMigrate(args []string) error {
 	}
 
 	result := repo.Migrate(runner, shell, migrateOpts, printMigrateEvent)
+	if err := migrateResultError(result); err != nil {
+		return err
+	}
 
 	fmt.Println()
 	for _, phase := range result.Phases {
 		if phase.HasFailures() {
 			for _, step := range phase.Steps {
-				if step.Status == pipeline.StepFailed {
+				if step.Status == progress.StepFailed {
 					fmt.Fprintf(os.Stderr, "%s✗%s %s: %v\n", yellow, nc, step.Name, step.Error)
 				}
 			}
@@ -77,21 +80,28 @@ func RunMigrate(args []string) error {
 	return nil
 }
 
-func printMigrateEvent(e pipeline.Event) {
+func migrateResultError(result repo.MigrateResult) error {
+	if result.Err != nil {
+		return fmt.Errorf("migration failed: %w", result.Err)
+	}
+	return nil
+}
+
+func printMigrateEvent(e progress.Event) {
 	switch e.Status {
-	case pipeline.StepRunning:
+	case progress.StepRunning:
 		msg := ""
 		if e.Message != "" {
 			msg = fmt.Sprintf(" — %s", e.Message)
 		}
 		fmt.Printf("%s→%s [%s] %s%s\n", blue, nc, e.Phase, e.Step, msg)
-	case pipeline.StepDone:
+	case progress.StepDone:
 		msg := ""
 		if e.Message != "" {
 			msg = fmt.Sprintf(" (%s)", e.Message)
 		}
 		fmt.Printf("%s✓%s [%s] %s%s\n", green, nc, e.Phase, e.Step, msg)
-	case pipeline.StepFailed:
+	case progress.StepFailed:
 		fmt.Printf("%s✗%s [%s] %s: %v\n", yellow, nc, e.Phase, e.Step, e.Error)
 	}
 }

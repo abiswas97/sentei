@@ -9,17 +9,20 @@ import (
 	tea "charm.land/bubbletea/v2"
 
 	"github.com/abiswas97/sentei/internal/git"
-	"github.com/abiswas97/sentei/internal/pipeline"
+	"github.com/abiswas97/sentei/internal/progress"
 	"github.com/abiswas97/sentei/internal/repo"
 )
 
 // cloneFailed reports whether the clone left the repo in a failed state and, if
 // so, the error from the first failed step.
 func cloneFailed(result repo.CloneResult) (bool, error) {
+	if result.Err != nil {
+		return true, result.Err
+	}
 	if !result.HasFailures() {
 		return false, nil
 	}
-	_, step, _ := pipeline.FirstFailure(result.Phases)
+	_, step, _ := progress.FirstFailure(result.Phases)
 	return true, step.Error
 }
 

@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"errors"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -10,7 +11,9 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 
+	"github.com/abiswas97/sentei/internal/git"
 	"github.com/abiswas97/sentei/internal/integration"
+	"github.com/abiswas97/sentei/internal/progress"
 )
 
 type integrationStateLoadedMsg struct {
@@ -22,10 +25,21 @@ type integrationStateLoadedMsg struct {
 }
 
 type integrationEventMsg struct {
-	Event integration.ManagerEvent
+	Event progress.Event
 }
 
-type integrationApplyDoneMsg struct{}
+type integrationApplyResult struct {
+	phases []progress.Phase
+	empty  bool
+	err    error
+}
+
+type integrationApplyDoneMsg struct{ result integrationApplyResult }
+
+type integrationPreparedMsg struct {
+	prepared integration.PreparedApply
+	err      error
+}
 
 func (m Model) loadIntegrationState() tea.Cmd {
 	return func() tea.Msg {
@@ -57,12 +71,21 @@ func (m Model) loadIntegrationState() tea.Cmd {
 	}
 }
 
-func waitForIntegrationEvent(ch <-chan integration.ManagerEvent, doneCh <-chan struct{}) tea.Cmd {
+func waitForIntegrationEvent(ch <-chan progress.Event, resultCh <-chan integrationApplyResult) tea.Cmd {
 	return func() tea.Msg {
 		ev, ok := <-ch
 		if !ok {
-			<-doneCh
-			return integrationApplyDoneMsg{}
+			select {
+			case result, ok := <-resultCh:
+				if !ok {
+					result.err = errors.New("integration apply events closed without a terminal result")
+				}
+				return integrationApplyDoneMsg{result: result}
+			default:
+				return integrationApplyDoneMsg{result: integrationApplyResult{
+					err: errors.New("integration apply events closed without a terminal result"),
+				}}
+			}
 		}
 		return integrationEventMsg{Event: ev}
 	}
@@ -104,49 +127,48 @@ func (m Model) startIntegrationApply() (Model, tea.Cmd) {
 		wtPaths = append(wtPaths, wt.Path)
 	}
 
-	// Calculate total steps upfront for accurate progress bar.
-	// Enable: setup is always 1 per worktree. Deps/install are conditional
-	// but we count them as maximum so the bar doesn't exceed total.
-	totalSteps := 0
-	for _, integ := range toEnable {
-		stepsPerWT := 1 // setup (always runs)
-		stepsPerWT += len(integ.Dependencies)
-		stepsPerWT++ // install
-		totalSteps += stepsPerWT * len(wtPaths)
-	}
-	for _, integ := range toDisable {
-		stepsPerWT := 0
-		if integ.Teardown.Command != "" {
-			stepsPerWT++ // teardown
-		}
-		stepsPerWT += len(integ.Teardown.Dirs) // dir removals
-		totalSteps += stepsPerWT * len(wtPaths)
-	}
-	m.integ.totalSteps = totalSteps
 	m.integ.targetWorktrees = wtPaths
-
-	ch := make(chan integration.ManagerEvent, 50)
-	doneCh := make(chan struct{}, 1)
-	m.integ.eventCh = ch
-	m.integ.doneCh = doneCh
+	m.integ.lifecycle = integrationPreparing
+	m.integ.prepareErr = nil
+	m.integ.executionErr = nil
+	m.integ.saveErr = nil
 
 	repoPath := m.repoPath
 	shell := m.shell
 	mainWT := m.findSourceWorktree()
+	return m, func() tea.Msg {
+		prepared, err := integration.PrepareApply(shell, repoPath, mainWT, toEnable, toDisable, wtPaths)
+		return integrationPreparedMsg{prepared: prepared, err: err}
+	}
+}
 
-	go func() {
-		emit := func(e integration.ManagerEvent) { ch <- e }
-		for _, integ := range toEnable {
-			integration.EnableIntegration(shell, repoPath, mainWT, wtPaths, integ, emit)
+func (m Model) startPreparedIntegrationApply(prepared integration.PreparedApply) (Model, tea.Cmd) {
+	ch := make(chan progress.Event, 50)
+	resultCh := make(chan integrationApplyResult, 1)
+	m.integ.eventCh = ch
+	m.integ.resultCh = resultCh
+	m.integ.lifecycle = integrationExecuting
+	shell := m.shell
+	go runIntegrationApplyWorker(prepared, shell, ch, resultCh)
+	return m, waitForIntegrationEvent(ch, resultCh)
+}
+
+func runIntegrationApplyWorker(
+	prepared integration.PreparedApply,
+	shell git.ShellRunner,
+	events chan<- progress.Event,
+	results chan<- integrationApplyResult,
+) {
+	result := integrationApplyResult{empty: prepared.Empty()}
+	defer func() {
+		if recovered := recover(); recovered != nil {
+			result.err = fmt.Errorf("integration apply worker panicked: %v", recovered)
 		}
-		for _, integ := range toDisable {
-			integration.DisableIntegration(shell, wtPaths, integ, emit)
-		}
-		close(ch)
-		doneCh <- struct{}{}
+		results <- result
+		close(results)
+		close(events)
 	}()
-
-	return m, waitForIntegrationEvent(ch, doneCh)
+	result.phases, result.err = prepared.Run(shell, func(event progress.Event) { events <- event })
 }
 
 func (m Model) updateIntegrationList(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -195,7 +217,7 @@ func (m Model) updateIntegrationList(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(msg, keys.Confirm):
 			if m.integrationHasPendingChanges() {
 				m.integ.events = nil
-				m.integ.finalized = false
+				m.integ.lifecycle = integrationIdle
 				m.integ.returnView = integrationListView
 				m.progressStartedAt = time.Now()
 				m.progressToken++

@@ -2,13 +2,14 @@ package tui
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"sort"
 	"strings"
 	"time"
 
 	"charm.land/bubbles/v2/key"
-	"charm.land/bubbles/v2/progress"
+	progressbar "charm.land/bubbles/v2/progress"
 	"charm.land/bubbles/v2/stopwatch"
 	"charm.land/bubbles/v2/textinput"
 	tea "charm.land/bubbletea/v2"
@@ -18,13 +19,17 @@ import (
 	"github.com/abiswas97/sentei/internal/creator"
 	"github.com/abiswas97/sentei/internal/git"
 	"github.com/abiswas97/sentei/internal/integration"
-	"github.com/abiswas97/sentei/internal/pipeline"
+	"github.com/abiswas97/sentei/internal/progress"
 	"github.com/abiswas97/sentei/internal/repo"
 )
 
-// progressHoldExpiredMsg fires when the minimum progress view duration has elapsed.
+// progressSettleProbeMsg is the completion settle's hard-timeout wake-up:
+// settle progress is normally observed on motion ticks and spring frames,
+// and this probe guarantees the check runs even if both go quiet.
 // The token must match model.progressToken to guard against stale messages.
-type progressHoldExpiredMsg struct{ token int }
+type progressSettleProbeMsg struct{ token int }
+
+type progressTransitionMsg struct{ token int }
 
 type viewState int
 
@@ -143,9 +148,9 @@ type createState struct {
 	copyEnvFiles           bool
 	optionsCursor          int
 
-	eventCh  chan pipeline.Event
+	eventCh  chan progress.Event
 	resultCh chan creator.Result
-	events   []pipeline.Event
+	events   []progress.Event
 	result   *creator.Result
 }
 
@@ -181,12 +186,22 @@ type repoState struct {
 	migrateInfo MigrateInfo
 
 	// Shared progress/summary
-	eventCh  chan pipeline.Event
+	eventCh  chan progress.Event
 	resultCh chan interface{} // receives CreateResult, CloneResult, or MigrateResult
-	events   []pipeline.Event
+	events   []progress.Event
 	result   interface{}
 	opType   string // "create", "clone", "migrate"
 }
+
+type integrationLifecycle uint8
+
+const (
+	integrationIdle integrationLifecycle = iota
+	integrationPreparing
+	integrationExecuting
+	integrationSaving
+	integrationSettling
+)
 
 // integrationState holds all state for the integration management flow.
 type integrationState struct {
@@ -199,18 +214,19 @@ type integrationState struct {
 	colCursor    int                       // 0-based column index for future expansion //nolint:unused
 
 	// Progress
-	events          []integration.ManagerEvent    //nolint:unused
-	finalized       bool                          // apply result arrived; the hold is showing
-	totalSteps      int                           // known upfront for progress bar
-	targetWorktrees []string                      // all apply targets, pre-populated as pending phases
-	eventCh         chan integration.ManagerEvent //nolint:unused
-	doneCh          chan struct{}                 //nolint:unused
+	events          []progress.Event //nolint:unused
+	lifecycle       integrationLifecycle
+	targetWorktrees []string                    // all apply targets, pre-populated as pending phases
+	eventCh         chan progress.Event         //nolint:unused
+	resultCh        chan integrationApplyResult //nolint:unused
 
 	// Context: where to return after progress completes
 	returnView viewState //nolint:unused
 
-	// Apply outcome: persistence error from the last apply, shown in the summary
-	saveErr error
+	// Apply outcome stages remain distinct so summaries identify the failed contract.
+	prepareErr   error
+	executionErr error
+	saveErr      error
 }
 
 type Model struct {
@@ -222,6 +238,9 @@ type Model struct {
 	context  repo.RepoContext
 	width    int
 	height   int
+	// windowHeight is the raw terminal height. height remains the shared
+	// chrome-budgeted body height used by non-progress views.
+	windowHeight int
 
 	menuItems          []menuItem
 	menuCursor         int
@@ -250,19 +269,30 @@ type Model struct {
 	// motionTick is the one animation clock: star frames and shimmer band
 	// positions derive from it as pure functions. The tick chain runs only
 	// while a working surface is visible (motionActive).
-	motionTick int
+	motionTick       int
+	motionPreference MotionPreference
 
 	// bar springs the overall progress toward each completion target and
 	// watch counts elapsed time; both animate only in determinate progress
 	// views and reset between flows in holdOrAdvance.
-	bar   progress.Model
+	bar   progressbar.Model
 	watch stopwatch.Model
 
 	// Progress hold state — used to enforce minimum visible duration for progress views.
-	minProgressDuration time.Duration // 0 = no hold; set via WithMinProgressDuration
-	progressStartedAt   time.Time     // set when entering any progress view
-	progressToken       int           // bumped on each entry; guards stale timers
-	progressTargetView  viewState     // where to transition when hold expires
+	minProgressDuration       time.Duration // 0 = no entry hold; set via WithMinProgressDuration
+	progressStartedAt         time.Time     // set when entering any progress view
+	progressToken             int           // bumped on each entry; guards stale timers
+	progressTargetView        viewState     // where to transition once settled
+	progressTransitionPending bool
+	progressTarget            float64 // exact logical progress, separate from the spring's displayed fill
+
+	// Completion settle state: after a flow's final event the view holds
+	// until the displayed bar fill reaches its target and stays there for
+	// progressSettleBeat, bounded by progressSettleTimeout. Checked on the
+	// motion clock and spring frames; applies in every run mode.
+	progressSettling      bool
+	progressSettlingSince time.Time // when the final event arrived
+	progressSettledAt     time.Time // when the displayed fill first arrived; zero while gliding
 }
 
 // ModelOption configures a Model at construction time.
@@ -292,9 +322,11 @@ func NewModel(worktrees []git.Worktree, runner git.CommandRunner, repoPath strin
 			sortAscending: true,
 			filterInput:   ti,
 		},
-		height: 20,
-		bar:    newOverallBar(),
-		watch:  stopwatch.New(),
+		width:            80,
+		height:           20,
+		bar:              newOverallBar(),
+		watch:            stopwatch.New(),
+		motionPreference: motionPreference(os.Getenv),
 	}
 	m.reindex()
 	return m
@@ -369,11 +401,13 @@ func NewMenuModel(runner git.CommandRunner, shell git.ShellRunner, repoPath stri
 		repoPath:           repoPath,
 		cfg:                cfg,
 		context:            context,
+		width:              80,
 		height:             20,
 		menuItems:          items,
 		worktreeGeneration: initGeneration,
 		bar:                newOverallBar(),
 		watch:              stopwatch.New(),
+		motionPreference:   motionPreference(os.Getenv),
 		remove: removeState{
 			selected:      make(map[string]bool),
 			sortField:     SortByAge,
@@ -409,27 +443,92 @@ func NewMenuModel(runner git.CommandRunner, shell git.ShellRunner, repoPath stri
 	return m
 }
 
-// holdOrAdvance either transitions to targetView immediately (if minProgressDuration
-// is zero or has already elapsed) or schedules a tea.Tick for the remaining time.
-// The caller must store all result state into the model before calling.
+// holdOrAdvance begins the completion settle: the view may not transition to
+// targetView until the displayed bar fill has reached its target and stayed
+// there for progressSettleBeat (plus, in playground mode, until the entry
+// hold has elapsed), hard-bounded by progressSettleTimeout. The caller must
+// store all result state into the model before calling. Settle progress is
+// observed on the motion clock and spring frames; a timeout tick guarantees
+// a wake-up even if both go quiet.
 func (m Model) holdOrAdvance(targetView viewState) (tea.Model, tea.Cmd) {
+	now := time.Now()
 	m.progressTargetView = targetView
-	if m.minProgressDuration == 0 {
-		m.view = targetView
-		// Leaving the progress view: discard the spring state so the next
-		// flow starts from zero, not easing down from 100%.
-		m.bar = newOverallBar()
-		m.bar.SetWidth(overallBarWidth(m.width))
-		return m, nil
-	}
-	// The hold is measured from view entry, so a flow that outlives it
-	// would otherwise cut away mid-glide; the settle floor guarantees the
-	// spring a beat to visibly finish at 100%.
-	remaining := max(m.minProgressDuration-time.Since(m.progressStartedAt), progressSettleFloor)
+	m.progressSettling = true
+	m.progressSettlingSince = now
+	m.progressSettledAt = time.Time{}
 	token := m.progressToken
-	return m, tea.Tick(remaining, func(time.Time) tea.Msg {
-		return progressHoldExpiredMsg{token: token}
+	if m.motionPreference == MotionOff {
+		if settled, advanced := m.observeSettle(now); advanced {
+			return settled, settledProgressTransitionCmd(token)
+		} else {
+			m = settled
+		}
+		remaining := m.minProgressDuration - now.Sub(m.progressStartedAt)
+		return m, tea.Tick(max(remaining, 0), func(time.Time) tea.Msg {
+			return progressSettleProbeMsg{token: token}
+		})
+	}
+	return m, tea.Tick(progressSettleTimeout, func(time.Time) tea.Msg {
+		return progressSettleProbeMsg{token: token}
 	})
+}
+
+// settleAdvanceReady reports whether the settled view may advance: the entry
+// hold (if any) has elapsed AND the displayed fill has been settled for the
+// beat, or the hard timeout has expired.
+func (m Model) settleAdvanceReady(now time.Time) bool {
+	holdDone := m.minProgressDuration == 0 || now.Sub(m.progressStartedAt) >= m.minProgressDuration
+	if m.motionPreference == MotionOff {
+		return holdDone
+	}
+	beatDone := !m.progressSettledAt.IsZero() && now.Sub(m.progressSettledAt) >= progressSettleBeat
+	timedOut := now.Sub(m.progressSettlingSince) >= progressSettleTimeout
+	return (holdDone && beatDone) || timedOut
+}
+
+// observeSettle records settle state transitions and advances the view once
+// settleAdvanceReady holds. Called from the motion clock, spring frames, and
+// the timeout probe so settling can never stall for lack of a wake-up.
+func (m Model) observeSettle(now time.Time) (Model, bool) {
+	if !m.progressSettling {
+		return m, false
+	}
+	if m.motionPreference == MotionFull && m.bar.IsAnimating() {
+		// Still gliding (or a new spring target arrived): not settled.
+		m.progressSettledAt = time.Time{}
+	} else if m.progressSettledAt.IsZero() {
+		m.progressSettledAt = now
+	}
+	if !m.settleAdvanceReady(now) {
+		return m, false
+	}
+	m.progressSettling = false
+	m.progressTransitionPending = true
+	return m, true
+}
+
+func settledProgressTransitionCmd(token int) tea.Cmd {
+	return tea.Sequence(tea.ClearScreen, func() tea.Msg {
+		return progressTransitionMsg{token: token}
+	})
+}
+
+func (m Model) completeProgressTransition() Model {
+	leavingIntegrationProgress := m.view == integrationProgressView
+	leavingProgress := m.determinateProgressActive()
+	m.progressTransitionPending = false
+	m.view = m.progressTargetView
+	if leavingProgress && m.portal.trigger == portalDetails {
+		m.portal = m.portal.Close()
+	}
+	if leavingIntegrationProgress && m.view != integrationSummaryView {
+		m.integ.lifecycle = integrationIdle
+	}
+	// Leaving the progress view: discard the spring state so the next
+	// flow starts from zero, not easing down from 100%.
+	m.bar = newOverallBar()
+	m.bar.SetWidth(overallBarWidth(m.width))
+	return m
 }
 
 // SetCleanupOpts sets the cleanup options and starts at the cleanup confirmation view.
@@ -467,6 +566,9 @@ func (m *Model) SetMigrateOpts(opts *MigrateOpts) {
 
 func (m Model) Init() tea.Cmd {
 	if m.view == menuView && m.context == repo.ContextBareRepo {
+		if m.motionPreference == MotionOff {
+			return tea.Batch(tea.RequestBackgroundColor, loadWorktreeContext(m.runner, m.repoPath, m.worktreeGeneration))
+		}
 		return tea.Batch(tea.RequestBackgroundColor, motionTickCmd(), loadWorktreeContext(m.runner, m.repoPath, m.worktreeGeneration))
 	}
 	return tea.RequestBackgroundColor
@@ -475,6 +577,9 @@ func (m Model) Init() tea.Cmd {
 // indeterminateWaitActive reports whether a spinner-bearing wait is visible:
 // the cleanup scan or the menu worktree-context load.
 func (m Model) indeterminateWaitActive() bool {
+	if m.view == integrationProgressView && m.integ.lifecycle == integrationPreparing {
+		return true
+	}
 	if m.view == cleanupPreviewView && m.cleanupScan == nil {
 		return true
 	}
@@ -489,13 +594,20 @@ func (m Model) indeterminateWaitActive() bool {
 }
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	if holdMsg, ok := msg.(progressHoldExpiredMsg); ok {
-		if holdMsg.token == m.progressToken {
-			m.view = m.progressTargetView
-			// Leaving the progress view: discard the spring state so the
-			// next flow starts from zero, not easing down from 100%.
-			m.bar = newOverallBar()
-			m.bar.SetWidth(overallBarWidth(m.width))
+	if transition, ok := msg.(progressTransitionMsg); ok {
+		if transition.token == m.progressToken && m.progressTransitionPending {
+			m = m.completeProgressTransition()
+		}
+		return m, nil
+	}
+
+	if probeMsg, ok := msg.(progressSettleProbeMsg); ok {
+		if probeMsg.token == m.progressToken {
+			var advanced bool
+			m, advanced = m.observeSettle(time.Now())
+			if advanced {
+				return m, settledProgressTransitionCmd(m.progressToken)
+			}
 		}
 		return m, nil
 	}
@@ -522,17 +634,23 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// share the chrome-budgeted body height. No view sizes itself.
 		m.portal = m.portal.SetSize(size.Width, size.Height)
 		m.width = size.Width
+		m.windowHeight = max(size.Height, 0)
 		m.height = max(size.Height-viewChromeRows, 5)
 		m.bar.SetWidth(overallBarWidth(size.Width))
 		return m, nil
 	}
 
-	if frame, ok := msg.(progress.FrameMsg); ok {
-		if !m.determinateProgressActive() {
+	if frame, ok := msg.(progressbar.FrameMsg); ok {
+		if m.motionPreference == MotionOff || !m.determinateProgressActive() {
 			return m, nil
 		}
 		var cmd tea.Cmd
 		m.bar, cmd = m.bar.Update(frame)
+		var advanced bool
+		m, advanced = m.observeSettle(time.Now())
+		if advanced {
+			return m, tea.Batch(cmd, settledProgressTransitionCmd(m.progressToken))
+		}
 		return m, cmd
 	}
 
@@ -557,7 +675,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if !m.motionActive() {
 			return m, nil
 		}
+		previousView := m.view
 		m.motionTick++
+		var advanced bool
+		m, advanced = m.observeSettle(time.Now())
+		if advanced {
+			return m, settledProgressTransitionCmd(m.progressToken)
+		}
+		if m.view != previousView || !m.motionActive() {
+			return m, nil
+		}
 		return m, motionTickCmd()
 	}
 
@@ -599,16 +726,36 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// starts the motion clock without each entry site knowing about it.
 	wasMoving := m.motionActive()
 	updated, cmd := m.dispatchByView(msg)
-	if model, ok := updated.(Model); ok && !wasMoving && model.motionActive() {
-		return model, tea.Batch(cmd, motionTickCmd())
+	if model, ok := updated.(Model); ok {
+		if model.portal.trigger == portalDetails && model.determinateProgressActive() {
+			if title, content := model.detailContent(); content != "" {
+				model.portal = model.portal.Refresh(title, content)
+			} else {
+				model.portal = model.portal.Close()
+			}
+		}
+		if !wasMoving && model.motionActive() {
+			return model, tea.Batch(cmd, motionTickCmd())
+		}
+		return model, cmd
 	}
 	return updated, cmd
+}
+
+func (m Model) progressHeight() int {
+	if m.windowHeight > 0 {
+		return m.windowHeight
+	}
+	return m.height
 }
 
 // motionActive reports whether any working surface is on screen: an
 // indeterminate wait, a determinate progress view, or the cleanup result's
 // running line. The one gate for the one motion clock.
 func (m Model) motionActive() bool {
+	if m.motionPreference == MotionOff {
+		return false
+	}
 	return m.indeterminateWaitActive() ||
 		m.determinateProgressActive() ||
 		(m.view == cleanupResultView && m.cleanupResult == nil)
@@ -879,7 +1026,7 @@ func (m Model) terminalProgress() *tea.ProgressBar {
 	}
 	state := tea.ProgressBarDefault
 	for _, p := range l.Phases {
-		if p.failed > 0 {
+		if p.Failed > 0 {
 			state = tea.ProgressBarError
 		}
 	}

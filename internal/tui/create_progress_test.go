@@ -8,7 +8,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 
 	"github.com/abiswas97/sentei/internal/creator"
-	"github.com/abiswas97/sentei/internal/pipeline"
+	"github.com/abiswas97/sentei/internal/progress"
 )
 
 func createProgressModel() Model {
@@ -53,9 +53,9 @@ func TestUpdateCreateProgress_WindowSize(t *testing.T) {
 
 func TestUpdateCreateProgress_EventAppendsAndWaitsForNext(t *testing.T) {
 	m := createProgressModel()
-	m.create.eventCh = make(chan pipeline.Event, 1)
+	m.create.eventCh = make(chan progress.Event, 1)
 
-	ev := pipeline.Event{Phase: "Setup", Step: "Create worktree", Status: pipeline.StepRunning}
+	ev := progress.Event{Phase: "Setup", Step: "Create worktree", Status: progress.StepRunning}
 	updated, cmd := m.updateCreateProgress(createEventMsg{Event: ev})
 	model := updated.(Model)
 
@@ -75,6 +75,7 @@ func TestUpdateCreateProgress_CompleteAdvancesToSummary(t *testing.T) {
 	updated, cmd := m.updateCreateProgress(createCompleteMsg{Result: result})
 	model := updated.(Model)
 
+	model = settleNow(t, model)
 	if model.view != createSummaryView {
 		t.Errorf("view = %d, want createSummaryView", model.view)
 	}
@@ -89,16 +90,16 @@ func TestUpdateCreateProgress_CompleteAdvancesToSummary(t *testing.T) {
 	}
 }
 
-func TestViewCreateProgress_ShowsTitleSubtitleAndPendingPhases(t *testing.T) {
+func TestViewCreateProgress_ShowsDeclaredPhases(t *testing.T) {
 	m := createProgressModel()
-	m.create.events = []pipeline.Event{
-		{Phase: "Setup", Step: "Create worktree", Status: pipeline.StepDone},
-		{Phase: "Dependencies", Step: "npm install", Status: pipeline.StepFailed, Error: errors.New("boom")},
+	m.create.events = []progress.Event{
+		{Phase: "Setup", Step: "Create worktree", Status: progress.StepDone},
+		{Phase: "Dependencies", Step: "npm install", Status: progress.StepFailed, Error: errors.New("boom")},
 	}
 
 	view := stripANSI(m.viewCreateProgress())
 
-	for _, want := range []string{"Creating worktree", "feature/x", "from main", "Setup", "Dependencies", "Integrations", "q quit"} {
+	for _, want := range []string{"Creating worktree", "feature/x", "from main", "Setup", "Dependencies", "q quit"} {
 		if !strings.Contains(view, want) {
 			t.Errorf("view missing %q:\n%s", want, view)
 		}

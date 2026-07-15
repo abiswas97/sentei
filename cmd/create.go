@@ -9,7 +9,7 @@ import (
 	"github.com/abiswas97/sentei/internal/config"
 	"github.com/abiswas97/sentei/internal/creator"
 	"github.com/abiswas97/sentei/internal/git"
-	"github.com/abiswas97/sentei/internal/pipeline"
+	"github.com/abiswas97/sentei/internal/progress"
 	"github.com/abiswas97/sentei/internal/repo"
 )
 
@@ -71,35 +71,45 @@ func RunCreate(args []string) error {
 
 	fmt.Printf("Creating worktree %q from %s...\n", opts.Branch, opts.Base)
 
-	result := creator.Run(runner, shell, creatorOpts, func(e pipeline.Event) {
+	result := creator.Run(runner, shell, creatorOpts, func(e progress.Event) {
 		printCreateEvent(e)
 	})
 
-	if result.HasFailures() {
-		return fmt.Errorf("create completed with errors")
+	if err := createResultError(result); err != nil {
+		return err
 	}
 
 	fmt.Printf("\n%sWorktree created:%s %s\n", green, nc, result.WorktreePath)
 	return nil
 }
 
-func printCreateEvent(e pipeline.Event) {
+func createResultError(result creator.Result) error {
+	if result.Err != nil {
+		return fmt.Errorf("create failed: %w", result.Err)
+	}
+	if result.HasFailures() {
+		return fmt.Errorf("create completed with errors")
+	}
+	return nil
+}
+
+func printCreateEvent(e progress.Event) {
 	switch e.Status {
-	case pipeline.StepRunning:
+	case progress.StepRunning:
 		fmt.Printf("%s→%s %s: %s\n", blue, nc, e.Phase, e.Step)
-	case pipeline.StepDone:
+	case progress.StepDone:
 		msg := ""
 		if e.Message != "" {
 			msg = " — " + e.Message
 		}
 		fmt.Printf("%s✓%s %s%s\n", green, nc, e.Step, msg)
-	case pipeline.StepFailed:
+	case progress.StepFailed:
 		msg := ""
 		if e.Error != nil {
 			msg = " — " + e.Error.Error()
 		}
 		fmt.Printf("%s✗%s %s%s\n", yellow, nc, e.Step, msg)
-	case pipeline.StepSkipped:
+	case progress.StepSkipped:
 		fmt.Printf("  %s%s (skipped)%s\n", dim, e.Step, nc)
 	}
 }

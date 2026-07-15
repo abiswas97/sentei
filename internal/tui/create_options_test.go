@@ -8,7 +8,7 @@ import (
 
 	"github.com/abiswas97/sentei/internal/config"
 	"github.com/abiswas97/sentei/internal/creator"
-	"github.com/abiswas97/sentei/internal/pipeline"
+	"github.com/abiswas97/sentei/internal/progress"
 	"github.com/abiswas97/sentei/internal/repo"
 )
 
@@ -139,9 +139,9 @@ func TestValidateBranchName(t *testing.T) {
 
 // drainCreatePipeline executes wait commands until the creation goroutine
 // reports completion, returning the final result and the events seen.
-func drainCreatePipeline(t *testing.T, m Model) (creator.Result, []pipeline.Event) {
+func drainCreatePipeline(t *testing.T, m Model) (creator.Result, []progress.Event) {
 	t.Helper()
-	var events []pipeline.Event
+	var events []progress.Event
 	for range 50 {
 		msg := m.waitForCreateEvent()()
 		switch msg := msg.(type) {
@@ -270,10 +270,10 @@ func TestStartCreation_OnlyEnabledEcosystemsPassed(t *testing.T) {
 
 func TestWaitForCreateEvent_DeliversEventThenCompletion(t *testing.T) {
 	m := createOptionsModel()
-	m.create.eventCh = make(chan pipeline.Event, 1)
+	m.create.eventCh = make(chan progress.Event, 1)
 	m.create.resultCh = make(chan creator.Result, 1)
 
-	ev := pipeline.Event{Phase: "Setup", Step: "Create worktree", Status: pipeline.StepRunning}
+	ev := progress.Event{Phase: "Setup", Step: "Create worktree", Status: progress.StepRunning}
 	m.create.eventCh <- ev
 	msg := m.waitForCreateEvent()()
 	got, ok := msg.(createEventMsg)

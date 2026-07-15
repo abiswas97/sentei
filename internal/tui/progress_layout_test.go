@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/abiswas97/sentei/internal/pipeline"
+	"github.com/abiswas97/sentei/internal/progress"
 )
 
 func TestProgressLayout_WithSubtitle(t *testing.T) {
@@ -13,18 +13,18 @@ func TestProgressLayout_WithSubtitle(t *testing.T) {
 		Subtitle: "feature/foo → from main",
 		Width:    80,
 		Height:   30,
-		Phases: []phaseDisplay{
-			{name: "Setup", total: 2, done: 1, steps: []stepDisplay{
-				{name: "Create worktree", status: pipeline.StepDone},
-				{name: "Merge base branch", status: pipeline.StepRunning},
+		Phases: []progress.PhaseState{
+			{Name: "Setup", Total: 2, Done: 1, Steps: []progress.StepState{
+				{Name: "Create worktree", Status: progress.StepDone},
+				{Name: "Merge base branch", Status: progress.StepRunning},
 			}},
-			{name: "Dependencies"},
-			{name: "Integrations"},
+			{Name: "Dependencies"},
+			{Name: "Integrations"},
 		},
 	}
 	view := stripANSI(l.View())
 
-	for _, want := range []string{"sentei ─ Creating worktree", "feature/foo → from main", "┄", "Setup", "Dependencies", "pending"} {
+	for _, want := range []string{"sentei ─ Creating worktree", "feature/foo → from main", "┄", "Setup", "2 phases waiting"} {
 		if !strings.Contains(view, want) {
 			t.Errorf("expected layout to contain %q, view:\n%s", want, view)
 		}
@@ -47,10 +47,10 @@ func TestProgressLayout_WithoutSubtitle(t *testing.T) {
 func TestProgressLayout_CompletedPhaseCollapses(t *testing.T) {
 	l := ProgressLayout{
 		Title: "T", Width: 80, Height: 30,
-		Phases: []phaseDisplay{
-			{name: "Setup", total: 2, done: 2, steps: []stepDisplay{
-				{name: "Create worktree", status: pipeline.StepDone},
-				{name: "Merge base branch", status: pipeline.StepDone},
+		Phases: []progress.PhaseState{
+			{Name: "Setup", Total: 2, Done: 2, Closed: true, Steps: []progress.StepState{
+				{Name: "Create worktree", Status: progress.StepDone},
+				{Name: "Merge base branch", Status: progress.StepDone},
 			}},
 		},
 	}
@@ -67,10 +67,10 @@ func TestProgressLayout_CompletedPhaseCollapses(t *testing.T) {
 func TestProgressLayout_CompletedPhaseWithFailuresKeepsSteps(t *testing.T) {
 	l := ProgressLayout{
 		Title: "T", Width: 80, Height: 30,
-		Phases: []phaseDisplay{
-			{name: "Setup", total: 2, done: 2, failed: 1, steps: []stepDisplay{
-				{name: "Create worktree", status: pipeline.StepDone},
-				{name: "Install hooks", status: pipeline.StepFailed},
+		Phases: []progress.PhaseState{
+			{Name: "Setup", Total: 2, Done: 2, Failed: 1, Steps: []progress.StepState{
+				{Name: "Create worktree", Status: progress.StepDone},
+				{Name: "Install hooks", Status: progress.StepFailed},
 			}},
 		},
 	}
@@ -87,11 +87,11 @@ func TestProgressLayout_CompletedPhaseWithFailuresKeepsSteps(t *testing.T) {
 func TestProgressLayout_ActivePhaseShowsSteps(t *testing.T) {
 	l := ProgressLayout{
 		Title: "T", Width: 80, Height: 30,
-		Phases: []phaseDisplay{
-			{name: "Removing worktrees", total: 30, done: 12, steps: []stepDisplay{
-				{name: "done-step", status: pipeline.StepDone},
-				{name: "active-step", status: pipeline.StepRunning},
-				{name: "pending-step", status: pipeline.StepPending},
+		Phases: []progress.PhaseState{
+			{Name: "Removing worktrees", Total: 30, Done: 12, Steps: []progress.StepState{
+				{Name: "done-step", Status: progress.StepDone},
+				{Name: "active-step", Status: progress.StepRunning},
+				{Name: "pending-step", Status: progress.StepPending},
 			}},
 		},
 	}
@@ -110,9 +110,9 @@ func TestProgressLayout_ActivePhaseShowsSteps(t *testing.T) {
 func TestProgressLayout_ZeroTotalPhaseIsPending(t *testing.T) {
 	l := ProgressLayout{
 		Title: "T", Width: 80, Height: 30,
-		Phases: []phaseDisplay{
-			{name: "Integrations", total: 0, done: 0, steps: []stepDisplay{
-				{name: "queued work", status: pipeline.StepPending},
+		Phases: []progress.PhaseState{
+			{Name: "Integrations", Total: 0, Done: 0, Steps: []progress.StepState{
+				{Name: "queued work", Status: progress.StepPending},
 			}},
 		},
 	}
@@ -129,14 +129,14 @@ func TestProgressLayout_ZeroTotalPhaseIsPending(t *testing.T) {
 func TestProgressLayout_OverallBarAggregatesPhases(t *testing.T) {
 	l := ProgressLayout{
 		Title: "T", Width: 80, Height: 30,
-		Phases: []phaseDisplay{
-			{name: "A", total: 12, done: 8},
-			{name: "B", total: 8, done: 2},
+		Phases: []progress.PhaseState{
+			{Name: "A", Total: 12, Done: 8},
+			{Name: "B", Total: 8, Done: 2},
 		},
 	}
 	view := stripANSI(l.View())
 
-	barWidth := overallBarWidth(80) - progressBarPercentReserve
+	barWidth := 80 - 2 - progressBarPercentReserve
 	want := strings.Repeat("█", barWidth/2) + strings.Repeat("░", barWidth-barWidth/2) + " 50%"
 	if !strings.Contains(view, want) {
 		t.Errorf("expected aggregated 50%% bar, view:\n%s", view)
@@ -146,8 +146,8 @@ func TestProgressLayout_OverallBarAggregatesPhases(t *testing.T) {
 func TestProgressLayout_DoneExceedsTotal_NoPanic(t *testing.T) {
 	l := ProgressLayout{
 		Title: "T", Width: 80, Height: 30,
-		Phases: []phaseDisplay{
-			{name: "A", total: 1, done: 3},
+		Phases: []progress.PhaseState{
+			{Name: "A", Total: 1, Done: 3},
 		},
 	}
 	view := stripANSI(l.View()) // must not panic
@@ -161,14 +161,14 @@ func TestProgressLayout_DoneExceedsTotal_NoPanic(t *testing.T) {
 }
 
 func TestProgressLayout_WindowsStepsOnShortTerminal(t *testing.T) {
-	steps := make([]stepDisplay, 30)
+	steps := make([]progress.StepState, 30)
 	for i := range steps {
-		steps[i] = stepDisplay{name: stepName(i), status: pipeline.StepPending}
+		steps[i] = progress.StepState{Name: stepName(i), Status: progress.StepPending}
 	}
-	steps[0].status = pipeline.StepRunning
+	steps[0].Status = progress.StepRunning
 	l := ProgressLayout{
 		Title: "T", Width: 80, Height: 15,
-		Phases: []phaseDisplay{{name: "Removing", total: 30, done: 0, steps: steps}},
+		Phases: []progress.PhaseState{{Name: "Removing", Total: 30, Done: 0, Steps: steps}},
 	}
 	view := stripANSI(l.View())
 

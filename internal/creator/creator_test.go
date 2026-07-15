@@ -8,7 +8,7 @@ import (
 
 	"github.com/abiswas97/sentei/internal/config"
 	"github.com/abiswas97/sentei/internal/integration"
-	"github.com/abiswas97/sentei/internal/pipeline"
+	"github.com/abiswas97/sentei/internal/progress"
 	"github.com/abiswas97/sentei/internal/testutil/mock"
 )
 
@@ -18,7 +18,7 @@ func TestRun_FullPipeline(t *testing.T) {
 		"/repo:[worktree add /repo/feature-auth -b feature/auth main]":     {Output: ""},
 		"/repo/feature-auth:[merge main --no-edit]":                        {Output: ""},
 		"/repo/feature-auth:shell[go mod download]":                        {Output: ""},
-		"/repo/feature-auth:shell[code-review-graph --version]":            {Output: "1.0"},
+		"/repo/main:shell[code-review-graph --version]":                    {Output: "1.0"},
 		"/repo:shell[code-review-graph build --repo '/repo/feature-auth']": {Output: ""},
 	}}
 
@@ -49,7 +49,7 @@ func TestRun_FullPipeline(t *testing.T) {
 		},
 	}
 
-	ec := &mock.EventCollector[pipeline.Event]{}
+	ec := &mock.EventCollector[progress.Event]{}
 	result := Run(runner, runner, opts, ec.Emit)
 
 	if result.WorktreePath != "/repo/feature-auth" {
@@ -95,11 +95,11 @@ func TestRun_CreateWorktreeFails_AbortsEarly(t *testing.T) {
 		},
 	}
 
-	ec := &mock.EventCollector[pipeline.Event]{}
+	ec := &mock.EventCollector[progress.Event]{}
 	result := Run(runner, runner, opts, ec.Emit)
 
-	if len(result.Phases) != 1 {
-		t.Fatalf("phase count = %d, want 1 (abort after setup)", len(result.Phases))
+	if len(result.Phases) != 2 {
+		t.Fatalf("phase count = %d, want full prepared projection", len(result.Phases))
 	}
 	if result.WorktreePath != "" {
 		t.Errorf("WorktreePath = %q, want empty on failure", result.WorktreePath)
@@ -122,11 +122,11 @@ func TestRun_MergeFailsContinues(t *testing.T) {
 		CopyEnvFiles:   false,
 	}
 
-	ec := &mock.EventCollector[pipeline.Event]{}
+	ec := &mock.EventCollector[progress.Event]{}
 	result := Run(runner, runner, opts, ec.Emit)
 
-	if len(result.Phases) != 3 {
-		t.Fatalf("phase count = %d, want 3 (continues despite merge failure)", len(result.Phases))
+	if len(result.Phases) != 1 {
+		t.Fatalf("phase count = %d, want only the non-empty setup phase", len(result.Phases))
 	}
 	if result.WorktreePath == "" {
 		t.Error("WorktreePath should be set even with merge failure")
@@ -167,7 +167,7 @@ func TestRun_CopyEnvFiles(t *testing.T) {
 		},
 	}
 
-	ec := &mock.EventCollector[pipeline.Event]{}
+	ec := &mock.EventCollector[progress.Event]{}
 	result := Run(runner, runner, opts, ec.Emit)
 
 	// Verify env file was copied
@@ -190,10 +190,15 @@ func TestResult_HasFailures(t *testing.T) {
 		want   bool
 	}{
 		{
+			name:   "contract error",
+			result: Result{Err: fmt.Errorf("progress delivery failed")},
+			want:   true,
+		},
+		{
 			name: "no failures",
 			result: Result{
-				Phases: []pipeline.Phase{
-					{Steps: []pipeline.StepResult{{Status: pipeline.StepDone}, {Status: pipeline.StepSkipped}}},
+				Phases: []progress.Phase{
+					{Steps: []progress.StepResult{{Status: progress.StepDone}, {Status: progress.StepSkipped}}},
 				},
 			},
 			want: false,
@@ -201,8 +206,8 @@ func TestResult_HasFailures(t *testing.T) {
 		{
 			name: "has failure",
 			result: Result{
-				Phases: []pipeline.Phase{
-					{Steps: []pipeline.StepResult{{Status: pipeline.StepDone}, {Status: pipeline.StepFailed}}},
+				Phases: []progress.Phase{
+					{Steps: []progress.StepResult{{Status: progress.StepDone}, {Status: progress.StepFailed}}},
 				},
 			},
 			want: true,

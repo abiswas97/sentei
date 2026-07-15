@@ -3,7 +3,7 @@ package tui
 import (
 	"github.com/abiswas97/sentei/internal/cleanup"
 	"github.com/abiswas97/sentei/internal/git"
-	"github.com/abiswas97/sentei/internal/pipeline"
+	"github.com/abiswas97/sentei/internal/progress"
 	"github.com/abiswas97/sentei/internal/worktree"
 )
 
@@ -16,13 +16,50 @@ type removalRun struct {
 	worktrees  []git.Worktree
 	statuses   map[string]string
 	result     worktree.DeletionResult
-	progressCh <-chan worktree.DeletionEvent
+	progressCh chan progress.Event
+	execution  *progress.Execution
+	events     []progress.Event
+	targets    []worktree.RemovalTarget
 
 	teardownRunning bool
-	teardownResults []pipeline.StepResult
+	// teardownPlanned is the step list scanned at confirm time (one step per
+	// worktree-integration with artifacts present), so the Teardown phase
+	// displays its real total from its first frame.
+	teardownPlanned []string
+	teardownResults []progress.StepResult
+	teardownOps     []teardownOperation
 
 	pruneErr      *error
 	cleanupResult *cleanup.Result
+}
+
+type teardownOperation struct {
+	groupID      string
+	stepID       progress.StepID
+	label        string
+	kind         teardownOperationKind
+	wtPath       string
+	command      string
+	managedPaths []string
+}
+
+type teardownOperationKind uint8
+
+const (
+	teardownCommand teardownOperationKind = iota
+	teardownArtifacts
+)
+
+type unlockOperation struct {
+	stepID   progress.StepID
+	worktree git.Worktree
+}
+
+type removalPreparation struct {
+	plan        progress.Plan
+	unlockOps   []unlockOperation
+	teardownOps []teardownOperation
+	targets     []worktree.RemovalTarget
 }
 
 func newRemovalRun(selected []git.Worktree) removalRun {

@@ -4,9 +4,10 @@ import (
 	"strings"
 	"testing"
 
-	"charm.land/bubbles/v2/progress"
+	progressbar "charm.land/bubbles/v2/progress"
 
 	"github.com/abiswas97/sentei/internal/git"
+	"github.com/abiswas97/sentei/internal/progress"
 )
 
 func TestProgressLayout_Overall(t *testing.T) {
@@ -15,9 +16,8 @@ func TestProgressLayout_Overall(t *testing.T) {
 		layout              ProgressLayout
 		wantDone, wantTotal int
 	}{
-		{"override wins", ProgressLayout{OverallDone: 3, OverallTotal: 10, Phases: []phaseDisplay{{done: 1, total: 1}}}, 3, 10},
-		{"discovered phases summed", ProgressLayout{Phases: []phaseDisplay{{done: 2, total: 4}, {done: 1, total: 2}}}, 3, 6},
-		{"undiscovered phase counts as outstanding", ProgressLayout{Phases: []phaseDisplay{{done: 2, total: 2}, {total: 0}}}, 2, 3},
+		{"discovered phases summed", ProgressLayout{Phases: []progress.PhaseState{{Done: 2, Total: 4}, {Done: 1, Total: 2}}}, 3, 6},
+		{"undiscovered phase counts as outstanding", ProgressLayout{Phases: []progress.PhaseState{{Done: 2, Total: 2}, {Total: 0}}}, 2, 3},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -33,7 +33,7 @@ func TestProgressFrame_GatedToProgressViews(t *testing.T) {
 	m := NewModel([]git.Worktree{}, nil, "/repo")
 
 	cmd := m.bar.SetPercent(0.5)
-	frame, ok := cmd().(progress.FrameMsg)
+	frame, ok := cmd().(progressbar.FrameMsg)
 	if !ok {
 		t.Fatal("SetPercent must yield a FrameMsg")
 	}

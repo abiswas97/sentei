@@ -9,7 +9,7 @@ import (
 
 	"github.com/abiswas97/sentei/internal/cleanup"
 	"github.com/abiswas97/sentei/internal/git"
-	"github.com/abiswas97/sentei/internal/pipeline"
+	"github.com/abiswas97/sentei/internal/progress"
 	"github.com/abiswas97/sentei/internal/worktree"
 )
 
@@ -34,7 +34,7 @@ func pollutedRun() removalRun {
 				{Path: "/work/b", Success: true},
 			},
 		},
-		teardownResults: []pipeline.StepResult{{Name: "old", Status: pipeline.StepDone}},
+		teardownResults: []progress.StepResult{{Name: "old", Status: progress.StepDone}},
 		pruneErr:        &pruneErr,
 		cleanupResult:   &cleanup.Result{},
 	}
@@ -86,8 +86,10 @@ func TestConfirmYes_SecondRunStartsFresh(t *testing.T) {
 	if !strings.Contains(view, "0%") {
 		t.Errorf("expected fresh run to start at 0%%, view:\n%s", view)
 	}
-	if !strings.Contains(view, "pending") {
-		t.Errorf("expected prune phase pending on fresh run, view:\n%s", view)
+	phases := model.buildRemovalPhases()
+	cleanupPhase := phases[len(phases)-1]
+	if cleanupPhase.Name != "Prune & cleanup" || cleanupPhase.Done != 0 {
+		t.Errorf("expected prune phase pending on fresh run, got %+v", cleanupPhase)
 	}
 }
 
@@ -98,12 +100,36 @@ func TestViewProgress_SecondRunCompletesAtHundredPercent(t *testing.T) {
 	m.remove.run = newRemovalRun([]git.Worktree{{Path: "/work/c", Branch: "refs/heads/c"}})
 	m.view = progressView
 
-	updated, _ := m.updateProgress(worktreeDeletedMsg{Path: "/work/c"})
+	updated, _ := m.updateProgress(removalEventMsg{event: progress.Event{Phase: worktree.RemovalPhaseName, Step: "/work/c", Status: progress.StepDone}})
 	model := updated.(Model)
 
 	view := model.viewProgress()
 	if !strings.Contains(view, "100%") {
 		t.Errorf("expected 100%% after the run's single deletion, view:\n%s", view)
+	}
+}
+
+func TestUpdateProgress_TerminalDeletionResultIsNotDoubleCountedByTrailingEvents(t *testing.T) {
+	wt := git.Worktree{Path: "/work/a", Branch: "refs/heads/a"}
+	m := NewModel([]git.Worktree{wt}, nil, "/repo")
+	m.remove.run = newRemovalRun([]git.Worktree{wt})
+	m.remove.run.targets = []worktree.RemovalTarget{{Worktree: wt, StepID: "remove-a"}}
+	m.remove.run.progressCh = make(chan progress.Event)
+	m.view = progressView
+
+	terminal := worktree.DeletionResult{
+		SuccessCount: 1,
+		Outcomes:     []worktree.WorktreeOutcome{{Path: wt.Path, Success: true}},
+	}
+	updated, _ := m.updateProgress(deletionsCompleteMsg{Result: terminal})
+	m = updated.(Model)
+	updated, _ = m.updateProgress(removalEventMsg{event: progress.Event{
+		Phase: worktree.RemovalPhaseID, Step: "remove-a", Status: progress.StepDone,
+	}})
+	m = updated.(Model)
+
+	if m.remove.run.result.SuccessCount != 1 || len(m.remove.run.result.Outcomes) != 1 {
+		t.Fatalf("trailing terminal event double-counted result: %+v", m.remove.run.result)
 	}
 }
 
@@ -148,6 +174,11 @@ func TestViewProgress_TeardownRunning_ShowsActivePhase(t *testing.T) {
 	}, nil, "/repo")
 	m.remove.run = newRemovalRun([]git.Worktree{{Path: "/work/a", Branch: "refs/heads/a"}})
 	m.remove.run.teardownRunning = true
+	m.remove.run.events = []progress.Event{
+		{Phase: teardownPhaseID, PhaseLabel: "Teardown", Step: "teardown-0", StepLabel: "Teardown code-review-graph", Status: progress.StepPending, Of: 1},
+		{Phase: teardownPhaseID, PhaseLabel: "Teardown", Close: true},
+		{Phase: teardownPhaseID, Step: "teardown-0", Status: progress.StepRunning, Of: 1},
+	}
 	m.view = progressView
 
 	view := stripAnsi(m.viewProgress())
@@ -190,10 +221,20 @@ func TestUpdateProgress_TeardownComplete_StartsDeletions(t *testing.T) {
 	m := NewModel(wts, nil, "/repo")
 	m.remove.run = newRemovalRun(wts)
 	m.remove.run.teardownRunning = true
+	m.remove.run.progressCh = make(chan progress.Event, 8)
+	m.remove.run.targets = []worktree.RemovalTarget{{Worktree: wts[0], StepID: "remove-0"}}
+	execution, err := progress.Start(progress.Plan{Phases: []progress.PlannedPhase{{
+		ID: worktree.RemovalPhaseID, Label: worktree.RemovalPhaseName,
+		Steps: []progress.PlannedStep{{ID: "remove-0", Label: "a", Checkpoints: 2}},
+	}}}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	m.remove.run.execution = execution
 	m.view = progressView
 
 	updated, cmd := m.updateProgress(teardownCompleteMsg{
-		results: []pipeline.StepResult{{Name: "Teardown code-review-graph", Status: pipeline.StepDone}},
+		results: []progress.StepResult{{Name: "Teardown code-review-graph", Status: progress.StepDone}},
 	})
 	model := updated.(Model)
 
@@ -203,10 +244,7 @@ func TestUpdateProgress_TeardownComplete_StartsDeletions(t *testing.T) {
 	if len(model.remove.run.teardownResults) != 1 {
 		t.Errorf("expected teardown results stored, got %d", len(model.remove.run.teardownResults))
 	}
-	if model.remove.run.progressCh == nil {
-		t.Error("expected deletion channel to be created")
-	}
 	if cmd == nil {
-		t.Fatal("expected a Cmd that consumes deletion events")
+		t.Fatal("expected a Cmd that starts deletion")
 	}
 }

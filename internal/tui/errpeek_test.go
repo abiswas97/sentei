@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/abiswas97/sentei/internal/git"
-	"github.com/abiswas97/sentei/internal/integration"
+	"github.com/abiswas97/sentei/internal/progress"
 )
 
 func TestErrorPeekLines_Bounds(t *testing.T) {
@@ -60,8 +60,8 @@ func TestRenderIntegrationOutcomes_FailureStaysBounded(t *testing.T) {
 	groups := []integrationWorktreeOutcomes{{
 		worktree: "/wt/feature-wip",
 		steps: []integrationStepOutcome{
-			{step: "Setup code-review-graph", ev: integration.ManagerEvent{Status: integration.StatusDone}},
-			{step: "Install cocoindex-code", ev: integration.ManagerEvent{Status: integration.StatusFailed, Error: errors.New(dump)}},
+			{step: "Setup code-review-graph", ev: progress.Event{Status: progress.StepDone}},
+			{step: "Install cocoindex-code", ev: progress.Event{Status: progress.StepFailed, Error: errors.New(dump)}},
 		},
 	}}
 
@@ -88,8 +88,8 @@ func TestRenderIntegrationOutcomes_FailureStaysBounded(t *testing.T) {
 func TestApplySummary_FailureUnlocksDetailPortal(t *testing.T) {
 	m := NewModel([]git.Worktree{}, nil, "/repo")
 	m.width = 100
-	m.integ.events = []integration.ManagerEvent{
-		{Worktree: "/wt/a", Step: "Install x", Status: integration.StatusFailed, Error: errors.New("line1\nline2\nerror: boom")},
+	m.integ.events = []progress.Event{
+		{Phase: "/wt/a", Step: "Install x", Status: progress.StepFailed, Error: errors.New("line1\nline2\nerror: boom")},
 	}
 	title, content := m.integrationSummaryDetailContent()
 	if title == "" || !strings.Contains(stripAnsi(content), "error: boom") {

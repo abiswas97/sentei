@@ -1,24 +1,25 @@
 package tui
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
 	"github.com/abiswas97/sentei/internal/config"
-	"github.com/abiswas97/sentei/internal/pipeline"
+	"github.com/abiswas97/sentei/internal/progress"
 	"github.com/abiswas97/sentei/internal/repo"
 )
 
 // drainRepoPipeline executes wait commands until the repo pipeline goroutine
 // reports completion, returning the final result and the events seen.
-func drainRepoPipeline(t *testing.T, m Model) (interface{}, []pipeline.Event) {
+func drainRepoPipeline(t *testing.T, m Model) (interface{}, []progress.Event) {
 	t.Helper()
-	var events []pipeline.Event
+	var events []progress.Event
 	for range 100 {
 		msg := m.waitForRepoEvent()()
 		switch msg := msg.(type) {
 		case repoEventMsg:
-			events = append(events, pipeline.Event(msg))
+			events = append(events, progress.Event(msg))
 		case repoDoneMsg:
 			return msg.result, events
 		default:
@@ -64,8 +65,12 @@ func TestStartRepoPipeline_DispatchesByOptionsType(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			m := repoProgressModel(t)
+			location := t.TempDir()
+			if tc.name == "migrate" {
+				m.runner.(*stubRunner).responses[location+" remote get-url origin"] = stubResponse{err: fmt.Errorf("error: No such remote 'origin'")}
+			}
 
-			cmd := m.startRepoPipeline(tc.opts(t.TempDir()))
+			cmd := m.startRepoPipeline(tc.opts(location))
 
 			if m.repo.eventCh == nil || m.repo.resultCh == nil {
 				t.Fatal("pipeline channels must be wired")
@@ -86,10 +91,10 @@ func TestStartRepoPipeline_DispatchesByOptionsType(t *testing.T) {
 
 func TestWaitForRepoEvent_DeliversEventThenDone(t *testing.T) {
 	m := repoProgressModel(t)
-	m.repo.eventCh = make(chan pipeline.Event, 1)
+	m.repo.eventCh = make(chan progress.Event, 1)
 	m.repo.resultCh = make(chan interface{}, 1)
 
-	m.repo.eventCh <- pipeline.Event{Phase: "Clone", Step: "Clone bare repository", Status: pipeline.StepRunning}
+	m.repo.eventCh <- progress.Event{Phase: "Clone", Step: "Clone bare repository", Status: progress.StepRunning}
 	msg := m.waitForRepoEvent()()
 	ev, ok := msg.(repoEventMsg)
 	if !ok {
@@ -124,8 +129,8 @@ func TestViewRepoProgress_TitlePerOperation(t *testing.T) {
 		t.Run(tc.opType, func(t *testing.T) {
 			m := repoProgressModel(t)
 			m.repo.opType = tc.opType
-			m.repo.events = []pipeline.Event{
-				{Phase: "Validate", Step: "Check repo", Status: pipeline.StepDone},
+			m.repo.events = []progress.Event{
+				{Phase: "Validate", Step: "Check repo", Status: progress.StepDone},
 			}
 
 			view := stripANSI(m.viewRepoProgress())

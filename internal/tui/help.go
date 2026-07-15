@@ -1,10 +1,15 @@
 package tui
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
+	"github.com/charmbracelet/x/ansi"
+
 	"github.com/abiswas97/sentei/internal/git"
+	"github.com/abiswas97/sentei/internal/progress"
+	"github.com/abiswas97/sentei/internal/repo"
 )
 
 // renderHelpSections formats key bindings as an aligned two-column table
@@ -96,11 +101,21 @@ func (m Model) helpForView() (string, []keySection) {
 // when the view has no contextual details (the key then falls through to the
 // view's own handling, e.g. the integration info card).
 func (m Model) detailContent() (string, string) {
+	if m.determinateProgressActive() {
+		layout, ok := m.activeProgressLayout()
+		if !ok || !progressNeedsDetails(layout, m.progressTopLevelError()) {
+			return "", ""
+		}
+		return portalProgressDetails, renderProgressDetails(layout, m.progressTopLevelError(), m.portal.contentWidth())
+	}
 	if m.view == cleanupPreviewView {
 		return m.cleanupDetailContent()
 	}
 	if m.view == integrationSummaryView {
 		return m.integrationSummaryDetailContent()
+	}
+	if m.view == summaryView {
+		return m.removalSummaryDetailContent()
 	}
 	if m.view == integrationListView || m.view == migrateIntegrationsView {
 		if len(m.integ.integrations) == 0 {
@@ -134,6 +149,152 @@ func (m Model) detailContent() (string, string) {
 		fmt.Fprintf(&b, "%s  %s\n", styleDim.Render(fmt.Sprintf("%-12s", r.label)), truncateWithEllipsis(r.value, valueWidth))
 	}
 	return portalWorktreeDetails, b.String()
+}
+
+func (m Model) progressTopLevelError() error {
+	switch m.view {
+	case progressView:
+		return m.remove.run.result.Err
+	case createProgressView:
+		if m.create.result != nil {
+			return m.create.result.Err
+		}
+	case repoProgressView, migrateProgressView:
+		switch result := m.repo.result.(type) {
+		case repo.CreateResult:
+			return result.Err
+		case repo.CloneResult:
+			return result.Err
+		case repo.MigrateResult:
+			return result.Err
+		}
+	case integrationProgressView:
+		return errors.Join(m.integ.prepareErr, m.integ.executionErr, m.integ.saveErr)
+	}
+	return nil
+}
+
+func progressNeedsDetails(layout ProgressLayout, topErr error) bool {
+	if topErr != nil {
+		return true
+	}
+	viewport := BuildProgressViewport(layout.Phases, layout.Height, layout.Completed)
+	if viewport.HistoryOmitted > 0 || viewport.Queued > 0 {
+		return true
+	}
+	if viewport.Focus != nil && WindowSteps(viewport.Focus.Steps, max(viewport.DetailRows-1, 0)).Windowed {
+		return true
+	}
+	for _, phase := range layout.Phases {
+		if phase.Failed > 0 {
+			return true
+		}
+		for _, step := range phase.Steps {
+			if step.Error != nil || step.Status == progress.StepFailed {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func renderProgressDetails(layout ProgressLayout, topErr error, width int) string {
+	var b strings.Builder
+	if topErr != nil {
+		writeProgressDetailValue(&b, "", styleError.Render("Operation error"), width)
+		writeProgressDetailValue(&b, "  ", topErr.Error(), width)
+		b.WriteString("\n")
+	}
+	for phaseIndex, phase := range layout.Phases {
+		if phaseIndex > 0 {
+			b.WriteString("\n")
+		}
+		writeProgressDetailValue(&b, "", styleTitle.Render(phase.Name), width)
+		writeProgressDetailValue(&b, "  "+styleDim.Render("Phase ID")+"  ", string(phase.ID), width)
+		writeProgressDetailValue(&b, "  "+styleDim.Render("Status")+"  ", progressPhaseStatus(phase), width)
+		for _, step := range phase.Steps {
+			b.WriteString("\n")
+			writeProgressDetailValue(&b, "  ", step.Name, width)
+			writeProgressDetailValue(&b, "    "+styleDim.Render("Step ID")+"  ", string(step.ID), width)
+			writeProgressDetailValue(&b, "    "+styleDim.Render("Status")+"  ", progressStepStatus(step.Status), width)
+			if step.Message != "" {
+				label := "Message"
+				if step.Status == progress.StepSkipped {
+					label = "Skip reason"
+				}
+				writeProgressDetailValue(&b, "    "+styleDim.Render(label)+"  ", step.Message, width)
+			}
+			if step.Error != nil {
+				writeProgressDetailValue(&b, "    "+styleError.Render("Error")+"  ", step.Error.Error(), width)
+			}
+		}
+	}
+	return strings.TrimRight(b.String(), "\n")
+}
+
+func writeProgressDetailValue(b *strings.Builder, prefix, value string, width int) {
+	if width <= 0 {
+		return
+	}
+	prefixWidth := ansi.StringWidth(prefix)
+	const minInlineValueWidth = 4
+	if prefix != "" && width-prefixWidth < minInlineValueWidth {
+		label := strings.TrimRight(prefix, " ")
+		b.WriteString(fitProgressLine(label, width))
+		b.WriteString("\n")
+
+		leading := len(prefix) - len(strings.TrimLeft(prefix, " "))
+		indentWidth := min(leading+2, max(width-minInlineValueWidth, 0))
+		indent := strings.Repeat(" ", indentWidth)
+		wrapped := ansi.Hardwrap(value, max(width-indentWidth, 1), true)
+		for _, line := range strings.Split(wrapped, "\n") {
+			b.WriteString(indent)
+			b.WriteString(line)
+			b.WriteString("\n")
+		}
+		return
+	}
+	wrapped := ansi.Hardwrap(value, max(width-prefixWidth, 1), true)
+	continuation := strings.Repeat(" ", prefixWidth)
+	for i, line := range strings.Split(wrapped, "\n") {
+		if i == 0 {
+			b.WriteString(prefix)
+		} else {
+			b.WriteString(continuation)
+		}
+		b.WriteString(line)
+		b.WriteString("\n")
+	}
+}
+
+func progressPhaseStatus(phase progress.PhaseState) string {
+	switch {
+	case phase.Failed > 0:
+		return "failed"
+	case phase.Settled():
+		return "done"
+	case phaseHasStatus(phase, progress.StepRunning):
+		return "running"
+	case phase.Total == 0:
+		return "empty"
+	default:
+		return "pending"
+	}
+}
+
+func progressStepStatus(status progress.StepStatus) string {
+	switch status {
+	case progress.StepRunning:
+		return "running"
+	case progress.StepDone:
+		return "done"
+	case progress.StepFailed:
+		return "failed"
+	case progress.StepSkipped:
+		return "skipped"
+	default:
+		return "pending"
+	}
 }
 
 func formatCommitDate(wt git.Worktree) string {

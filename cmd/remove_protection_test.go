@@ -8,6 +8,7 @@ import (
 
 	"github.com/abiswas97/sentei/internal/git"
 	"github.com/abiswas97/sentei/internal/repo"
+	"github.com/abiswas97/sentei/internal/testtmp"
 )
 
 // TestRemove_DefaultBranchProtectedFromWorktree builds a real sentei bare repo
@@ -21,7 +22,9 @@ func TestRemove_DefaultBranchProtectedFromWorktree(t *testing.T) {
 
 	mustGit := func(dir string, args ...string) {
 		t.Helper()
-		out, err := exec.Command("git", append([]string{"-C", dir}, args...)...).CombinedOutput()
+		cmd := exec.Command("git", append([]string{"-C", dir}, args...)...)
+		cmd.Env = testtmp.HermeticGitEnv()
+		out, err := cmd.CombinedOutput()
 		if err != nil {
 			t.Fatalf("git %v: %s", args, out)
 		}
