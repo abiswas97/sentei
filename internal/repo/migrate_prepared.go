@@ -46,13 +46,16 @@ type preparedMigrate struct {
 func prepareMigrate(runner git.CommandRunner, shell git.ShellRunner, opts MigrateOptions) preparedMigrate {
 	repoPath := opts.RepoPath
 	barePath := filepath.Join(repoPath, ".bare")
-	originURL, _ := runner.Run(repoPath, "remote", "get-url", "origin")
+	originURL, originErr := runner.Run(repoPath, "remote", "get-url", "origin")
 	backupPath := fmt.Sprintf("%s_backup_%s", repoPath, time.Now().Format("20060102_150405"))
 	branch := ""
 	isDirty := false
 	prepared := preparedMigrate{
 		result: MigrateResult{BareRoot: repoPath}, backupPath: backupPath,
 		branch: &branch, isDirty: &isDirty, backupCopyIndex: -1,
+	}
+	if originErr != nil && !isMissingOrigin(originErr) {
+		prepared.err = fmt.Errorf("reading origin remote before migration: %w", originErr)
 	}
 	add := func(phaseID, phaseLabel, stepID, label string, kind migrateOperationKind, run func(*progress.Execution) (string, error)) {
 		if len(prepared.plan.Phases) == 0 || prepared.plan.Phases[len(prepared.plan.Phases)-1].ID != phaseID {
@@ -179,6 +182,9 @@ func (p preparedMigrate) run(emit func(progress.Event)) MigrateResult {
 		} else {
 			var step progress.StepResult
 			step, err = execution.Run(operation.phaseID, operation.stepID, func() (string, error) { return operation.run(execution) })
+			if operation.kind == migrateBackupCopy && step.Status == progress.StepDone {
+				result.BackupPath = p.backupPath
+			}
 			if err == nil && step.Status == progress.StepFailed {
 				failedBy = operation.label
 			}
@@ -208,4 +214,9 @@ func (p preparedMigrate) run(emit func(progress.Event)) MigrateResult {
 	result.Phases = execution.Phases()
 	result.Err = errors.Join(result.Err, finishErr)
 	return result
+}
+
+func isMissingOrigin(err error) bool {
+	message := strings.ToLower(err.Error())
+	return strings.Contains(message, "no such remote") && strings.Contains(message, "origin")
 }

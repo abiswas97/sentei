@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -64,8 +65,12 @@ func TestStartRepoPipeline_DispatchesByOptionsType(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			m := repoProgressModel(t)
+			location := t.TempDir()
+			if tc.name == "migrate" {
+				m.runner.(*stubRunner).responses[location+" remote get-url origin"] = stubResponse{err: fmt.Errorf("error: No such remote 'origin'")}
+			}
 
-			cmd := m.startRepoPipeline(tc.opts(t.TempDir()))
+			cmd := m.startRepoPipeline(tc.opts(location))
 
 			if m.repo.eventCh == nil || m.repo.resultCh == nil {
 				t.Fatal("pipeline channels must be wired")

@@ -28,6 +28,38 @@ func TestPrepareMigrate_FreezesOriginBeforeExecution(t *testing.T) {
 	}
 }
 
+func TestPrepareMigrate_DistinguishesNoOriginFromLookupFailure(t *testing.T) {
+	t.Run("verified no origin", func(t *testing.T) {
+		runner := &mock.Runner{Responses: map[string]mock.Response{
+			"/repo:[remote get-url origin]": {Err: errors.New("git remote get-url origin: error: No such remote 'origin'")},
+		}}
+		prepared := prepareMigrate(runner, runner, MigrateOptions{RepoPath: "/repo"})
+		if prepared.err != nil {
+			t.Fatalf("err = %v", prepared.err)
+		}
+		for _, operation := range prepared.operations {
+			if operation.stepID == "restore-origin" {
+				t.Fatal("restore-origin declared without an origin")
+			}
+		}
+	})
+
+	t.Run("lookup infrastructure failure", func(t *testing.T) {
+		lookupErr := errors.New("permission denied reading git config")
+		runner := &mock.Runner{Responses: map[string]mock.Response{
+			"/repo:[remote get-url origin]": {Err: lookupErr},
+		}}
+		prepared := prepareMigrate(runner, runner, MigrateOptions{RepoPath: "/repo"})
+		result := prepared.run(func(progress.Event) {})
+		if !errors.Is(result.Err, lookupErr) {
+			t.Fatalf("Err = %v, want wrapped lookup failure", result.Err)
+		}
+		if len(result.Phases) != 0 || len(runner.Calls) != 1 {
+			t.Fatalf("destructive work started: phases=%#v calls=%v", result.Phases, runner.Calls)
+		}
+	})
+}
+
 func TestPreparedMigrate_FailurePolicyAndBackupInformation(t *testing.T) {
 	runner := &mock.Runner{Responses: map[string]mock.Response{"/repo:[remote get-url origin]": {}}}
 	base := prepareMigrate(runner, runner, MigrateOptions{RepoPath: "/repo"})
@@ -66,6 +98,26 @@ func TestPreparedMigrate_CallbackPanicPopulatesErr(t *testing.T) {
 	result := prepareMigrate(runner, runner, MigrateOptions{RepoPath: "/repo"}).run(func(progress.Event) { panic(want) })
 	if !errors.Is(result.Err, want) || len(result.Phases) != 0 {
 		t.Fatalf("result = %#v", result)
+	}
+}
+
+func TestPreparedMigrate_BackupPathSurvivesDoneDeliveryPanic(t *testing.T) {
+	want := errors.New("delivery")
+	runner := &mock.Runner{Responses: map[string]mock.Response{"/repo:[remote get-url origin]": {}}}
+	prepared := prepareMigrate(runner, runner, MigrateOptions{RepoPath: "/repo"})
+	for i := range prepared.operations {
+		prepared.operations[i].run = func(*progress.Execution) (string, error) { return "", nil }
+	}
+	result := prepared.run(func(event progress.Event) {
+		if event.Phase == "migrate:backup" && event.Step == "copy" && event.Status == progress.StepDone {
+			panic(want)
+		}
+	})
+	if !errors.Is(result.Err, want) {
+		t.Fatalf("Err = %v", result.Err)
+	}
+	if result.BackupPath != prepared.backupPath {
+		t.Fatalf("BackupPath = %q, want %q", result.BackupPath, prepared.backupPath)
 	}
 }
 

@@ -26,6 +26,7 @@ func TestMigrate_Successful(t *testing.T) {
 	barePath := filepath.Join(repoPath, ".bare")
 
 	runner := &mock.Runner{Responses: map[string]mock.Response{
+		fmt.Sprintf("%s:[remote get-url origin]", repoPath): {Err: fmt.Errorf("error: No such remote 'origin'")},
 		// Validate
 		fmt.Sprintf("%s:[status --porcelain]", repoPath):    {Output: ""},
 		fmt.Sprintf("%s:[branch --show-current]", repoPath): {Output: "main"},
@@ -69,6 +70,7 @@ func TestMigrate_DirtyRepo_WarningContinues(t *testing.T) {
 	barePath := filepath.Join(repoPath, ".bare")
 
 	runner := &mock.Runner{Responses: map[string]mock.Response{
+		fmt.Sprintf("%s:[remote get-url origin]", repoPath):                                          {Err: fmt.Errorf("error: No such remote 'origin'")},
 		fmt.Sprintf("%s:[status --porcelain]", repoPath):                                             {Output: "M file.txt"},
 		fmt.Sprintf("%s:[branch --show-current]", repoPath):                                          {Output: "develop"},
 		fmt.Sprintf("%s:[clone --bare .git %s]", repoPath, barePath):                                 {Output: ""},
@@ -109,6 +111,7 @@ func TestMigrate_CloneFailure_ShowsRollbackInfo(t *testing.T) {
 	barePath := filepath.Join(repoPath, ".bare")
 
 	runner := &mock.Runner{Responses: map[string]mock.Response{
+		fmt.Sprintf("%s:[remote get-url origin]", repoPath): {Err: fmt.Errorf("error: No such remote 'origin'")},
 		fmt.Sprintf("%s:[status --porcelain]", repoPath):    {Output: ""},
 		fmt.Sprintf("%s:[branch --show-current]", repoPath): {Output: "main"},
 		fmt.Sprintf("%s:[clone --bare .git %s]", repoPath, barePath): {
@@ -154,6 +157,7 @@ func TestMigrate_DetachedHead_RejectedBeforeDestruction(t *testing.T) {
 	os.MkdirAll(filepath.Join(repoPath, ".git"), 0755)
 
 	runner := &mock.Runner{Responses: map[string]mock.Response{
+		fmt.Sprintf("%s:[remote get-url origin]", repoPath): {Err: fmt.Errorf("error: No such remote 'origin'")},
 		fmt.Sprintf("%s:[status --porcelain]", repoPath):    {Output: ""},
 		fmt.Sprintf("%s:[branch --show-current]", repoPath): {Output: ""}, // detached HEAD
 	}}
@@ -228,6 +232,7 @@ func TestMigrate_SlashBranch_ChecksOutExistingBranch(t *testing.T) {
 	barePath := filepath.Join(repoPath, ".bare")
 
 	runner := &mock.Runner{Responses: map[string]mock.Response{
+		fmt.Sprintf("%s:[remote get-url origin]", repoPath):                                          {Err: fmt.Errorf("error: No such remote 'origin'")},
 		fmt.Sprintf("%s:[status --porcelain]", repoPath):                                             {Output: ""},
 		fmt.Sprintf("%s:[branch --show-current]", repoPath):                                          {Output: "feature/foo"},
 		fmt.Sprintf("%s:[clone --bare .git %s]", repoPath, barePath):                                 {Output: ""},
@@ -284,6 +289,7 @@ func TestMigrate_BackupFailure_LeavesNoDestructiveRestore(t *testing.T) {
 	os.MkdirAll(filepath.Join(repoPath, ".git"), 0755)
 
 	runner := &mock.Runner{Responses: map[string]mock.Response{
+		fmt.Sprintf("%s:[remote get-url origin]", repoPath): {Err: fmt.Errorf("error: No such remote 'origin'")},
 		fmt.Sprintf("%s:[status --porcelain]", repoPath):    {Output: ""},
 		fmt.Sprintf("%s:[branch --show-current]", repoPath): {Output: "main"},
 	}}
