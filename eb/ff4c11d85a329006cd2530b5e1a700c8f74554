@@ -1,0 +1,53 @@
+internal/tui/remove_run.go
+  s_47b5c057f8c030::t_46556cacf3698e 46-51
+  s_47b5c057f8c030::t_245671bf231206 37-42
+  s_47b5c057f8c030::t_5bd24396126e78 43
+  s_47b5c057f8c030::t_9213ed21345fce 52
+internal/tui/removal_preparation_test.go
+  s_47b5c057f8c030::t_be61156cffd0d6 65-76
+  s_47b5c057f8c030::t_90e5c75ae83fe4 123-124
+  s_47b5c057f8c030::t_a80f2a4a361beb 77-122,125-128
+internal/tui/confirm.go
+  s_47b5c057f8c030::t_5bd24396126e78 160,255-259
+  s_47b5c057f8c030::t_36c73fec61b980 263
+  s_47b5c057f8c030::t_90e5c75ae83fe4 135,137-140,145-147,150,152-159
+  s_47b5c057f8c030::t_46556cacf3698e 123-129,151,161-163,229-241,244,246,248-254,260-262,264-266,268-273,276-277
+  s_47b5c057f8c030::t_a979b5c0c1779d 136,141
+  s_47b5c057f8c030::t_3e08cdc67582d0 142-143
+internal/integration/apply_test.go
+  s_47b5c057f8c030::t_a32953982a7487 27-30,454-540
+  s_47b5c057f8c030::t_dc31c8e8745d06 638,642,646
+  s_47b5c057f8c030::t_a80f2a4a361beb 541-542,665-716
+  s_47b5c057f8c030::t_be61156cffd0d6 613-637,639-641,643-645,647-664
+  s_47b5c057f8c030::t_b4427ee4d544a9 543
+internal/tui/confirm_test.go
+  s_47b5c057f8c030::t_a80f2a4a361beb 346-397
+  s_47b5c057f8c030::t_aa808b0ebe1ea9 5
+  s_47b5c057f8c030::t_a32953982a7487 23-28,343-344,398-440,442-443
+  s_47b5c057f8c030::t_be61156cffd0d6 267,276,294-342
+  s_47b5c057f8c030::t_01c4fe7630b213 4
+  s_47b5c057f8c030::t_9de5e2bd7c8d92 345
+internal/integration/apply.go
+  s_47b5c057f8c030::t_3e08cdc67582d0 202-209,264-267,334,345
+  s_47b5c057f8c030::t_5bd24396126e78 49-54,220-221,271,533-543,546-561,564
+  s_47b5c057f8c030::t_90e5c75ae83fe4 328,330,332-333,335-344,346-349,355-382
+  s_47b5c057f8c030::t_46556cacf3698e 111-113,219,283-327,329,331,350-354
+  s_47b5c057f8c030::t_245671bf231206 47-48,55-56
+  s_47b5c057f8c030::t_d66d37a86e6ffb 383
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "ebff4c11d85a329006cd2530b5e1a700c8f74554",
+  "prompts": {},
+  "sessions": {
+    "s_47b5c057f8c030": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f5f62-a0bd-7f92-96e2-b1de98524420",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>"
+    }
+  }
+}
