@@ -1,6 +1,9 @@
 package creator
 
 import (
+	"errors"
+	"fmt"
+
 	"github.com/abiswas97/sentei/internal/config"
 	"github.com/abiswas97/sentei/internal/git"
 	"github.com/abiswas97/sentei/internal/integration"
@@ -21,30 +24,28 @@ type Options struct {
 type Result struct {
 	WorktreePath string
 	Phases       []progress.Phase
+	Err          error
 }
 
 func (r *Result) HasFailures() bool {
-	return progress.PhasesHaveFailures(r.Phases)
+	return r.Err != nil || progress.PhasesHaveFailures(r.Phases)
 }
 
 func Run(runner git.CommandRunner, shell git.ShellRunner, opts Options, emit func(progress.Event)) Result {
 	result := Result{}
-
-	setupPhase := runSetup(runner, opts, emit)
-	result.Phases = append(result.Phases, setupPhase)
-
-	if setupPhase.Steps[0].Status == progress.StepFailed {
+	prepared, err := prepareCreation(runner, shell, opts)
+	if err != nil {
+		result.Err = err
 		return result
 	}
-	result.WorktreePath = git.WorktreePath(opts.RepoPath, opts.BranchName)
-
-	depsPhase := runDeps(shell, result.WorktreePath, opts, emit)
-	result.Phases = append(result.Phases, depsPhase)
-	progress.ClosePhase(depsPhase.Name, emit)
-
-	intPhase := runIntegrations(shell, result.WorktreePath, opts, emit)
-	result.Phases = append(result.Phases, intPhase)
-	progress.ClosePhase(intPhase.Name, emit)
-
+	execution, err := progress.Start(prepared.plan, emit)
+	if err != nil {
+		result.Err = fmt.Errorf("starting worktree creation: %w", err)
+		return result
+	}
+	runErr := prepared.run(execution, runner, shell, &result)
+	finishErr := execution.Finish("worktree creation finished")
+	result.Phases = execution.Phases()
+	result.Err = errors.Join(runErr, finishErr)
 	return result
 }

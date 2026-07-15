@@ -75,11 +75,21 @@ func RunCreate(args []string) error {
 		printCreateEvent(e)
 	})
 
-	if result.HasFailures() {
-		return fmt.Errorf("create completed with errors")
+	if err := createResultError(result); err != nil {
+		return err
 	}
 
 	fmt.Printf("\n%sWorktree created:%s %s\n", green, nc, result.WorktreePath)
+	return nil
+}
+
+func createResultError(result creator.Result) error {
+	if result.Err != nil {
+		return fmt.Errorf("create failed: %w", result.Err)
+	}
+	if result.HasFailures() {
+		return fmt.Errorf("create completed with errors")
+	}
 	return nil
 }
 

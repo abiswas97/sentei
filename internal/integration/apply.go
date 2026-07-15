@@ -85,17 +85,23 @@ func (p PreparedApply) Empty() bool { return len(p.operations) == 0 }
 // PrepareApply performs the read-only detection pass once in the first target
 // worktree, then freezes both the declaration and every execution decision.
 func PrepareApply(shell git.ShellRunner, repoPath, mainWT string, toEnable, toDisable []Integration, wtPaths []string) (PreparedApply, error) {
+	probeDir := ""
+	if len(wtPaths) > 0 {
+		probeDir = wtPaths[0]
+	}
+	return PrepareApplyForTarget(shell, repoPath, mainWT, probeDir, toEnable, toDisable, wtPaths)
+}
+
+// PrepareApplyForTarget separates the existing worktree used for read-only
+// availability probes from future target worktrees. This lets callers freeze
+// an apply plan before any target is created.
+func PrepareApplyForTarget(shell git.ShellRunner, repoPath, mainWT, probeDir string, toEnable, toDisable []Integration, wtPaths []string) (PreparedApply, error) {
 	if (len(toEnable) > 0 || len(toDisable) > 0) && len(wtPaths) == 0 {
 		return PreparedApply{}, errors.New("preparing integrations: no target worktree")
 	}
 	if err := validateApplyInputs(toEnable, toDisable); err != nil {
 		return PreparedApply{}, fmt.Errorf("preparing integrations: %w", err)
 	}
-	probeDir := ""
-	if len(wtPaths) > 0 {
-		probeDir = wtPaths[0]
-	}
-
 	type enabledDecision struct {
 		integration Integration
 		key         string
@@ -252,6 +258,33 @@ func PrepareApply(shell git.ShellRunner, repoPath, mainWT string, toEnable, toDi
 	return PreparedApply{plan: planForOperations(operations), operations: operations, files: realApplyFileOperations{}}, nil
 }
 
+// BindPhase returns a copy whose operations share one caller-owned phase.
+// Operation identities and dependency edges remain semantic and unchanged
+// apart from their phase-qualified keys.
+func (p PreparedApply) BindPhase(phaseID progress.PhaseID, phaseLabel string) (PreparedApply, error) {
+	if phaseID == "" {
+		return PreparedApply{}, errors.New("binding integration apply: empty phase ID")
+	}
+	operations := append([]applyOperation(nil), p.operations...)
+	keys := make(map[string]string, len(operations))
+	for i := range operations {
+		operations[i].dependsOn = append([]string(nil), operations[i].dependsOn...)
+		oldKey := operations[i].key()
+		operations[i].phaseID = phaseID
+		operations[i].phaseName = phaseLabel
+		keys[oldKey] = operations[i].key()
+	}
+	for i := range operations {
+		for j, dependency := range operations[i].dependsOn {
+			operations[i].dependsOn[j] = keys[dependency]
+		}
+	}
+	if err := validateOperationGraph(operations); err != nil {
+		return PreparedApply{}, fmt.Errorf("binding integration apply: %w", err)
+	}
+	return PreparedApply{plan: planForOperations(operations), operations: operations, files: p.files}, nil
+}
+
 func validateApplyInputs(toEnable, toDisable []Integration) error {
 	identities := make(map[string]string, len(toEnable)+len(toDisable))
 	dependencies := make(map[string]Dependency)
@@ -329,12 +362,28 @@ func (p PreparedApply) Run(shell git.ShellRunner, emit func(progress.Event)) ([]
 	if err != nil {
 		return nil, fmt.Errorf("starting integration apply: %w", err)
 	}
+	runErr := p.RunIn(execution, shell)
+	finishErr := execution.Finish("integration apply finished")
+	if finishErr != nil {
+		finishErr = fmt.Errorf("finishing integration apply: %w", finishErr)
+	}
+	return execution.Phases(), errors.Join(runErr, finishErr)
+}
+
+// RunIn executes the frozen operations through an already-started shared
+// execution. It does not start or finish that execution.
+func (p PreparedApply) RunIn(execution *progress.Execution, shell git.ShellRunner) error {
+	if execution == nil {
+		return errors.New("executing integration apply: nil execution")
+	}
+	if err := validateOperationGraph(p.operations); err != nil {
+		return fmt.Errorf("validating integration apply: %w", err)
+	}
 	results := make(map[string]progress.StepResult, len(p.operations))
 	files := p.files
 	if files == nil {
 		files = realApplyFileOperations{}
 	}
-	var runErr error
 	for _, op := range p.operations {
 		blockedBy := ""
 		for _, dependency := range op.dependsOn {
@@ -347,8 +396,7 @@ func (p PreparedApply) Run(shell git.ShellRunner, emit func(progress.Event)) ([]
 		if blockedBy != "" {
 			result, err := execution.Skip(op.phaseID, op.stepID, "blocked by "+blockedBy)
 			if err != nil {
-				runErr = fmt.Errorf("skipping %s: %w", op.label, err)
-				break
+				return fmt.Errorf("skipping %s: %w", op.label, err)
 			}
 			results[op.key()] = result
 			continue
@@ -378,16 +426,11 @@ func (p PreparedApply) Run(shell git.ShellRunner, emit func(progress.Event)) ([]
 			result, transitionErr = execution.Run(op.phaseID, op.stepID, func() (string, error) { return shell.RunShell(op.dir, op.command) })
 		}
 		if transitionErr != nil {
-			runErr = fmt.Errorf("executing %s: %w", op.label, transitionErr)
-			break
+			return fmt.Errorf("executing %s: %w", op.label, transitionErr)
 		}
 		results[op.key()] = result
 	}
-	finishErr := execution.Finish("integration apply finished")
-	if finishErr != nil {
-		finishErr = fmt.Errorf("finishing integration apply: %w", finishErr)
-	}
-	return execution.Phases(), errors.Join(runErr, finishErr)
+	return nil
 }
 
 func detectForApply(shell git.ShellRunner, dir string, detect DetectSpec) bool {

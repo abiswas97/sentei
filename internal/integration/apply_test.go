@@ -130,6 +130,40 @@ func TestPrepareApply_MissingToolPlansPrerequisiteOnce(t *testing.T) {
 	}
 }
 
+func TestPrepareApplyForTarget_ProbesExistingWorktreeAndBindsSharedExecution(t *testing.T) {
+	integ := testIntegration("tool")
+	shell := &applyShell{responses: map[string]mockShellResponse{
+		"/repo/main:shell[tool detect]":                   {output: "installed"},
+		"/repo/feature:shell[tool setup '/repo/feature']": {},
+	}}
+	prepared, err := PrepareApplyForTarget(shell, "/repo", "/repo/main", "/repo/main", []Integration{integ}, nil, []string{"/repo/feature"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	prepared, err = prepared.BindPhase("integrations", "Integrations")
+	if err != nil {
+		t.Fatal(err)
+	}
+	execution, err := progress.Start(prepared.Plan(), func(progress.Event) {})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := prepared.RunIn(execution, shell); err != nil {
+		t.Fatal(err)
+	}
+	if err := execution.Finish("done"); err != nil {
+		t.Fatal(err)
+	}
+	if got := prepared.Plan().Phases; len(got) != 1 || got[0].ID != "integrations" {
+		t.Fatalf("bound phases = %#v", got)
+	}
+	for _, call := range shell.calls {
+		if strings.Contains(call, "/repo/feature:shell[tool detect]") {
+			t.Fatalf("future target was probed: %v", shell.calls)
+		}
+	}
+}
+
 func TestPreparedApply_InstallFailureSkipsEverySetup(t *testing.T) {
 	integ := testIntegration("tool")
 	shell := &applyShell{responses: map[string]mockShellResponse{

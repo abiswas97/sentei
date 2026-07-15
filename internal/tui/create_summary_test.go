@@ -11,6 +11,17 @@ import (
 	"github.com/abiswas97/sentei/internal/progress"
 )
 
+func TestCreateSummaryShowsCreatorContractError(t *testing.T) {
+	m := createOptionsModel()
+	m.width = 100
+	m.create.result = &creator.Result{Err: errors.New("progress delivery failed")}
+
+	view := stripANSI(m.viewCreateSummary())
+	if !strings.Contains(view, "progress delivery failed") || strings.Contains(view, " ready") {
+		t.Fatalf("summary did not propagate creator error:\n%s", view)
+	}
+}
+
 func TestUpdateCreateSummary_EnterReturnsToMenuWhenMenuLaunched(t *testing.T) {
 	m := createOptionsModel()
 	m.view = createSummaryView

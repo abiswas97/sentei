@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -8,8 +9,16 @@ import (
 	"testing"
 
 	"github.com/abiswas97/sentei/internal/config"
+	"github.com/abiswas97/sentei/internal/creator"
 	"github.com/abiswas97/sentei/internal/git"
 )
+
+func TestCreateResultErrorPropagatesContractError(t *testing.T) {
+	want := errors.New("progress delivery failed")
+	if got := createResultError(creator.Result{Err: want}); !errors.Is(got, want) {
+		t.Fatalf("createResultError() = %v, want wrapped %v", got, want)
+	}
+}
 
 func TestMatchEcosystems(t *testing.T) {
 	available := []config.EcosystemConfig{

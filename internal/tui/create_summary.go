@@ -43,13 +43,21 @@ func (m Model) viewCreateSummary() string {
 	}
 
 	hasFailures := result != nil && result.HasFailures()
+	hasContractError := result != nil && result.Err != nil
 
 	b.WriteString(viewTitle(titleWorktreeCreated))
 	b.WriteString("\n\n")
 	b.WriteString(viewSeparator(m.width))
 	b.WriteString("\n\n")
 
-	if hasFailures {
+	if hasContractError {
+		fmt.Fprintf(&b, "  %s %s creation failed\n\n",
+			styleIndicatorFailed.Render(indicatorFailed), branch)
+		for _, line := range errorPeekLines(result.Err.Error(), max(m.width-8, 20)) {
+			fmt.Fprintf(&b, "      %s\n", styleError.Render(line))
+		}
+		b.WriteString("\n")
+	} else if hasFailures {
 		fmt.Fprintf(&b, "  %s %s created with issues\n\n",
 			styleIndicatorWarning.Render(indicatorWarning), branch)
 	} else {
