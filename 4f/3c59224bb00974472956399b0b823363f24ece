@@ -1,0 +1,45 @@
+.demos/progress-arc/integration-failure.tape
+  s_47b5c057f8c030::t_e7fc8d41aebc65 2,5-11,13,15,19,23
+  s_47b5c057f8c030::t_628a28db0c77bf 1
+  s_47b5c057f8c030::t_a6ea6eb6ca6b8d 16
+  s_47b5c057f8c030::t_7e44f8efb9769a 3,17,20-22
+  s_47b5c057f8c030::t_c31d9865e553be 4,12,14,18
+.demos/progress-arc/setup-fixture.sh
+  s_47b5c057f8c030::t_e7fc8d41aebc65 1-10,13-14,16-126
+  s_47b5c057f8c030::t_628a28db0c77bf 12
+  s_47b5c057f8c030::t_7923e5c78c987f 11,15
+internal/tui/progress_teatest_test.go
+  s_47b5c057f8c030::t_fa653bcdd7f78e 34-35,39
+  s_47b5c057f8c030::t_3d33257ce27d7e 129,157
+  s_47b5c057f8c030::t_9f08781f91011b 1-33,36-38,40-128,130-156,158-278
+.demos/progress-arc/README.md
+  s_47b5c057f8c030::t_4ca7a63a933f24 28-40
+  s_47b5c057f8c030::t_e7fc8d41aebc65 1-27
+.demos/progress-arc/before-after.tape
+  s_47b5c057f8c030::t_628a28db0c77bf 1
+  s_47b5c057f8c030::t_7e44f8efb9769a 3,18,20,22,34,36,38
+  s_47b5c057f8c030::t_e7fc8d41aebc65 2,5-12,14-15,17,19,21,23-28,30-31,33,35,37,39
+  s_47b5c057f8c030::t_8e0af3dc44244d 29,32
+  s_47b5c057f8c030::t_c31d9865e553be 4,13,16
+.demos/progress-arc/removal-success.tape
+  s_47b5c057f8c030::t_c31d9865e553be 4,12
+  s_47b5c057f8c030::t_628a28db0c77bf 1
+  s_47b5c057f8c030::t_e7fc8d41aebc65 2,5-11,13-16,18,20,22
+  s_47b5c057f8c030::t_e301f07e77f8d3 3,17,19,21
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "4f3c59224bb00974472956399b0b823363f24ece",
+  "prompts": {},
+  "sessions": {
+    "s_47b5c057f8c030": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f5f62-a0bd-7f92-96e2-b1de98524420",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>"
+    }
+  }
+}
