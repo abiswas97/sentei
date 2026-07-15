@@ -1,0 +1,36 @@
+internal/tui/motion.go
+  s_47b5c057f8c030::t_ef1efe2b57b6c4 36-49
+internal/tui/testmain_test.go
+  s_47b5c057f8c030::t_59384b6269ff85 14-15
+internal/tui/motion_preference_test.go
+  s_47b5c057f8c030::t_31dc0940737aaa 155-171
+  s_47b5c057f8c030::t_692ff21eef0f84 1-7,11-12,14-33,46-82,86-87,152-154,172-183
+  s_47b5c057f8c030::t_45ac2bebb85bdd 8-10,13,34-45
+  s_47b5c057f8c030::t_a04925df4ab535 109
+  s_47b5c057f8c030::t_d346df56130fe2 132
+  s_47b5c057f8c030::t_9b257326bdb984 128-129,133
+  s_47b5c057f8c030::t_b11d2a8b891eab 83-85,88-108,110-127,130-131,134-151
+internal/tui/model.go
+  s_47b5c057f8c030::t_8588536d084780 322-325
+  s_47b5c057f8c030::t_ef1efe2b57b6c4 5,270-271,326,407,451,454,457-467,478-480,493,614,704-706
+  s_47b5c057f8c030::t_3f200dc855aec6 550-552
+internal/tui/progress_layout.go
+  s_47b5c057f8c030::t_b29e2fad585d71 192-194
+  s_47b5c057f8c030::t_ef1efe2b57b6c4 327-330,362-366,373-375
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "e236c0bfc8faeeea73509b8ab9bdf86a6d7b964d",
+  "prompts": {},
+  "sessions": {
+    "s_47b5c057f8c030": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f5f62-a0bd-7f92-96e2-b1de98524420",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>"
+    }
+  }
+}
