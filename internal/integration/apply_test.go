@@ -466,7 +466,6 @@ func TestPrepareApplyRejectsMalformedDetectionBeforeSideEffects(t *testing.T) {
 		integ Integration
 	}{
 		{name: "empty integration detect", integ: Integration{Name: "tool", Setup: SetupSpec{Command: "setup"}}},
-		{name: "ambiguous integration detect", integ: Integration{Name: "tool", Detect: DetectSpec{Command: "tool detect", BinaryName: "tool"}}},
 		{name: "empty dependency detect", integ: testIntegration("tool", Dependency{Name: "dep", Install: "dep install"})},
 	}
 	for _, tc := range tests {
@@ -480,6 +479,29 @@ func TestPrepareApplyRejectsMalformedDetectionBeforeSideEffects(t *testing.T) {
 				t.Fatalf("shell called before preflight completed: %v", shell.calls)
 			}
 		})
+	}
+}
+
+func TestPrepareApplyDetectionFallsBackFromCommandToBinary(t *testing.T) {
+	integ := Integration{
+		Name: "tool", Detect: DetectSpec{Command: "tool detect", BinaryName: "tool"},
+		Setup: SetupSpec{Command: "tool setup"},
+	}
+	shell := &applyShell{responses: map[string]mockShellResponse{
+		"/wt/a:shell[tool detect]":     {err: errors.New("command unavailable")},
+		"/wt/a:shell[command -v tool]": {output: "/usr/local/bin/tool"},
+	}}
+	prepared, err := PrepareApply(shell, "/repo", "/wt/a", []Integration{integ}, nil, []string{"/wt/a"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	labels := strings.Join(plannedLabels(prepared.Plan()), "\n")
+	if strings.Contains(labels, "Install tool") || !strings.Contains(labels, "Setup tool") {
+		t.Fatalf("fallback detection plan = %s", labels)
+	}
+	wantCalls := []string{"/wt/a:shell[tool detect]", "/wt/a:shell[command -v tool]"}
+	if !reflect.DeepEqual(shell.calls, wantCalls) {
+		t.Fatalf("detection calls = %v, want %v", shell.calls, wantCalls)
 	}
 }
 

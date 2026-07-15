@@ -110,8 +110,7 @@ func PrepareApply(shell git.ShellRunner, repoPath, mainWT string, toEnable, toDi
 
 	for _, integ := range toEnable {
 		decision := enabledDecision{integration: integ, key: integ.Name}
-		_, detectErr := shell.RunShell(probeDir, detectionCommand(integ))
-		decision.installed = detectErr == nil
+		decision.installed = detectForApply(shell, probeDir, integ.Detect)
 		for _, dep := range integ.Dependencies {
 			if _, checked := dependencyPresent[dep.Name]; checked {
 				continue
@@ -272,8 +271,8 @@ func validateApplyInputs(toEnable, toDisable []Integration) error {
 			if group.name == "enable" {
 				hasCommand := strings.TrimSpace(integ.Detect.Command) != ""
 				hasBinary := strings.TrimSpace(integ.Detect.BinaryName) != ""
-				if hasCommand == hasBinary {
-					return fmt.Errorf("integration %q must declare exactly one detection command or binary", name)
+				if !hasCommand && !hasBinary {
+					return fmt.Errorf("integration %q must declare a detection command or binary", name)
 				}
 			}
 			for _, dep := range integ.Dependencies {
@@ -391,14 +390,18 @@ func (p PreparedApply) Run(shell git.ShellRunner, emit func(progress.Event)) ([]
 	return execution.Phases(), errors.Join(runErr, finishErr)
 }
 
-func detectionCommand(integ Integration) string {
-	if integ.Detect.Command != "" {
-		return integ.Detect.Command
+func detectForApply(shell git.ShellRunner, dir string, detect DetectSpec) bool {
+	if strings.TrimSpace(detect.Command) != "" {
+		if _, err := shell.RunShell(dir, detect.Command); err == nil {
+			return true
+		}
 	}
-	if integ.Detect.BinaryName != "" {
-		return "command -v " + integ.Detect.BinaryName
+	if strings.TrimSpace(detect.BinaryName) != "" {
+		if _, err := shell.RunShell(dir, "command -v "+detect.BinaryName); err == nil {
+			return true
+		}
 	}
-	return "false"
+	return false
 }
 
 func stableToken(value string) string {
