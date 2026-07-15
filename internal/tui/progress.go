@@ -166,14 +166,14 @@ func (m Model) updateProgress(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) removalLayout() ProgressLayout {
-	return ProgressLayout{
+	return m.withProgressDetails(ProgressLayout{
 		Title:     titleRemoving,
 		Completed: m.remove.run.cleanupResult != nil,
 		Phases:    m.buildRemovalPhases(),
 		Width:     m.width,
-		Height:    m.height,
+		Height:    m.progressHeight(),
 		Hints:     progressFooter,
-	}
+	})
 }
 
 func (m Model) viewProgress() string {

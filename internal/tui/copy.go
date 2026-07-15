@@ -38,6 +38,7 @@ const (
 	portalApplyDetails       = "Apply details"
 	portalIntegrationDetails = "Integration details"
 	portalAggressiveDetails  = "Aggressive cleanup details"
+	portalProgressDetails    = "Progress details"
 )
 
 // whisperMilestone is the dim celebration line on the removal summary when

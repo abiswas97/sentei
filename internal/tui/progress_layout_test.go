@@ -24,7 +24,7 @@ func TestProgressLayout_WithSubtitle(t *testing.T) {
 	}
 	view := stripANSI(l.View())
 
-	for _, want := range []string{"sentei ─ Creating worktree", "feature/foo → from main", "┄", "Setup", "Dependencies", "pending"} {
+	for _, want := range []string{"sentei ─ Creating worktree", "feature/foo → from main", "┄", "Setup", "2 phases waiting"} {
 		if !strings.Contains(view, want) {
 			t.Errorf("expected layout to contain %q, view:\n%s", want, view)
 		}
@@ -136,7 +136,7 @@ func TestProgressLayout_OverallBarAggregatesPhases(t *testing.T) {
 	}
 	view := stripANSI(l.View())
 
-	barWidth := overallBarWidth(80) - progressBarPercentReserve
+	barWidth := 80 - 2 - progressBarPercentReserve
 	want := strings.Repeat("█", barWidth/2) + strings.Repeat("░", barWidth-barWidth/2) + " 50%"
 	if !strings.Contains(view, want) {
 		t.Errorf("expected aggregated 50%% bar, view:\n%s", view)

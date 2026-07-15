@@ -135,14 +135,14 @@ func (m Model) finalizeIntegrationApply() tea.Cmd {
 }
 
 func (m Model) integrationLayout() ProgressLayout {
-	return ProgressLayout{
+	return m.withProgressDetails(ProgressLayout{
 		Title:     titleApplyingChanges,
 		Phases:    m.buildIntegrationPhases(),
 		Width:     m.width,
-		Height:    m.height,
+		Height:    m.progressHeight(),
 		Hints:     progressFooter,
 		Completed: m.integ.lifecycle == integrationSettling,
-	}
+	})
 }
 
 func (m Model) viewIntegrationProgress() string {

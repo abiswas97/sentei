@@ -102,16 +102,8 @@ func TestWindowSteps_BudgetZero_MinimumViable(t *testing.T) {
 	steps := makeSteps(progress.StepDone, progress.StepFailed, progress.StepRunning, progress.StepPending)
 	r := WindowSteps(steps, 0)
 
-	if !r.Windowed {
-		t.Fatal("expected windowing at zero budget")
-	}
-	if len(r.Steps) != 2 {
-		t.Fatalf("expected only failed+active at zero budget, got %d steps", len(r.Steps))
-	}
-	for _, s := range r.Steps {
-		if s.Status != progress.StepFailed && s.Status != progress.StepRunning {
-			t.Errorf("unexpected status %v in minimum viable display", s.Status)
-		}
+	if r.Windowed || len(r.Steps) != 0 {
+		t.Fatalf("zero budget must return no rows, got windowed=%v steps=%d", r.Windowed, len(r.Steps))
 	}
 }
 

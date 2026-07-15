@@ -235,6 +235,9 @@ type Model struct {
 	context  repo.RepoContext
 	width    int
 	height   int
+	// windowHeight is the raw terminal height. height remains the shared
+	// chrome-budgeted body height used by non-progress views.
+	windowHeight int
 
 	menuItems          []menuItem
 	menuCursor         int
@@ -276,6 +279,7 @@ type Model struct {
 	progressStartedAt   time.Time     // set when entering any progress view
 	progressToken       int           // bumped on each entry; guards stale timers
 	progressTargetView  viewState     // where to transition once settled
+	progressTarget      float64       // exact logical progress, separate from the spring's displayed fill
 
 	// Completion settle state: after a flow's final event the view holds
 	// until the displayed bar fill reaches its target and stays there for
@@ -313,6 +317,7 @@ func NewModel(worktrees []git.Worktree, runner git.CommandRunner, repoPath strin
 			sortAscending: true,
 			filterInput:   ti,
 		},
+		width:  80,
 		height: 20,
 		bar:    newOverallBar(),
 		watch:  stopwatch.New(),
@@ -390,6 +395,7 @@ func NewMenuModel(runner git.CommandRunner, shell git.ShellRunner, repoPath stri
 		repoPath:           repoPath,
 		cfg:                cfg,
 		context:            context,
+		width:              80,
 		height:             20,
 		menuItems:          items,
 		worktreeGeneration: initGeneration,
@@ -576,6 +582,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// share the chrome-budgeted body height. No view sizes itself.
 		m.portal = m.portal.SetSize(size.Width, size.Height)
 		m.width = size.Width
+		m.windowHeight = max(size.Height, 0)
 		m.height = max(size.Height-viewChromeRows, 5)
 		m.bar.SetWidth(overallBarWidth(size.Width))
 		return m, nil
@@ -659,6 +666,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return model, tea.Batch(cmd, motionTickCmd())
 	}
 	return updated, cmd
+}
+
+func (m Model) progressHeight() int {
+	if m.windowHeight > 0 {
+		return m.windowHeight
+	}
+	return m.height
 }
 
 // motionActive reports whether any working surface is on screen: an

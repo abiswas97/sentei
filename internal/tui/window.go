@@ -39,38 +39,61 @@ func WindowSteps(steps []progress.StepState, availableLines int) WindowResult {
 		}
 	}
 
+	availableLines = max(availableLines, 0)
 	if len(steps) <= availableLines {
 		stats.Showing = len(steps)
 		return WindowResult{Steps: steps, Windowed: false, Stats: stats}
 	}
 
-	visible := make([]bool, len(steps))
-	for i, s := range steps {
-		if s.Status == progress.StepFailed || s.Status == progress.StepRunning {
-			visible[i] = true
-		}
+	if availableLines == 0 {
+		return WindowResult{Stats: stats}
 	}
 
-	budget := max(availableLines-1, 0) // reserve the stat line
-	remaining := budget - stats.Failed - stats.Active
-
-	completedTrail := min(WindowCompletedTrail, max(remaining, 0))
-	for i := len(steps) - 1; i >= 0 && completedTrail > 0; i-- {
+	budget := availableLines - 1 // reserve the omission stat
+	priority := make([]int, 0, len(steps))
+	for i, step := range steps {
+		if step.Status == progress.StepRunning {
+			priority = append(priority, i)
+		}
+	}
+	latestFailure := -1
+	for i := len(steps) - 1; i >= 0; i-- {
+		if steps[i].Status == progress.StepFailed {
+			latestFailure = i
+			priority = append(priority, i)
+			break
+		}
+	}
+	for i, step := range steps {
+		if step.Status == progress.StepFailed && i != latestFailure {
+			priority = append(priority, i)
+		}
+	}
+	resolved := 0
+	for i := len(steps) - 1; i >= 0 && resolved < WindowCompletedTrail; i-- {
 		if steps[i].Status == progress.StepDone || steps[i].Status == progress.StepSkipped {
-			visible[i] = true
-			completedTrail--
-			remaining--
+			priority = append(priority, i)
+			resolved++
+		}
+	}
+	pending := 0
+	for i, step := range steps {
+		if step.Status == progress.StepPending && pending < WindowPendingLead {
+			priority = append(priority, i)
+			pending++
 		}
 	}
 
-	pendingLead := min(WindowPendingLead, max(remaining, 0))
-	for i := 0; i < len(steps) && pendingLead > 0; i++ {
-		if steps[i].Status == progress.StepPending {
-			visible[i] = true
-			pendingLead--
+	visible := make([]bool, len(steps))
+	for _, index := range priority {
+		if budget == 0 {
+			break
+		}
+		if !visible[index] {
+			visible[index] = true
+			budget--
 		}
 	}
-
 	var windowed []progress.StepState
 	for i, s := range steps {
 		if visible[i] {

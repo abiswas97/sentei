@@ -98,15 +98,15 @@ func (m Model) repoLayout() ProgressLayout {
 		subject = m.repoPath
 	}
 
-	return ProgressLayout{
+	return m.withProgressDetails(ProgressLayout{
 		Title:     title,
 		Subtitle:  subject,
 		Completed: m.repo.result != nil,
 		Phases:    progress.Snapshot(m.repo.events),
 		Width:     m.width,
-		Height:    m.height,
+		Height:    m.progressHeight(),
 		Hints:     progressFooter,
-	}
+	})
 }
 
 func (m Model) viewRepoProgress() string {

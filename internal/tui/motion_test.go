@@ -144,28 +144,13 @@ func TestMotionClock_StartsOnFlowEntry(t *testing.T) {
 	if model.view != progressView {
 		t.Fatalf("expected progressView after confirm, got %d", model.view)
 	}
-	if got := countMotionTicks(cmd); got != 1 {
-		t.Errorf("entering a progress view must start exactly one tick chain, got %d", got)
+	batch, ok := cmd().(tea.BatchMsg)
+	if !ok || len(batch) != 2 {
+		t.Fatalf("entering a progress view must append one motion command, got %T with %d commands", batch, len(batch))
 	}
-}
-
-// countMotionTicks walks a command tree counting motion tick messages,
-// expanding batches.
-func countMotionTicks(cmd tea.Cmd) int {
-	if cmd == nil {
-		return 0
+	if msg := batch[len(batch)-1](); msg != (motionTickMsg{}) {
+		t.Errorf("appended command = %T, want motionTickMsg", msg)
 	}
-	switch msg := cmd().(type) {
-	case motionTickMsg:
-		return 1
-	case tea.BatchMsg:
-		n := 0
-		for _, sub := range msg {
-			n += countMotionTicks(sub)
-		}
-		return n
-	}
-	return 0
 }
 
 func TestCleanupRunningLine_Shimmers(t *testing.T) {
