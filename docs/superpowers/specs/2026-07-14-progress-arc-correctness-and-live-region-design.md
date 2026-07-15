@@ -1,6 +1,6 @@
 # Progress Arc Correctness and Live Region Design
 
-**Date:** 2026-07-14  
+**Date:** 2026-07-14
 **Status:** Approved
 
 ## Problem
