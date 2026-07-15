@@ -1,13 +1,64 @@
 package tui
 
 import (
+	"errors"
+	"strings"
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
+	"github.com/charmbracelet/x/ansi"
 
 	"github.com/abiswas97/sentei/internal/config"
 	"github.com/abiswas97/sentei/internal/repo"
+	"github.com/abiswas97/sentei/internal/worktree"
 )
+
+func denseRemovalSummaryModel() Model {
+	m := NewMenuModel(nil, nil, "/repo", &config.Config{}, repo.ContextBareRepo)
+	m.view = summaryView
+	m.width, m.windowHeight, m.height = 80, 24, 18
+	m.portal = m.portal.SetSize(80, 24)
+	m.remove.run.result.FailureCount = 30
+	for i := 0; i < 30; i++ {
+		m.remove.run.result.Outcomes = append(m.remove.run.result.Outcomes, worktree.WorktreeOutcome{
+			Path:    "/repo/worktrees/failed-" + itoa(i),
+			Success: false,
+			Error:   errors.New("removal failed " + itoa(i)),
+		})
+	}
+	return m
+}
+
+func TestViewSummary_DenseFailuresStayWithinTerminalAndKeepFooter(t *testing.T) {
+	m := denseRemovalSummaryModel()
+	view := stripANSI(m.viewSummary())
+	lines := strings.Split(strings.TrimSuffix(view, "\n"), "\n")
+
+	if len(lines) > m.windowHeight {
+		t.Fatalf("summary has %d rows, terminal has %d", len(lines), m.windowHeight)
+	}
+	if !strings.Contains(lines[len(lines)-1], "q quit") {
+		t.Fatalf("visible footer missing quit action: %q", lines[len(lines)-1])
+	}
+}
+
+func TestViewSummary_DenseFailuresExposeOmittedResultsInDetails(t *testing.T) {
+	m := denseRemovalSummaryModel()
+	view := stripANSI(m.viewSummary())
+	if !strings.Contains(view, "? details") {
+		t.Fatalf("bounded summary does not advertise omitted details:\n%s", view)
+	}
+
+	title, detail := m.detailContent()
+	if title == "" || !strings.Contains(stripANSI(detail), "failed-29") {
+		t.Fatalf("detail portal lost final omitted failure: title=%q\n%s", title, stripANSI(detail))
+	}
+	for row, line := range strings.Split(detail, "\n") {
+		if width := ansi.StringWidth(line); width > m.portal.contentWidth() {
+			t.Fatalf("detail row %d width=%d exceeds portal width=%d", row+1, width, m.portal.contentWidth())
+		}
+	}
+}
 
 func TestUpdateSummary_MenuLaunch_KeysReturnToMenu(t *testing.T) {
 	cases := []struct {

@@ -33,7 +33,7 @@ func (m Model) updateSummary(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m Model) viewSummary() string {
+func (m Model) renderRemovalSummary() string {
 	var b strings.Builder
 
 	b.WriteString(viewTitle(titleRemovalComplete))
@@ -149,4 +149,37 @@ func (m Model) viewSummary() string {
 	b.WriteString("\n")
 
 	return b.String()
+}
+
+func (m Model) viewSummary() string {
+	return boundRemovalSummary(m.renderRemovalSummary(), m.progressHeight())
+}
+
+func boundRemovalSummary(summary string, height int) string {
+	lines := strings.Split(strings.TrimSuffix(summary, "\n"), "\n")
+	if height <= 0 || len(lines) <= height {
+		return summary
+	}
+	const footerRows = 4
+	if height <= footerRows {
+		return strings.Join(lines[len(lines)-height:], "\n")
+	}
+	previewRows := height - footerRows - 1
+	omitted := len(lines) - previewRows - footerRows
+	visible := append([]string(nil), lines[:previewRows]...)
+	visible = append(visible, fmt.Sprintf("  ? details for %d omitted %s", omitted, pluralize(omitted, "line", "lines")))
+	visible = append(visible, lines[len(lines)-footerRows:]...)
+	return strings.Join(visible, "\n")
+}
+
+func (m Model) removalSummaryDetailContent() (string, string) {
+	full := m.renderRemovalSummary()
+	if m.progressHeight() <= 0 || len(strings.Split(strings.TrimSuffix(full, "\n"), "\n")) <= m.progressHeight() {
+		return "", ""
+	}
+	var detail strings.Builder
+	for _, line := range strings.Split(strings.TrimSuffix(full, "\n"), "\n") {
+		writeProgressDetailValue(&detail, "", line, m.portal.contentWidth())
+	}
+	return "Removal details", strings.TrimSuffix(detail.String(), "\n")
 }

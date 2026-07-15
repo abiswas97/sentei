@@ -174,7 +174,11 @@ func (m Model) integrationSummaryDetailContent() (string, string) {
 	if b.Len() == 0 && len(groups) <= inlineSummaryPreview && !outcomesHaveErrorOutput(groups) {
 		return "", ""
 	}
-	renderIntegrationOutcomes(&b, groups, 0)
+	var outcomes strings.Builder
+	renderIntegrationOutcomes(&outcomes, groups, 0)
+	for _, line := range strings.Split(strings.TrimRight(outcomes.String(), "\n"), "\n") {
+		writeProgressDetailValue(&b, "", line, m.portal.contentWidth())
+	}
 	return portalApplyDetails, strings.TrimRight(b.String(), "\n")
 }
 

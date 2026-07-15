@@ -2,6 +2,7 @@ package tui
 
 import (
 	"errors"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -188,6 +189,34 @@ func TestMotionTick_DoesNotRescheduleAfterSettleTransition(t *testing.T) {
 	}
 	if _, rescheduledMotion := cmd().(motionTickMsg); rescheduledMotion {
 		t.Fatal("settled motion tick rescheduled decorative motion instead of the transition")
+	}
+}
+
+func TestSettledProgressTransition_DoesNotReplayCapturedWindowSize(t *testing.T) {
+	cmd := settledProgressTransitionCmd(7)
+	sequence := reflect.ValueOf(cmd())
+	if sequence.Kind() != reflect.Slice {
+		t.Fatalf("transition command emitted %T, want ordered command sequence", cmd())
+	}
+
+	var messages []tea.Msg
+	for i := 0; i < sequence.Len(); i++ {
+		step, ok := sequence.Index(i).Interface().(tea.Cmd)
+		if !ok {
+			t.Fatalf("sequence step %d has type %T, want tea.Cmd", i, sequence.Index(i).Interface())
+		}
+		messages = append(messages, step())
+	}
+	for _, msg := range messages {
+		if size, ok := msg.(tea.WindowSizeMsg); ok {
+			t.Fatalf("transition replayed stale terminal size %dx%d", size.Width, size.Height)
+		}
+	}
+	if len(messages) != 2 || reflect.TypeOf(messages[0]) != reflect.TypeOf(tea.ClearScreen()) {
+		t.Fatalf("transition messages = %T, %T; want clear then private transition", messages[0], messages[1])
+	}
+	if transition, ok := messages[1].(progressTransitionMsg); !ok || transition.token != 7 {
+		t.Fatalf("final transition message = %#v, want live token", messages[1])
 	}
 }
 

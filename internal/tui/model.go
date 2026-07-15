@@ -459,7 +459,7 @@ func (m Model) holdOrAdvance(targetView viewState) (tea.Model, tea.Cmd) {
 	token := m.progressToken
 	if m.motionPreference == MotionOff {
 		if settled, advanced := m.observeSettle(now); advanced {
-			return settled, settledProgressTransitionCmd(settled.width, settled.windowHeight, token)
+			return settled, settledProgressTransitionCmd(token)
 		} else {
 			m = settled
 		}
@@ -507,10 +507,8 @@ func (m Model) observeSettle(now time.Time) (Model, bool) {
 	return m, true
 }
 
-func settledProgressTransitionCmd(width, height, token int) tea.Cmd {
-	return tea.Sequence(func() tea.Msg {
-		return tea.WindowSizeMsg{Width: width, Height: height}
-	}, func() tea.Msg {
+func settledProgressTransitionCmd(token int) tea.Cmd {
+	return tea.Sequence(tea.ClearScreen, func() tea.Msg {
 		return progressTransitionMsg{token: token}
 	})
 }
@@ -604,7 +602,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			var advanced bool
 			m, advanced = m.observeSettle(time.Now())
 			if advanced {
-				return m, settledProgressTransitionCmd(m.width, m.windowHeight, m.progressToken)
+				return m, settledProgressTransitionCmd(m.progressToken)
 			}
 		}
 		return m, nil
@@ -647,7 +645,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		var advanced bool
 		m, advanced = m.observeSettle(time.Now())
 		if advanced {
-			return m, tea.Batch(cmd, settledProgressTransitionCmd(m.width, m.windowHeight, m.progressToken))
+			return m, tea.Batch(cmd, settledProgressTransitionCmd(m.progressToken))
 		}
 		return m, cmd
 	}
@@ -678,7 +676,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		var advanced bool
 		m, advanced = m.observeSettle(time.Now())
 		if advanced {
-			return m, settledProgressTransitionCmd(m.width, m.windowHeight, m.progressToken)
+			return m, settledProgressTransitionCmd(m.progressToken)
 		}
 		if m.view != previousView || !m.motionActive() {
 			return m, nil

@@ -76,6 +76,29 @@ func TestViewIntegrationSummary_TopLevelErrorRemainsActionableWhenCompact(t *tes
 	}
 }
 
+func TestIntegrationSummaryDetail_WrapsLongStepErrorsToPortalWidth(t *testing.T) {
+	longError := strings.Repeat("index dependency resolution failed ", 12)
+	m := makeIntegrationModel()
+	m.view = integrationSummaryView
+	m.width, m.windowHeight = 40, 24
+	m.portal = m.portal.SetSize(40, 24)
+	m.integ.events = []progress.Event{
+		{Phase: "worktree", PhaseLabel: "worktree", Step: "index", StepLabel: "Index", Status: progress.StepPending, Of: 1},
+		{Phase: "worktree", PhaseLabel: "worktree", Close: true},
+		{Phase: "worktree", Step: "index", Status: progress.StepFailed, Error: errors.New(longError)},
+	}
+
+	_, detail := m.integrationSummaryDetailContent()
+	if !strings.Contains(compactProgressDetailText(stripAnsi(detail)), compactProgressDetailText(longError)) {
+		t.Fatalf("wrapped detail lost step error:\n%s", stripAnsi(detail))
+	}
+	for row, line := range strings.Split(detail, "\n") {
+		if got := ansi.StringWidth(line); got > m.portal.contentWidth() {
+			t.Fatalf("detail row %d width=%d exceeds portal width=%d: %q", row+1, got, m.portal.contentWidth(), stripAnsi(line))
+		}
+	}
+}
+
 func TestViewIntegrationSummary_DemoFailuresRemainCompleteInDetails(t *testing.T) {
 	m := makeIntegrationModel()
 	m.view = integrationSummaryView
@@ -89,7 +112,7 @@ func TestViewIntegrationSummary_DemoFailuresRemainCompleteInDetails(t *testing.T
 	_, detail := m.integrationSummaryDetailContent()
 	plain := stripAnsi(detail)
 	for _, want := range []string{"alpha", "beta", "gamma", "deterministic index failure", "exit status 17", "blocked by Setup cocoindex-code"} {
-		if !strings.Contains(plain, want) {
+		if !strings.Contains(compactProgressDetailText(plain), compactProgressDetailText(want)) {
 			t.Errorf("detail portal missing %q:\n%s", want, plain)
 		}
 	}
