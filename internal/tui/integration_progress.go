@@ -147,16 +147,38 @@ func (m Model) integrationLayout() ProgressLayout {
 
 func (m Model) viewIntegrationProgress() string {
 	if m.integ.lifecycle == integrationPreparing {
-		var b strings.Builder
-		b.WriteString(viewTitle(titleApplyingChanges))
-		b.WriteString("\n\n")
-		b.WriteString(viewSeparator(m.width))
-		b.WriteString("\n\n  ")
-		b.WriteString(shimmerLine(starFrame(m.motionTick)+" Preparing plan...", rampAccent, m.motionTick))
-		b.WriteString("\n")
-		return b.String()
+		return m.viewIntegrationPreparing()
 	}
 	return m.renderProgressLayout(m.integrationLayout())
+}
+
+func (m Model) viewIntegrationPreparing() string {
+	height := max(m.progressHeight(), 0)
+	if height == 0 {
+		return ""
+	}
+	width := max(m.width, 1)
+	title := fitProgressLine(viewTitle(titleApplyingChanges), width)
+	wait := fitProgressLine("  "+shimmerLine(starFrame(m.motionTick)+" Preparing plan...", rampAccent, m.motionTick), width)
+	separator := fitProgressLine(viewSeparator(width), width)
+
+	var lines []string
+	switch progressTier(height) {
+	case progressViewportEmergency:
+		if height == 1 {
+			lines = []string{wait}
+		} else {
+			lines = []string{title, wait}
+		}
+	case progressViewportMinimal:
+		lines = []string{title, separator, wait}
+	default:
+		lines = []string{title, "", separator, "", wait}
+	}
+	if len(lines) > height {
+		lines = lines[:height]
+	}
+	return strings.Join(lines, "\n")
 }
 
 func classifyIntegrationExecution(result integrationApplyResult) integrationExecutionOutcome {

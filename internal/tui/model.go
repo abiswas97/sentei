@@ -515,8 +515,12 @@ func settledProgressTransitionCmd(token int) tea.Cmd {
 
 func (m Model) completeProgressTransition() Model {
 	leavingIntegrationProgress := m.view == integrationProgressView
+	leavingProgress := m.determinateProgressActive()
 	m.progressTransitionPending = false
 	m.view = m.progressTargetView
+	if leavingProgress && m.portal.trigger == portalDetails {
+		m.portal = m.portal.Close()
+	}
 	if leavingIntegrationProgress && m.view != integrationSummaryView {
 		m.integ.lifecycle = integrationIdle
 	}
@@ -722,8 +726,18 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// starts the motion clock without each entry site knowing about it.
 	wasMoving := m.motionActive()
 	updated, cmd := m.dispatchByView(msg)
-	if model, ok := updated.(Model); ok && !wasMoving && model.motionActive() {
-		return model, tea.Batch(cmd, motionTickCmd())
+	if model, ok := updated.(Model); ok {
+		if model.portal.trigger == portalDetails && model.determinateProgressActive() {
+			if title, content := model.detailContent(); content != "" {
+				model.portal = model.portal.Refresh(title, content)
+			} else {
+				model.portal = model.portal.Close()
+			}
+		}
+		if !wasMoving && model.motionActive() {
+			return model, tea.Batch(cmd, motionTickCmd())
+		}
+		return model, cmd
 	}
 	return updated, cmd
 }

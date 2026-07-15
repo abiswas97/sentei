@@ -53,6 +53,20 @@ func (p DetailPortal) Open(trigger portalTrigger, title, content string) DetailP
 	return p
 }
 
+// Refresh replaces live detail content without disorienting a user who is
+// already reading it. SetYOffset clamps the previous position when the new
+// content is shorter.
+func (p DetailPortal) Refresh(title, content string) DetailPortal {
+	offset := p.viewport.YOffset()
+	p.title = title
+	p.contentLines = strings.Count(content, "\n") + 1
+	p.viewport.SetWidth(p.contentWidth())
+	p.viewport.SetHeight(p.fitHeight())
+	p.viewport.SetContent(content)
+	p.viewport.SetYOffset(offset)
+	return p
+}
+
 // fitHeight is the viewport height: the content's own height, capped by the
 // terminal budget.
 func (p DetailPortal) fitHeight() int {
@@ -75,13 +89,19 @@ func (p DetailPortal) SetSize(width, height int) DetailPortal {
 
 // contentWidth is the viewport width inside margins, border, and padding.
 func (p DetailPortal) contentWidth() int {
-	return max(p.width-2*portalMargin-4, 20)
+	if p.width <= 0 {
+		return 20
+	}
+	return max(p.width-2*portalMargin-4, 1)
 }
 
 // contentHeight is the viewport height inside margins, border, title,
 // separator, and hint lines.
 func (p DetailPortal) contentHeight() int {
-	return max(p.height-2*portalMargin-2-3, 3)
+	if p.height <= 0 {
+		return 3
+	}
+	return max(p.height-2*portalMargin-2-3, 1)
 }
 
 // Update routes scroll keys to the viewport. Dismiss and quit are handled
@@ -94,13 +114,26 @@ func (p DetailPortal) Update(msg tea.Msg) (DetailPortal, tea.Cmd) {
 
 // View renders the portal box composited centered over the background view.
 func (p DetailPortal) View(background string) string {
+	if p.width <= 0 || p.height <= 0 {
+		return background
+	}
+	if p.height < 7 {
+		lines := []string{fitProgressLine("  "+styleTitle.Render(p.title), p.width)}
+		if p.height > 1 {
+			lines = append(lines, fitProgressLine(p.viewport.View(), p.width))
+		}
+		if p.height > 2 {
+			lines = append(lines, fitProgressLine(viewFooter(p.width, portalFooterStatic), p.width))
+		}
+		return compositeOverlay(strings.Join(lines[:min(len(lines), p.height)], "\n"), background)
+	}
 	var b strings.Builder
 
 	// The brand is already on screen behind the box; the portal carries
 	// just its own name.
-	b.WriteString("  " + styleTitle.Render(p.title))
+	b.WriteString(fitProgressLine("  "+styleTitle.Render(p.title), p.contentWidth()))
 	b.WriteString("\n")
-	b.WriteString(viewSeparator(p.contentWidth() + 2))
+	b.WriteString(viewSeparator(p.contentWidth()))
 	b.WriteString("\n")
 	b.WriteString(p.viewport.View())
 	b.WriteString("\n")
@@ -111,11 +144,11 @@ func (p DetailPortal) View(background string) string {
 	if p.viewport.TotalLineCount() > p.viewport.VisibleLineCount() {
 		footer = portalFooter
 	}
-	hintLine := viewFooter(p.contentWidth()+2, footer)
+	hintLine := viewFooter(p.contentWidth(), footer)
 	if !p.viewport.AtBottom() {
 		hintLine += styleDim.Render("  ↓ more")
 	}
-	b.WriteString(hintLine)
+	b.WriteString(fitProgressLine(hintLine, p.contentWidth()))
 
 	// lipgloss v2 Width spans the whole block including border and padding,
 	// so the box adds its full frame (2 border + 2 padding) to the content.

@@ -6,12 +6,46 @@ import (
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
 
 	"github.com/abiswas97/sentei/internal/config"
 	"github.com/abiswas97/sentei/internal/repo"
 	"github.com/abiswas97/sentei/internal/worktree"
 )
+
+func TestViewSummary_BoundsEveryLineAndOffersFullWidthOmissions(t *testing.T) {
+	for _, width := range []int{20, 40, 80} {
+		m := NewModel(nil, nil, "/repo")
+		m.view = summaryView
+		m.width, m.windowHeight, m.height = width, 40, 34
+		m.portal = m.portal.SetSize(width, 40)
+		fullPath := "/repo/界/" + strings.Repeat("very-long-worktree-name-", 5)
+		fullError := strings.Repeat("錯誤🙂 failure detail ", 8)
+		m.remove.run.result.FailureCount = 1
+		m.remove.run.result.Outcomes = []worktree.WorktreeOutcome{{Path: fullPath, Error: errors.New(fullError)}}
+
+		view := m.viewSummary()
+		for row, line := range strings.Split(view, "\n") {
+			if got := lipgloss.Width(line); got > width {
+				t.Fatalf("width %d row %d rendered %d cells: %q", width, row+1, got, stripANSI(line))
+			}
+		}
+		if !strings.Contains(stripANSI(view), "? details") {
+			t.Fatalf("width %d summary did not advertise width-omitted detail:\n%s", width, stripANSI(view))
+		}
+		title, detail := m.detailContent()
+		compact := compactProgressDetailText(stripANSI(detail))
+		if title == "" || !strings.Contains(compact, compactProgressDetailText(fullPath)) || !strings.Contains(compact, compactProgressDetailText(fullError)) {
+			t.Fatalf("width %d portal lost full source detail, title=%q:\n%s", width, title, stripANSI(detail))
+		}
+		for row, line := range strings.Split(detail, "\n") {
+			if got := lipgloss.Width(line); got > m.portal.contentWidth() {
+				t.Fatalf("width %d detail row %d rendered %d cells", width, row+1, got)
+			}
+		}
+	}
+}
 
 func denseRemovalSummaryModel() Model {
 	m := NewMenuModel(nil, nil, "/repo", &config.Config{}, repo.ContextBareRepo)

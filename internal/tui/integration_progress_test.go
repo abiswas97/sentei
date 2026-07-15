@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 
 	"github.com/abiswas97/sentei/internal/config"
 	"github.com/abiswas97/sentei/internal/integration"
@@ -15,6 +16,28 @@ import (
 	"github.com/abiswas97/sentei/internal/repo"
 	"github.com/abiswas97/sentei/internal/state"
 )
+
+func TestIntegrationPreparingFrameFitsEveryResponsiveTier(t *testing.T) {
+	for _, width := range []int{20, 40, 50, 80, 120} {
+		for height := 1; height <= 40; height++ {
+			m := NewModel(nil, nil, "/repo")
+			m.view = integrationProgressView
+			m.integ.lifecycle = integrationPreparing
+			m.width, m.windowHeight = width, height
+
+			view := m.viewIntegrationProgress()
+			lines := strings.Split(view, "\n")
+			if len(lines) > height {
+				t.Fatalf("%dx%d preparing frame has %d rows:\n%s", width, height, len(lines), stripANSI(view))
+			}
+			for row, line := range lines {
+				if got := lipgloss.Width(line); got > width {
+					t.Fatalf("%dx%d row %d width=%d:\n%s", width, height, row+1, got, stripANSI(view))
+				}
+			}
+		}
+	}
+}
 
 func TestUpdateIntegrationProgress_FinalizedMsg_SaveError_DoesNotApply(t *testing.T) {
 	m := makeIntegrationModel()

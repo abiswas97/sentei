@@ -58,8 +58,8 @@ func (m Model) renderRemovalSummary() string {
 				if !o.Success {
 					fmt.Fprintf(&b, "    %s %s: %s\n",
 						styleIndicatorFailed.Render(indicatorFailed),
-						truncateWithEllipsis(o.Path, max(m.width-10, 20)),
-						truncateWithEllipsis(fmt.Sprint(o.Error), max(m.width-10, 20)))
+						o.Path,
+						fmt.Sprint(o.Error))
 				}
 			}
 		}
@@ -152,13 +152,31 @@ func (m Model) renderRemovalSummary() string {
 }
 
 func (m Model) viewSummary() string {
-	return boundRemovalSummary(m.renderRemovalSummary(), m.progressHeight())
+	return boundRemovalSummary(m.renderRemovalSummary(), m.width, m.progressHeight())
 }
 
-func boundRemovalSummary(summary string, height int) string {
+func boundRemovalSummary(summary string, width, height int) string {
 	lines := strings.Split(strings.TrimSuffix(summary, "\n"), "\n")
-	if height <= 0 || len(lines) <= height {
+	widthOmitted := false
+	for i, line := range lines {
+		if fit := fitProgressLine(line, width); fit != line {
+			widthOmitted = true
+			lines[i] = fit
+		}
+	}
+	if widthOmitted {
+		const footerRows = 4
+		at := max(len(lines)-footerRows, 0)
+		hint := fitProgressLine("  ? details for omitted text", width)
+		lines = append(lines, "")
+		copy(lines[at+1:], lines[at:])
+		lines[at] = hint
+	}
+	if !widthOmitted && (height <= 0 || len(lines) <= height) {
 		return summary
+	}
+	if height <= 0 || len(lines) <= height {
+		return strings.Join(lines, "\n")
 	}
 	const footerRows = 4
 	if height <= footerRows {
@@ -167,18 +185,23 @@ func boundRemovalSummary(summary string, height int) string {
 	previewRows := height - footerRows - 1
 	omitted := len(lines) - previewRows - footerRows
 	visible := append([]string(nil), lines[:previewRows]...)
-	visible = append(visible, fmt.Sprintf("  ? details for %d omitted %s", omitted, pluralize(omitted, "line", "lines")))
+	visible = append(visible, fitProgressLine(fmt.Sprintf("  ? details for %d omitted %s", omitted, pluralize(omitted, "line", "lines")), width))
 	visible = append(visible, lines[len(lines)-footerRows:]...)
 	return strings.Join(visible, "\n")
 }
 
 func (m Model) removalSummaryDetailContent() (string, string) {
 	full := m.renderRemovalSummary()
-	if m.progressHeight() <= 0 || len(strings.Split(strings.TrimSuffix(full, "\n"), "\n")) <= m.progressHeight() {
+	lines := strings.Split(strings.TrimSuffix(full, "\n"), "\n")
+	omitted := m.progressHeight() > 0 && len(lines) > m.progressHeight()
+	for _, line := range lines {
+		omitted = omitted || fitProgressLine(line, m.width) != line
+	}
+	if !omitted {
 		return "", ""
 	}
 	var detail strings.Builder
-	for _, line := range strings.Split(strings.TrimSuffix(full, "\n"), "\n") {
+	for _, line := range lines {
 		writeProgressDetailValue(&detail, "", line, m.portal.contentWidth())
 	}
 	return "Removal details", strings.TrimSuffix(detail.String(), "\n")

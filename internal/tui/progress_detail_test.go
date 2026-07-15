@@ -117,9 +117,79 @@ func TestProgressPortal_StaysOpenAcrossBackgroundEventAndResize(t *testing.T) {
 	if !m.portal.Visible() {
 		t.Fatal("background progress event closed portal")
 	}
+	if got := stripANSI(m.portal.viewport.View()); !strings.Contains(got, "updated") {
+		t.Fatalf("background progress event left stale detail content:\n%s", got)
+	}
 	updated, _ = m.Update(tea.WindowSizeMsg{Width: 40, Height: 12})
 	m = updated.(Model)
 	if !m.portal.Visible() || m.portal.viewport.Width() != m.portal.contentWidth() {
 		t.Fatal("resize did not preserve/refit portal")
+	}
+}
+
+func TestProgressPortal_BackgroundRefreshPreservesAndClampsScroll(t *testing.T) {
+	m := progressDetailModel()
+	m.remove.run.events[4].Error = errors.New(strings.Repeat("failure line\n", 40))
+	title, content := m.detailContent()
+	m.portal = m.portal.Open(portalDetails, title, content)
+	m.portal.viewport.ScrollDown(8)
+	before := m.portal.viewport.YOffset()
+	if before == 0 {
+		t.Fatal("precondition: portal did not scroll")
+	}
+
+	updated, _ := m.Update(removalEventMsg{event: progress.Event{
+		Phase: "phase-id", Step: "skip-id", Status: progress.StepSkipped,
+		Message: "fresh background detail",
+	}})
+	m = updated.(Model)
+	if got := m.portal.viewport.YOffset(); got != before {
+		t.Fatalf("refresh moved scroll offset from %d to %d", before, got)
+	}
+}
+
+func TestProgressPortal_BackgroundEventClosesWhenDetailsResolve(t *testing.T) {
+	m := NewModel(nil, nil, "/repo")
+	m.view = progressView
+	m.width, m.height, m.windowHeight = 80, 18, 18
+	m.portal = m.portal.SetSize(80, 12)
+	m.remove.run.events = []progress.Event{
+		{Phase: "p1", PhaseLabel: "First", Step: "s1", StepLabel: "First step", Status: progress.StepPending, Of: 1},
+		{Phase: "p1", Close: true},
+		{Phase: "p2", PhaseLabel: "Second", Step: "s2", StepLabel: "Second step", Status: progress.StepPending, Of: 1},
+		{Phase: "p2", Close: true},
+	}
+	title, content := m.detailContent()
+	if content == "" {
+		t.Fatal("precondition: queued phase did not offer details")
+	}
+	m.portal = m.portal.Open(portalDetails, title, content)
+	m.portal.viewport.ScrollDown(4)
+	if m.portal.viewport.YOffset() == 0 {
+		t.Fatal("precondition: portal did not scroll")
+	}
+
+	updated, _ := m.Update(removalEventMsg{event: progress.Event{Phase: "p1", Step: "s1", Status: progress.StepDone}})
+	m = updated.(Model)
+	if m.portal.Visible() {
+		t.Fatal("resolved omission left a stale progress details portal open")
+	}
+}
+
+func TestProgressPortal_ClosesWhenProgressTransitionsToSummary(t *testing.T) {
+	m := progressDetailModel()
+	title, content := m.detailContent()
+	m.portal = m.portal.Open(portalDetails, title, content)
+	m.progressToken = 7
+	m.progressTransitionPending = true
+	m.progressTargetView = summaryView
+
+	updated, _ := m.Update(progressTransitionMsg{token: 7})
+	m = updated.(Model)
+	if m.view != summaryView {
+		t.Fatalf("view=%v, want summary", m.view)
+	}
+	if m.portal.Visible() {
+		t.Fatal("progress details portal persisted over summary transition")
 	}
 }
