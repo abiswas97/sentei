@@ -3,8 +3,9 @@ package progress
 import "fmt"
 
 // ValidateStream checks the stable stream contract: a complete
-// declaration-and-close prefix must precede work, and every transition must
-// target declared identities without mutating terminal state.
+// declaration-and-close prefix must precede work, every event must carry its
+// stable display labels, and every transition must target declared identities
+// without mutating terminal state.
 func ValidateStream(events []Event) error {
 	type declaration struct {
 		checkpoints int
@@ -19,12 +20,16 @@ func ValidateStream(events []Event) error {
 	prefixStage := 0 // 0: declarations, 1: closes, 2: work
 	for i, ev := range events {
 		key := ev.Phase + "\x00" + ev.Step
-		if ev.PhaseLabel != "" {
-			if label := phaseLabels[ev.Phase]; label != "" && label != ev.PhaseLabel {
-				return fmt.Errorf("event %d: phase %q label changed from %q to %q", i, ev.Phase, label, ev.PhaseLabel)
-			}
-			phaseLabels[ev.Phase] = ev.PhaseLabel
+		if ev.PhaseLabel == "" {
+			return fmt.Errorf("event %d: phase %q has empty label", i, ev.Phase)
 		}
+		if !ev.Close && ev.StepLabel == "" {
+			return fmt.Errorf("event %d: phase %q step %q has empty label", i, ev.Phase, ev.Step)
+		}
+		if label := phaseLabels[ev.Phase]; label != "" && label != ev.PhaseLabel {
+			return fmt.Errorf("event %d: phase %q label changed from %q to %q", i, ev.Phase, label, ev.PhaseLabel)
+		}
+		phaseLabels[ev.Phase] = ev.PhaseLabel
 		if ev.StepLabel != "" {
 			if label := stepLabels[key]; label != "" && label != ev.StepLabel {
 				return fmt.Errorf("event %d: phase %q step %q label changed from %q to %q", i, ev.Phase, ev.Step, label, ev.StepLabel)

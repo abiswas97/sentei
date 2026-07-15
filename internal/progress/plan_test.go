@@ -107,8 +107,8 @@ func TestValidateLegacyStream_AllowsLabeledDiscovery(t *testing.T) {
 
 func TestValidateStream_MixedMetadataDoesNotFallBack(t *testing.T) {
 	events := []Event{
-		{Phase: "p", Step: "declared", Status: StepPending, Of: 1},
-		{Phase: "p", Close: true},
+		{Phase: "p", PhaseLabel: "Phase", Step: "declared", StepLabel: "Declared", Status: StepPending, Of: 1},
+		{Phase: "p", PhaseLabel: "Phase", Close: true},
 		{Phase: "p", PhaseLabel: "Phase", Step: "undeclared", StepLabel: "Undeclared", Status: StepDone},
 	}
 	if err := ValidateStream(events); err == nil {
@@ -195,10 +195,10 @@ func TestSettled_RequiresCloseAndCompletion(t *testing.T) {
 
 func TestValidateStream_FlagsNewStepAfterClose(t *testing.T) {
 	events := []Event{
-		{Phase: "P", Step: "declared", Status: StepPending, Of: 1},
-		{Phase: "P", Close: true},
-		{Phase: "P", Step: "declared", Status: StepDone},
-		{Phase: "P", Step: "smuggled", Status: StepRunning},
+		{Phase: "P", PhaseLabel: "Phase", Step: "declared", StepLabel: "Declared", Status: StepPending, Of: 1},
+		{Phase: "P", PhaseLabel: "Phase", Close: true},
+		{Phase: "P", PhaseLabel: "Phase", Step: "declared", StepLabel: "Declared", Status: StepDone},
+		{Phase: "P", PhaseLabel: "Phase", Step: "smuggled", StepLabel: "Smuggled", Status: StepRunning},
 	}
 	if err := ValidateStream(events); err == nil {
 		t.Error("a new step after close must be flagged")
@@ -217,7 +217,7 @@ func TestValidateStream_RequiresCompleteDeclarationPrefix(t *testing.T) {
 			name: "undeclared work",
 			events: []Event{
 				{Phase: "p", PhaseLabel: "Phase", Close: true},
-				{Phase: "p", Step: "missing", Status: StepRunning},
+				{Phase: "p", PhaseLabel: "Phase", Step: "missing", StepLabel: "Missing", Status: StepRunning},
 			},
 		},
 		{
@@ -225,7 +225,7 @@ func TestValidateStream_RequiresCompleteDeclarationPrefix(t *testing.T) {
 			events: []Event{
 				{Phase: "p", PhaseLabel: "Phase", Step: "s", StepLabel: "Step", Status: StepPending, Of: 1},
 				{Phase: "p", PhaseLabel: "Phase", Close: true},
-				{Phase: "q", Step: "late", Status: StepPending, Of: 1},
+				{Phase: "q", PhaseLabel: "Late phase", Step: "late", StepLabel: "Late", Status: StepPending, Of: 1},
 			},
 		},
 		{
@@ -233,8 +233,8 @@ func TestValidateStream_RequiresCompleteDeclarationPrefix(t *testing.T) {
 			events: []Event{
 				{Phase: "p", PhaseLabel: "Phase", Step: "s", StepLabel: "Step", Status: StepPending, Of: 1},
 				{Phase: "q", PhaseLabel: "Other", Step: "t", StepLabel: "Other step", Status: StepPending, Of: 1},
-				{Phase: "p", Close: true},
-				{Phase: "p", Step: "s", Status: StepRunning},
+				{Phase: "p", PhaseLabel: "Phase", Close: true},
+				{Phase: "p", PhaseLabel: "Phase", Step: "s", StepLabel: "Step", Status: StepRunning},
 			},
 		},
 		{
@@ -262,10 +262,10 @@ func TestValidateStream_RejectsTerminalMutationAndCheckpointErrors(t *testing.T)
 		name string
 		work []Event
 	}{
-		{"terminal mutation", []Event{{Phase: "p", Step: "s", Status: StepDone}, {Phase: "p", Step: "s", Status: StepFailed}}},
-		{"checkpoint regression", []Event{{Phase: "p", Step: "s", Status: StepRunning, Checkpoint: 2}, {Phase: "p", Step: "s", Status: StepRunning, Checkpoint: 1}}},
-		{"checkpoint overflow", []Event{{Phase: "p", Step: "s", Status: StepRunning, Checkpoint: 3}}},
-		{"checkpoint total changed", []Event{{Phase: "p", Step: "s", Status: StepRunning, Checkpoint: 1, Of: 3}}},
+		{"terminal mutation", []Event{{Phase: "p", PhaseLabel: "Phase", Step: "s", StepLabel: "Step", Status: StepDone}, {Phase: "p", PhaseLabel: "Phase", Step: "s", StepLabel: "Step", Status: StepFailed, Error: errors.New("late")}}},
+		{"checkpoint regression", []Event{{Phase: "p", PhaseLabel: "Phase", Step: "s", StepLabel: "Step", Status: StepRunning, Checkpoint: 2}, {Phase: "p", PhaseLabel: "Phase", Step: "s", StepLabel: "Step", Status: StepRunning, Checkpoint: 1}}},
+		{"checkpoint overflow", []Event{{Phase: "p", PhaseLabel: "Phase", Step: "s", StepLabel: "Step", Status: StepRunning, Checkpoint: 3}}},
+		{"checkpoint total changed", []Event{{Phase: "p", PhaseLabel: "Phase", Step: "s", StepLabel: "Step", Status: StepRunning, Checkpoint: 1, Of: 3}}},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
@@ -287,9 +287,9 @@ func TestValidateStreamRejectsUnstableLabels(t *testing.T) {
 			events: []Event{
 				{Phase: "p", PhaseLabel: "Phase", Step: "a", StepLabel: "A", Status: StepPending, Of: 1},
 				{Phase: "p", PhaseLabel: "Changed", Step: "b", StepLabel: "B", Status: StepPending, Of: 1},
-				{Phase: "p", Close: true},
-				{Phase: "p", Step: "a", Status: StepDone},
-				{Phase: "p", Step: "b", Status: StepDone},
+				{Phase: "p", PhaseLabel: "Phase", Close: true},
+				{Phase: "p", PhaseLabel: "Phase", Step: "a", StepLabel: "A", Status: StepDone},
+				{Phase: "p", PhaseLabel: "Phase", Step: "b", StepLabel: "B", Status: StepDone},
 			},
 		},
 		{
@@ -317,17 +317,92 @@ func TestValidateStreamRejectsUnstableLabels(t *testing.T) {
 	}
 }
 
+func TestValidateStreamRequiresExplicitStableLabels(t *testing.T) {
+	if err := ValidateStream(nil); err != nil {
+		t.Fatalf("empty execution rejected: %v", err)
+	}
+	tests := []struct {
+		name   string
+		events []Event
+	}{
+		{
+			name: "declaration phase label",
+			events: []Event{
+				{Phase: "p", Step: "s", StepLabel: "Step", Status: StepPending, Of: 1},
+				{Phase: "p", PhaseLabel: "Phase", Close: true},
+				{Phase: "p", PhaseLabel: "Phase", Step: "s", StepLabel: "Step", Status: StepDone},
+			},
+		},
+		{
+			name: "declaration step label",
+			events: []Event{
+				{Phase: "p", PhaseLabel: "Phase", Step: "s", Status: StepPending, Of: 1},
+				{Phase: "p", PhaseLabel: "Phase", Close: true},
+				{Phase: "p", PhaseLabel: "Phase", Step: "s", StepLabel: "Step", Status: StepDone},
+			},
+		},
+		{
+			name: "close phase label",
+			events: []Event{
+				{Phase: "p", PhaseLabel: "Phase", Step: "s", StepLabel: "Step", Status: StepPending, Of: 1},
+				{Phase: "p", Close: true},
+				{Phase: "p", PhaseLabel: "Phase", Step: "s", StepLabel: "Step", Status: StepDone},
+			},
+		},
+		{
+			name: "running phase label",
+			events: []Event{
+				{Phase: "p", PhaseLabel: "Phase", Step: "s", StepLabel: "Step", Status: StepPending, Of: 1},
+				{Phase: "p", PhaseLabel: "Phase", Close: true},
+				{Phase: "p", Step: "s", StepLabel: "Step", Status: StepRunning},
+			},
+		},
+		{
+			name: "running step label",
+			events: []Event{
+				{Phase: "p", PhaseLabel: "Phase", Step: "s", StepLabel: "Step", Status: StepPending, Of: 1},
+				{Phase: "p", PhaseLabel: "Phase", Close: true},
+				{Phase: "p", PhaseLabel: "Phase", Step: "s", Status: StepRunning},
+			},
+		},
+		{
+			name: "terminal phase label disappearance",
+			events: []Event{
+				{Phase: "p", PhaseLabel: "Phase", Step: "s", StepLabel: "Step", Status: StepPending, Of: 1},
+				{Phase: "p", PhaseLabel: "Phase", Close: true},
+				{Phase: "p", Step: "s", StepLabel: "Step", Status: StepDone},
+			},
+		},
+		{
+			name: "terminal label disappearance",
+			events: []Event{
+				{Phase: "p", PhaseLabel: "Phase", Step: "s", StepLabel: "Step", Status: StepPending, Of: 1},
+				{Phase: "p", PhaseLabel: "Phase", Close: true},
+				{Phase: "p", PhaseLabel: "Phase", Step: "s", StepLabel: "Step", Status: StepRunning},
+				{Phase: "p", PhaseLabel: "Phase", Step: "s", Status: StepDone},
+			},
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			if err := ValidateStream(tc.events); err == nil || !strings.Contains(err.Error(), "label") {
+				t.Fatalf("ValidateStream() error = %v, want label error", err)
+			}
+		})
+	}
+}
+
 func TestValidateStreamRequiresTerminalPayloads(t *testing.T) {
 	prefix := []Event{
-		{Phase: "p", Step: "s", Status: StepPending, Of: 1},
-		{Phase: "p", Close: true},
+		{Phase: "p", PhaseLabel: "Phase", Step: "s", StepLabel: "Step", Status: StepPending, Of: 1},
+		{Phase: "p", PhaseLabel: "Phase", Close: true},
 	}
 	tests := []struct {
 		name  string
 		event Event
 	}{
-		{"failed without error", Event{Phase: "p", Step: "s", Status: StepFailed}},
-		{"skipped without reason", Event{Phase: "p", Step: "s", Status: StepSkipped}},
+		{"failed without error", Event{Phase: "p", PhaseLabel: "Phase", Step: "s", StepLabel: "Step", Status: StepFailed}},
+		{"skipped without reason", Event{Phase: "p", PhaseLabel: "Phase", Step: "s", StepLabel: "Step", Status: StepSkipped}},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
@@ -350,46 +425,46 @@ func TestValidateCompletedStream(t *testing.T) {
 		{
 			name: "valid",
 			events: []Event{
-				{Phase: "p", Step: "done", Status: StepPending, Of: 1},
-				{Phase: "p", Step: "failed", Status: StepPending, Of: 1},
-				{Phase: "p", Step: "skipped", Status: StepPending, Of: 1},
-				{Phase: "p", Close: true},
-				{Phase: "p", Step: "done", Status: StepDone},
-				{Phase: "p", Step: "failed", Status: StepFailed, Error: failure},
-				{Phase: "p", Step: "skipped", Status: StepSkipped, Message: "not needed"},
+				{Phase: "p", PhaseLabel: "Phase", Step: "done", StepLabel: "Done", Status: StepPending, Of: 1},
+				{Phase: "p", PhaseLabel: "Phase", Step: "failed", StepLabel: "Failed", Status: StepPending, Of: 1},
+				{Phase: "p", PhaseLabel: "Phase", Step: "skipped", StepLabel: "Skipped", Status: StepPending, Of: 1},
+				{Phase: "p", PhaseLabel: "Phase", Close: true},
+				{Phase: "p", PhaseLabel: "Phase", Step: "done", StepLabel: "Done", Status: StepDone},
+				{Phase: "p", PhaseLabel: "Phase", Step: "failed", StepLabel: "Failed", Status: StepFailed, Error: failure},
+				{Phase: "p", PhaseLabel: "Phase", Step: "skipped", StepLabel: "Skipped", Status: StepSkipped, Message: "not needed"},
 			},
 		},
 		{
 			name: "pending",
 			events: []Event{
-				{Phase: "p", Step: "s", Status: StepPending, Of: 1},
-				{Phase: "p", Close: true},
+				{Phase: "p", PhaseLabel: "Phase", Step: "s", StepLabel: "Step", Status: StepPending, Of: 1},
+				{Phase: "p", PhaseLabel: "Phase", Close: true},
 			},
 			wantErr: true,
 		},
 		{
 			name: "running",
 			events: []Event{
-				{Phase: "p", Step: "s", Status: StepPending, Of: 1},
-				{Phase: "p", Close: true},
-				{Phase: "p", Step: "s", Status: StepRunning},
+				{Phase: "p", PhaseLabel: "Phase", Step: "s", StepLabel: "Step", Status: StepPending, Of: 1},
+				{Phase: "p", PhaseLabel: "Phase", Close: true},
+				{Phase: "p", PhaseLabel: "Phase", Step: "s", StepLabel: "Step", Status: StepRunning},
 			},
 			wantErr: true,
 		},
-		{name: "close only", events: []Event{{Phase: "p", Close: true}}, wantErr: true},
+		{name: "close only", events: []Event{{Phase: "p", PhaseLabel: "Phase", Close: true}}, wantErr: true},
 		{
 			name: "one incomplete step",
 			events: []Event{
-				{Phase: "p", Step: "done", Status: StepPending, Of: 1},
-				{Phase: "p", Step: "pending", Status: StepPending, Of: 1},
-				{Phase: "p", Close: true},
-				{Phase: "p", Step: "done", Status: StepDone},
+				{Phase: "p", PhaseLabel: "Phase", Step: "done", StepLabel: "Done", Status: StepPending, Of: 1},
+				{Phase: "p", PhaseLabel: "Phase", Step: "pending", StepLabel: "Pending", Status: StepPending, Of: 1},
+				{Phase: "p", PhaseLabel: "Phase", Close: true},
+				{Phase: "p", PhaseLabel: "Phase", Step: "done", StepLabel: "Done", Status: StepDone},
 			},
 			wantErr: true,
 		},
 		{
 			name:    "unclosed phase",
-			events:  []Event{{Phase: "p", Step: "s", Status: StepPending, Of: 1}},
+			events:  []Event{{Phase: "p", PhaseLabel: "Phase", Step: "s", StepLabel: "Step", Status: StepPending, Of: 1}},
 			wantErr: true,
 		},
 	}
