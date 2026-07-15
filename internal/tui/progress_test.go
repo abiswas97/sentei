@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 	"testing"
@@ -8,10 +9,38 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
+	"github.com/abiswas97/sentei/internal/cleanup"
 	"github.com/abiswas97/sentei/internal/git"
+	"github.com/abiswas97/sentei/internal/progress"
 	"github.com/abiswas97/sentei/internal/repo"
 	"github.com/abiswas97/sentei/internal/worktree"
 )
+
+func TestUpdateProgress_CleanupErrorsFailResultAndAppearInSummary(t *testing.T) {
+	cleanupErr := errors.New("config cleanup failed")
+	m := NewModel(nil, nil, "/repo")
+	m.view = progressView
+	m.remove.run.progressCh = make(chan progress.Event, 8)
+	execution, err := progress.Start(progress.Plan{Phases: []progress.PlannedPhase{{
+		ID: cleanupPhaseID, Label: "Prune & cleanup",
+		Steps: []progress.PlannedStep{{ID: cleanupStepID, Label: "Repository cleanup"}},
+	}}}, func(event progress.Event) { m.remove.run.progressCh <- event })
+	if err != nil {
+		t.Fatal(err)
+	}
+	m.remove.run.execution = execution
+
+	updated, _ := m.updateProgress(cleanupCompleteMsg{Result: cleanup.Result{Errors: []cleanup.OperationError{{Step: "config", Err: cleanupErr}}}})
+	m = updated.(Model)
+	if !errors.Is(m.remove.run.result.Err, cleanupErr) || !m.remove.run.result.HasFailures() {
+		t.Fatalf("cleanup failure classification = %+v", m.remove.run.result)
+	}
+	m.view = summaryView
+	view := stripANSI(m.viewSummary())
+	if !strings.Contains(view, "Cleanup failures") || !strings.Contains(view, "config cleanup failed") {
+		t.Fatalf("summary omitted cleanup error:\n%s", view)
+	}
+}
 
 type stubRunner struct {
 	responses map[string]stubResponse
@@ -34,7 +63,7 @@ func (s *stubRunner) Run(dir string, args ...string) (string, error) {
 	return resp.output, resp.err
 }
 
-func TestUpdateProgress_AllDeletionsComplete_TriggersPrune(t *testing.T) {
+func TestUpdateProgress_DeletionsComplete_TriggersPrune(t *testing.T) {
 	runner := &stubRunner{
 		responses: map[string]stubResponse{
 			"/repo worktree prune": {output: ""},
@@ -46,7 +75,7 @@ func TestUpdateProgress_AllDeletionsComplete_TriggersPrune(t *testing.T) {
 	}, runner, "/repo")
 	m.view = progressView
 
-	updated, cmd := m.updateProgress(allDeletionsCompleteMsg{})
+	updated, cmd := m.updateProgress(deletionsCompleteMsg{})
 
 	if cmd == nil {
 		t.Fatal("expected a Cmd from allDeletionsCompleteMsg, got nil")

@@ -8,10 +8,10 @@ import (
 	"testing"
 )
 
-func TestPlanCloneDeepCopiesCompatibilityAndStableFields(t *testing.T) {
+func TestPlanCloneDeepCopiesStableFields(t *testing.T) {
 	original := Plan{Phases: []PlannedPhase{{
-		ID: "stable-phase", Label: "Phase", Name: "legacy-phase", Open: true,
-		Steps: []PlannedStep{{ID: "stable-step", Label: "Step", Name: "legacy-step", Checkpoints: 3}},
+		ID: "stable-phase", Label: "Phase",
+		Steps: []PlannedStep{{ID: "stable-step", Label: "Step", Checkpoints: 3}},
 	}}}
 
 	clone := original.Clone()
@@ -19,12 +19,8 @@ func TestPlanCloneDeepCopiesCompatibilityAndStableFields(t *testing.T) {
 		t.Fatalf("Clone() = %#v, want %#v", clone, original)
 	}
 	clone.Phases[0].ID = "changed-phase"
-	clone.Phases[0].Name = "changed-legacy-phase"
-	clone.Phases[0].Open = false
 	clone.Phases[0].Steps[0].ID = "changed-step"
-	clone.Phases[0].Steps[0].Name = "changed-legacy-step"
-	if original.Phases[0].ID != "stable-phase" || original.Phases[0].Name != "legacy-phase" || !original.Phases[0].Open ||
-		original.Phases[0].Steps[0].ID != "stable-step" || original.Phases[0].Steps[0].Name != "legacy-step" {
+	if original.Phases[0].ID != "stable-phase" || original.Phases[0].Steps[0].ID != "stable-step" {
 		t.Fatalf("mutating clone changed original: %#v", original)
 	}
 }
@@ -59,11 +55,14 @@ func TestExecutionStartRejectsPhaseWithoutSteps(t *testing.T) {
 	}
 }
 
-func TestDeclare_EstablishesTotalsBeforeWork(t *testing.T) {
+func TestStart_EstablishesTotalsBeforeWork(t *testing.T) {
 	events, emit := collectEvents()
-	Declare(Plan{Phases: []PlannedPhase{
-		{Name: "feat-1", Steps: []PlannedStep{{Name: "Setup a"}, {Name: "Setup b"}}},
+	_, err := Start(Plan{Phases: []PlannedPhase{
+		{ID: "feat-1", Steps: []PlannedStep{{ID: "setup-a"}, {ID: "setup-b"}}},
 	}}, emit)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	states := Snapshot(*events)
 	if len(states) != 1 {
@@ -74,20 +73,10 @@ func TestDeclare_EstablishesTotalsBeforeWork(t *testing.T) {
 		t.Errorf("declared phase = %d/%d, want 0/2 before any work", p.Done, p.Total)
 	}
 	if !p.Closed {
-		t.Error("non-Open phase must be closed by Declare")
+		t.Error("phase must be closed by Start")
 	}
 	if p.Settled() {
 		t.Error("declared-but-unworked phase must not be settled")
-	}
-}
-
-func TestValidateStream_LegacyOpenPhaseRetainsDiscoveryCompatibility(t *testing.T) {
-	events, emit := collectEvents()
-	Declare(Plan{Phases: []PlannedPhase{{Name: "scan", Open: true}}}, emit)
-	emit(Event{Phase: "scan", Step: "found-1", Status: StepDone})
-	ClosePhase("scan", emit)
-	if err := ValidateLegacyStream(*events); err != nil {
-		t.Fatalf("legacy open stream rejected before producer migration: %v", err)
 	}
 }
 
@@ -95,13 +84,6 @@ func TestValidateStream_StrictByDefaultForUnlabeledEvents(t *testing.T) {
 	events := []Event{{Phase: "p", Step: "undeclared", Status: StepRunning}}
 	if err := ValidateStream(events); err == nil {
 		t.Fatal("strict validation accepted unlabeled undeclared work")
-	}
-}
-
-func TestValidateLegacyStream_AllowsLabeledDiscovery(t *testing.T) {
-	events := []Event{{Phase: "p", PhaseLabel: "Phase", Step: "discovered", StepLabel: "Discovered", Status: StepDone}}
-	if err := ValidateLegacyStream(events); err != nil {
-		t.Fatalf("legacy validation inferred strictness from labels: %v", err)
 	}
 }
 
@@ -118,9 +100,12 @@ func TestValidateStream_MixedMetadataDoesNotFallBack(t *testing.T) {
 
 func TestSnapshot_CheckpointProgressWithinSteps(t *testing.T) {
 	events, emit := collectEvents()
-	Declare(Plan{Phases: []PlannedPhase{
-		{Name: "Removing worktrees", Steps: []PlannedStep{{Name: "wt-a", Checkpoints: 2}}},
+	_, err := Start(Plan{Phases: []PlannedPhase{
+		{ID: "Removing worktrees", Steps: []PlannedStep{{ID: "wt-a", Checkpoints: 2}}},
 	}}, emit)
+	if err != nil {
+		t.Fatal(err)
+	}
 	emit(Event{Phase: "Removing worktrees", Step: "wt-a", Status: StepRunning, Checkpoint: 1, Of: 2})
 
 	states := Snapshot(*events)
@@ -484,10 +469,13 @@ func TestSnapshot_MonotonicUnderRandomInterleavings(t *testing.T) {
 	rng := rand.New(rand.NewSource(1))
 	for trial := 0; trial < 50; trial++ {
 		var stream []Event
-		Declare(Plan{Phases: []PlannedPhase{
-			{Name: "A", Steps: []PlannedStep{{Name: "a1", Checkpoints: 2}, {Name: "a2"}}},
-			{Name: "B", Steps: []PlannedStep{{Name: "b1", Checkpoints: 3}}},
+		_, err := Start(Plan{Phases: []PlannedPhase{
+			{ID: "A", Steps: []PlannedStep{{ID: "a1", Checkpoints: 2}, {ID: "a2"}}},
+			{ID: "B", Steps: []PlannedStep{{ID: "b1", Checkpoints: 3}}},
 		}}, func(e Event) { stream = append(stream, e) })
+		if err != nil {
+			t.Fatal(err)
+		}
 
 		work := []Event{
 			{Phase: "A", Step: "a1", Status: StepRunning, Checkpoint: 1, Of: 2},

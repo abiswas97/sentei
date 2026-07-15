@@ -128,8 +128,27 @@ func RunRemove(args []string) error {
 		return err
 	}
 
-	events := make(chan progress.Event, 2*len(filtered))
-	result := worktree.DeleteWorktrees(remover, filtered, 5, events)
+	targets := make([]worktree.RemovalTarget, len(filtered))
+	steps := make([]progress.PlannedStep, len(filtered))
+	for i, wt := range filtered {
+		stepID := progress.StepID(fmt.Sprintf("remove-%d", i))
+		targets[i] = worktree.RemovalTarget{Worktree: wt, StepID: stepID}
+		steps[i] = progress.PlannedStep{ID: stepID, Label: shortBranch(wt.Branch), Checkpoints: 2}
+	}
+	execution, err := progress.Start(progress.Plan{Phases: []progress.PlannedPhase{{
+		ID: worktree.RemovalPhaseID, Label: worktree.RemovalPhaseName, Steps: steps,
+	}}}, nil)
+	if err != nil {
+		return fmt.Errorf("starting removal progress: %w", err)
+	}
+	result := worktree.DeleteWorktrees(execution, worktree.RemovalPhaseID, remover, targets, 5)
+	if err := execution.Finish("removal command complete"); err != nil {
+		return fmt.Errorf("finishing removal progress: %w", err)
+	}
+	result.Phases = execution.Phases()
+	if result.Err != nil {
+		return fmt.Errorf("reporting removal progress: %w", result.Err)
+	}
 
 	if err := worktree.PruneWorktrees(runner, repoPath); err != nil {
 		fmt.Fprintf(os.Stderr, "Warning: failed to prune worktrees: %v\n", err)

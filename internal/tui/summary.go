@@ -69,6 +69,14 @@ func (m Model) viewSummary() string {
 	}
 
 	if cr := m.remove.run.cleanupResult; cr != nil {
+		if len(cr.Errors) > 0 {
+			b.WriteString("\n")
+			b.WriteString(styleError.Render("  Cleanup failures:"))
+			b.WriteString("\n")
+			for _, operationErr := range cr.Errors {
+				fmt.Fprintf(&b, "    %s %s: %s\n", styleIndicatorFailed.Render(indicatorFailed), operationErr.Step, operationErr.Err)
+			}
+		}
 		cleanupActions := cr.StaleRefsRemoved + cr.ConfigDedupResult.Removed +
 			cr.GoneBranchesDeleted + cr.ConfigOrphanResult.Removed
 		if cleanupActions > 0 {

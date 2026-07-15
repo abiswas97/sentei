@@ -3,6 +3,7 @@ package tui
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -20,15 +21,13 @@ type teardownCompleteMsg struct {
 	results []progress.StepResult
 }
 
-func unlockLockedWorktrees(runner git.CommandRunner, repoPath string, worktrees []git.Worktree) {
-	for _, wt := range worktrees {
-		if wt.IsLocked {
-			if err := worktree.UnlockWorktree(runner, repoPath, wt.Path); err != nil {
-				fmt.Fprintf(os.Stderr, "Warning: failed to unlock %s: %v\n", wt.Path, err)
-			}
-		}
-	}
-}
+const (
+	unlockPhaseID   progress.PhaseID = "unlock-worktrees"
+	teardownPhaseID progress.PhaseID = "teardown-integrations"
+	cleanupPhaseID  progress.PhaseID = "prune-and-cleanup"
+	pruneStepID     progress.StepID  = "prune-worktree-metadata"
+	cleanupStepID   progress.StepID  = "repository-cleanup"
+)
 
 func (m Model) updateConfirm(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
@@ -57,24 +56,87 @@ func (m Model) beginRemoval() (tea.Model, tea.Cmd) {
 	m.remove.run = newRemovalRun(selected)
 
 	integrations := integration.All()
-	var planned []string
-	for _, wt := range selected {
+	var teardownOps []teardownOperation
+	for wtIndex, wt := range selected {
 		for _, artifact := range creator.ScanArtifacts(wt.Path, integrations) {
 			if integ := findIntegrationByName(integrations, artifact.IntegrationName); integ != nil {
-				planned = append(planned, integration.TeardownStepName(*integ))
+				stepID := progress.StepID(fmt.Sprintf("teardown-%d-%d", wtIndex, len(teardownOps)))
+				teardownOps = append(teardownOps, teardownOperation{
+					stepID:  stepID,
+					label:   integration.TeardownStepName(*integ),
+					wtPath:  wt.Path,
+					command: integ.Teardown.Command,
+					dirs:    append([]string(nil), artifact.Dirs...),
+				})
 			}
 		}
 	}
 
-	unlockLockedWorktrees(m.runner, m.repoPath, selected)
-
-	if len(planned) > 0 {
-		m.remove.run.teardownRunning = true
-		m.remove.run.teardownPlanned = planned
-		return m, m.runTeardownPhase(selected, integrations)
+	var phases []progress.PlannedPhase
+	var unlockSteps []progress.PlannedStep
+	for i, wt := range selected {
+		if wt.IsLocked {
+			unlockSteps = append(unlockSteps, progress.PlannedStep{ID: progress.StepID(fmt.Sprintf("unlock-%d", i)), Label: worktreeLabel(wt)})
+		}
+	}
+	if len(unlockSteps) > 0 {
+		phases = append(phases, progress.PlannedPhase{ID: unlockPhaseID, Label: "Unlock", Steps: unlockSteps})
+	}
+	if len(teardownOps) > 0 {
+		steps := make([]progress.PlannedStep, len(teardownOps))
+		for i, op := range teardownOps {
+			steps[i] = progress.PlannedStep{ID: op.stepID, Label: op.label}
+		}
+		phases = append(phases, progress.PlannedPhase{ID: teardownPhaseID, Label: "Teardown", Steps: steps})
+	}
+	targets := make([]worktree.RemovalTarget, len(selected))
+	removeSteps := make([]progress.PlannedStep, len(selected))
+	for i, wt := range selected {
+		stepID := progress.StepID(fmt.Sprintf("remove-%d", i))
+		targets[i] = worktree.RemovalTarget{Worktree: wt, StepID: stepID}
+		removeSteps[i] = progress.PlannedStep{ID: stepID, Label: worktreeLabel(wt), Checkpoints: 2}
+	}
+	phases = append(phases,
+		progress.PlannedPhase{ID: worktree.RemovalPhaseID, Label: worktree.RemovalPhaseName, Steps: removeSteps},
+		progress.PlannedPhase{ID: cleanupPhaseID, Label: "Prune & cleanup", Steps: []progress.PlannedStep{
+			{ID: pruneStepID, Label: "Prune worktree metadata"},
+			{ID: cleanupStepID, Label: "Repository cleanup"},
+		}},
+	)
+	ch := make(chan progress.Event, (len(selected)+len(teardownOps)+len(unlockSteps)+2)*5)
+	execution, err := progress.Start(progress.Plan{Phases: phases}, func(event progress.Event) { ch <- event })
+	if err != nil {
+		close(ch)
+		return m, waitForRemovalEvent(ch)
+	}
+	m.remove.run.execution = execution
+	m.remove.run.progressCh = ch
+	m.remove.run.targets = targets
+	m.remove.run.teardownOps = teardownOps
+	declarationEvents := len(unlockSteps) + len(teardownOps) + len(removeSteps) + 2 + len(phases)
+	for range declarationEvents {
+		m.remove.run.events = append(m.remove.run.events, <-ch)
+	}
+	for i, wt := range selected {
+		if !wt.IsLocked {
+			continue
+		}
+		stepID := progress.StepID(fmt.Sprintf("unlock-%d", i))
+		_, _ = execution.Run(unlockPhaseID, stepID, func() (string, error) {
+			return "", worktree.UnlockWorktree(m.runner, m.repoPath, wt.Path)
+		})
 	}
 
-	return m.startDeletions()
+	if len(teardownOps) > 0 {
+		m.remove.run.teardownRunning = true
+		for _, op := range teardownOps {
+			m.remove.run.teardownPlanned = append(m.remove.run.teardownPlanned, op.label)
+		}
+		return m, tea.Batch(waitForRemovalEvent(ch), m.runFrozenTeardownPhase(teardownOps, execution))
+	}
+
+	updated, cmd := m.startDeletions()
+	return updated, tea.Batch(waitForRemovalEvent(ch), cmd)
 }
 
 // worktreeAtRisk reports whether removing wt could lose work that exists
@@ -87,11 +149,12 @@ func worktreeAtRisk(wt git.Worktree) bool {
 // startDeletions kicks off the deletion goroutine for the current run's
 // worktree snapshot and begins consuming its events.
 func (m Model) startDeletions() (tea.Model, tea.Cmd) {
-	selected := m.remove.run.worktrees
-	ch := make(chan progress.Event, len(selected)*2)
-	m.remove.run.progressCh = ch
-	go worktree.DeleteWorktrees(os.RemoveAll, selected, 5, ch)
-	return m, waitForRemovalEvent(ch)
+	execution := m.remove.run.execution
+	targets := append([]worktree.RemovalTarget(nil), m.remove.run.targets...)
+	return m, func() tea.Msg {
+		result := worktree.DeleteWorktrees(execution, worktree.RemovalPhaseID, os.RemoveAll, targets, 5)
+		return deletionsCompleteMsg{Result: result}
+	}
 }
 
 func findIntegrationByName(integrations []integration.Integration, name string) *integration.Integration {
@@ -105,7 +168,7 @@ func findIntegrationByName(integrations []integration.Integration, name string) 
 
 const maxTeardownConcurrency = 5
 
-func (m Model) runTeardownPhase(worktrees []git.Worktree, integrations []integration.Integration) tea.Cmd {
+func (m Model) runFrozenTeardownPhase(operations []teardownOperation, execution *progress.Execution) tea.Cmd {
 	return func() tea.Msg {
 		shell := m.shell
 		type indexedResults struct {
@@ -113,20 +176,32 @@ func (m Model) runTeardownPhase(worktrees []git.Worktree, integrations []integra
 			results []progress.StepResult
 		}
 
-		resultsCh := make(chan indexedResults, len(worktrees))
+		resultsCh := make(chan indexedResults, len(operations))
 		sem := make(chan struct{}, maxTeardownConcurrency)
 
-		for i, wt := range worktrees {
+		for i, operation := range operations {
 			sem <- struct{}{}
-			go func(idx int, wtPath string) {
+			go func(idx int, op teardownOperation) {
 				defer func() { <-sem }()
-				results := creator.Teardown(shell, wtPath, integrations, func(progress.Event) {})
-				resultsCh <- indexedResults{index: idx, results: results}
-			}(i, wt.Path)
+				result, _ := execution.Run(teardownPhaseID, op.stepID, func() (string, error) {
+					if op.command != "" {
+						if _, err := shell.RunShell(op.wtPath, op.command); err == nil {
+							return "", nil
+						}
+					}
+					for _, dir := range op.dirs {
+						if err := os.RemoveAll(filepath.Join(op.wtPath, strings.TrimSuffix(dir, "/"))); err != nil {
+							return "", err
+						}
+					}
+					return "removed artifact dirs", nil
+				})
+				resultsCh <- indexedResults{index: idx, results: []progress.StepResult{result}}
+			}(i, operation)
 		}
 
-		collected := make([][]progress.StepResult, len(worktrees))
-		for range worktrees {
+		collected := make([][]progress.StepResult, len(operations))
+		for range operations {
 			ir := <-resultsCh
 			collected[ir.index] = ir.results
 		}
@@ -137,6 +212,34 @@ func (m Model) runTeardownPhase(worktrees []git.Worktree, integrations []integra
 		}
 		return teardownCompleteMsg{results: allResults}
 	}
+}
+
+// runTeardownPhase is retained as a focused test seam. The confirmation path
+// prepares and freezes these operations before calling runFrozenTeardownPhase.
+func (m Model) runTeardownPhase(worktrees []git.Worktree, integrations []integration.Integration) tea.Cmd {
+	var operations []teardownOperation
+	for _, wt := range worktrees {
+		for _, artifact := range creator.ScanArtifacts(wt.Path, integrations) {
+			integ := findIntegrationByName(integrations, artifact.IntegrationName)
+			if integ == nil {
+				continue
+			}
+			operations = append(operations, teardownOperation{
+				stepID: progress.StepID(fmt.Sprintf("teardown-%d", len(operations))),
+				label:  integration.TeardownStepName(*integ), wtPath: wt.Path,
+				command: integ.Teardown.Command, dirs: append([]string(nil), artifact.Dirs...),
+			})
+		}
+	}
+	steps := make([]progress.PlannedStep, len(operations))
+	for i, op := range operations {
+		steps[i] = progress.PlannedStep{ID: op.stepID, Label: op.label}
+	}
+	execution, err := progress.Start(progress.Plan{Phases: []progress.PlannedPhase{{ID: teardownPhaseID, Label: "Teardown", Steps: steps}}}, nil)
+	if err != nil {
+		return func() tea.Msg { return teardownCompleteMsg{} }
+	}
+	return m.runFrozenTeardownPhase(operations, execution)
 }
 
 func (m Model) viewConfirm() string {

@@ -9,6 +9,7 @@ import (
 	"github.com/abiswas97/sentei/internal/git"
 	"github.com/abiswas97/sentei/internal/progress"
 	"github.com/abiswas97/sentei/internal/repo"
+	"github.com/abiswas97/sentei/internal/worktree"
 )
 
 func TestViewProgress_NoPurpleBadge_HasChromeAndBar(t *testing.T) {
@@ -32,15 +33,22 @@ func TestViewProgress_NoPurpleBadge_HasChromeAndBar(t *testing.T) {
 func TestBuildRemovalPhases_PruneStaging(t *testing.T) {
 	m := NewModel(nil, nil, "/repo")
 	m.remove.run = newRemovalRun([]git.Worktree{{Path: "/work/a", Branch: "refs/heads/a"}})
+	m.remove.run.events = []progress.Event{
+		{Phase: worktree.RemovalPhaseID, PhaseLabel: worktree.RemovalPhaseName, Step: "remove-0", StepLabel: "a", Status: progress.StepPending, Of: 2},
+		{Phase: cleanupPhaseID, PhaseLabel: "Prune & cleanup", Step: pruneStepID, StepLabel: "Prune worktree metadata", Status: progress.StepPending, Of: 1},
+		{Phase: cleanupPhaseID, PhaseLabel: "Prune & cleanup", Step: cleanupStepID, StepLabel: "Repository cleanup", Status: progress.StepPending, Of: 1},
+		{Phase: worktree.RemovalPhaseID, PhaseLabel: worktree.RemovalPhaseName, Close: true},
+		{Phase: cleanupPhaseID, PhaseLabel: "Prune & cleanup", Close: true},
+	}
 
 	phases := m.buildRemovalPhases()
 	last := phases[len(phases)-1]
-	if last.Name != "Prune & cleanup" || last.Total != 0 {
+	if last.Name != "Prune & cleanup" || last.Total != 2 {
 		t.Errorf("expected pending prune phase before removal completes, got %+v", last)
 	}
 
 	// Removal finished: prune phase becomes active work.
-	m.remove.run.statuses["/work/a"] = statusRemoved
+	m.remove.run.events = append(m.remove.run.events, progress.Event{Phase: worktree.RemovalPhaseID, Step: "remove-0", Status: progress.StepDone})
 	phases = m.buildRemovalPhases()
 	last = phases[len(phases)-1]
 	if last.Total != 2 || last.Done != 0 {
@@ -50,6 +58,10 @@ func TestBuildRemovalPhases_PruneStaging(t *testing.T) {
 	pruneErr := error(nil)
 	m.remove.run.pruneErr = &pruneErr
 	m.remove.run.cleanupResult = &cleanup.Result{}
+	m.remove.run.events = append(m.remove.run.events,
+		progress.Event{Phase: cleanupPhaseID, Step: pruneStepID, Status: progress.StepDone},
+		progress.Event{Phase: cleanupPhaseID, Step: cleanupStepID, Status: progress.StepDone},
+	)
 	phases = m.buildRemovalPhases()
 	last = phases[len(phases)-1]
 	if last.Done != 2 || last.Failed != 0 {

@@ -154,39 +154,3 @@ func ValidateCompletedStream(events []Event) error {
 	}
 	return nil
 }
-
-// ValidateLegacyStream preserves discovery semantics for unconverted
-// producers. New code must use ValidateStream.
-func ValidateLegacyStream(events []Event) error {
-	closed := map[PhaseID]bool{}
-	seen := map[string]bool{}
-	reached := map[string]int{}
-	terminalSteps := map[string]bool{}
-	for i, ev := range events {
-		if ev.Close {
-			closed[ev.Phase] = true
-			continue
-		}
-		key := ev.Phase + "\x00" + ev.Step
-		if closed[ev.Phase] && !seen[key] {
-			return fmt.Errorf("event %d: step %q added after phase %q closed", i, ev.Step, ev.Phase)
-		}
-		if terminalSteps[key] {
-			return fmt.Errorf("event %d: terminal mutation for phase %q step %q", i, ev.Phase, ev.Step)
-		}
-		seen[key] = true
-		if ev.Status == StepRunning && ev.Checkpoint > 0 {
-			if ev.Checkpoint < reached[key] {
-				return fmt.Errorf("event %d: step %q checkpoint regressed from %d to %d", i, ev.Step, reached[key], ev.Checkpoint)
-			}
-			if ev.Of > 0 && ev.Checkpoint > ev.Of {
-				return fmt.Errorf("event %d: step %q checkpoint %d exceeds declared %d", i, ev.Step, ev.Checkpoint, ev.Of)
-			}
-			reached[key] = ev.Checkpoint
-		}
-		if terminal(ev.Status) {
-			terminalSteps[key] = true
-		}
-	}
-	return nil
-}

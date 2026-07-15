@@ -5,6 +5,7 @@ import (
 
 	"github.com/abiswas97/sentei/internal/git"
 	"github.com/abiswas97/sentei/internal/progress"
+	"github.com/abiswas97/sentei/internal/worktree"
 )
 
 // Spec "Teardown counts are real": the running Teardown phase displays the
@@ -17,6 +18,10 @@ func TestBuildRemovalPhases_TeardownDeclaresPlannedTotal(t *testing.T) {
 		"Teardown code-review-graph", "Teardown cocoindex-code",
 		"Teardown code-review-graph", "Teardown cocoindex-code",
 	}
+	for i, label := range m.remove.run.teardownPlanned {
+		m.remove.run.events = append(m.remove.run.events, progress.Event{Phase: teardownPhaseID, PhaseLabel: "Teardown", Step: progress.StepID(string(rune('a' + i))), StepLabel: label, Status: progress.StepPending, Of: 1})
+	}
+	m.remove.run.events = append(m.remove.run.events, progress.Event{Phase: teardownPhaseID, PhaseLabel: "Teardown", Close: true})
 
 	phases := m.buildRemovalPhases()
 	td := phases[0]
@@ -34,9 +39,14 @@ func TestBuildRemovalPhases_StartCheckpointsMoveTheBar(t *testing.T) {
 	wts := []git.Worktree{{Path: "/wt/a"}, {Path: "/wt/b"}, {Path: "/wt/c"}}
 	m := NewModel(wts, nil, "/repo")
 	m.remove.run = newRemovalRun(wts)
-	for _, wt := range wts {
-		m.remove.run.statuses[wt.Path] = statusRemoving
+	for i := range wts {
+		stepID := progress.StepID(string(rune('a' + i)))
+		m.remove.run.events = append(m.remove.run.events,
+			progress.Event{Phase: worktree.RemovalPhaseID, PhaseLabel: worktree.RemovalPhaseName, Step: stepID, Status: progress.StepPending, Of: 2},
+			progress.Event{Phase: worktree.RemovalPhaseID, Step: stepID, Status: progress.StepRunning, Checkpoint: 1, Of: 2},
+		)
 	}
+	m.remove.run.events = append(m.remove.run.events, progress.Event{Phase: worktree.RemovalPhaseID, PhaseLabel: worktree.RemovalPhaseName, Close: true})
 
 	phases := m.buildRemovalPhases()
 	var removing progress.PhaseState

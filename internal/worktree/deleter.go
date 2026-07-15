@@ -1,6 +1,7 @@
 package worktree
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 	"sync"
@@ -13,6 +14,13 @@ import (
 // report progress; the TUI renders the same phase name.
 const RemovalPhaseName = "Removing worktrees"
 
+const RemovalPhaseID progress.PhaseID = "remove-worktrees"
+
+type RemovalTarget struct {
+	Worktree git.Worktree
+	StepID   progress.StepID
+}
+
 type WorktreeOutcome struct {
 	Path    string
 	Success bool
@@ -23,6 +31,12 @@ type DeletionResult struct {
 	SuccessCount int
 	FailureCount int
 	Outcomes     []WorktreeOutcome
+	Phases       []progress.Phase
+	Err          error
+}
+
+func (r DeletionResult) HasFailures() bool {
+	return r.Err != nil || r.FailureCount > 0 || progress.PhasesHaveFailures(r.Phases)
 }
 
 func PruneWorktrees(runner git.CommandRunner, repoPath string) error {
@@ -38,10 +52,8 @@ func UnlockWorktree(runner git.CommandRunner, repoPath, wtPath string) error {
 	return err
 }
 
-func DeleteWorktrees(remover func(string) error, worktrees []git.Worktree, maxConcurrency int, events chan<- progress.Event) DeletionResult {
-	defer close(events)
-
-	if len(worktrees) == 0 {
+func DeleteWorktrees(execution *progress.Execution, phaseID progress.PhaseID, remover func(string) error, targets []RemovalTarget, maxConcurrency int) DeletionResult {
+	if len(targets) == 0 {
 		return DeletionResult{}
 	}
 
@@ -51,44 +63,64 @@ func DeleteWorktrees(remover func(string) error, worktrees []git.Worktree, maxCo
 
 	var mu sync.Mutex
 	result := DeletionResult{
-		Outcomes: make([]WorktreeOutcome, len(worktrees)),
+		Outcomes: make([]WorktreeOutcome, len(targets)),
+	}
+	recordExecutionError := func(err error) {
+		if err == nil {
+			return
+		}
+		mu.Lock()
+		result.Err = errors.Join(result.Err, err)
+		mu.Unlock()
 	}
 
 	sem := make(chan struct{}, maxConcurrency)
 	var wg sync.WaitGroup
 
-	for i, wt := range worktrees {
+	for i, target := range targets {
 		wg.Add(1)
 		sem <- struct{}{}
 
-		go func(idx int, w git.Worktree) {
+		go func(idx int, target RemovalTarget) {
 			defer wg.Done()
 			defer func() { <-sem }()
 
-			events <- progress.Event{Phase: RemovalPhaseName, Step: w.Path, Status: progress.StepRunning}
+			if err := execution.Running(phaseID, target.StepID, 1, "Removing from disk"); err != nil {
+				recordExecutionError(err)
+				return
+			}
 
-			err := remover(w.Path)
+			err := remover(target.Worktree.Path)
 
 			mu.Lock()
-			defer mu.Unlock()
-
 			if err != nil {
 				result.FailureCount++
 				result.Outcomes[idx] = WorktreeOutcome{
-					Path:    w.Path,
+					Path:    target.Worktree.Path,
 					Success: false,
-					Error:   fmt.Errorf("removing %s: %w", w.Path, err),
+					Error:   fmt.Errorf("removing %s: %w", target.Worktree.Path, err),
 				}
-				events <- progress.Event{Phase: RemovalPhaseName, Step: w.Path, Status: progress.StepFailed, Error: err}
 			} else {
 				result.SuccessCount++
 				result.Outcomes[idx] = WorktreeOutcome{
-					Path:    w.Path,
+					Path:    target.Worktree.Path,
 					Success: true,
 				}
-				events <- progress.Event{Phase: RemovalPhaseName, Step: w.Path, Status: progress.StepDone}
 			}
-		}(i, wt)
+			mu.Unlock()
+
+			if err != nil {
+				_, progressErr := execution.Fail(phaseID, target.StepID, err)
+				recordExecutionError(progressErr)
+				return
+			}
+			if progressErr := execution.Running(phaseID, target.StepID, 2, "Removed from disk"); progressErr != nil {
+				recordExecutionError(progressErr)
+				return
+			}
+			_, progressErr := execution.Done(phaseID, target.StepID, "Removed")
+			recordExecutionError(progressErr)
+		}(i, target)
 	}
 
 	wg.Wait()

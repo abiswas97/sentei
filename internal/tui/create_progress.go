@@ -36,7 +36,7 @@ func (m Model) createLayout() ProgressLayout {
 		Title:     titleCreatingWorktree,
 		Completed: m.create.result != nil,
 		Subtitle:  fmt.Sprintf("%s \u2192 from %s", m.create.branchInput.Value(), m.create.baseInput.Value()),
-		Phases:    progress.WithPendingPhases(progress.Snapshot(m.create.events), "Setup", "Dependencies", "Integrations"),
+		Phases:    progress.Snapshot(m.create.events),
 		Width:     m.width,
 		Height:    m.height,
 		Hints:     progressFooter,

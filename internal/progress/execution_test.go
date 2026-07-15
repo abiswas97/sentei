@@ -122,24 +122,6 @@ func TestExecution_StartRejectsInvalidIDs(t *testing.T) {
 	}
 }
 
-func TestExecution_StartRejectsMixedStableAndLegacyPlanFields(t *testing.T) {
-	tests := []struct {
-		name string
-		plan Plan
-	}{
-		{"phase name", Plan{Phases: []PlannedPhase{{ID: "p", Label: "Phase", Name: "legacy"}}}},
-		{"phase open", Plan{Phases: []PlannedPhase{{ID: "p", Label: "Phase", Open: true}}}},
-		{"step name", Plan{Phases: []PlannedPhase{{ID: "p", Steps: []PlannedStep{{ID: "s", Label: "Step", Name: "legacy"}}}}}},
-	}
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			if _, err := Start(tc.plan, func(Event) {}); err == nil {
-				t.Fatal("mixed stable and legacy plan fields accepted")
-			}
-		})
-	}
-}
-
 func TestExecution_StartEmitsCompleteNormalizedDeclarationPrefix(t *testing.T) {
 	var events []Event
 	_, err := Start(Plan{Phases: []PlannedPhase{

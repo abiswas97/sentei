@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"errors"
 	"fmt"
 
 	"charm.land/bubbles/v2/key"
@@ -24,14 +25,15 @@ type cleanupCompleteMsg struct {
 }
 
 type removalEventMsg struct{ event progress.Event }
-type allDeletionsCompleteMsg struct{}
+type removalEventsCompleteMsg struct{}
+type deletionsCompleteMsg struct{ Result worktree.DeletionResult }
 type pruneCompleteMsg struct{ Err error }
 
 func waitForRemovalEvent(ch <-chan progress.Event) tea.Cmd {
 	return func() tea.Msg {
 		ev, ok := <-ch
 		if !ok {
-			return allDeletionsCompleteMsg{}
+			return removalEventsCompleteMsg{}
 		}
 		return removalEventMsg{event: ev}
 	}
@@ -67,7 +69,17 @@ func (m Model) updateProgress(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.startDeletions()
 
 	case removalEventMsg:
+		m.remove.run.events = append(m.remove.run.events, msg.event)
+		if msg.event.Phase != worktree.RemovalPhaseID {
+			return m, tea.Batch(m.syncProgressBar(), waitForRemovalEvent(m.remove.run.progressCh))
+		}
 		path := msg.event.Step
+		for _, target := range m.remove.run.targets {
+			if target.StepID == msg.event.Step {
+				path = target.Worktree.Path
+				break
+			}
+		}
 		switch msg.event.Status {
 		case progress.StepRunning:
 			m.remove.run.statuses[path] = statusRemoving
@@ -89,16 +101,50 @@ func (m Model) updateProgress(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, tea.Batch(m.syncProgressBar(), waitForRemovalEvent(m.remove.run.progressCh))
 
-	case allDeletionsCompleteMsg:
+	case deletionsCompleteMsg:
+		m.remove.run.result = msg.Result
 		return m, tea.Batch(m.syncProgressBar(), runPrune(m.runner, m.repoPath))
 
 	case pruneCompleteMsg:
 		pruneErr := msg.Err
 		m.remove.run.pruneErr = &pruneErr
+		if m.remove.run.execution != nil {
+			if msg.Err != nil {
+				_, _ = m.remove.run.execution.Fail(cleanupPhaseID, pruneStepID, msg.Err)
+			} else {
+				_, _ = m.remove.run.execution.Done(cleanupPhaseID, pruneStepID, "Pruned")
+			}
+		}
 		return m, tea.Batch(m.syncProgressBar(), runCleanup(m.runner, m.repoPath))
 
 	case cleanupCompleteMsg:
 		m.remove.run.cleanupResult = &msg.Result
+		if m.remove.run.execution == nil {
+			m.remove.selected = make(map[string]bool)
+			m.worktreeGeneration++
+			syncCmd := m.syncProgressBar()
+			updated, holdCmd := m.holdOrAdvance(summaryView)
+			return updated, tea.Batch(syncCmd, holdCmd,
+				recordRemovals(m.repoPath, m.remove.run.result.SuccessCount),
+				loadWorktreeContext(m.runner, m.repoPath, m.worktreeGeneration))
+		}
+		if len(msg.Result.Errors) > 0 {
+			cleanupErrors := make([]error, len(msg.Result.Errors))
+			for i, operationErr := range msg.Result.Errors {
+				cleanupErrors[i] = operationErr.Err
+			}
+			cleanupErr := errors.Join(cleanupErrors...)
+			m.remove.run.result.Err = errors.Join(m.remove.run.result.Err, cleanupErr)
+			_, _ = m.remove.run.execution.Fail(cleanupPhaseID, cleanupStepID, cleanupErr)
+		} else {
+			_, _ = m.remove.run.execution.Done(cleanupPhaseID, cleanupStepID, "Cleaned")
+		}
+		_ = m.remove.run.execution.Finish("removal run complete")
+		m.remove.run.result.Phases = m.remove.run.execution.Phases()
+		close(m.remove.run.progressCh)
+		return m, m.syncProgressBar()
+
+	case removalEventsCompleteMsg:
 		m.remove.selected = make(map[string]bool)
 		m.worktreeGeneration++
 		// Final spring target before the hold: all phases are complete, so
@@ -131,84 +177,5 @@ func (m Model) viewProgress() string {
 // buildRemovalPhases maps the current removal run onto the shared phase
 // shape consumed by ProgressLayout.
 func (m Model) buildRemovalPhases() []progress.PhaseState {
-	run := m.remove.run
-	var phases []progress.PhaseState
-
-	switch {
-	case run.teardownRunning:
-		// The plan was scanned at confirm time: the phase shows its real
-		// total from its first frame; steps resolve when results land.
-		td := progress.PhaseState{Name: "Teardown", Total: len(run.teardownPlanned), Closed: true}
-		for _, name := range run.teardownPlanned {
-			td.Steps = append(td.Steps, progress.StepState{Name: name, Status: progress.StepPending, Declared: 1})
-		}
-		phases = append(phases, td)
-	case len(run.teardownResults) > 0:
-		td := progress.PhaseState{Name: "Teardown", Total: len(run.teardownResults), Closed: true}
-		for _, r := range run.teardownResults {
-			td.Steps = append(td.Steps, progress.StepState{Name: r.Name, Status: r.Status, Reached: 1, Declared: 1})
-			switch r.Status {
-			case progress.StepDone, progress.StepSkipped:
-				td.Done++
-			case progress.StepFailed:
-				td.Failed++
-				td.Done++
-			}
-		}
-		phases = append(phases, td)
-	}
-
-	// Each removal step declares two checkpoints (started, removed): the
-	// deleter observes nothing finer inside `git worktree remove`, and the
-	// start checkpoint is what moves the bar during parallel work.
-	removing := progress.PhaseState{Name: worktree.RemovalPhaseName, Total: run.total(), Closed: true}
-	for _, wt := range run.worktrees {
-		label := worktreeLabel(wt)
-		step := progress.StepState{Name: label, Declared: 2}
-		switch run.statuses[wt.Path] {
-		case statusRemoving:
-			step.Status = progress.StepRunning
-			step.Reached = 1
-		case statusRemoved:
-			step.Status = progress.StepDone
-			step.Reached = 2
-			removing.Done++
-		case statusFailed:
-			step.Status = progress.StepFailed
-			step.Reached = 2
-			removing.Failed++
-			removing.Done++
-		default:
-			step.Status = progress.StepPending
-		}
-		removing.Steps = append(removing.Steps, step)
-	}
-	phases = append(phases, removing)
-
-	cleanupPhase := progress.PhaseState{Name: "Prune & cleanup", Closed: true}
-	if removing.Total > 0 && removing.Done == removing.Total {
-		cleanupPhase.Total = 2
-		cleanupPhase.Steps = []progress.StepState{
-			{Name: "Prune worktree metadata", Status: progress.StepRunning, Declared: 1},
-			{Name: "Repository cleanup", Status: progress.StepPending, Declared: 1},
-		}
-		if run.pruneErr != nil {
-			if *run.pruneErr != nil {
-				cleanupPhase.Steps[0].Status = progress.StepFailed
-				cleanupPhase.Failed++
-			} else {
-				cleanupPhase.Steps[0].Status = progress.StepDone
-			}
-			cleanupPhase.Steps[0].Reached = 1
-			cleanupPhase.Done++
-			cleanupPhase.Steps[1].Status = progress.StepRunning
-		}
-		if run.cleanupResult != nil {
-			cleanupPhase.Steps[1].Status = progress.StepDone
-			cleanupPhase.Steps[1].Reached = 1
-			cleanupPhase.Done++
-		}
-	}
-	phases = append(phases, cleanupPhase)
-	return phases
+	return progress.Snapshot(m.remove.run.events)
 }

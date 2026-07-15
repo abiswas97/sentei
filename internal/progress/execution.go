@@ -65,9 +65,6 @@ func Start(plan Plan, emit func(Event)) (*Execution, error) {
 	}
 	x.delivery = sync.NewCond(&x.mu)
 	for phaseIndex, plannedPhase := range plan.Phases {
-		if plannedPhase.Name != "" || plannedPhase.Open {
-			return nil, fmt.Errorf("phase %d mixes stable and legacy plan fields", phaseIndex)
-		}
 		if plannedPhase.ID == "" {
 			return nil, fmt.Errorf("phase %d has empty ID", phaseIndex)
 		}
@@ -88,9 +85,6 @@ func Start(plan Plan, emit func(Event)) (*Execution, error) {
 			order: make([]StepID, 0, len(plannedPhase.Steps)),
 		}
 		for stepIndex, plannedStep := range plannedPhase.Steps {
-			if plannedStep.Name != "" {
-				return nil, fmt.Errorf("phase %q step %d mixes stable and legacy plan fields", plannedPhase.ID, stepIndex)
-			}
 			if plannedStep.ID == "" {
 				return nil, fmt.Errorf("phase %q step %d has empty ID", plannedPhase.ID, stepIndex)
 			}

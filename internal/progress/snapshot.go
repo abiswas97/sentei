@@ -134,30 +134,3 @@ func Snapshot(events []Event) []PhaseState {
 	}
 	return result
 }
-
-// WithPendingPhases returns states reordered onto the canonical phase
-// sequence, inserting an empty (pending) PhaseState for any canonical phase
-// that has not emitted events yet. Phases outside the canonical list keep
-// their discovery order at the end.
-func WithPendingPhases(states []PhaseState, names ...string) []PhaseState {
-	byName := make(map[string]PhaseState, len(states))
-	for _, ps := range states {
-		byName[ps.Name] = ps
-	}
-	result := make([]PhaseState, 0, len(names)+len(states))
-	canonical := make(map[string]bool, len(names))
-	for _, name := range names {
-		canonical[name] = true
-		if ps, ok := byName[name]; ok {
-			result = append(result, ps)
-		} else {
-			result = append(result, PhaseState{Name: name})
-		}
-	}
-	for _, ps := range states {
-		if !canonical[ps.Name] {
-			result = append(result, ps)
-		}
-	}
-	return result
-}

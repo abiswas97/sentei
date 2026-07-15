@@ -86,8 +86,10 @@ func TestConfirmYes_SecondRunStartsFresh(t *testing.T) {
 	if !strings.Contains(view, "0%") {
 		t.Errorf("expected fresh run to start at 0%%, view:\n%s", view)
 	}
-	if !strings.Contains(view, "pending") {
-		t.Errorf("expected prune phase pending on fresh run, view:\n%s", view)
+	phases := model.buildRemovalPhases()
+	cleanupPhase := phases[len(phases)-1]
+	if cleanupPhase.Name != "Prune & cleanup" || cleanupPhase.Done != 0 {
+		t.Errorf("expected prune phase pending on fresh run, got %+v", cleanupPhase)
 	}
 }
 
@@ -148,6 +150,11 @@ func TestViewProgress_TeardownRunning_ShowsActivePhase(t *testing.T) {
 	}, nil, "/repo")
 	m.remove.run = newRemovalRun([]git.Worktree{{Path: "/work/a", Branch: "refs/heads/a"}})
 	m.remove.run.teardownRunning = true
+	m.remove.run.events = []progress.Event{
+		{Phase: teardownPhaseID, PhaseLabel: "Teardown", Step: "teardown-0", StepLabel: "Teardown code-review-graph", Status: progress.StepPending, Of: 1},
+		{Phase: teardownPhaseID, PhaseLabel: "Teardown", Close: true},
+		{Phase: teardownPhaseID, Step: "teardown-0", Status: progress.StepRunning, Of: 1},
+	}
 	m.view = progressView
 
 	view := stripAnsi(m.viewProgress())
@@ -190,6 +197,16 @@ func TestUpdateProgress_TeardownComplete_StartsDeletions(t *testing.T) {
 	m := NewModel(wts, nil, "/repo")
 	m.remove.run = newRemovalRun(wts)
 	m.remove.run.teardownRunning = true
+	m.remove.run.progressCh = make(chan progress.Event, 8)
+	m.remove.run.targets = []worktree.RemovalTarget{{Worktree: wts[0], StepID: "remove-0"}}
+	execution, err := progress.Start(progress.Plan{Phases: []progress.PlannedPhase{{
+		ID: worktree.RemovalPhaseID, Label: worktree.RemovalPhaseName,
+		Steps: []progress.PlannedStep{{ID: "remove-0", Label: "a", Checkpoints: 2}},
+	}}}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	m.remove.run.execution = execution
 	m.view = progressView
 
 	updated, cmd := m.updateProgress(teardownCompleteMsg{
@@ -203,10 +220,7 @@ func TestUpdateProgress_TeardownComplete_StartsDeletions(t *testing.T) {
 	if len(model.remove.run.teardownResults) != 1 {
 		t.Errorf("expected teardown results stored, got %d", len(model.remove.run.teardownResults))
 	}
-	if model.remove.run.progressCh == nil {
-		t.Error("expected deletion channel to be created")
-	}
 	if cmd == nil {
-		t.Fatal("expected a Cmd that consumes deletion events")
+		t.Fatal("expected a Cmd that starts deletion")
 	}
 }

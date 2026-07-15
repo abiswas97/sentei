@@ -16,7 +16,10 @@ type removalRun struct {
 	worktrees  []git.Worktree
 	statuses   map[string]string
 	result     worktree.DeletionResult
-	progressCh <-chan progress.Event
+	progressCh chan progress.Event
+	execution  *progress.Execution
+	events     []progress.Event
+	targets    []worktree.RemovalTarget
 
 	teardownRunning bool
 	// teardownPlanned is the step list scanned at confirm time (one step per
@@ -24,9 +27,18 @@ type removalRun struct {
 	// displays its real total from its first frame.
 	teardownPlanned []string
 	teardownResults []progress.StepResult
+	teardownOps     []teardownOperation
 
 	pruneErr      *error
 	cleanupResult *cleanup.Result
+}
+
+type teardownOperation struct {
+	stepID  progress.StepID
+	label   string
+	wtPath  string
+	command string
+	dirs    []string
 }
 
 func newRemovalRun(selected []git.Worktree) removalRun {

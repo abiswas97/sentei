@@ -90,7 +90,7 @@ func TestUpdateCreateProgress_CompleteAdvancesToSummary(t *testing.T) {
 	}
 }
 
-func TestViewCreateProgress_ShowsTitleSubtitleAndPendingPhases(t *testing.T) {
+func TestViewCreateProgress_ShowsDeclaredPhases(t *testing.T) {
 	m := createProgressModel()
 	m.create.events = []progress.Event{
 		{Phase: "Setup", Step: "Create worktree", Status: progress.StepDone},
@@ -99,7 +99,7 @@ func TestViewCreateProgress_ShowsTitleSubtitleAndPendingPhases(t *testing.T) {
 
 	view := stripANSI(m.viewCreateProgress())
 
-	for _, want := range []string{"Creating worktree", "feature/x", "from main", "Setup", "Dependencies", "Integrations", "q quit"} {
+	for _, want := range []string{"Creating worktree", "feature/x", "from main", "Setup", "Dependencies", "q quit"} {
 		if !strings.Contains(view, want) {
 			t.Errorf("view missing %q:\n%s", want, view)
 		}

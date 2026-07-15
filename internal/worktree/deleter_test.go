@@ -24,6 +24,34 @@ func collectEvents(ch <-chan progress.Event) []progress.Event {
 	return events
 }
 
+func deleteWorktreesForTest(t *testing.T, remover func(string) error, worktrees []git.Worktree, maxConcurrency int, events chan progress.Event) DeletionResult {
+	t.Helper()
+	if len(worktrees) == 0 {
+		result := DeleteWorktrees(nil, RemovalPhaseID, remover, nil, maxConcurrency)
+		close(events)
+		return result
+	}
+	targets := make([]RemovalTarget, len(worktrees))
+	steps := make([]progress.PlannedStep, len(worktrees))
+	for i, wt := range worktrees {
+		stepID := progress.StepID(fmt.Sprintf("remove-%d", i))
+		targets[i] = RemovalTarget{Worktree: wt, StepID: stepID}
+		steps[i] = progress.PlannedStep{ID: stepID, Label: wt.Path, Checkpoints: 2}
+	}
+	execution, err := progress.Start(progress.Plan{Phases: []progress.PlannedPhase{{
+		ID: RemovalPhaseID, Label: RemovalPhaseName, Steps: steps,
+	}}}, func(event progress.Event) { events <- event })
+	if err != nil {
+		t.Fatalf("Start() error = %v", err)
+	}
+	result := DeleteWorktrees(execution, RemovalPhaseID, remover, targets, maxConcurrency)
+	if finishErr := execution.Finish("test complete"); finishErr != nil {
+		t.Fatalf("Finish() error = %v", finishErr)
+	}
+	close(events)
+	return result
+}
+
 func TestDeleteWorktrees_DeletesRealDirectories(t *testing.T) {
 	dirA := t.TempDir()
 	dirB := t.TempDir()
@@ -34,7 +62,7 @@ func TestDeleteWorktrees_DeletesRealDirectories(t *testing.T) {
 	}
 
 	ch := make(chan progress.Event, 20)
-	result := DeleteWorktrees(os.RemoveAll, worktrees, 5, ch)
+	result := deleteWorktreesForTest(t, os.RemoveAll, worktrees, 5, ch)
 	events := collectEvents(ch)
 
 	if result.SuccessCount != 2 {
@@ -61,8 +89,8 @@ func TestDeleteWorktrees_DeletesRealDirectories(t *testing.T) {
 			t.Error("unexpected failure event")
 		}
 	}
-	if started != 2 {
-		t.Errorf("started events = %d, want 2", started)
+	if started != 4 {
+		t.Errorf("started events = %d, want 4 (two checkpoints per worktree)", started)
 	}
 	if completed != 2 {
 		t.Errorf("completed events = %d, want 2", completed)
@@ -75,7 +103,7 @@ func TestDeleteWorktrees_DirectoryAlreadyMissing_Succeeds(t *testing.T) {
 	}
 
 	ch := make(chan progress.Event, 10)
-	result := DeleteWorktrees(os.RemoveAll, worktrees, 5, ch)
+	result := deleteWorktreesForTest(t, os.RemoveAll, worktrees, 5, ch)
 	collectEvents(ch)
 
 	if result.SuccessCount != 1 {
@@ -98,7 +126,7 @@ func TestDeleteWorktrees_RemovalFailure_ReportsFailure(t *testing.T) {
 	}
 
 	ch := make(chan progress.Event, 20)
-	result := DeleteWorktrees(failingRemover, worktrees, 5, ch)
+	result := deleteWorktreesForTest(t, failingRemover, worktrees, 5, ch)
 	collectEvents(ch)
 
 	if result.SuccessCount != 0 {
@@ -135,7 +163,7 @@ func TestDeleteWorktrees_MixedOutcomes(t *testing.T) {
 	}
 
 	ch := make(chan progress.Event, 20)
-	result := DeleteWorktrees(remover, worktrees, 5, ch)
+	result := deleteWorktreesForTest(t, remover, worktrees, 5, ch)
 	events := collectEvents(ch)
 
 	if result.SuccessCount != 1 {
@@ -164,7 +192,7 @@ func TestDeleteWorktrees_MixedOutcomes(t *testing.T) {
 
 func TestDeleteWorktrees_EmptyInput(t *testing.T) {
 	ch := make(chan progress.Event, 20)
-	result := DeleteWorktrees(os.RemoveAll, nil, 5, ch)
+	result := deleteWorktreesForTest(t, os.RemoveAll, nil, 5, ch)
 	events := collectEvents(ch)
 
 	if result.SuccessCount != 0 || result.FailureCount != 0 {
@@ -205,7 +233,7 @@ func TestDeleteWorktrees_ConcurrencyBound(t *testing.T) {
 
 	ch := make(chan progress.Event, 50)
 	go func() {
-		DeleteWorktrees(remover, worktrees, maxConcurrency, ch)
+		deleteWorktreesForTest(t, remover, worktrees, maxConcurrency, ch)
 	}()
 
 	// Wait for maxConcurrency workers to arrive (proves they're running concurrently).
