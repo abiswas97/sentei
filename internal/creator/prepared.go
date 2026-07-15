@@ -20,6 +20,7 @@ const (
 	setupPhaseID        progress.PhaseID = "setup"
 	dependenciesPhaseID progress.PhaseID = "dependencies"
 	integrationsPhaseID progress.PhaseID = "integrations"
+	maxDepsConcurrency                   = 5
 )
 
 type preparedDependency struct {

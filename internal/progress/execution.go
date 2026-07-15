@@ -5,6 +5,10 @@ import (
 	"sync"
 )
 
+// StepFunc does the work of one declared step. The returned message becomes
+// the successful result message; a non-nil error fails the step.
+type StepFunc func() (message string, err error)
+
 // Execution owns the mutable state of a validated Plan. All transitions and
 // emissions are serialized; Run releases the lock while user work executes.
 type Execution struct {

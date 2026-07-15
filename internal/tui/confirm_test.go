@@ -231,7 +231,15 @@ func TestRunTeardownPhase_FallsBackToRemovingArtifactDirs(t *testing.T) {
 	}}
 	worktrees := []git.Worktree{{Path: withArtifacts}, {Path: clean}}
 
-	msg := m.runTeardownPhase(worktrees, integrations)()
+	prepared, err := prepareRemoval(worktrees, integrations)
+	if err != nil {
+		t.Fatal(err)
+	}
+	execution, err := progress.Start(prepared.plan, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	msg := m.runFrozenTeardownPhase(prepared.teardownOps, execution)()
 
 	done, ok := msg.(teardownCompleteMsg)
 	if !ok {
@@ -264,7 +272,15 @@ func TestRunTeardownPhase_TeardownCommandHandlesRemoval(t *testing.T) {
 		Teardown: integration.TeardownSpec{Command: "fake clean", Dirs: []string{".fake-artifact/"}},
 	}}
 
-	msg := m.runTeardownPhase([]git.Worktree{{Path: wtPath}}, integrations)()
+	prepared, err := prepareRemoval([]git.Worktree{{Path: wtPath}}, integrations)
+	if err != nil {
+		t.Fatal(err)
+	}
+	execution, err := progress.Start(prepared.plan, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	msg := m.runFrozenTeardownPhase(prepared.teardownOps, execution)()
 
 	done := msg.(teardownCompleteMsg)
 	if len(done.results) != 1 || done.results[0].Status != progress.StepDone {

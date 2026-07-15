@@ -1,12 +1,37 @@
 package worktree
 
 import (
+	"errors"
+	"strings"
 	"sync"
 	"testing"
 
 	"github.com/abiswas97/sentei/internal/git"
 	"github.com/abiswas97/sentei/internal/progress"
 )
+
+func TestDeleteWorktrees_DeliveryFailurePopulatesErr(t *testing.T) {
+	deliveryErr := errors.New("delivery failed")
+	emissions := 0
+	execution, err := progress.Start(progress.Plan{Phases: []progress.PlannedPhase{{
+		ID: RemovalPhaseID, Steps: []progress.PlannedStep{{ID: "remove-a", Checkpoints: 2}},
+	}}}, func(progress.Event) {
+		emissions++
+		if emissions > 2 {
+			panic(deliveryErr)
+		}
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	result := DeleteWorktrees(execution, RemovalPhaseID, func(string) error { return nil }, []RemovalTarget{{
+		Worktree: git.Worktree{Path: "/work/a"}, StepID: "remove-a",
+	}}, 1)
+	if result.Err == nil || !strings.Contains(result.Err.Error(), deliveryErr.Error()) {
+		t.Fatalf("DeleteWorktrees() error = %v", result.Err)
+	}
+}
 
 func TestDeleteWorktrees_UsesCallerExecutionAndLeavesChannelOpen(t *testing.T) {
 	targets := []RemovalTarget{

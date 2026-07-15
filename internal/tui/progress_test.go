@@ -42,6 +42,34 @@ func TestUpdateProgress_CleanupErrorsFailResultAndAppearInSummary(t *testing.T) 
 	}
 }
 
+func TestViewSummary_ExecutionFailureOverridesSuccessfulDeletionCopy(t *testing.T) {
+	m := NewModel(nil, nil, "/repo")
+	m.remove.run.result = worktree.DeletionResult{
+		SuccessCount: 1,
+		Phases:       []progress.Phase{{Name: "Unlock", Steps: []progress.StepResult{{Name: "feature/a", Status: progress.StepFailed, Error: errors.New("unlock denied")}}}},
+	}
+	m.view = summaryView
+
+	view := stripANSI(m.viewSummary())
+	if strings.Contains(view, "removed successfully") {
+		t.Fatalf("summary advertised success despite failed execution:\n%s", view)
+	}
+	if !strings.Contains(view, "1 removed") || !strings.Contains(view, "unlock denied") {
+		t.Fatalf("summary lost deletion count or execution error:\n%s", view)
+	}
+}
+
+func TestViewSummary_DeliveryErrorIsVisible(t *testing.T) {
+	m := NewModel(nil, nil, "/repo")
+	m.remove.run.result = worktree.DeletionResult{SuccessCount: 1, Err: errors.New("progress delivery failed")}
+	m.view = summaryView
+
+	view := stripANSI(m.viewSummary())
+	if strings.Contains(view, "removed successfully") || !strings.Contains(view, "progress delivery failed") {
+		t.Fatalf("delivery failure not visible:\n%s", view)
+	}
+}
+
 type stubRunner struct {
 	responses map[string]stubResponse
 }

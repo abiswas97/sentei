@@ -8,6 +8,11 @@ import (
 	"testing"
 )
 
+func collectEvents() (*[]Event, func(Event)) {
+	events := &[]Event{}
+	return events, func(event Event) { *events = append(*events, event) }
+}
+
 func TestPlanCloneDeepCopiesStableFields(t *testing.T) {
 	original := Plan{Phases: []PlannedPhase{{
 		ID: "stable-phase", Label: "Phase",

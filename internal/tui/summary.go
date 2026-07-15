@@ -6,6 +6,8 @@ import (
 
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
+
+	"github.com/abiswas97/sentei/internal/progress"
 )
 
 func (m Model) updateSummary(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -38,7 +40,7 @@ func (m Model) viewSummary() string {
 	b.WriteString("\n\n")
 
 	r := m.remove.run.result
-	if r.FailureCount == 0 {
+	if !r.HasFailures() {
 		fmt.Fprintf(&b, "  %s %s\n",
 			styleIndicatorDone.Render(indicatorDone),
 			styleSuccess.Render(fmt.Sprintf("%d %s removed successfully", r.SuccessCount, pluralize(r.SuccessCount, "worktree", "worktrees"))))
@@ -47,14 +49,31 @@ func (m Model) viewSummary() string {
 			styleSuccess.Render(fmt.Sprintf("%d removed", r.SuccessCount)),
 			styleError.Render(fmt.Sprintf("%d failed", r.FailureCount)),
 		)
-		b.WriteString("\n")
-		b.WriteString(styleError.Render("  Failures:\n"))
-		for _, o := range r.Outcomes {
-			if !o.Success {
-				fmt.Fprintf(&b, "    %s %s: %s\n",
-					styleIndicatorFailed.Render(indicatorFailed),
-					truncateWithEllipsis(o.Path, max(m.width-10, 20)),
-					truncateWithEllipsis(fmt.Sprint(o.Error), max(m.width-10, 20)))
+		if r.FailureCount > 0 {
+			b.WriteString("\n")
+			b.WriteString(styleError.Render("  Removal failures:\n"))
+			for _, o := range r.Outcomes {
+				if !o.Success {
+					fmt.Fprintf(&b, "    %s %s: %s\n",
+						styleIndicatorFailed.Render(indicatorFailed),
+						truncateWithEllipsis(o.Path, max(m.width-10, 20)),
+						truncateWithEllipsis(fmt.Sprint(o.Error), max(m.width-10, 20)))
+				}
+			}
+		}
+		if r.Err != nil {
+			b.WriteString("\n")
+			fmt.Fprintf(&b, "  %s %s\n", styleIndicatorFailed.Render(indicatorFailed), styleError.Render(r.Err.Error()))
+		}
+		if progress.PhasesHaveFailures(r.Phases) {
+			b.WriteString("\n")
+			b.WriteString(styleError.Render("  Execution failures:\n"))
+			for _, phase := range r.Phases {
+				for _, step := range phase.Steps {
+					if step.Status == progress.StepFailed {
+						fmt.Fprintf(&b, "    %s %s / %s: %s\n", styleIndicatorFailed.Render(indicatorFailed), phase.Name, step.Name, step.Error)
+					}
+				}
 			}
 		}
 	}

@@ -41,6 +41,18 @@ type teardownOperation struct {
 	dirs    []string
 }
 
+type unlockOperation struct {
+	stepID   progress.StepID
+	worktree git.Worktree
+}
+
+type removalPreparation struct {
+	plan        progress.Plan
+	unlockOps   []unlockOperation
+	teardownOps []teardownOperation
+	targets     []worktree.RemovalTarget
+}
+
 func newRemovalRun(selected []git.Worktree) removalRun {
 	statuses := make(map[string]string, len(selected))
 	for _, wt := range selected {

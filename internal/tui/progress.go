@@ -66,6 +66,7 @@ func (m Model) updateProgress(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// lands here, not in updateConfirm.
 		m.remove.run.teardownRunning = false
 		m.remove.run.teardownResults = msg.results
+		m.remove.run.result.Err = errors.Join(m.remove.run.result.Err, msg.err)
 		return m.startDeletions()
 
 	case removalEventMsg:
@@ -102,6 +103,7 @@ func (m Model) updateProgress(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, tea.Batch(m.syncProgressBar(), waitForRemovalEvent(m.remove.run.progressCh))
 
 	case deletionsCompleteMsg:
+		msg.Result.Err = errors.Join(m.remove.run.result.Err, msg.Result.Err)
 		m.remove.run.result = msg.Result
 		return m, tea.Batch(m.syncProgressBar(), runPrune(m.runner, m.repoPath))
 
@@ -110,9 +112,11 @@ func (m Model) updateProgress(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.remove.run.pruneErr = &pruneErr
 		if m.remove.run.execution != nil {
 			if msg.Err != nil {
-				_, _ = m.remove.run.execution.Fail(cleanupPhaseID, pruneStepID, msg.Err)
+				_, transitionErr := m.remove.run.execution.Fail(cleanupPhaseID, pruneStepID, msg.Err)
+				m.remove.run.result.Err = errors.Join(m.remove.run.result.Err, transitionErr)
 			} else {
-				_, _ = m.remove.run.execution.Done(cleanupPhaseID, pruneStepID, "Pruned")
+				_, transitionErr := m.remove.run.execution.Done(cleanupPhaseID, pruneStepID, "Pruned")
+				m.remove.run.result.Err = errors.Join(m.remove.run.result.Err, transitionErr)
 			}
 		}
 		return m, tea.Batch(m.syncProgressBar(), runCleanup(m.runner, m.repoPath))
@@ -135,11 +139,13 @@ func (m Model) updateProgress(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			cleanupErr := errors.Join(cleanupErrors...)
 			m.remove.run.result.Err = errors.Join(m.remove.run.result.Err, cleanupErr)
-			_, _ = m.remove.run.execution.Fail(cleanupPhaseID, cleanupStepID, cleanupErr)
+			_, transitionErr := m.remove.run.execution.Fail(cleanupPhaseID, cleanupStepID, cleanupErr)
+			m.remove.run.result.Err = errors.Join(m.remove.run.result.Err, transitionErr)
 		} else {
-			_, _ = m.remove.run.execution.Done(cleanupPhaseID, cleanupStepID, "Cleaned")
+			_, transitionErr := m.remove.run.execution.Done(cleanupPhaseID, cleanupStepID, "Cleaned")
+			m.remove.run.result.Err = errors.Join(m.remove.run.result.Err, transitionErr)
 		}
-		_ = m.remove.run.execution.Finish("removal run complete")
+		m.remove.run.result.Err = errors.Join(m.remove.run.result.Err, m.remove.run.execution.Finish("removal run complete"))
 		m.remove.run.result.Phases = m.remove.run.execution.Phases()
 		close(m.remove.run.progressCh)
 		return m, m.syncProgressBar()
