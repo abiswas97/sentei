@@ -109,6 +109,30 @@ func TestViewProgress_SecondRunCompletesAtHundredPercent(t *testing.T) {
 	}
 }
 
+func TestUpdateProgress_TerminalDeletionResultIsNotDoubleCountedByTrailingEvents(t *testing.T) {
+	wt := git.Worktree{Path: "/work/a", Branch: "refs/heads/a"}
+	m := NewModel([]git.Worktree{wt}, nil, "/repo")
+	m.remove.run = newRemovalRun([]git.Worktree{wt})
+	m.remove.run.targets = []worktree.RemovalTarget{{Worktree: wt, StepID: "remove-a"}}
+	m.remove.run.progressCh = make(chan progress.Event)
+	m.view = progressView
+
+	terminal := worktree.DeletionResult{
+		SuccessCount: 1,
+		Outcomes:     []worktree.WorktreeOutcome{{Path: wt.Path, Success: true}},
+	}
+	updated, _ := m.updateProgress(deletionsCompleteMsg{Result: terminal})
+	m = updated.(Model)
+	updated, _ = m.updateProgress(removalEventMsg{event: progress.Event{
+		Phase: worktree.RemovalPhaseID, Step: "remove-a", Status: progress.StepDone,
+	}})
+	m = updated.(Model)
+
+	if m.remove.run.result.SuccessCount != 1 || len(m.remove.run.result.Outcomes) != 1 {
+		t.Fatalf("trailing terminal event double-counted result: %+v", m.remove.run.result)
+	}
+}
+
 func TestUpdateProgress_CleanupComplete_ClearsSelection(t *testing.T) {
 	m := NewModel([]git.Worktree{
 		{Path: "/work/a", Branch: "refs/heads/a"},

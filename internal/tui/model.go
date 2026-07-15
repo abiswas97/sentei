@@ -29,6 +29,8 @@ import (
 // The token must match model.progressToken to guard against stale messages.
 type progressSettleProbeMsg struct{ token int }
 
+type progressTransitionMsg struct{ token int }
+
 type viewState int
 
 const (
@@ -277,11 +279,12 @@ type Model struct {
 	watch stopwatch.Model
 
 	// Progress hold state — used to enforce minimum visible duration for progress views.
-	minProgressDuration time.Duration // 0 = no entry hold; set via WithMinProgressDuration
-	progressStartedAt   time.Time     // set when entering any progress view
-	progressToken       int           // bumped on each entry; guards stale timers
-	progressTargetView  viewState     // where to transition once settled
-	progressTarget      float64       // exact logical progress, separate from the spring's displayed fill
+	minProgressDuration       time.Duration // 0 = no entry hold; set via WithMinProgressDuration
+	progressStartedAt         time.Time     // set when entering any progress view
+	progressToken             int           // bumped on each entry; guards stale timers
+	progressTargetView        viewState     // where to transition once settled
+	progressTransitionPending bool
+	progressTarget            float64 // exact logical progress, separate from the spring's displayed fill
 
 	// Completion settle state: after a flow's final event the view holds
 	// until the displayed bar fill reaches its target and stays there for
@@ -456,7 +459,7 @@ func (m Model) holdOrAdvance(targetView viewState) (tea.Model, tea.Cmd) {
 	token := m.progressToken
 	if m.motionPreference == MotionOff {
 		if settled, advanced := m.observeSettle(now); advanced {
-			return settled, nil
+			return settled, settledProgressTransitionCmd(settled.width, settled.windowHeight, token)
 		} else {
 			m = settled
 		}
@@ -499,8 +502,22 @@ func (m Model) observeSettle(now time.Time) (Model, bool) {
 	if !m.settleAdvanceReady(now) {
 		return m, false
 	}
-	leavingIntegrationProgress := m.view == integrationProgressView
 	m.progressSettling = false
+	m.progressTransitionPending = true
+	return m, true
+}
+
+func settledProgressTransitionCmd(width, height, token int) tea.Cmd {
+	return tea.Sequence(func() tea.Msg {
+		return tea.WindowSizeMsg{Width: width, Height: height}
+	}, func() tea.Msg {
+		return progressTransitionMsg{token: token}
+	})
+}
+
+func (m Model) completeProgressTransition() Model {
+	leavingIntegrationProgress := m.view == integrationProgressView
+	m.progressTransitionPending = false
 	m.view = m.progressTargetView
 	if leavingIntegrationProgress && m.view != integrationSummaryView {
 		m.integ.lifecycle = integrationIdle
@@ -509,7 +526,7 @@ func (m Model) observeSettle(now time.Time) (Model, bool) {
 	// flow starts from zero, not easing down from 100%.
 	m.bar = newOverallBar()
 	m.bar.SetWidth(overallBarWidth(m.width))
-	return m, true
+	return m
 }
 
 // SetCleanupOpts sets the cleanup options and starts at the cleanup confirmation view.
@@ -575,9 +592,20 @@ func (m Model) indeterminateWaitActive() bool {
 }
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	if transition, ok := msg.(progressTransitionMsg); ok {
+		if transition.token == m.progressToken && m.progressTransitionPending {
+			m = m.completeProgressTransition()
+		}
+		return m, nil
+	}
+
 	if probeMsg, ok := msg.(progressSettleProbeMsg); ok {
 		if probeMsg.token == m.progressToken {
-			m, _ = m.observeSettle(time.Now())
+			var advanced bool
+			m, advanced = m.observeSettle(time.Now())
+			if advanced {
+				return m, settledProgressTransitionCmd(m.width, m.windowHeight, m.progressToken)
+			}
 		}
 		return m, nil
 	}
@@ -616,7 +644,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		var cmd tea.Cmd
 		m.bar, cmd = m.bar.Update(frame)
-		m, _ = m.observeSettle(time.Now())
+		var advanced bool
+		m, advanced = m.observeSettle(time.Now())
+		if advanced {
+			return m, tea.Batch(cmd, settledProgressTransitionCmd(m.width, m.windowHeight, m.progressToken))
+		}
 		return m, cmd
 	}
 
@@ -643,7 +675,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		previousView := m.view
 		m.motionTick++
-		m, _ = m.observeSettle(time.Now())
+		var advanced bool
+		m, advanced = m.observeSettle(time.Now())
+		if advanced {
+			return m, settledProgressTransitionCmd(m.width, m.windowHeight, m.progressToken)
+		}
 		if m.view != previousView || !m.motionActive() {
 			return m, nil
 		}

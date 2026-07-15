@@ -2,7 +2,6 @@ package tui
 
 import (
 	"errors"
-	"fmt"
 
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
@@ -86,19 +85,8 @@ func (m Model) updateProgress(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.remove.run.statuses[path] = statusRemoving
 		case progress.StepDone:
 			m.remove.run.statuses[path] = statusRemoved
-			m.remove.run.result.SuccessCount++
-			m.remove.run.result.Outcomes = append(m.remove.run.result.Outcomes, worktree.WorktreeOutcome{
-				Path:    path,
-				Success: true,
-			})
 		case progress.StepFailed:
 			m.remove.run.statuses[path] = statusFailed
-			m.remove.run.result.FailureCount++
-			m.remove.run.result.Outcomes = append(m.remove.run.result.Outcomes, worktree.WorktreeOutcome{
-				Path:    path,
-				Success: false,
-				Error:   fmt.Errorf("removing %s: %w", path, msg.event.Error),
-			})
 		}
 		return m, tea.Batch(m.syncProgressBar(), waitForRemovalEvent(m.remove.run.progressCh))
 

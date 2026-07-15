@@ -84,5 +84,5 @@ func settleNow(t *testing.T, m Model) Model {
 	if !advanced {
 		t.Fatal("settle observation did not advance the view")
 	}
-	return model
+	return model.completeProgressTransition()
 }

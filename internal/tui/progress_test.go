@@ -316,8 +316,8 @@ func TestObserveSettle_AdvancesAfterBeat(t *testing.T) {
 	m.progressSettledAt = time.Now().Add(-progressSettleBeat - time.Millisecond)
 
 	model, advanced := m.observeSettle(time.Now())
-	if !advanced || model.view != summaryView {
-		t.Errorf("settled fill + elapsed beat must advance, got view %d", model.view)
+	if !advanced || !model.progressTransitionPending || model.view != progressView {
+		t.Errorf("settled fill must schedule a renderer-safe transition, got view %d pending=%v", model.view, model.progressTransitionPending)
 	}
 	if model.progressSettling {
 		t.Error("advancing must end the settling state")
@@ -363,8 +363,8 @@ func TestObserveSettle_TimeoutForcesAdvance(t *testing.T) {
 	// Never settled (settledAt zero): the hard timeout must still advance.
 
 	model, advanced := m.observeSettle(time.Now())
-	if !advanced || model.view != summaryView {
-		t.Error("the hard timeout must advance a view that cannot settle")
+	if !advanced || !model.progressTransitionPending || model.view != progressView {
+		t.Error("the hard timeout must schedule a view that cannot settle")
 	}
 }
 
@@ -392,10 +392,14 @@ func TestSettleProbe_CorrectToken_RunsCheck(t *testing.T) {
 	m.progressSettling = true
 	m.progressSettlingSince = time.Now().Add(-progressSettleTimeout - time.Millisecond)
 
-	result, _ := m.Update(progressSettleProbeMsg{token: 3})
+	result, cmd := m.Update(progressSettleProbeMsg{token: 3})
 	model := result.(Model)
 
-	if model.view != summaryView {
-		t.Errorf("timeout probe with the live token must advance, got %d", model.view)
+	if model.view != progressView || !model.progressTransitionPending || cmd == nil {
+		t.Errorf("timeout probe must schedule refresh before transition, view=%d pending=%v cmd=%v", model.view, model.progressTransitionPending, cmd != nil)
+	}
+	completed, _ := model.Update(progressTransitionMsg{token: 3})
+	if completed.(Model).view != summaryView {
+		t.Errorf("post-refresh transition ended at %d, want summary", completed.(Model).view)
 	}
 }

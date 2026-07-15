@@ -7,9 +7,113 @@ import (
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
+	"github.com/charmbracelet/x/ansi"
 
 	"github.com/abiswas97/sentei/internal/progress"
 )
+
+func demoIntegrationFailureEvents() []progress.Event {
+	var events []progress.Event
+	for _, worktree := range []string{"/repo/worktrees/alpha", "/repo/worktrees/beta", "/repo/worktrees/gamma"} {
+		events = append(events,
+			progress.Event{Phase: worktree, PhaseLabel: worktree, Step: "setup", StepLabel: "Setup cocoindex-code", Status: progress.StepPending, Of: 1},
+			progress.Event{Phase: worktree, PhaseLabel: worktree, Step: "gitignore", StepLabel: "Update .gitignore for cocoindex-code", Status: progress.StepPending, Of: 1},
+			progress.Event{Phase: worktree, PhaseLabel: worktree, Close: true},
+			progress.Event{Phase: worktree, Step: "setup", Status: progress.StepFailed, Error: errors.New("ccc init && ccc index: deterministic index failure\nexit status 17")},
+			progress.Event{Phase: worktree, Step: "gitignore", Status: progress.StepSkipped, Message: "blocked by Setup cocoindex-code"},
+		)
+	}
+	return events
+}
+
+func TestViewIntegrationSummary_DemoFailuresFitEveryTerminal(t *testing.T) {
+	for _, width := range []int{20, 40, 80, 120} {
+		for height := 1; height <= 40; height++ {
+			t.Run(fmt.Sprintf("%dx%d", width, height), func(t *testing.T) {
+				m := makeIntegrationModel()
+				m.view = integrationSummaryView
+				m.width, m.windowHeight, m.height = width, height, max(height-viewChromeRows, 5)
+				m.integ.events = demoIntegrationFailureEvents()
+
+				view := m.viewIntegrationSummary()
+				lines := strings.Split(strings.TrimSuffix(view, "\n"), "\n")
+				if got := lipgloss.Height(view); got > height {
+					t.Fatalf("summary has %d rows, terminal has %d:\n%s", got, height, stripAnsi(view))
+				}
+				for row, line := range lines {
+					if got := ansi.StringWidth(line); got > width {
+						t.Fatalf("row %d width=%d exceeds %d: %q", row+1, got, width, stripAnsi(line))
+					}
+				}
+			})
+		}
+	}
+}
+
+func TestViewIntegrationSummary_TopLevelErrorRemainsActionableWhenCompact(t *testing.T) {
+	longError := "manifest is malformed: " + strings.Repeat("dependency-resolution-context-", 8)
+	for _, height := range []int{3, 4} {
+		m := makeIntegrationModel()
+		m.view = integrationSummaryView
+		m.width, m.windowHeight = 80, height
+		m.portal = m.portal.SetSize(80, 24)
+		m.integ.prepareErr = errors.New(longError)
+
+		view := stripAnsi(m.viewIntegrationSummary())
+		if !strings.Contains(view, "manifest is malformed") && !strings.Contains(view, "details") {
+			t.Fatalf("height %d hid the top-level error without a details affordance:\n%s", height, view)
+		}
+		_, detail := m.integrationSummaryDetailContent()
+		if !strings.Contains(stripAnsi(detail), "manifest is malformed") {
+			t.Fatalf("height %d detail portal lost top-level error: %q", height, stripAnsi(detail))
+		}
+		for row, line := range strings.Split(detail, "\n") {
+			if got := ansi.StringWidth(line); got > m.portal.contentWidth() {
+				t.Fatalf("height %d detail row %d width=%d exceeds portal width=%d: %q", height, row+1, got, m.portal.contentWidth(), stripAnsi(line))
+			}
+		}
+	}
+}
+
+func TestViewIntegrationSummary_DemoFailuresRemainCompleteInDetails(t *testing.T) {
+	m := makeIntegrationModel()
+	m.view = integrationSummaryView
+	m.width, m.windowHeight = 80, 24
+	m.integ.events = demoIntegrationFailureEvents()
+
+	view := stripAnsi(m.viewIntegrationSummary())
+	if !strings.Contains(view, "3 failed") || !strings.Contains(view, "details") {
+		t.Fatalf("bounded summary lost verdict or details hint:\n%s", view)
+	}
+	_, detail := m.integrationSummaryDetailContent()
+	plain := stripAnsi(detail)
+	for _, want := range []string{"alpha", "beta", "gamma", "deterministic index failure", "exit status 17", "blocked by Setup cocoindex-code"} {
+		if !strings.Contains(plain, want) {
+			t.Errorf("detail portal missing %q:\n%s", want, plain)
+		}
+	}
+}
+
+func TestIntegrationProgressToSummary_DropsOutgoingBarContent(t *testing.T) {
+	t.Setenv("SENTEI_MOTION", "off")
+	m := makeIntegrationModel()
+	m.width, m.windowHeight, m.height = 80, 24, 18
+	m.view = integrationProgressView
+	m.integ.lifecycle = integrationExecuting
+	m.integ.events = demoIntegrationFailureEvents()
+	progressView := stripAnsi(m.viewIntegrationProgress())
+	if !strings.Contains(progressView, "%") {
+		t.Fatal("progress precondition missing bar percentage")
+	}
+
+	m.view = integrationSummaryView
+	m.integ.lifecycle = integrationSettling
+	summary := stripAnsi(m.viewIntegrationSummary())
+	if strings.Contains(summary, "%") || strings.Contains(summary, "█") || strings.Contains(summary, "░") {
+		t.Fatalf("summary content retained outgoing progress bar text:\n%s", summary)
+	}
+}
 
 func doneEventsForWorktrees(n int) []progress.Event {
 	var events []progress.Event

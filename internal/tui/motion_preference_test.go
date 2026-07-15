@@ -180,11 +180,14 @@ func TestMotionTick_DoesNotRescheduleAfterSettleTransition(t *testing.T) {
 
 	updated, cmd := m.Update(motionTickMsg{})
 	model := updated.(Model)
-	if model.view != summaryView {
-		t.Fatalf("settle tick left view = %v, want summary", model.view)
+	if model.view != progressView || !model.progressTransitionPending {
+		t.Fatalf("settle tick must schedule transition, view=%v pending=%v", model.view, model.progressTransitionPending)
 	}
-	if cmd != nil {
-		t.Fatal("stale progress motion tick rescheduled after changing views")
+	if cmd == nil {
+		t.Fatal("settle tick must schedule the refresh-then-transition sequence")
+	}
+	if _, rescheduledMotion := cmd().(motionTickMsg); rescheduledMotion {
+		t.Fatal("settled motion tick rescheduled decorative motion instead of the transition")
 	}
 }
 
@@ -210,7 +213,8 @@ func TestMotionOff_CompletionAdvancesWithoutDecorativeDelay(t *testing.T) {
 	m.progressTarget = 1
 
 	updated, cmd := m.holdOrAdvance(summaryView)
-	if cmd != nil || updated.(Model).view != summaryView {
-		t.Fatalf("static completion = view %v cmd %v, want immediate summary and nil command", updated.(Model).view, cmd != nil)
+	model := updated.(Model)
+	if cmd == nil || model.view != progressView || !model.progressTransitionPending {
+		t.Fatalf("static completion = view %v pending=%v cmd=%v, want immediate refresh-then-transition", model.view, model.progressTransitionPending, cmd != nil)
 	}
 }

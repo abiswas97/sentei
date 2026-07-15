@@ -155,17 +155,30 @@ func renderIntegrationOutcomes(b *strings.Builder, groups []integrationWorktreeO
 // failure carries error output (the inline peek promises "? for full output").
 func (m Model) integrationSummaryDetailContent() (string, string) {
 	groups := orderOutcomesFailuresFirst(groupIntegrationEvents(m.integ.events))
-	if len(groups) <= inlineSummaryPreview && !outcomesHaveErrorOutput(groups) {
+	var b strings.Builder
+	for _, stage := range []struct {
+		label string
+		err   error
+	}{
+		{"Preparation", m.integ.prepareErr},
+		{"Execution", m.integ.executionErr},
+		{"Saving state", m.integ.saveErr},
+	} {
+		if stage.err == nil {
+			continue
+		}
+		writeProgressDetailValue(&b, "", styleError.Render(stage.label+" failed:"), m.portal.contentWidth())
+		writeProgressDetailValue(&b, "  ", stage.err.Error(), m.portal.contentWidth())
+		b.WriteString("\n")
+	}
+	if b.Len() == 0 && len(groups) <= inlineSummaryPreview && !outcomesHaveErrorOutput(groups) {
 		return "", ""
 	}
-	var b strings.Builder
 	renderIntegrationOutcomes(&b, groups, 0)
 	return portalApplyDetails, strings.TrimRight(b.String(), "\n")
 }
 
 func (m Model) viewIntegrationSummary() string {
-	var b strings.Builder
-
 	groups := orderOutcomesFailuresFirst(groupIntegrationEvents(m.integ.events))
 	applied, failed := countIntegrationOutcomes(groups)
 
@@ -175,68 +188,156 @@ func (m Model) viewIntegrationSummary() string {
 	if failed > 0 || m.integ.prepareErr != nil || m.integ.executionErr != nil || m.integ.saveErr != nil {
 		title = titleApplyErrors
 	}
-	b.WriteString(viewTitle(title))
-	b.WriteString("\n\n")
-	b.WriteString(viewSeparator(m.width))
-	b.WriteString("\n\n")
+	header := []string{viewTitle(title), "", viewSeparator(m.width), ""}
 
 	if m.integ.saveErr != nil {
-		b.WriteString(styleError.Render(truncateWithEllipsis(
+		header = append(header, styleError.Render(truncateWithEllipsis(
 			fmt.Sprintf("  %s Integration state was not saved: %s", indicatorFailed, m.integ.saveErr),
-			max(m.width, 40))))
-		b.WriteString("\n")
-		b.WriteString(styleDim.Render("    The list will show what is actually on disk."))
-		b.WriteString("\n\n")
+			max(m.width, 40))), styleDim.Render("    The list will show what is actually on disk."), "")
 	}
 	if m.integ.prepareErr != nil {
-		b.WriteString(styleError.Render(truncateWithEllipsis(
+		header = append(header, styleError.Render(truncateWithEllipsis(
 			fmt.Sprintf("  %s Integration preparation failed: %s", indicatorFailed, m.integ.prepareErr),
-			max(m.width, 40))))
-		b.WriteString("\n\n")
+			max(m.width, 40))), "")
 	}
 	if m.integ.executionErr != nil {
-		b.WriteString(styleError.Render(truncateWithEllipsis(
+		header = append(header, styleError.Render(truncateWithEllipsis(
 			fmt.Sprintf("  %s Integration execution failed: %s", indicatorFailed, m.integ.executionErr),
-			max(m.width, 40))))
-		b.WriteString("\n\n")
+			max(m.width, 40))), "")
 	}
 
 	if m.integ.prepareErr == nil && m.integ.executionErr == nil && m.integ.saveErr == nil {
+		var verdict strings.Builder
 		switch {
 		case failed > 0:
-			b.WriteString("  ")
-			b.WriteString(styleError.Render(fmt.Sprintf("%s %d failed", indicatorFailed, failed)))
+			verdict.WriteString("  ")
+			verdict.WriteString(styleError.Render(fmt.Sprintf("%s %d failed", indicatorFailed, failed)))
 			if applied > 0 {
-				b.WriteString(", ")
-				b.WriteString(styleSuccess.Render(fmt.Sprintf("%d %s applied", applied, pluralize(applied, "step", "steps"))))
+				verdict.WriteString(", ")
+				verdict.WriteString(styleSuccess.Render(fmt.Sprintf("%d %s applied", applied, pluralize(applied, "step", "steps"))))
 			}
 		case applied == 0:
-			b.WriteString(styleDim.Render("  No integration work was needed"))
+			verdict.WriteString(styleDim.Render("  No integration work was needed"))
 		default:
-			b.WriteString(styleSuccess.Render(fmt.Sprintf("  %s %d %s applied", indicatorDone, applied, pluralize(applied, "step", "steps"))))
+			verdict.WriteString(styleSuccess.Render(fmt.Sprintf("  %s %d %s applied", indicatorDone, applied, pluralize(applied, "step", "steps"))))
 		}
-		b.WriteString("\n\n")
+		header = append(header, verdict.String(), "")
 	}
 
-	shown := min(len(groups), inlineSummaryPreview)
-	renderIntegrationOutcomes(&b, groups[:shown], m.width)
-	if rest := len(groups) - shown; rest > 0 {
-		b.WriteString(styleDim.Render(fmt.Sprintf("  and %d more %s — ? for details",
-			rest, pluralize(rest, "worktree", "worktrees"))))
-		b.WriteString("\n\n")
-	}
-
-	b.WriteString(viewSeparator(m.width))
-	b.WriteString("\n\n")
 	hints := []key.Binding{integrationsOpenHint}
-	if len(groups) > shown || outcomesHaveErrorOutput(groups) {
+	if _, detail := m.integrationSummaryDetailContent(); detail != "" {
 		hints = append(hints, detailsHint)
 	}
 	hints = append(hints, keys.Quit)
-	b.WriteString(viewFooter(m.width, hints))
-	b.WriteString("\n")
+	footer := []string{viewSeparator(m.width), "", viewFooter(m.width, hints)}
+	height := m.windowHeight
+	if height <= 0 {
+		height = m.height
+	}
+	header, footer = compactIntegrationSummaryChrome(header, footer, height)
 
-	return b.String()
+	lines := append([]string(nil), header...)
+	available := max(height-len(header)-len(footer), 0)
+	shown := 0
+	limit := min(len(groups), inlineSummaryPreview)
+	for shown < limit {
+		block := inlineIntegrationGroupLines(groups[shown], m.width, false)
+		reserve := 0
+		if shown+1 < len(groups) {
+			reserve = 2
+		}
+		if len(block)+reserve > available {
+			break
+		}
+		lines = append(lines, block...)
+		available -= len(block)
+		shown++
+	}
+	if shown == 0 && len(groups) > 0 && groupHasFailure(groups[0]) {
+		block := inlineIntegrationGroupLines(groups[0], m.width, true)
+		if len(block) <= available {
+			lines = append(lines, block...)
+			available -= len(block)
+			shown = 1
+		}
+	}
+	if rest := len(groups) - shown; rest > 0 && available >= 2 {
+		lines = append(lines, styleDim.Render(fmt.Sprintf("  and %d more %s — ? for details",
+			rest, pluralize(rest, "worktree", "worktrees"))), "")
+	}
+	lines = append(lines, footer...)
+	for i := range lines {
+		lines[i] = fitProgressLine(lines[i], m.width)
+	}
+	return strings.Join(lines, "\n")
+}
+
+func compactIntegrationSummaryChrome(header, footer []string, height int) ([]string, []string) {
+	for len(header)+len(footer) > height {
+		removed := false
+		for i := len(header) - 1; i >= 0; i-- {
+			if header[i] == "" {
+				header = append(header[:i], header[i+1:]...)
+				removed = true
+				break
+			}
+		}
+		if removed {
+			continue
+		}
+		for i := len(footer) - 1; i >= 0; i-- {
+			if footer[i] == "" {
+				footer = append(footer[:i], footer[i+1:]...)
+				removed = true
+				break
+			}
+		}
+		if removed {
+			continue
+		}
+		// The top separator is decorative; the fixed footer separator remains.
+		if len(header) > 1 {
+			header = append(header[:1], header[2:]...)
+			continue
+		}
+		// In emergency tiers, keep the title and action footer before optional
+		// error prose, then keep the title alone at one row.
+		if len(header) > 1 {
+			header = header[:len(header)-1]
+			continue
+		}
+		if len(footer) > 1 {
+			footer = footer[1:]
+			continue
+		}
+		if len(footer) == 1 {
+			footer = nil
+			continue
+		}
+		break
+	}
+	return header, footer
+}
+
+func inlineIntegrationGroupLines(group integrationWorktreeOutcomes, width int, concise bool) []string {
+	var b strings.Builder
+	if !concise {
+		renderIntegrationOutcomes(&b, []integrationWorktreeOutcomes{group}, width)
+	} else {
+		fmt.Fprintf(&b, "  %s\n", filepath.Base(group.worktree))
+		for _, step := range group.steps {
+			if step.ev.Status == progress.StepFailed {
+				fmt.Fprintf(&b, "    %s %s\n", styleIndicatorFailed.Render(indicatorFailed), step.step)
+			}
+		}
+		b.WriteString("\n")
+	}
+	text := strings.TrimSuffix(b.String(), "\n")
+	lines := strings.Split(text, "\n")
+	for i := range lines {
+		lines[i] = fitProgressLine(lines[i], width)
+	}
+	return lines
 }
 
 // outcomesHaveErrorOutput reports whether any failed step carries error text
