@@ -7,6 +7,19 @@ repo="$tmp/repo"
 worktree="$tmp/worktree"
 trap 'rm -rf "$tmp"' EXIT
 
+# The fixture must not discover or mutate the caller's repository, hooks, or
+# identity configuration. Establish the isolated process environment before
+# the first fixture Git command.
+mkdir -p "$tmp/home" "$tmp/xdg"
+export HOME="$tmp/home"
+export XDG_CONFIG_HOME="$tmp/xdg"
+export GIT_CONFIG_GLOBAL="$tmp/gitconfig-global"
+export GIT_CONFIG_SYSTEM=/dev/null
+export GIT_CONFIG_NOSYSTEM=1
+unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_OBJECT_DIRECTORY
+unset GIT_ALTERNATE_OBJECT_DIRECTORIES GIT_COMMON_DIR GIT_PREFIX
+unset GIT_CONFIG_COUNT GIT_CONFIG_PARAMETERS
+
 fail() {
 	echo "FAIL: $*" >&2
 	exit 1
@@ -43,6 +56,7 @@ resolve_common_dir() {
 git init -q "$repo"
 git -C "$repo" config user.name "Valid Config"
 git -C "$repo" config user.email "avishek.biswas.1997@gmail.com"
+git -C "$repo" config core.hooksPath /dev/null
 printf 'fixture\n' >"$repo/README.md"
 git -C "$repo" add README.md
 git -C "$repo" commit -q -m "chore: initialize fixture"
