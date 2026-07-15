@@ -179,27 +179,24 @@ func (p preparedCreation) run(execution *progress.Execution, runner git.CommandR
 	}
 	result.WorktreePath = p.worktreePath
 
-	var runErr error
 	if p.mergeStepID != "" {
 		_, err := execution.Run(setupPhaseID, p.mergeStepID, func() (string, error) {
 			_, err := runner.Run(p.worktreePath, "merge", p.opts.BaseBranch, "--no-edit")
 			return "", err
 		})
 		if err != nil {
-			runErr = errors.Join(runErr, fmt.Errorf("executing merge: %w", err))
+			return fmt.Errorf("executing merge: %w", err)
 		}
 	}
-	if p.envStepID != "" && runErr == nil {
+	if p.envStepID != "" {
 		_, err := execution.Run(setupPhaseID, p.envStepID, func() (string, error) {
 			return copyPreparedEnvFiles(p.opts.SourceWorktree, p.worktreePath, p.envFiles)
 		})
 		if err != nil {
-			runErr = errors.Join(runErr, fmt.Errorf("executing env copy: %w", err))
+			return fmt.Errorf("executing env copy: %w", err)
 		}
 	}
-	if runErr != nil {
-		return runErr
-	}
+	var runErr error
 	if p.hasDependencies {
 		runErr = errors.Join(runErr, p.runDependencies(execution, shell))
 	}

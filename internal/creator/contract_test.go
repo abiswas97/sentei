@@ -134,6 +134,90 @@ func TestRun_MergeFailureDoesNotBlockEnvCopy(t *testing.T) {
 	}
 }
 
+func TestRun_IndependentSetupFailureDoesNotBlockDependenciesOrIntegrations(t *testing.T) {
+	tests := []struct {
+		name           string
+		mergeErr       error
+		makeSourceEnv  func(*testing.T, string)
+		failedStepName string
+	}{
+		{
+			name: "merge failure", mergeErr: errors.New("conflict"), failedStepName: "Merge base branch",
+			makeSourceEnv: func(t *testing.T, source string) {
+				t.Helper()
+				if err := os.WriteFile(filepath.Join(source, ".env"), []byte("SAFE=1"), 0o600); err != nil {
+					t.Fatal(err)
+				}
+			},
+		},
+		{
+			name: "env copy failure", failedStepName: "Copy env files",
+			makeSourceEnv: func(t *testing.T, source string) {
+				t.Helper()
+				if err := os.Mkdir(filepath.Join(source, ".env"), 0o755); err != nil {
+					t.Fatal(err)
+				}
+			},
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			source := t.TempDir()
+			tc.makeSourceEnv(t, source)
+			repo := t.TempDir()
+			worktree := filepath.Join(repo, "feature-fallbacks")
+			if err := os.MkdirAll(worktree, 0o755); err != nil {
+				t.Fatal(err)
+			}
+			responses := map[string]mock.Response{
+				fmt.Sprintf("%s:shell[tool detect]", source):                                  {},
+				fmt.Sprintf("%s:[show-ref --verify refs/heads/feature/fallbacks]", repo):      {Err: errors.New("missing")},
+				fmt.Sprintf("%s:[worktree add %s -b feature/fallbacks main]", repo, worktree): {},
+				fmt.Sprintf("%s:[merge main --no-edit]", worktree):                            {Err: tc.mergeErr},
+				fmt.Sprintf("%s:shell[go mod download]", worktree):                            {},
+				fmt.Sprintf("%s:shell[tool setup]", worktree):                                 {},
+			}
+			runner := &mock.Runner{Responses: responses}
+			result := Run(runner, runner, Options{
+				BranchName: "feature/fallbacks", BaseBranch: "main", RepoPath: repo,
+				SourceWorktree: source, MergeBase: true, CopyEnvFiles: true,
+				Ecosystems: []config.EcosystemConfig{{
+					Name: "go", EnvFiles: []string{".env"}, Install: config.InstallConfig{Command: "go mod download"},
+				}},
+				Integrations: []integration.Integration{{
+					Name: "tool", Detect: integration.DetectSpec{Command: "tool detect"},
+					Setup: integration.SetupSpec{Command: "tool setup", WorkingDir: "worktree"},
+				}},
+			}, func(progress.Event) {})
+
+			if result.Err != nil {
+				t.Fatalf("Err = %v", result.Err)
+			}
+			if step := creatorResultStep(t, result, tc.failedStepName); step.Status != progress.StepFailed {
+				t.Fatalf("failed setup result = %#v", step)
+			}
+			for _, name := range []string{"go", "Setup tool"} {
+				if step := creatorResultStep(t, result, name); step.Status != progress.StepDone {
+					t.Fatalf("independent step %q = %#v", name, step)
+				}
+			}
+		})
+	}
+}
+
+func creatorResultStep(t *testing.T, result Result, name string) progress.StepResult {
+	t.Helper()
+	for _, phase := range result.Phases {
+		for _, step := range phase.Steps {
+			if step.Name == name {
+				return step
+			}
+		}
+	}
+	t.Fatalf("step %q not found in %#v", name, result.Phases)
+	return progress.StepResult{}
+}
+
 func TestRun_WorktreeFailureBlocksAllPreparedExecution(t *testing.T) {
 	runner := &mock.Runner{Responses: map[string]mock.Response{
 		"/repo:shell[tool detect]":                                           {},

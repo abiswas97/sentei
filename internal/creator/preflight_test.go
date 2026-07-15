@@ -11,20 +11,22 @@ import (
 	"github.com/abiswas97/sentei/internal/testutil/mock"
 )
 
-func TestRun_MalformedBaseBranchManifestReturnsErrorBeforeExecution(t *testing.T) {
+func TestRun_MalformedBaseBranchManifestFallsBackToRootInstall(t *testing.T) {
 	runner := &mock.Runner{Responses: map[string]mock.Response{
-		"/repo:[ls-tree -r --name-only main]": {Output: "package.json\npackages/api/package.json"},
-		"/repo:[show main:package.json]":      {Output: `{"workspaces":[`},
+		"/repo:[ls-tree -r --name-only main]":                                  {Output: "package.json\npackages/api/package.json"},
+		"/repo:[show main:package.json]":                                       {Output: `{"workspaces":[`},
+		"/repo:[show-ref --verify refs/heads/feature/manifest]":                {Err: errors.New("not found")},
+		"/repo:[worktree add /repo/feature-manifest -b feature/manifest main]": {},
+		"/repo/feature-manifest:shell[npm install]":                            {},
 	}}
 
 	result := Run(runner, runner, workspaceOptions(), func(progress.Event) {})
 
-	if result.Err == nil || !strings.Contains(result.Err.Error(), "package.json") {
-		t.Fatalf("Err = %v, want malformed package.json error", result.Err)
+	if result.Err != nil || result.HasFailures() {
+		t.Fatalf("result = %#v, want successful root fallback", result)
 	}
-	assertNoExecutionCalls(t, runner.Calls)
-	if len(result.Phases) != 0 {
-		t.Fatalf("Phases = %#v, want no execution projection before Start", result.Phases)
+	if !slices.Contains(runner.Calls, "/repo/feature-manifest:shell[npm install]") {
+		t.Fatalf("calls = %v, want root install fallback", runner.Calls)
 	}
 }
 
@@ -43,20 +45,41 @@ func TestRun_UnreadableBaseBranchManifestReturnsErrorBeforeExecution(t *testing.
 	assertNoExecutionCalls(t, runner.Calls)
 }
 
-func TestRun_MalformedPnpmBaseBranchManifestReturnsErrorBeforeExecution(t *testing.T) {
+func TestRun_MalformedPnpmBaseBranchManifestFallsBackToRootInstall(t *testing.T) {
 	runner := &mock.Runner{Responses: map[string]mock.Response{
-		"/repo:[ls-tree -r --name-only main]":   {Output: "pnpm-workspace.yaml\npackages/api/package.json"},
-		"/repo:[show main:pnpm-workspace.yaml]": {Output: "packages: [unterminated"},
+		"/repo:[ls-tree -r --name-only main]":                                  {Output: "pnpm-workspace.yaml\npackages/api/package.json"},
+		"/repo:[show main:pnpm-workspace.yaml]":                                {Output: "packages: [unterminated"},
+		"/repo:[show-ref --verify refs/heads/feature/manifest]":                {Err: errors.New("not found")},
+		"/repo:[worktree add /repo/feature-manifest -b feature/manifest main]": {},
+		"/repo/feature-manifest:shell[npm install]":                            {},
 	}}
 	opts := workspaceOptions()
 	opts.Ecosystems[0].Install.WorkspaceDetect = "pnpm-workspace.yaml"
 
 	result := Run(runner, runner, opts, func(progress.Event) {})
 
-	if result.Err == nil || !strings.Contains(result.Err.Error(), "pnpm-workspace.yaml") {
-		t.Fatalf("Err = %v, want malformed pnpm manifest error", result.Err)
+	if result.Err != nil || result.HasFailures() {
+		t.Fatalf("result = %#v, want successful root fallback", result)
 	}
-	assertNoExecutionCalls(t, runner.Calls)
+}
+
+func TestRun_UnresolvableWorkspacePatternFallsBackToRootInstall(t *testing.T) {
+	runner := &mock.Runner{Responses: map[string]mock.Response{
+		"/repo:[ls-tree -r --name-only main]":                                  {Output: "package.json\npackages/api/package.json"},
+		"/repo:[show main:package.json]":                                       {Output: `{"workspaces":["packages/["]}`},
+		"/repo:[show-ref --verify refs/heads/feature/manifest]":                {Err: errors.New("not found")},
+		"/repo:[worktree add /repo/feature-manifest -b feature/manifest main]": {},
+		"/repo/feature-manifest:shell[npm install]":                            {},
+	}}
+
+	result := Run(runner, runner, workspaceOptions(), func(progress.Event) {})
+
+	if result.Err != nil || result.HasFailures() {
+		t.Fatalf("result = %#v, want successful root fallback", result)
+	}
+	if !slices.Contains(runner.Calls, "/repo/feature-manifest:shell[npm install]") {
+		t.Fatalf("calls = %v, want root install fallback", runner.Calls)
+	}
 }
 
 func TestWorkspacePatterns_ParsesPnpmManifestStrictly(t *testing.T) {

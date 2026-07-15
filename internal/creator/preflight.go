@@ -58,11 +58,17 @@ func prepareDependencyTargets(runner git.CommandRunner, opts Options) ([]depende
 		}
 		patterns, err := workspacePatterns(manifest, []byte(data))
 		if err != nil {
-			return nil, fmt.Errorf("parsing %s from base branch %q: %w", manifest, opts.BaseBranch, err)
+			if strings.TrimSpace(install.Command) != "" {
+				targets = append(targets, dependencyTarget{ecosystem: ecosystem})
+			}
+			continue
 		}
 		members, err := matchWorkspaceDirs(patterns, treeDirs)
 		if err != nil {
-			return nil, fmt.Errorf("resolving %s from base branch %q: %w", manifest, opts.BaseBranch, err)
+			if strings.TrimSpace(install.Command) != "" {
+				targets = append(targets, dependencyTarget{ecosystem: ecosystem})
+			}
+			continue
 		}
 		if len(members) == 0 {
 			if strings.TrimSpace(install.Command) != "" {
