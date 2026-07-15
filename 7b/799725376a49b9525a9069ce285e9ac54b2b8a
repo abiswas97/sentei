@@ -1,0 +1,59 @@
+internal/creator/contract_test.go
+  s_47b5c057f8c030::t_950ba939e0c7da 1-74,76,78-119,121,123-138,141-193,197-229
+  s_47b5c057f8c030::t_909b93a438b755 75,77,120,122,139-140,194-196
+internal/creator/creator.go
+  s_47b5c057f8c030::t_898a7dabbc6ae3 4-6,36-37,41-49
+  s_47b5c057f8c030::t_0a24ba15c0a96f 31
+  s_47b5c057f8c030::t_3c3940aa8d2ec2 27,38
+cmd/create_run_test.go
+  s_47b5c057f8c030::t_e5be34ef0d3637 4,12,16-21
+  s_47b5c057f8c030::t_6db3dade19aafa 22
+internal/creator/prepared.go
+  s_47b5c057f8c030::t_898a7dabbc6ae3 1-33,45-300
+  s_47b5c057f8c030::t_e83b5827e82f1c 34-44
+internal/integration/apply_test.go
+  s_47b5c057f8c030::t_0c85db6b4729b5 136
+  s_47b5c057f8c030::t_95ac6ec2d50aca 133-135,137-166
+internal/tui/create_summary_test.go
+  s_47b5c057f8c030::t_0a24ba15c0a96f 15
+  s_47b5c057f8c030::t_e5be34ef0d3637 14,16-23
+  s_47b5c057f8c030::t_c2e3f126e2022b 24
+internal/integration/apply.go
+  s_47b5c057f8c030::t_48d422649c255f 271
+  s_47b5c057f8c030::t_ceac0d8ea9c5f2 88-98,261-270,272-287,365-381,399,429,433
+internal/creator/creator_test.go
+  s_47b5c057f8c030::t_e5be34ef0d3637 193-196
+  s_47b5c057f8c030::t_0edfc709203c54 21,101-102,128-129
+  s_47b5c057f8c030::t_0926f8a3910b97 192
+cmd/create.go
+  s_47b5c057f8c030::t_0a24ba15c0a96f 78-79,86-92
+  s_47b5c057f8c030::t_16d29704a60578 93-95
+internal/tui/create_summary.go
+  s_47b5c057f8c030::t_0a24ba15c0a96f 46,53-60
+internal/creator/preflight_test.go
+  s_47b5c057f8c030::t_42b514b637be48 1-45,72-76,80-95,97-111,114,116-145
+  s_47b5c057f8c030::t_918b491668847c 62-71
+  s_47b5c057f8c030::t_1f0aa9fe4cf50a 46-47,49-61
+  s_47b5c057f8c030::t_0c85db6b4729b5 77-79,112-113,115
+  s_47b5c057f8c030::t_0edfc709203c54 96
+  s_47b5c057f8c030::t_f45d24d6ae7ef4 48
+internal/creator/preflight.go
+  s_47b5c057f8c030::t_3c3940aa8d2ec2 1-11,13-108,117-166
+  s_47b5c057f8c030::t_42890895690c69 12,109-116
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "7b799725376a49b9525a9069ce285e9ac54b2b8a",
+  "prompts": {},
+  "sessions": {
+    "s_47b5c057f8c030": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f5f62-a0bd-7f92-96e2-b1de98524420",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>"
+    }
+  }
+}
