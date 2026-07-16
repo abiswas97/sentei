@@ -1,0 +1,21 @@
+internal/operation/recorder.go
+  s_528292aebf342e::t_8d061a664b64c6 1-136
+internal/operation/recorder_test.go
+  s_528292aebf342e::t_b7a1b804632f52 1-85
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "0ea25e5230bc9b15e89c116a06b17012882b51d7",
+  "prompts": {},
+  "sessions": {
+    "s_528292aebf342e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f6a1f-363e-7f43-88fb-9a1f3d63aca6",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>"
+    }
+  }
+}
