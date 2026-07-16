@@ -1,0 +1,32 @@
+internal/tui/portal_test.go
+  s_47b5c057f8c030::t_613058ab5720d0 124-142
+internal/tui/model.go
+  s_47b5c057f8c030::t_65300e7a0a45ec 699-701
+internal/tui/repo_options_test.go
+  s_47b5c057f8c030::t_60c79d3a944e86 172-184
+  s_47b5c057f8c030::t_7d6b207cbfc9e5 185-196
+internal/tui/remove_filter_test.go
+  s_47b5c057f8c030::t_23b743c5d8e3ce 220-235
+  s_47b5c057f8c030::t_7d6b207cbfc9e5 236-249
+internal/tui/list.go
+  s_47b5c057f8c030::t_2bf4b3a5c2cd31 221-223,251-260,262-267
+internal/tui/repo_options.go
+  s_47b5c057f8c030::t_6b70a98dd70887 51,56,139-142
+  s_47b5c057f8c030::t_3139b83df38683 54,143
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "043e5910201008a81a95f65319a5ad4893aafde4",
+  "prompts": {},
+  "sessions": {
+    "s_47b5c057f8c030": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f5f62-a0bd-7f92-96e2-b1de98524420",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>"
+    }
+  }
+}
