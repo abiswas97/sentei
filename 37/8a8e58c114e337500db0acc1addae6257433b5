@@ -1,0 +1,80 @@
+internal/github/review.go
+  s_528292aebf342e::t_8be62b608679d9 1-66
+internal/tui/create_confirm_test.go
+  s_528292aebf342e::t_28efa240eb4157 89-105
+internal/tui/help.go
+  s_528292aebf342e::t_440f5ce9fcd071 167
+  s_528292aebf342e::t_74775df5e35624 148-166,168-169,183-186
+internal/tui/create_confirm.go
+  s_528292aebf342e::t_32660005c12f90 31-36,63-65,94-96,99
+cmd/create_pr_test.go
+  s_528292aebf342e::t_182294d354d815 1-82
+internal/operation/args.go
+  s_528292aebf342e::t_dbee7f25758c87 7
+internal/dashboard/snapshot.go
+  s_528292aebf342e::t_bb917505792818 6,10,16-33,53-78
+  s_528292aebf342e::t_f4c0bf9d61ccd8 86
+internal/tui/model.go
+  s_528292aebf342e::t_b2217d13792653 23,259,339-344,640-642,699-701
+  s_528292aebf342e::t_b824aaebc72116 101-102
+  s_528292aebf342e::t_5d3fb0ddaf8389 637-639
+internal/tui/github_test.go
+  s_528292aebf342e::t_9c6f5756acbc57 1-9,12-54,66-81,128-139
+  s_528292aebf342e::t_d09c67ae03cf50 10-11
+  s_528292aebf342e::t_8f90b4d395e532 82-110
+  s_528292aebf342e::t_03a1b4b7a84548 55-65
+  s_528292aebf342e::t_0bab7c6e4079d5 111-127
+internal/tui/list.go
+  s_528292aebf342e::t_5d3fb0ddaf8389 224-232
+internal/tui/contextual_actions.go
+  s_528292aebf342e::t_5d3fb0ddaf8389 7,15,29-34,123-178
+  s_528292aebf342e::t_a2753503bf3213 179
+cmd/create.go
+  s_528292aebf342e::t_b824aaebc72116 4,13,24-27,41-52
+cmd/create_flags.go
+  s_528292aebf342e::t_dbee7f25758c87 18-19,31,42,59-61,74-76,79
+cmd/create_flags_test.go
+  s_528292aebf342e::t_182294d354d815 84-96
+cmd/create_pr.go
+  s_528292aebf342e::t_dbee7f25758c87 1-22,24-31
+  s_528292aebf342e::t_8be62b608679d9 23
+internal/tui/github.go
+  s_528292aebf342e::t_b2217d13792653 1-6,8-19,31-57
+  s_528292aebf342e::t_440f5ce9fcd071 7,20-30
+internal/github/provider.go
+  s_528292aebf342e::t_9e6835182d9f46 1-202,205,207,209-238
+  s_528292aebf342e::t_5bc23ef56e3c59 203-204,206,208
+internal/tui/keys.go
+  s_528292aebf342e::t_5d3fb0ddaf8389 31-33,137-148,224-226
+internal/tui/menu.go
+  s_528292aebf342e::t_440f5ce9fcd071 276
+  s_528292aebf342e::t_b2217d13792653 221-224,236-275,277-278
+  s_528292aebf342e::t_33eac90c7279b0 279-280
+internal/github/provider_test.go
+  s_528292aebf342e::t_21490b4313d771 1-100
+internal/dashboard/snapshot_test.go
+  s_528292aebf342e::t_ba04546a9d3181 4,9,38-56
+  s_528292aebf342e::t_36e444f845081f 57
+internal/operation/record.go
+  s_528292aebf342e::t_dbee7f25758c87 80
+main.go
+  s_528292aebf342e::t_b824aaebc72116 275-276,278-281,289-290
+  s_528292aebf342e::t_b2217d13792653 22,257,442
+  s_528292aebf342e::t_a579fcd00f5d71 4,277
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "378a8e58c114e337500db0acc1addae6257433b5",
+  "prompts": {},
+  "sessions": {
+    "s_528292aebf342e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f6a1f-363e-7f43-88fb-9a1f3d63aca6",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>"
+    }
+  }
+}
