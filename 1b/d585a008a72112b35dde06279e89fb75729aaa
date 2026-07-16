@@ -1,0 +1,122 @@
+internal/diskusage/diskusage.go
+  s_528292aebf342e::t_a8be7c0db423bf 1-11,14-74,91-103
+  s_528292aebf342e::t_e2aa8b03928982 12-13,75-90
+main.go
+  s_528292aebf342e::t_70db019c76b264 27,317-319,473-475,546-567
+  s_528292aebf342e::t_196ff76742a947 21,337,526
+  s_528292aebf342e::t_b70a850a34fa27 141-149,151-152,157
+  s_528292aebf342e::t_2d234e2d49bcf0 150
+  s_528292aebf342e::t_1fc676b98cdfb8 105,130-131,133-137,139-140
+  s_528292aebf342e::t_5e7ec8b0f8e148 106-117
+  s_528292aebf342e::t_39918589a01b46 132,138
+  s_528292aebf342e::t_6e53af0a8609c3 153-156
+  s_528292aebf342e::t_12e38d2fbc0dda 118-129
+  s_528292aebf342e::t_fa87abe2928e7c 568
+internal/tui/diskusage.go
+  s_528292aebf342e::t_d00f8489ff9a39 1-44,46,48-49,51-54
+  s_528292aebf342e::t_e78babe53887d1 45,47,50
+cmd/generate_test.go
+  s_528292aebf342e::t_be09d722264de3 1-34
+internal/restore/restore_test.go
+  s_528292aebf342e::t_2b0be83a7ee239 13-15
+  s_528292aebf342e::t_26d77e9a5f7a7f 1-12,16-39
+internal/tui/palette.go
+  s_528292aebf342e::t_1aee615c4c0825 141-146
+  s_528292aebf342e::t_2d234e2d49bcf0 154
+internal/tui/progress.go
+  s_528292aebf342e::t_de705811fe464a 121,151
+cmd/repair_test.go
+  s_528292aebf342e::t_8a6e972523327d 1-36
+internal/repair/repair.go
+  s_528292aebf342e::t_6e2aca0295c327 1-134
+internal/tui/restore_journal.go
+  s_528292aebf342e::t_de705811fe464a 1-48
+internal/tui/diskusage_test.go
+  s_528292aebf342e::t_77be8482b39e91 1-32
+cmd/restore.go
+  s_528292aebf342e::t_4a979d2ebd3220 58-60
+  s_528292aebf342e::t_6e53af0a8609c3 1-57,61-93
+cmd/sync_test.go
+  s_528292aebf342e::t_2c63ef64e53a72 1-51
+cmd/repair.go
+  s_528292aebf342e::t_acdd0dd7455375 36
+  s_528292aebf342e::t_12e38d2fbc0dda 1-35,37-99
+internal/syncer/syncer.go
+  s_528292aebf342e::t_abdba1bf57573f 1-38,40,42-191
+  s_528292aebf342e::t_04c167cf3065b2 39,41
+cmd/sync.go
+  s_528292aebf342e::t_5e7ec8b0f8e148 1-78
+internal/diskusage/diskusage_test.go
+  s_528292aebf342e::t_6883f346c10dac 7-8,21-37
+  s_528292aebf342e::t_cf5a757f6d47aa 1-6,9-20,38-49
+internal/operation/args.go
+  s_528292aebf342e::t_ed9db3999dfd46 6
+internal/restore/restore.go
+  s_528292aebf342e::t_208db43e3c641e 1-69
+internal/tui/model.go
+  s_528292aebf342e::t_d00f8489ff9a39 22,259-260,349-354,377,462,663-665,728,730-733,735
+  s_528292aebf342e::t_de705811fe464a 651-656
+internal/tui/menu.go
+  s_528292aebf342e::t_d00f8489ff9a39 14,204-208
+README.md
+  s_528292aebf342e::t_bb58681987f25c 48-58
+cmd/operator_state.go
+  s_528292aebf342e::t_b70a850a34fa27 1-7,9-65,69-122,126-134,136-138,163-199,203-205,216-246
+  s_528292aebf342e::t_5d31a3552db7d0 66-68,123-125,200-202
+  s_528292aebf342e::t_44449c72bc2fbc 8,135,139-162,206-215
+internal/operatorstate/store_test.go
+  s_528292aebf342e::t_26d77e9a5f7a7f 56-64
+  s_528292aebf342e::t_870ffc44446538 1-11,13-14,16-55
+  s_528292aebf342e::t_36212a34bfa658 15
+  s_528292aebf342e::t_36f3ef241c119e 12
+cmd/generate.go
+  s_528292aebf342e::t_1fc676b98cdfb8 1-72
+internal/operatorstate/store.go
+  s_528292aebf342e::t_5f06372d460374 1-5,7-44,62-75,78-172,211-240
+  s_528292aebf342e::t_b70a850a34fa27 173-196,208-210
+  s_528292aebf342e::t_320743c41c81d0 45-51
+  s_528292aebf342e::t_36f3ef241c119e 76-77
+  s_528292aebf342e::t_6e53af0a8609c3 52,197-207
+  s_528292aebf342e::t_208db43e3c641e 6,53-61
+internal/tui/helpers.go
+  s_528292aebf342e::t_1aee615c4c0825 25-41
+internal/tui/restore_journal_test.go
+  s_528292aebf342e::t_92926dcfebefb5 1-33
+cmd/restore_test.go
+  s_528292aebf342e::t_9b3c6774fdc261 1-32
+docs/operator-cockpit.md
+  s_528292aebf342e::t_bb58681987f25c 16-33,50-53
+  s_528292aebf342e::t_07860926f6fafe 54
+internal/operation/args_test.go
+  s_528292aebf342e::t_feb9d590c4ba61 28-37
+internal/operation/record.go
+  s_528292aebf342e::t_ed9db3999dfd46 81-82
+internal/repair/repair_test.go
+  s_528292aebf342e::t_ef385db6b9ac42 16-17,19,43-44
+  s_528292aebf342e::t_a3038d92c19d19 1-15,18,20-42,45-54
+internal/syncer/syncer_test.go
+  s_528292aebf342e::t_77ea6a36818b45 1-12,18,20-40,46,49-61,63,66-87
+  s_528292aebf342e::t_4d2d118559957c 41
+  s_528292aebf342e::t_04c167cf3065b2 13-17,19,42-45,47-48,62,64-65
+cmd/operator_state_test.go
+  s_528292aebf342e::t_fa2c2dc2b247f7 31-37
+  s_528292aebf342e::t_683a5dbbcbdb62 1-30,38-52
+recent_test.go
+  s_528292aebf342e::t_d8aa2864a68539 1-25
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "1bd585a008a72112b35dde06279e89fb75729aaa",
+  "prompts": {},
+  "sessions": {
+    "s_528292aebf342e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f6a1f-363e-7f43-88fb-9a1f3d63aca6",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>"
+    }
+  }
+}
