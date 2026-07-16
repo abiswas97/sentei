@@ -121,6 +121,25 @@ func TestPortal_ResizeWhileOpen(t *testing.T) {
 	}
 }
 
+func TestPortal_PasteDoesNotEditHiddenInput(t *testing.T) {
+	m := createBranchModel()
+	updated, _ := m.Update(keyF1())
+	m = updated.(Model)
+	if !m.portal.Visible() {
+		t.Fatal("precondition: help portal must be open")
+	}
+
+	updated, _ = m.Update(tea.PasteMsg{Content: "hidden-change"})
+	m = updated.(Model)
+
+	if !m.portal.Visible() {
+		t.Fatal("paste must not close the portal")
+	}
+	if got := m.create.branchInput.Value(); got != "" {
+		t.Errorf("hidden branch input changed to %q", got)
+	}
+}
+
 func TestPortal_ChromeTitleHintsAndScrollIndicator(t *testing.T) {
 	var p DetailPortal
 	p = p.SetSize(80, 14)

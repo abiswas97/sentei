@@ -218,6 +218,9 @@ func (m Model) updateList(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m.beginRemoval()
 		}
 	}
+	if m.remove.filterActive {
+		return m.updateFilterInput(msg)
+	}
 	return m, nil
 }
 
@@ -245,21 +248,23 @@ func (m Model) listCursorUp() Model {
 	return m
 }
 
-func (m Model) updateFilterInput(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
-	switch {
-	case key.Matches(msg, keys.Back):
-		m.remove.filterActive = false
-		m.remove.filterText = ""
-		m.remove.filterInput.SetValue("")
-		m.remove.filterInput.Blur()
-		m.reindex()
-		return m, nil
+func (m Model) updateFilterInput(msg tea.Msg) (tea.Model, tea.Cmd) {
+	if msg, ok := msg.(tea.KeyPressMsg); ok {
+		switch {
+		case key.Matches(msg, keys.Back):
+			m.remove.filterActive = false
+			m.remove.filterText = ""
+			m.remove.filterInput.SetValue("")
+			m.remove.filterInput.Blur()
+			m.reindex()
+			return m, nil
 
-	case key.Matches(msg, keys.Confirm):
-		m.remove.filterActive = false
-		m.remove.filterText = m.remove.filterInput.Value()
-		m.remove.filterInput.Blur()
-		return m, nil
+		case key.Matches(msg, keys.Confirm):
+			m.remove.filterActive = false
+			m.remove.filterText = m.remove.filterInput.Value()
+			m.remove.filterInput.Blur()
+			return m, nil
+		}
 	}
 
 	var cmd tea.Cmd

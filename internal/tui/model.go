@@ -696,6 +696,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	if m.portal.Visible() {
+		if _, ok := msg.(tea.PasteMsg); ok {
+			return m, nil
+		}
 		if keyMsg, ok := msg.(tea.KeyPressMsg); ok {
 			return m.updatePortalKeys(keyMsg)
 		}

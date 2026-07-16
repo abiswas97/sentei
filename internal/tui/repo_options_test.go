@@ -169,6 +169,31 @@ func TestUpdateRepoOptions_DescriptionReceivesTyping(t *testing.T) {
 	}
 }
 
+func TestUpdateRepoOptions_DescriptionReceivesPaste(t *testing.T) {
+	m := repoOptionsModel(t)
+	m.repo.publishGitHub = true
+	m.repo.optionsCursor = repoOptDescription
+	m.repo.descInput.Focus()
+
+	updated, _ := m.updateRepoOptions(tea.PasteMsg{Content: "release 界 notes"})
+
+	if got := updated.(Model).repo.descInput.Value(); got != "release 界 notes" {
+		t.Errorf("description = %q, want pasted text", got)
+	}
+}
+
+func TestUpdateRepoOptions_PasteIgnoresHiddenDescription(t *testing.T) {
+	m := repoOptionsModel(t)
+	m.repo.publishGitHub = false
+	m.repo.optionsCursor = repoOptPublish
+
+	updated, _ := m.updateRepoOptions(tea.PasteMsg{Content: "hidden"})
+
+	if got := updated.(Model).repo.descInput.Value(); got != "" {
+		t.Errorf("hidden description changed to %q", got)
+	}
+}
+
 func TestUpdateRepoOptions_BackReturnsToNameView(t *testing.T) {
 	m := repoOptionsModel(t)
 
