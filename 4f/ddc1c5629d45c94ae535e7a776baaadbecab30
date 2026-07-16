@@ -1,0 +1,24 @@
+internal/operation/store_test.go
+  s_528292aebf342e::t_c096f8e5b72536 1-93,105-165
+  s_528292aebf342e::t_c0084b60e9f362 94-104
+internal/operation/store.go
+  s_528292aebf342e::t_8a0a13af268631 81-87
+  s_528292aebf342e::t_515cdf13cc20c1 152,245
+  s_528292aebf342e::t_ae4aa168ae6a16 1-80,88-151,153-244,246-268
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "4fddc1c5629d45c94ae535e7a776baaadbecab30",
+  "prompts": {},
+  "sessions": {
+    "s_528292aebf342e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f6a1f-363e-7f43-88fb-9a1f3d63aca6",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>"
+    }
+  }
+}
