@@ -1,0 +1,23 @@
+internal/tui/notice.go
+  s_528292aebf342e::t_4610e4770ccccc 1-76
+internal/tui/model.go
+  s_528292aebf342e::t_4610e4770ccccc 251,613-619,652-655,875-877
+internal/tui/notice_test.go
+  s_528292aebf342e::t_ba3e85bbaf2993 1-57
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "6c8ce7f4bd1fbb94afcd813ef0937c208c75cf47",
+  "prompts": {},
+  "sessions": {
+    "s_528292aebf342e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f6a1f-363e-7f43-88fb-9a1f3d63aca6",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>"
+    }
+  }
+}
