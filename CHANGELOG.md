@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.13.0](https://github.com/abiswas97/sentei/compare/v1.12.0...v1.13.0) (2026-07-16)
+
+
+### Features
+
+* **tui:** support native paste in text inputs ([0179157](https://github.com/abiswas97/sentei/commit/01791571e6770bafef4b4a101bc83fcb29dc2f3d))
+* **tui:** support paste in form inputs ([25d55f7](https://github.com/abiswas97/sentei/commit/25d55f70ddcdaae8d4cf71ccf3c278d96b01778f))
+
+
+### Bug Fixes
+
+* **tui:** isolate paste to visible text inputs ([043e591](https://github.com/abiswas97/sentei/commit/043e5910201008a81a95f65319a5ad4893aafde4))
+
 ## [1.12.0](https://github.com/abiswas97/sentei/compare/v1.11.1...v1.12.0) (2026-07-15)
 
 
