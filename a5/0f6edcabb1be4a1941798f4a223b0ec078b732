@@ -1,0 +1,29 @@
+internal/doctor/doctor_test.go
+  s_528292aebf342e::t_16685c053a8a39 15-19
+  s_528292aebf342e::t_169cd1fc60306e 1-14,20-89
+internal/doctor/doctor.go
+  s_528292aebf342e::t_9a856ed23f98df 1-195
+cmd/doctor_test.go
+  s_528292aebf342e::t_b23ebfd0fc2cb4 1-68
+cmd/doctor.go
+  s_528292aebf342e::t_cf806ee6bda967 1-64
+main.go
+  s_528292aebf342e::t_cf806ee6bda967 76-86
+  s_528292aebf342e::t_8e845b2b39e23e 75
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "a50f6edcabb1be4a1941798f4a223b0ec078b732",
+  "prompts": {},
+  "sessions": {
+    "s_528292aebf342e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f6a1f-363e-7f43-88fb-9a1f3d63aca6",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>"
+    }
+  }
+}
