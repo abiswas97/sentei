@@ -1,0 +1,61 @@
+internal/dashboard/snapshot_test.go
+  s_528292aebf342e::t_d3d5808bd0b5a3 1-35
+internal/tui/help.go
+  s_528292aebf342e::t_b2d1bec7b71070 133-147,158-160
+internal/tui/menu.go
+  s_528292aebf342e::t_cda83d19aacddb 12,235
+  s_528292aebf342e::t_1cb84f8871952f 7,14,16,26,30-33,39,41,50,52
+  s_528292aebf342e::t_b7cdf0039ca48d 11,137-168,199-200,202-205,207-211,213,215-230,232-234,236-237
+internal/tui/keys.go
+  s_528292aebf342e::t_aee57838ad0aa5 25-30,110-133,181,202-208
+  s_528292aebf342e::t_44bd4bff6315e8 209
+internal/tui/contextual_actions_test.go
+  s_528292aebf342e::t_ddf962785fdbb1 80
+  s_528292aebf342e::t_aefb5c339d71d3 1-76
+  s_528292aebf342e::t_e963b3f14f7c33 77-79,81-95
+internal/tui/list.go
+  s_528292aebf342e::t_aee57838ad0aa5 206-223
+main.go
+  s_528292aebf342e::t_2fadbbe746c54b 22,252-255,427-430,448-466
+  s_528292aebf342e::t_17f3ad4ff78a42 467
+internal/tui/model.go
+  s_528292aebf342e::t_0845ed0ef0f62b 21,24,254-255,327-334,359,471,600,602,674
+  s_528292aebf342e::t_842379cdbad5a2 675-679
+  s_528292aebf342e::t_aee57838ad0aa5 627-638
+internal/git/worktree.go
+  s_528292aebf342e::t_ba3f06797bcbb3 23-31
+internal/worktree/divergence.go
+  s_528292aebf342e::t_ba3f06797bcbb3 1-6,8-10,35-122
+  s_528292aebf342e::t_ff2c90a31c1e05 7,11-34
+internal/worktree/divergence_test.go
+  s_528292aebf342e::t_d3d5808bd0b5a3 1-43,62-63,68-80
+  s_528292aebf342e::t_fc036783a5980c 64-67
+  s_528292aebf342e::t_a26f7c91fc8a54 44-46,49-61
+  s_528292aebf342e::t_d3a2a7b90d4290 47-48
+internal/tui/contextual_actions.go
+  s_528292aebf342e::t_aee57838ad0aa5 1-70,72-131
+  s_528292aebf342e::t_fd51c21cc91fcd 71
+internal/tui/menu_test.go
+  s_528292aebf342e::t_9144af097ec701 5,7,13,15,19-44
+  s_528292aebf342e::t_56736c1261ddda 45
+internal/dashboard/snapshot.go
+  s_528292aebf342e::t_cf067d476263cb 25,35-36
+  s_528292aebf342e::t_ba3f06797bcbb3 1-14,21,23-24,26-34,37-92
+  s_528292aebf342e::t_1b0c82cc8041f0 15-20,22
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "1bae421044c9609b432f8b20d1c4a63606b5deba",
+  "prompts": {},
+  "sessions": {
+    "s_528292aebf342e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f6a1f-363e-7f43-88fb-9a1f3d63aca6",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>"
+    }
+  }
+}
