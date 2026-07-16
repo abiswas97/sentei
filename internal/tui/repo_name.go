@@ -11,8 +11,7 @@ import (
 )
 
 func (m Model) updateRepoName(msg tea.Msg) (tea.Model, tea.Cmd) {
-	switch msg := msg.(type) {
-	case tea.KeyPressMsg:
+	if msg, ok := msg.(tea.KeyPressMsg); ok {
 		switch {
 		case key.Matches(msg, keys.Back):
 			m.view = menuView
@@ -81,24 +80,25 @@ func (m Model) updateRepoName(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, checkGitHubAuth(m.shell)
 		}
 
-		// Forward to focused input
-		m.repo.validationErr = ""
-		var cmd tea.Cmd
-		if m.repo.focusedField == 0 {
-			m.repo.nameInput, cmd = m.repo.nameInput.Update(msg)
-			// Auto-update location to show <repoPath>/<name> as user types
-			name := strings.TrimSpace(m.repo.nameInput.Value())
-			if name != "" {
-				m.repo.locationInput.SetValue(filepath.Join(m.repoPath, name))
-			} else {
-				m.repo.locationInput.SetValue(m.repoPath)
-			}
-		} else {
-			m.repo.locationInput, cmd = m.repo.locationInput.Update(msg)
-		}
-		return m, cmd
 	}
-	return m, nil
+	return m.updateRepoNameInput(msg)
+}
+
+func (m Model) updateRepoNameInput(msg tea.Msg) (tea.Model, tea.Cmd) {
+	m.repo.validationErr = ""
+	var cmd tea.Cmd
+	if m.repo.focusedField == 0 {
+		m.repo.nameInput, cmd = m.repo.nameInput.Update(msg)
+		name := strings.TrimSpace(m.repo.nameInput.Value())
+		if name != "" {
+			m.repo.locationInput.SetValue(filepath.Join(m.repoPath, name))
+		} else {
+			m.repo.locationInput.SetValue(m.repoPath)
+		}
+	} else {
+		m.repo.locationInput, cmd = m.repo.locationInput.Update(msg)
+	}
+	return m, cmd
 }
 
 func (m Model) viewRepoName() string {

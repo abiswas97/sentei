@@ -217,3 +217,33 @@ func TestUpdateFilterInput_TypingNarrowsList(t *testing.T) {
 		t.Errorf("visible worktree = %q, want the alpha branch", wt.Branch)
 	}
 }
+
+func TestUpdateFilterInput_PasteNarrowsList(t *testing.T) {
+	m := makeRemoveModel(sampleWorktrees())
+	m.remove.filterActive = true
+	m.remove.filterInput.Focus()
+
+	updated, _ := m.updateList(tea.PasteMsg{Content: "alpha"})
+	model := updated.(Model)
+
+	if model.remove.filterText != "alpha" {
+		t.Errorf("filterText = %q, want alpha", model.remove.filterText)
+	}
+	if len(model.remove.visibleIndices) != 1 {
+		t.Fatalf("visible = %d, want one alpha worktree", len(model.remove.visibleIndices))
+	}
+}
+
+func TestUpdateList_PasteIgnoredWithoutActiveFilter(t *testing.T) {
+	m := makeRemoveModel(sampleWorktrees())
+
+	updated, _ := m.updateList(tea.PasteMsg{Content: "alpha"})
+	model := updated.(Model)
+
+	if model.remove.filterText != "" {
+		t.Errorf("inactive filter changed to %q", model.remove.filterText)
+	}
+	if len(model.remove.visibleIndices) != len(sampleWorktrees()) {
+		t.Fatalf("visible = %d, want all worktrees", len(model.remove.visibleIndices))
+	}
+}

@@ -127,6 +127,42 @@ func TestUpdateCloneInput_TypingDerivesNameUntilManuallyEdited(t *testing.T) {
 	}
 }
 
+func TestUpdateCloneInput_PasteDerivesName(t *testing.T) {
+	m := cloneInputModel("/repo")
+	m.repo.validationErr = "repository URL is required"
+
+	updated, _ := m.updateCloneInput(tea.PasteMsg{Content: "git@github.com:user/myrepo.git"})
+	model := updated.(Model)
+
+	if got := model.repo.urlInput.Value(); got != "git@github.com:user/myrepo.git" {
+		t.Errorf("URL = %q, want pasted URL", got)
+	}
+	if got := model.repo.cloneNameInput.Value(); got != "myrepo" {
+		t.Errorf("derived name = %q, want myrepo", got)
+	}
+	if model.repo.validationErr != "" {
+		t.Errorf("paste should clear validation error, got %q", model.repo.validationErr)
+	}
+}
+
+func TestUpdateCloneInput_PasteMarksNameManuallyEdited(t *testing.T) {
+	m := cloneInputModel("/repo")
+	m.repo.urlInput.SetValue("git@github.com:user/original.git")
+	m.repo.cloneFocusedField = 1
+	m.repo.urlInput.Blur()
+	m.repo.cloneNameInput.Focus()
+
+	updated, _ := m.updateCloneInput(tea.PasteMsg{Content: "custom"})
+	model := updated.(Model)
+
+	if got := model.repo.cloneNameInput.Value(); got != "custom" {
+		t.Errorf("clone name = %q, want custom", got)
+	}
+	if !model.repo.nameManuallyEdited {
+		t.Fatal("pasting clone name must mark it manually edited")
+	}
+}
+
 func TestViewCloneInput_RendersFieldsAndError(t *testing.T) {
 	m := cloneInputModel("/repo")
 	m.repo.urlInput.SetValue("git@github.com:user/myrepo.git")

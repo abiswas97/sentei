@@ -33,6 +33,42 @@ func TestUpdateCreateBranch_TypingFillsFocusedField(t *testing.T) {
 	}
 }
 
+func TestUpdateCreateBranch_PasteFillsFocusedField(t *testing.T) {
+	m := createBranchModel()
+	m.create.validationErr = "branch name is required"
+
+	updated, _ := m.updateCreateBranch(tea.PasteMsg{Content: "feature/界"})
+	model := updated.(Model)
+
+	if got := model.create.branchInput.Value(); got != "feature/界" {
+		t.Errorf("branch input = %q, want %q", got, "feature/界")
+	}
+	if got := model.create.baseInput.Value(); got != defaultBaseBranch {
+		t.Errorf("base input = %q, want untouched default", got)
+	}
+	if model.create.validationErr != "" {
+		t.Errorf("paste should clear validation error, got %q", model.create.validationErr)
+	}
+}
+
+func TestUpdateCreateBranch_PasteSanitizesFocusedBaseField(t *testing.T) {
+	m := createBranchModel()
+	m.create.focusedField = 1
+	m.create.branchInput.Blur()
+	m.create.baseInput.Focus()
+	m.create.baseInput.SetValue("")
+
+	updated, _ := m.updateCreateBranch(tea.PasteMsg{Content: "ma\n\tin\x1b界"})
+	model := updated.(Model)
+
+	if got := model.create.baseInput.Value(); got != "ma  in界" {
+		t.Errorf("base input = %q, want sanitized %q", got, "ma  in界")
+	}
+	if got := model.create.branchInput.Value(); got != "" {
+		t.Errorf("branch input = %q, want untouched", got)
+	}
+}
+
 func TestUpdateCreateBranch_TabSwitchesFields(t *testing.T) {
 	m := createBranchModel()
 

@@ -48,12 +48,12 @@ func (m Model) repoVisibleOptions() []int {
 }
 
 func (m Model) updateRepoOptions(msg tea.Msg) (tea.Model, tea.Cmd) {
-	switch msg := msg.(type) {
-	case ghAuthStatusMsg:
+	if msg, ok := msg.(ghAuthStatusMsg); ok {
 		m.repo.ghStatus = msg.status
 		return m, nil
+	}
 
-	case tea.KeyPressMsg:
+	if msg, ok := msg.(tea.KeyPressMsg); ok {
 		// When description is focused, forward all keys except navigation/action to the text input
 		if m.repo.optionsCursor == repoOptDescription && m.repo.publishGitHub {
 			if !key.Matches(msg, keys.Back) && !key.Matches(msg, keys.Confirm) &&
@@ -135,6 +135,11 @@ func (m Model) updateRepoOptions(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.view = repoProgressView
 			return m, m.startRepoPipeline(opts)
 		}
+	}
+	if m.repo.optionsCursor == repoOptDescription && m.repo.publishGitHub {
+		var cmd tea.Cmd
+		m.repo.descInput, cmd = m.repo.descInput.Update(msg)
+		return m, cmd
 	}
 	return m, nil
 }

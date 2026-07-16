@@ -120,6 +120,43 @@ func TestUpdateRepoName_TypingAutoFillsLocation(t *testing.T) {
 	}
 }
 
+func TestUpdateRepoName_PasteAutoFillsLocation(t *testing.T) {
+	m := repoNameModel("/repo")
+	m.repo.validationErr = "repository name is required"
+
+	updated, _ := m.updateRepoName(tea.PasteMsg{Content: "myrepo"})
+	model := updated.(Model)
+
+	if got := model.repo.nameInput.Value(); got != "myrepo" {
+		t.Errorf("name = %q, want myrepo", got)
+	}
+	if got := model.repo.locationInput.Value(); got != filepath.Join("/repo", "myrepo") {
+		t.Errorf("location = %q, want derived path", got)
+	}
+	if model.repo.validationErr != "" {
+		t.Errorf("paste should clear validation error, got %q", model.repo.validationErr)
+	}
+}
+
+func TestUpdateRepoName_PasteEditsFocusedLocationOnly(t *testing.T) {
+	m := repoNameModel("/repo")
+	m.repo.nameInput.SetValue("myrepo")
+	m.repo.focusedField = 1
+	m.repo.nameInput.Blur()
+	m.repo.locationInput.SetValue("")
+	m.repo.locationInput.Focus()
+
+	updated, _ := m.updateRepoName(tea.PasteMsg{Content: "/tmp/myrepo"})
+	model := updated.(Model)
+
+	if got := model.repo.locationInput.Value(); got != "/tmp/myrepo" {
+		t.Errorf("location = %q, want pasted path", got)
+	}
+	if got := model.repo.nameInput.Value(); got != "myrepo" {
+		t.Errorf("name = %q, want untouched", got)
+	}
+}
+
 func TestViewRepoName_RendersFieldsAndError(t *testing.T) {
 	m := repoNameModel("/repo")
 	m.repo.validationErr = "repository name is required"
