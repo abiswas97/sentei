@@ -14,8 +14,7 @@ import (
 )
 
 func (m Model) updateCloneInput(msg tea.Msg) (tea.Model, tea.Cmd) {
-	switch msg := msg.(type) {
-	case tea.KeyPressMsg:
+	if msg, ok := msg.(tea.KeyPressMsg); ok {
 		switch {
 		case key.Matches(msg, keys.Back):
 			m.view = menuView
@@ -76,25 +75,25 @@ func (m Model) updateCloneInput(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, m.startRepoPipeline(opts)
 		}
 
-		// Forward to focused input
-		m.repo.validationErr = ""
-		var cmd tea.Cmd
-		if m.repo.cloneFocusedField == 0 {
-			prevURL := m.repo.urlInput.Value()
-			m.repo.urlInput, cmd = m.repo.urlInput.Update(msg)
-			newURL := m.repo.urlInput.Value()
-			// Auto-derive name when URL changes, unless user edited name field
-			if newURL != prevURL && !m.repo.nameManuallyEdited {
-				derived := repo.DeriveRepoName(newURL)
-				m.repo.cloneNameInput.SetValue(derived)
-			}
-		} else {
-			m.repo.nameManuallyEdited = true
-			m.repo.cloneNameInput, cmd = m.repo.cloneNameInput.Update(msg)
-		}
-		return m, cmd
 	}
-	return m, nil
+	return m.updateCloneTextInput(msg)
+}
+
+func (m Model) updateCloneTextInput(msg tea.Msg) (tea.Model, tea.Cmd) {
+	m.repo.validationErr = ""
+	var cmd tea.Cmd
+	if m.repo.cloneFocusedField == 0 {
+		prevURL := m.repo.urlInput.Value()
+		m.repo.urlInput, cmd = m.repo.urlInput.Update(msg)
+		newURL := m.repo.urlInput.Value()
+		if newURL != prevURL && !m.repo.nameManuallyEdited {
+			m.repo.cloneNameInput.SetValue(repo.DeriveRepoName(newURL))
+		}
+	} else {
+		m.repo.nameManuallyEdited = true
+		m.repo.cloneNameInput, cmd = m.repo.cloneNameInput.Update(msg)
+	}
+	return m, cmd
 }
 
 func (m Model) viewCloneInput() string {

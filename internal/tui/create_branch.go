@@ -61,8 +61,7 @@ func validateBranchName(name string, existingWorktrees []string) *branchValidati
 }
 
 func (m Model) updateCreateBranch(msg tea.Msg) (tea.Model, tea.Cmd) {
-	switch msg := msg.(type) {
-	case tea.KeyPressMsg:
+	if msg, ok := msg.(tea.KeyPressMsg); ok {
 		switch {
 		case key.Matches(msg, keys.Back):
 			m.view = menuView
@@ -116,17 +115,19 @@ func (m Model) updateCreateBranch(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 
-		// Forward key to focused input
-		m.create.validationErr = ""
-		var cmd tea.Cmd
-		if m.create.focusedField == 0 {
-			m.create.branchInput, cmd = m.create.branchInput.Update(msg)
-		} else {
-			m.create.baseInput, cmd = m.create.baseInput.Update(msg)
-		}
-		return m, cmd
 	}
-	return m, nil
+	return m.updateCreateBranchInput(msg)
+}
+
+func (m Model) updateCreateBranchInput(msg tea.Msg) (tea.Model, tea.Cmd) {
+	m.create.validationErr = ""
+	var cmd tea.Cmd
+	if m.create.focusedField == 0 {
+		m.create.branchInput, cmd = m.create.branchInput.Update(msg)
+	} else {
+		m.create.baseInput, cmd = m.create.baseInput.Update(msg)
+	}
+	return m, cmd
 }
 
 func (m *Model) prepareCreateOptions() {
