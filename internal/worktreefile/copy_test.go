@@ -91,6 +91,13 @@ func TestCopyOverwritesExplicitly(t *testing.T) {
 	if info.Mode().Perm() != 0o600 {
 		t.Errorf("destination mode = %o, want 600", info.Mode().Perm())
 	}
+	data, err := os.ReadFile(filepath.Join(worktreeRoot, "config"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(data) != "new" {
+		t.Errorf("destination content = %q, want new", data)
+	}
 }
 
 func TestCopyRejectsUnsafeRuntimePaths(t *testing.T) {
