@@ -1,0 +1,53 @@
+README.md
+  s_bc116e9a58f42f::t_b7caa5d9d0dafc 43-79
+cmd/create.go
+  s_bc116e9a58f42f::t_08d1f268a29dad 51-57
+cmd/create_worktree_files_test.go
+  s_bc116e9a58f42f::t_72c3fde0b314d2 1-74
+docs/PRD.md
+  s_bc116e9a58f42f::t_31a8aebbc2aec8 165-178,385-387
+internal/config/config.go
+  s_bc116e9a58f42f::t_f08e619304d261 12,120,128-130,137-139
+internal/config/types.go
+  s_bc116e9a58f42f::t_40cf0f2c81a673 1-47
+internal/config/worktree_files_test.go
+  s_bc116e9a58f42f::t_642247447bfe3c 1-122
+internal/creator/creator.go
+  s_bc116e9a58f42f::t_001bf76fc8e30d 11,21
+internal/creator/env_files.go
+  s_bc116e9a58f42f::t_3dabfcabe56310 1-48
+internal/creator/prepared.go
+  s_bc116e9a58f42f::t_9bd9839bc675be 13,32-43,53-55,71-74,180-184
+internal/creator/worktree_files.go
+  s_bc116e9a58f42f::t_cd812cb2e57733 1-28
+internal/creator/worktree_files_test.go
+  s_bc116e9a58f42f::t_563d1901d2a3a0 1-144
+internal/tui/create_confirm.go
+  s_bc116e9a58f42f::t_cbc89c9a5fb1f3 82-87
+internal/tui/create_options.go
+  s_bc116e9a58f42f::t_700b902692988e 25-26,140,156-179,247-251,264-267
+internal/tui/worktree_files_test.go
+  s_bc116e9a58f42f::t_69ef6ed82f88b6 1-49
+internal/worktreefile/copy.go
+  s_bc116e9a58f42f::t_4bf84c0d0d34b5 1-207
+internal/worktreefile/copy_test.go
+  s_bc116e9a58f42f::t_62c0232d49b7c0 1-216
+internal/worktreefile/rule.go
+  s_bc116e9a58f42f::t_92897a9dc6acba 1-51
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "e23afae2bb004d86d288cd506aa38e9aa6b14a21",
+  "prompts": {},
+  "sessions": {
+    "s_bc116e9a58f42f": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019facac-17d1-7502-850d-5072d0c1f094",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>"
+    }
+  }
+}
