@@ -1,0 +1,21 @@
+internal/worktreefile/copy_errors_test.go
+  s_bc116e9a58f42f::t_29d0657d298abf 1-155
+internal/worktreefile/copy_test.go
+  s_bc116e9a58f42f::t_be373987a95d2c 94-100
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "66cd517cc9f2af317b0755c3b1a9ad4e5a50e1bf",
+  "prompts": {},
+  "sessions": {
+    "s_bc116e9a58f42f": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019facac-17d1-7502-850d-5072d0c1f094",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>"
+    }
+  }
+}
