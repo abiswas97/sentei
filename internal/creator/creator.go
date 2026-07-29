@@ -8,6 +8,7 @@ import (
 	"github.com/abiswas97/sentei/internal/git"
 	"github.com/abiswas97/sentei/internal/integration"
 	"github.com/abiswas97/sentei/internal/progress"
+	"github.com/abiswas97/sentei/internal/worktreefile"
 )
 
 type Options struct {
@@ -17,6 +18,7 @@ type Options struct {
 	SourceWorktree string
 	MergeBase      bool
 	CopyEnvFiles   bool
+	WorktreeFiles  []worktreefile.Rule
 	Ecosystems     []config.EcosystemConfig
 	Integrations   []integration.Integration
 }
