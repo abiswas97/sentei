@@ -162,6 +162,20 @@ For each worktree, gather:
 - Protected worktrees are visible in the list but cannot be selected for deletion
 - No configuration file needed — protection is built-in
 
+#### F10: Repository-Private Worktree Files
+- `.sentei.yaml` may declare a top-level `worktree_files` list.
+- Each rule has a container-relative `source`, worktree-relative `destination`,
+  and optional `overwrite` boolean that defaults to false.
+- The rules apply automatically to interactive and non-interactive creation.
+- Missing destination parents are created.
+- The copied file preserves the source permission bits.
+- Empty paths, absolute paths, `..` traversal, source escapes, and destination
+  symlinks are rejected.
+- Missing sources and copy failures are visible Setup failures without exposing
+  file contents.
+- Independent dependency and integration setup continues after a copy failure.
+- Ecosystem `env_files` behavior remains separate and opt-in.
+
 ---
 
 ## 6. Non-Functional Requirements
@@ -368,6 +382,9 @@ sentei --version
 | Bare repo without worktrees | Show message explaining bare repos need worktrees |
 | Permission denied on delete | Show error, continue with others, summarize failures |
 | Git command not found | Show error: "git not found in PATH" |
+| Configured worktree-file source missing | Mark `Copy worktree files` failed and name only the configured path |
+| Worktree-file destination exists | Preserve it unless the rule explicitly enables overwrite |
+| Worktree-file path escapes its root | Reject the config or runtime copy before reading or writing outside the root |
 
 ### 9.2 Error Messages
 

@@ -48,15 +48,13 @@ func RunCreate(args []string) error {
 		CopyEnvFiles: opts.CopyEnv,
 	}
 
-	// Resolve ecosystems from config if requested.
-	if len(opts.Ecosystems) > 0 {
-		cfg, err := config.LoadConfig(repoPath,
-			config.WithRunner(runner),
-		)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Warning: failed to load config: %v\n", err)
-		}
-		if cfg != nil {
+	cfg, err := config.LoadConfig(repoPath, config.WithRunner(runner))
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: failed to load config: %v\n", err)
+	}
+	if cfg != nil {
+		creatorOpts.WorktreeFiles = cfg.WorktreeFiles
+		if len(opts.Ecosystems) > 0 {
 			creatorOpts.Ecosystems = matchEcosystems(cfg.Ecosystems, opts.Ecosystems)
 		}
 	}

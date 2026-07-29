@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/abiswas97/sentei/internal/worktreefile"
 	"gopkg.in/yaml.v3"
 )
 
@@ -116,6 +117,7 @@ func mergeConfigs(base, overlay *Config, overlaySource string) *Config {
 		Ecosystems:          mergeEcosystems(base.Ecosystems, overlay.Ecosystems, overlaySource),
 		ProtectedBranches:   base.ProtectedBranches,
 		IntegrationsEnabled: base.IntegrationsEnabled,
+		WorktreeFiles:       base.WorktreeFiles,
 	}
 	if len(overlay.ProtectedBranches) > 0 {
 		result.ProtectedBranches = overlay.ProtectedBranches
@@ -123,12 +125,18 @@ func mergeConfigs(base, overlay *Config, overlaySource string) *Config {
 	if len(overlay.IntegrationsEnabled) > 0 {
 		result.IntegrationsEnabled = overlay.IntegrationsEnabled
 	}
+	if len(overlay.WorktreeFiles) > 0 {
+		result.WorktreeFiles = overlay.WorktreeFiles
+	}
 	return result
 }
 
 // validate checks the config for structural errors and warns about unknown
 // integration names. knownIntegrationNames is the set of recognised names.
 func validate(cfg *Config, knownIntegrationNames []string) error {
+	if err := worktreefile.ValidateRules(cfg.WorktreeFiles); err != nil {
+		return err
+	}
 	for i, e := range cfg.Ecosystems {
 		if !e.IsEnabled() {
 			continue
@@ -248,47 +256,4 @@ func LoadConfig(repoPath string, opts ...LoadOption) (*Config, error) {
 		return nil, err
 	}
 	return cfg, nil
-}
-
-// Config is the top-level configuration for sentei.
-type Config struct {
-	Ecosystems          []EcosystemConfig `yaml:"ecosystems"`
-	ProtectedBranches   []string          `yaml:"protected_branches"`
-	IntegrationsEnabled []string          `yaml:"integrations_enabled"`
-}
-
-// EcosystemConfig describes how to detect and install a language/tool ecosystem.
-type EcosystemConfig struct {
-	Name        string        `yaml:"name"`
-	Enabled     *bool         `yaml:"enabled,omitempty"`
-	Detect      DetectConfig  `yaml:"detect"`
-	Install     InstallConfig `yaml:"install"`
-	EnvFiles    []string      `yaml:"env_files"`
-	PostInstall []string      `yaml:"post_install"`
-	Source      string        `yaml:"-"` // "embedded", "global", or "per-repo"
-}
-
-// IsEnabled reports whether the ecosystem is active. An absent Enabled field
-// is treated as true.
-func (e *EcosystemConfig) IsEnabled() bool {
-	return e.Enabled == nil || *e.Enabled
-}
-
-// DetectConfig holds the file patterns used to detect an ecosystem.
-type DetectConfig struct {
-	Files []string `yaml:"files"`
-}
-
-// InstallConfig describes how to install an ecosystem's dependencies.
-type InstallConfig struct {
-	Command          string `yaml:"command"`
-	WorkspaceDetect  string `yaml:"workspace_detect,omitempty"`
-	WorkspaceInstall string `yaml:"workspace_install,omitempty"`
-	Parallel         *bool  `yaml:"parallel,omitempty"`
-}
-
-// IsParallel reports whether installation should run in parallel. An absent
-// Parallel field is treated as false.
-func (i *InstallConfig) IsParallel() bool {
-	return i.Parallel != nil && *i.Parallel
 }

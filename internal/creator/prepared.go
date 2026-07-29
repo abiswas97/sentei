@@ -4,16 +4,13 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
-	"os"
-	"path/filepath"
-	"sort"
 	"strings"
 	"sync"
 
-	"github.com/abiswas97/sentei/internal/fileutil"
 	"github.com/abiswas97/sentei/internal/git"
 	"github.com/abiswas97/sentei/internal/integration"
 	"github.com/abiswas97/sentei/internal/progress"
+	"github.com/abiswas97/sentei/internal/worktreefile"
 )
 
 const (
@@ -32,17 +29,18 @@ type preparedDependency struct {
 }
 
 type preparedCreation struct {
-	opts            Options
-	plan            progress.Plan
-	worktreePath    string
-	createStepID    progress.StepID
-	mergeStepID     progress.StepID
-	envStepID       progress.StepID
-	envFiles        []string
-	dependencies    []preparedDependency
-	integrations    integration.PreparedApply
-	hasDependencies bool
-	hasIntegrations bool
+	opts               Options
+	plan               progress.Plan
+	worktreePath       string
+	createStepID       progress.StepID
+	mergeStepID        progress.StepID
+	worktreeFileStepID progress.StepID
+	envStepID          progress.StepID
+	envFiles           []string
+	dependencies       []preparedDependency
+	integrations       integration.PreparedApply
+	hasDependencies    bool
+	hasIntegrations    bool
 }
 
 func prepareCreation(runner git.CommandRunner, shell git.ShellRunner, opts Options) (preparedCreation, error) {
@@ -50,6 +48,9 @@ func prepareCreation(runner git.CommandRunner, shell git.ShellRunner, opts Optio
 		return preparedCreation{}, errors.New("preparing worktree creation: branch, base branch, and repository path are required")
 	}
 	if err := validateEcosystemIdentities(opts); err != nil {
+		return preparedCreation{}, fmt.Errorf("preparing worktree creation: %w", err)
+	}
+	if err := worktreefile.ValidateRules(opts.WorktreeFiles); err != nil {
 		return preparedCreation{}, fmt.Errorf("preparing worktree creation: %w", err)
 	}
 	targets, err := prepareDependencyTargets(runner, opts)
@@ -66,6 +67,10 @@ func prepareCreation(runner git.CommandRunner, shell git.ShellRunner, opts Optio
 	if opts.MergeBase {
 		prepared.mergeStepID = semanticStepID("merge-base", opts.BaseBranch)
 		setup.Steps = append(setup.Steps, progress.PlannedStep{ID: prepared.mergeStepID, Label: "Merge base branch"})
+	}
+	if len(opts.WorktreeFiles) > 0 {
+		prepared.worktreeFileStepID = semanticStepID("copy-worktree-files", worktreeFileIdentity(opts.WorktreeFiles))
+		setup.Steps = append(setup.Steps, progress.PlannedStep{ID: prepared.worktreeFileStepID, Label: "Copy worktree files"})
 	}
 	if opts.CopyEnvFiles {
 		prepared.envFiles = uniqueEnvFiles(opts)
@@ -142,23 +147,6 @@ func validateEcosystemIdentities(opts Options) error {
 	return nil
 }
 
-func uniqueEnvFiles(opts Options) []string {
-	seen := map[string]bool{}
-	var files []string
-	for _, ecosystem := range opts.Ecosystems {
-		for _, name := range ecosystem.EnvFiles {
-			name = filepath.Clean(strings.TrimSpace(name))
-			if name == "." || filepath.IsAbs(name) || strings.HasPrefix(name, ".."+string(filepath.Separator)) || seen[name] {
-				continue
-			}
-			seen[name] = true
-			files = append(files, name)
-		}
-	}
-	sort.Strings(files)
-	return files
-}
-
 func (p preparedCreation) run(execution *progress.Execution, runner git.CommandRunner, shell git.ShellRunner, result *Result) error {
 	createResult, err := execution.Run(setupPhaseID, p.createStepID, func() (string, error) {
 		args := []string{"worktree", "add", p.worktreePath}
@@ -187,6 +175,11 @@ func (p preparedCreation) run(execution *progress.Execution, runner git.CommandR
 		})
 		if err != nil {
 			return fmt.Errorf("executing merge: %w", err)
+		}
+	}
+	if p.worktreeFileStepID != "" {
+		if err := p.runWorktreeFileCopy(execution); err != nil {
+			return err
 		}
 	}
 	if p.envStepID != "" {
@@ -271,25 +264,6 @@ func runPreparedDependency(execution *progress.Execution, shell git.ShellRunner,
 		return fmt.Errorf("executing dependency %s: %w", dependency.label, err)
 	}
 	return nil
-}
-
-func copyPreparedEnvFiles(source, destination string, files []string) (string, error) {
-	var copied []string
-	for _, name := range files {
-		if _, err := os.Stat(filepath.Join(source, name)); errors.Is(err, os.ErrNotExist) {
-			continue
-		} else if err != nil {
-			return "", fmt.Errorf("inspecting %s: %w", name, err)
-		}
-		if err := fileutil.CopyFile(filepath.Join(source, name), filepath.Join(destination, name)); err != nil {
-			return "", fmt.Errorf("copying %s: %w", name, err)
-		}
-		copied = append(copied, name)
-	}
-	if len(copied) == 0 {
-		return "no source files found", nil
-	}
-	return strings.Join(copied, ", "), nil
 }
 
 func semanticStepID(kind, identity string) progress.StepID {

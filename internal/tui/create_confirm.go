@@ -79,6 +79,12 @@ func (m Model) createConfirmationVM() ConfirmationViewModel {
 		copyEnv = "yes"
 	}
 	items = append(items, ConfirmationItem{Label: "Copy env:", Value: copyEnv})
+	if m.cfg != nil && len(m.cfg.WorktreeFiles) > 0 {
+		items = append(items, ConfirmationItem{
+			Label: worktreeFilesLabel,
+			Value: automaticWorktreeFiles(len(m.cfg.WorktreeFiles)),
+		})
+	}
 
 	// Build CLI command from current model state.
 	flags := make(map[string]string)

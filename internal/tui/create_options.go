@@ -22,6 +22,8 @@ type optionItem struct {
 	key         string
 }
 
+const worktreeFilesLabel = "Worktree files:"
+
 func (m Model) buildOptionItems() []optionItem {
 	var items []optionItem
 
@@ -120,13 +122,6 @@ func (m Model) updateCreateOptions(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m *Model) startCreation() {
-	var enabledEcos []config.EcosystemConfig
-	for _, eco := range m.create.ecosystems {
-		if m.create.ecoEnabled[eco.Name] {
-			enabledEcos = append(enabledEcos, eco)
-		}
-	}
-
 	st, err := m.loadRepoState()
 	if err != nil {
 		st = &state.State{}
@@ -142,16 +137,7 @@ func (m *Model) startCreation() {
 		}
 	}
 
-	opts := creator.Options{
-		BranchName:     m.create.branchInput.Value(),
-		BaseBranch:     m.create.baseInput.Value(),
-		RepoPath:       m.repoPath,
-		SourceWorktree: m.findSourceWorktree(),
-		MergeBase:      m.create.mergeBase,
-		CopyEnvFiles:   m.create.copyEnvFiles,
-		Ecosystems:     enabledEcos,
-		Integrations:   enabledInts,
-	}
+	opts := m.buildCreatorOptions(enabledInts)
 
 	ch := make(chan progress.Event, 50)
 	resultCh := make(chan creator.Result, 1)
@@ -165,6 +151,30 @@ func (m *Model) startCreation() {
 		close(ch)
 		resultCh <- result
 	}()
+}
+
+func (m Model) buildCreatorOptions(enabledInts []integration.Integration) creator.Options {
+	var enabledEcos []config.EcosystemConfig
+	for _, eco := range m.create.ecosystems {
+		if m.create.ecoEnabled[eco.Name] {
+			enabledEcos = append(enabledEcos, eco)
+		}
+	}
+
+	opts := creator.Options{
+		BranchName:     m.create.branchInput.Value(),
+		BaseBranch:     m.create.baseInput.Value(),
+		RepoPath:       m.repoPath,
+		SourceWorktree: m.findSourceWorktree(),
+		MergeBase:      m.create.mergeBase,
+		CopyEnvFiles:   m.create.copyEnvFiles,
+		Ecosystems:     enabledEcos,
+		Integrations:   enabledInts,
+	}
+	if m.cfg != nil {
+		opts.WorktreeFiles = m.cfg.WorktreeFiles
+	}
+	return opts
 }
 
 func (m Model) waitForCreateEvent() tea.Cmd {
@@ -234,6 +244,11 @@ func (m Model) viewCreateOptions() string {
 	}
 
 	b.WriteString("\n")
+	if m.cfg != nil && len(m.cfg.WorktreeFiles) > 0 {
+		b.WriteString(styleDim.Render(fmt.Sprintf("  %s %s",
+			worktreeFilesLabel, automaticWorktreeFiles(len(m.cfg.WorktreeFiles)))))
+		b.WriteString("\n")
+	}
 	if len(m.create.activeIntegrationNames) > 0 {
 		b.WriteString(styleDim.Render(fmt.Sprintf("  Integrations from main: %s",
 			strings.Join(m.create.activeIntegrationNames, ", "))))
@@ -245,4 +260,8 @@ func (m Model) viewCreateOptions() string {
 	b.WriteString("\n")
 
 	return b.String()
+}
+
+func automaticWorktreeFiles(count int) string {
+	return fmt.Sprintf("%d automatic", count)
 }
