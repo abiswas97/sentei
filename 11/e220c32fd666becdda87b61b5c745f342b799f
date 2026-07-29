@@ -1,0 +1,21 @@
+docs/superpowers/plans/2026-07-29-worktree-file-propagation.md
+  s_bc116e9a58f42f::t_a76ccc3121a2b7 1-98
+docs/superpowers/specs/2026-07-29-worktree-file-propagation-design.md
+  s_bc116e9a58f42f::t_1b36539687a065 1-67
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "11e220c32fd666becdda87b61b5c745f342b799f",
+  "prompts": {},
+  "sessions": {
+    "s_bc116e9a58f42f": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019facac-17d1-7502-850d-5072d0c1f094",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Avi <avishek.biswas.1997@gmail.com>"
+    }
+  }
+}
