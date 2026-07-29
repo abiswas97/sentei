@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.14.0](https://github.com/abiswas97/sentei/compare/v1.13.0...v1.14.0) (2026-07-29)
+
+
+### Features
+
+* copy repository files into new worktrees ([6740340](https://github.com/abiswas97/sentei/commit/6740340cfe5718910c8ca32cece71e3afa01c9d2))
+* copy repository files into new worktrees ([e23afae](https://github.com/abiswas97/sentei/commit/e23afae2bb004d86d288cd506aa38e9aa6b14a21))
+
 ## [1.13.0](https://github.com/abiswas97/sentei/compare/v1.12.0...v1.13.0) (2026-07-16)
 
 
